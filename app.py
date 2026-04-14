@@ -301,17 +301,22 @@ def init_db():
     with app.app_context():
         db.create_all()
         try:
-            if not User.query.filter_by(email='admin@tahfeel.ae').first():
-                admin = User(
+            admin = User.query.filter_by(email='admin@tahfeel.ae').first()
+            if not admin:
+                new_admin = User(
                     name='Admin',
                     email='admin@tahfeel.ae',
                     password=generate_password_hash('tahfeel2026'),
                     role='admin'
                 )
-                db.session.add(admin)
+                db.session.add(new_admin)
                 db.session.commit()
+                print('Admin user created')
+            else:
+                print('Admin already exists — skipping')
         except Exception as e:
             db.session.rollback()
+            print(f'Init db error: {e}')
 
 init_db()
 if __name__ == '__main__':
