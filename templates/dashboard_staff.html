@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — My Tasks</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .container { padding: 24px; max-width: 1000px; margin: 0 auto; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: white; border-radius: 10px; padding: 18px 20px; border: 0.5px solid #ddd; }
+    .stat-card .label { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #133E87; }
+    .stat-card.red .value { color: #c0392b; }
+    .stat-card.amber .value { color: #854F0B; }
+    .card { background: white; border-radius: 10px; border: 0.5px solid #ddd; margin-bottom: 20px; }
+    .card-header { padding: 16px 20px; border-bottom: 0.5px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h2 { font-size: 15px; color: #133E87; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; }
+    td { padding: 12px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8f9fa; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-new { background: #E6F1FB; color: #0C447C; }
+    .badge-converted { background: #EAF3DE; color: #27500A; }
+    .badge-lost { background: #FCEBEB; color: #791F1F; }
+    .badge-potential { background: #FAEEDA; color: #633806; }
+    .badge-called { background: #EEEDFE; color: #3C3489; }
+    .overdue-row td { background: #fff5f5; }
+    .overdue-tag { background: #FCEBEB; color: #c0392b; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-left: 6px; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; }
+    .btn-sm:hover { background: #133E87; color: white; }
+    .empty { padding: 24px; text-align: center; color: #aaa; font-size: 13px; }
+    .followup-item { padding: 12px 20px; border-bottom: 0.5px solid #f0f0f0; font-size: 13px; }
+    .followup-item:last-child { border-bottom: none; }
+    .followup-item strong { color: #133E87; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div class="right">
+      <span>{{ session.user_name }}</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard" class="active">My Tasks</a>
+  </div>
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <div class="stats">
+      <div class="stat-card">
+        <div class="label">My total leads</div>
+        <div class="value">{{ leads|length }}</div>
+      </div>
+      <div class="stat-card red">
+        <div class="label">Overdue</div>
+        <div class="value">{{ overdue|length }}</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="label">Follow-ups today</div>
+        <div class="value">{{ followups|length }}</div>
+      </div>
+    </div>
+    {% if followups %}
+    <div class="card">
+      <div class="card-header"><h2>Follow-ups due today</h2></div>
+      {% for f in followups %}
+      <div class="followup-item">
+        <strong>{{ f.lead.name }}</strong> — {{ f.remark[:80] }}
+        <a href="/leads/{{ f.lead_id }}" class="btn-sm" style="margin-left:10px;">View</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="card">
+      <div class="card-header"><h2>My assigned leads</h2></div>
+      {% if leads %}
+      <table>
+        <thead>
+          <tr><th>Customer</th><th>Service</th><th>Due date</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for lead in leads %}
+          <tr {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}class="overdue-row"{% endif %}>
+            <td>
+              <strong>{{ lead.name }}</strong>
+              {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}
+                <span class="overdue-tag">Overdue</span>
+              {% endif %}
+              {% if lead.company %}<br><span style="color:#888;font-size:12px;">{{ lead.company }}</span>{% endif %}
+            </td>
+            <td>{{ lead.service or '—' }}</td>
+            <td {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}style="color:#c0392b;font-weight:600;"{% endif %}>
+              {{ lead.due_date.strftime('%d %b %Y %H:%M') }}
+            </td>
+            <td>
+              <span class="badge
+                {% if lead.status == 'Converted' %}badge-converted
+                {% elif lead.status == 'Lost' %}badge-lost
+                {% elif lead.status == 'Potential Lead' %}badge-potential
+                {% elif 'Called' in lead.status %}badge-called
+                {% else %}badge-new{% endif %}">
+                {{ lead.status }}
+              </span>
+            </td>
+            <td><a href="/leads/{{ lead.id }}" class="btn-sm">Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No tasks assigned to you yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
