@@ -10,13 +10,14 @@ app.secret_key = 'tahfeel2026secretkey'
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tahfeel.db')).replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app) 
+db = SQLAlchemy(app)
 
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
     return redirect(url_for('dashboard'))
-    @app.errorhandler(404)
+
+@app.errorhandler(404)
 def not_found(error):
     return redirect(url_for('dashboard'))
 
@@ -177,6 +178,7 @@ def lead_detail(lead_id):
         flash('Update saved')
         return redirect(url_for('lead_detail', lead_id=lead_id))
     return render_template('lead_detail.html', lead=lead)
+
 @app.route('/leads/import', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -243,16 +245,14 @@ def download_template():
     wb = Workbook()
     ws = wb.active
     ws.title = "Leads"
-    headers = ['Name*', 'Company', 'Phone*', 'Email', 'Address', 
+    headers = ['Name*', 'Company', 'Phone*', 'Email', 'Address',
                'Source', 'Service', 'Lead Type', 'Remarks']
-    sources = 'Walk-in / WhatsApp / Referral / Social Media / Website / Other'
-    services = 'Trade License / Family Visa / PRO Services / Healthcare License / Umrah Package / Other'
     ws.append(headers)
-    ws.append(['John Smith', 'ABC Trading LLC', '+971501234567', 
-               'john@abc.ae', 'Dubai', 'WhatsApp', 
+    ws.append(['John Smith', 'ABC Trading LLC', '+971501234567',
+               'john@abc.ae', 'Dubai', 'WhatsApp',
                'Trade License', 'New', 'Interested in mainland license'])
-    ws.append(['Sara Ahmed', '', '+971509876543', 
-               '', 'Sharjah', 'Referral', 
+    ws.append(['Sara Ahmed', '', '+971509876543',
+               '', 'Sharjah', 'Referral',
                'Family Visa', 'New', ''])
     from openpyxl.styles import Font, PatternFill
     header_font = Font(bold=True, color="FFFFFF")
@@ -270,6 +270,7 @@ def download_template():
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     response.headers['Content-Disposition'] = 'attachment; filename=tahfeel_leads_template.xlsx'
     return response
+
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -303,8 +304,8 @@ def manage_users():
 @admin_required
 def toggle_user(user_id):
     user = User.query.get_or_404(user_id)
-    if user.email == 'admin@tahfeel.ae':
-        flash('Admin account cannot be deactivated')
+    if user.role == 'admin':
+        flash('Admin accounts cannot be deactivated')
         return redirect(url_for('manage_users'))
     user.active = not user.active
     db.session.commit()
