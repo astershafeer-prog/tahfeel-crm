@@ -271,7 +271,42 @@ def download_template():
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     response.headers['Content-Disposition'] = 'attachment; filename=tahfeel_leads_template.xlsx'
     return response
+@app.route('/leads/<int:lead_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_lead(lead_id):
+    lead = Lead.query.get_or_404(lead_id)
+    users = User.query.filter_by(active=True, role='staff').all()
+    if request.method == 'POST':
+        lead.name = request.form['name']
+        lead.company = request.form.get('company')
+        lead.phone = request.form.get('phone')
+        lead.email = request.form.get('email')
+        lead.address = request.form.get('address')
+        lead.source = request.form.get('source')
+        lead.service = request.form.get('service')
+        lead.lead_type = request.form.get('lead_type', 'New')
+        lead.remarks = request.form.get('remarks')
+        assigned = request.form.get('assigned_to')
+        lead.assigned_to = int(assigned) if assigned else None
+        due = request.form.get('due_date')
+        if due:
+            lead.due_date = datetime.strptime(due, '%Y-%m-%dT%H:%M')
+        db.session.commit()
+        flash('Lead updated successfully')
+        return redirect(url_for('lead_detail', lead_id=lead_id))
+    return render_template('edit_lead.html', lead=lead, users=users)
 
+@app.route('/leads/<int:lead_id>/delete')
+@login_required
+@admin_required
+def delete_lead(lead_id):
+    lead = Lead.query.get_or_404(lead_id)
+    LeadUpdate.query.filter_by(lead_id=lead_id).delete()
+    db.session.delete(lead)
+    db.session.commit()
+    flash('Lead deleted successfully')
+    return redirect(url_for('dashboard'))
+    
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
