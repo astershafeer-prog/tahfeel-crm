@@ -267,19 +267,23 @@ def download_template():
 @admin_required
 def manage_users():
     if request.method == 'POST':
-        existing = User.query.filter_by(email=request.form['email']).first()
-        if existing:
-            flash('Email already exists — please use a different email')
-            return redirect(url_for('manage_users'))
-        user = User(
-            name=request.form['name'],
-            email=request.form['email'],
-            password=generate_password_hash(request.form['password']),
-            role=request.form['role']
-        )
-        db.session.add(user)
-        db.session.commit()
-        flash('User added successfully')
+        try:
+            existing = User.query.filter_by(email=request.form['email']).first()
+            if existing:
+                flash('This email already exists — please use a different email')
+                return redirect(url_for('manage_users'))
+            user = User(
+                name=request.form['name'],
+                email=request.form['email'],
+                password=generate_password_hash(request.form['password']),
+                role=request.form['role']
+            )
+            db.session.add(user)
+            db.session.commit()
+            flash('User added successfully')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error adding user — please try again')
         return redirect(url_for('manage_users'))
     users = User.query.all()
     return render_template('users.html', users=users)
