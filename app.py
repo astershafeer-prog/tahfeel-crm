@@ -296,17 +296,19 @@ def toggle_user(user_id):
 def init_db():
     with app.app_context():
         db.create_all()
-        if not User.query.filter_by(email='admin@tahfeel.ae').first():
-            admin = User(
-                name='Admin',
-                email='admin@tahfeel.ae',
-                password=generate_password_hash('tahfeel2026'),
-                role='admin'
-            )
-            db.session.add(admin)
-            db.session.commit()
+        try:
+            if not User.query.filter_by(email='admin@tahfeel.ae').first():
+                admin = User(
+                    name='Admin',
+                    email='admin@tahfeel.ae',
+                    password=generate_password_hash('tahfeel2026'),
+                    role='admin'
+                )
+                db.session.add(admin)
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
 
 init_db()
-
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
