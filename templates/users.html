@@ -95,7 +95,11 @@
               <td>{{ user.email }}</td>
               <td><span class="{% if user.role == 'admin' %}badge-admin{% else %}badge-staff{% endif %}">{{ user.role }}</span></td>
               <td><span class="{% if user.active %}badge-active{% else %}badge-inactive{% endif %}">{{ 'Active' if user.active else 'Inactive' }}</span></td>
-              <td><a href="/users/{{ user.id }}/toggle" class="btn-sm">{{ 'Deactivate' if user.active else 'Activate' }}</a></td>
+              <td>{% if user.email != 'admin@tahfeel.ae' %}
+<a href="/users/{{ user.id }}/toggle" class="btn-sm">
+  {{ 'Deactivate' if user.active else 'Activate' }}
+</a>
+{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>
