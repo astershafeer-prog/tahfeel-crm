@@ -10,7 +10,15 @@ app.secret_key = 'tahfeel2026secretkey'
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tahfeel.db')).replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+db = SQLAlchemy(app) 
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return redirect(url_for('dashboard'))
+    @app.errorhandler(404)
+def not_found(error):
+    return redirect(url_for('dashboard'))
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
