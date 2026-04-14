@@ -43,7 +43,7 @@
     .btn-sm:hover { background: #133E87; color: white; }
     .btn-edit { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #1D6F42; color: #1D6F42; white-space: nowrap; }
     .btn-edit:hover { background: #1D6F42; color: white; }
-    .btn-delete { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; white-space: nowrap; }
+    .btn-delete { padding: 5px 12px; border-radius: 6px; font-size: 12px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; white-space: nowrap; }
     .btn-delete:hover { background: #c0392b; color: white; }
     .btn-add { background: #133E87; color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
     .btn-add:hover { background: #1E5AB8; }
@@ -60,6 +60,7 @@
   </style>
 </head>
 <body>
+
   <div class="topbar">
     <h1>Tahfeel Business Solutions — CRM</h1>
     <div class="right">
@@ -67,11 +68,13 @@
       <a href="/logout">Logout</a>
     </div>
   </div>
+
   <div class="nav">
     <a href="/dashboard" class="active">Lead Management</a>
     <a href="/leads/add">Add Lead</a>
     <a href="/users">Manage Staff</a>
   </div>
+
   <div class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}
@@ -108,7 +111,12 @@
         <table>
           <thead>
             <tr>
-              <th>Name</th><th>Service</th><th>Assigned to</th><th>Due date</th><th>Status</th><th>Actions</th>
+              <th>Name</th>
+              <th>Service</th>
+              <th>Assigned to</th>
+              <th>Due date</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -144,7 +152,14 @@
         <table>
           <thead>
             <tr>
-              <th>Name</th><th>Company</th><th>Service</th><th>Source</th><th>Assigned to</th><th>Due date</th><th>Status</th><th>Actions</th>
+              <th>Name</th>
+              <th>Company</th>
+              <th>Service</th>
+              <th>Source</th>
+              <th>Assigned to</th>
+              <th>Due date</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -215,5 +230,6 @@
       if (e.target === this) closeModal();
     });
   </script>
+
 </body>
 </html>
