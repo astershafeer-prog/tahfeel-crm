@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Lead Detail</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover { color: white; border-bottom-color: #DCDCBF; }
+    .container { padding: 24px; max-width: 1000px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { background: white; border-radius: 10px; border: 0.5px solid #ddd; margin-bottom: 20px; }
+    .card-header { padding: 14px 20px; border-bottom: 0.5px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h2 { font-size: 14px; color: #133E87; font-weight: 700; }
+    .card-body { padding: 20px; }
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid #f5f5f5; font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .lbl { color: #888; min-width: 130px; }
+    .info-row .val { color: #333; font-weight: 500; text-align: right; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-new { background: #E6F1FB; color: #0C447C; }
+    .badge-converted { background: #EAF3DE; color: #27500A; }
+    .badge-lost { background: #FCEBEB; color: #791F1F; }
+    .badge-potential { background: #FAEEDA; color: #633806; }
+    .badge-called { background: #EEEDFE; color: #3C3489; }
+    label { display: block; font-size: 12px; color: #555; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.3px; }
+    input, select, textarea { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: Arial, sans-serif; outline: none; background: white; }
+    input:focus, select:focus, textarea:focus { border-color: #133E87; }
+    textarea { resize: vertical; min-height: 80px; }
+    .form-group { margin-bottom: 14px; }
+    .btn-primary { background: #133E87; color: white; padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
+    .btn-primary:hover { background: #1E5AB8; }
+    .lost-fields { display: none; background: #fff5f5; border: 1px solid #f5c6c6; border-radius: 8px; padding: 14px; margin-top: 10px; }
+    .timeline { padding: 0; }
+    .timeline-item { padding: 14px 20px; border-bottom: 0.5px solid #f0f0f0; font-size: 13px; }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .timeline-stage { font-weight: 700; color: #133E87; font-size: 13px; }
+    .timeline-meta { font-size: 11px; color: #aaa; }
+    .timeline-remark { color: #444; line-height: 1.5; }
+    .timeline-followup { margin-top: 6px; font-size: 12px; color: #854F0B; background: #FAEEDA; padding: 3px 10px; border-radius: 4px; display: inline-block; }
+    .wa-link { display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 3px 10px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600; margin-left: 8px; }
+    .wa-link:hover { background: #1da851; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .empty-timeline { padding: 24px; text-align: center; color: #aaa; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <a href="/logout">Logout</a>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">← Back to dashboard</a>
+  </div>
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}
+        <div class="flash">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <h2>Customer details</h2>
+          <span class="badge
+            {% if lead.status == 'Converted' %}badge-converted
+            {% elif lead.status == 'Lost' %}badge-lost
+            {% elif lead.status == 'Potential Lead' %}badge-potential
+            {% elif 'Called' in lead.status %}badge-called
+            {% else %}badge-new{% endif %}">
+            {{ lead.status }}
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="info-row"><span class="lbl">Name</span><span class="val">{{ lead.name }}</span></div>
+          <div class="info-row"><span class="lbl">Company</span><span class="val">{{ lead.company or '—' }}</span></div>
+          <div class="info-row">
+            <span class="lbl">Phone</span>
+            <span class="val">
+              {{ lead.phone or '—' }}
+              {% if lead.phone %}
+              <a href="https://wa.me/{{ lead.phone | replace(' ','') | replace('+','') }}" target="_blank" class="wa-link">WA</a>
+              {% endif %}
+            </span>
+          </div>
+          <div class="info-row"><span class="lbl">Email</span><span class="val">{{ lead.email or '—' }}</span></div>
+          <div class="info-row"><span class="lbl">Address</span><span class="val">{{ lead.address or '—' }}</span></div>
+          <div class="info-row"><span class="lbl">Service</span><span class="val">{{ lead.service or '—' }}</span></div>
+          <div class="info-row"><span class="lbl">Source</span><span class="val">{{ lead.source or '—' }}</span></div>
+          <div class="info-row"><span class="lbl">Type</span><span class="val">{{ lead.lead_type }}</span></div>
+          <div class="info-row"><span class="lbl">Assigned to</span><span class="val">{{ lead.assignee.name if lead.assignee else '—' }}</span></div>
+          <div class="info-row"><span class="lbl">Due date</span><span class="val">{{ lead.due_date.strftime('%d %b %Y %H:%M') }}</span></div>
+          <div class="info-row"><span class="lbl">Created</span><span class="val">{{ lead.created_at.strftime('%d %b %Y') }}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Update this lead</h2></div>
+        <div class="card-body">
+          <form method="POST">
+            <div class="form-group">
+              <label>Customer story</label>
+              <textarea name="customer_story" placeholder="Brief profile — e.g. Big businessman, 50 staff">{{ lead.customer_story or '' }}</textarea>
+            </div>
+            <div class="form-group">
+              <label>Stage <span style="color:#c0392b;">*</span></label>
+              <select name="stage" required id="stage-select" onchange="checkLost(this.value)">
+                <option value="">— Select stage —</option>
+                <option {% if lead.status=='Called — Connected' %}selected{% endif %}>Called — Connected</option>
+                <option {% if lead.status=='Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
+                <option {% if lead.status=='WhatsApp Done' %}selected{% endif %}>WhatsApp Done</option>
+                <option {% if lead.status=='Email Sent' %}selected{% endif %}>Email Sent</option>
+                <option {% if lead.status=='Potential Lead' %}selected{% endif %}>Potential Lead</option>
+                <option {% if lead.status=='Quotation Sent' %}selected{% endif %}>Quotation Sent</option>
+                <option {% if lead.status=='Converted' %}selected{% endif %}>Converted</option>
+                <option {% if lead.status=='Lost' %}selected{% endif %}>Lost</option>
+              </select>
+            </div>
+            <div class="lost-fields" id="lost-fields">
+              <div class="form-group">
+                <label>Lost reason</label>
+                <select name="lost_reason">
+                  <option value="">— Select reason —</option>
+                  <option>Price too high</option>
+                  <option>Not a serious buyer</option>
+                  <option>Not responding</option>
+                  <option>Went to competitor</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Future potential</label>
+                <select name="future_potential">
+                  <option value="">— Select —</option>
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                  <option>Not likely</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Remark <span style="color:#c0392b;">*</span></label>
+              <textarea name="remark" required placeholder="What happened? What was discussed?"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Follow-up date (optional)</label>
+              <input type="datetime-local" name="followup_date">
+            </div>
+            <button type="submit" class="btn-primary">Save update</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Activity history</h2></div>
+      <div class="timeline">
+        {% if lead.updates %}
+          {% for update in lead.updates %}
+          <div class="timeline-item">
+            <div class="timeline-top">
+              <span class="timeline-stage">{{ update.stage }}</span>
+              <span class="timeline-meta">{{ update.staff_name }} · {{ update.created_at.strftime('%d %b %Y %H:%M') }}</span>
+            </div>
+            <div class="timeline-remark">{{ update.remark }}</div>
+            {% if update.followup_date %}
+            <span class="timeline-followup">Follow-up: {{ update.followup_date.strftime('%d %b %Y %H:%M') }}</span>
+            {% endif %}
+            {% if update.lost_reason %}
+            <span class="timeline-followup" style="background:#FCEBEB;color:#791F1F;">
+              Lost: {{ update.lost_reason }}
+              {% if update.future_potential %} · Potential: {{ update.future_potential }}{% endif %}
+            </span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-timeline">No updates yet. Use the form above to log the first action.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <script>
+    function checkLost(val) {
+      document.getElementById('lost-fields').style.display = val === 'Lost' ? 'block' : 'none';
+    }
+  </script>
+</body>
+</html>
