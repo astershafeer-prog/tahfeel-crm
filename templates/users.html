@@ -36,6 +36,7 @@
     .btn-sm { padding: 4px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #ddd; color: #555; }
     .btn-sm:hover { border-color: #133E87; color: #133E87; }
     .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .flash.error { background: #FCEBEB; color: #791F1F; }
   </style>
 </head>
 <body>
@@ -95,11 +96,11 @@
               <td>{{ user.email }}</td>
               <td><span class="{% if user.role == 'admin' %}badge-admin{% else %}badge-staff{% endif %}">{{ user.role }}</span></td>
               <td><span class="{% if user.active %}badge-active{% else %}badge-inactive{% endif %}">{{ 'Active' if user.active else 'Inactive' }}</span></td>
-              <td>{% if user.email != 'admin@tahfeel.ae' %}
-<a href="/users/{{ user.id }}/toggle" class="btn-sm">
-  {{ 'Deactivate' if user.active else 'Activate' }}
-</a>
-{% endif %}</td>
+              <td>
+                {% if user.email != 'admin@tahfeel.ae' %}
+                <a href="/users/{{ user.id }}/toggle" class="btn-sm">{{ 'Deactivate' if user.active else 'Activate' }}</a>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
