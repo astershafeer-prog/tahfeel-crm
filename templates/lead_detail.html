@@ -56,10 +56,11 @@
     <h1>Tahfeel Business Solutions — CRM</h1>
     <a href="/logout">Logout</a>
   </div>
+
   <div class="nav">
     <a href="/dashboard">← Back to dashboard</a>
-<a href="/leads/{{ lead.id }}/edit" style="color:#133E87;text-decoration:none;padding:10px 16px;font-size:13px;">Edit Lead</a>
-<a href="/leads/{{ lead.id }}/delete" onclick="return confirm('Are you sure you want to delete this lead?')" style="color:#c0392b;text-decoration:none;padding:10px 16px;font-size:13px;">Delete Lead</a>
+<a href="/leads/{{ lead.id }}/edit" style="color:#c8d8f0;text-decoration:none;padding:10px 16px;font-size:13px;">Edit Lead</a>
+<a href="/leads/{{ lead.id }}/delete" onclick="return confirm('Are you sure you want to delete this lead?')" style="color:#FAC775;text-decoration:none;padding:10px 16px;font-size:13px;">Delete Lead</a>
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
