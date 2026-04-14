@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Login</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .login-box {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      border: 0.5px solid #ddd;
+    }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo h1 { color: #133E87; font-size: 22px; font-weight: 700; }
+    .logo p { color: #888; font-size: 13px; margin-top: 4px; }
+    .logo .bar { width: 50px; height: 4px; background: #133E87; margin: 10px auto 0; border-radius: 2px; }
+    label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; margin-top: 16px; }
+    input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+    input:focus { border-color: #133E87; }
+    .btn { width: 100%; padding: 12px; background: #133E87; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 24px; }
+    .btn:hover { background: #1E5AB8; }
+    .flash { background: #fff0f0; color: #c0392b; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; border: 1px solid #f5c6c6; }
+    .footer { text-align: center; font-size: 12px; color: #aaa; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="logo">
+      <h1>Tahfeel Business Solutions</h1>
+      <p>CRM & Task Management</p>
+      <div class="bar"></div>
+    </div>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <form method="POST">
+      <label>Email Address</label>
+      <input type="email" name="email" placeholder="you@tahfeel.ae" required>
+      <label>Password</label>
+      <input type="password" name="password" placeholder="Enter your password" required>
+      <button type="submit" class="btn">Sign In</button>
+    </form>
+    <div class="footer">Tahfeel Business Solutions · Dubai, UAE</div>
+  </div>
+</body>
+</html>
