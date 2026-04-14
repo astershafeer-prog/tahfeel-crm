@@ -303,6 +303,9 @@ def manage_users():
 @admin_required
 def toggle_user(user_id):
     user = User.query.get_or_404(user_id)
+    if user.email == 'admin@tahfeel.ae':
+        flash('Admin account cannot be deactivated')
+        return redirect(url_for('manage_users'))
     user.active = not user.active
     db.session.commit()
     return redirect(url_for('manage_users'))
