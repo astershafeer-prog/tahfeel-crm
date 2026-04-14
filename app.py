@@ -267,6 +267,10 @@ def download_template():
 @admin_required
 def manage_users():
     if request.method == 'POST':
+        existing = User.query.filter_by(email=request.form['email']).first()
+        if existing:
+            flash('Email already exists — please use a different email')
+            return redirect(url_for('manage_users'))
         user = User(
             name=request.form['name'],
             email=request.form['email'],
@@ -275,7 +279,7 @@ def manage_users():
         )
         db.session.add(user)
         db.session.commit()
-        flash('User added')
+        flash('User added successfully')
         return redirect(url_for('manage_users'))
     users = User.query.all()
     return render_template('users.html', users=users)
