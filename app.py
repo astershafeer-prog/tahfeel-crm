@@ -169,7 +169,99 @@ def lead_detail(lead_id):
         flash('Update saved')
         return redirect(url_for('lead_detail', lead_id=lead_id))
     return render_template('lead_detail.html', lead=lead)
+@app.route('/leads/import', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def import_leads():
+    if request.method == 'POST':
+        file = request.files.get('file')
+        if not file or not file.filename.endswith('.xlsx'):
+            flash('Please upload a valid .xlsx file')
+            return redirect(url_for('import_leads'))
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(file)
+            ws = wb.active
+            count = 0
+            errors = []
+            for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                name = row[0] if len(row) > 0 else None
+                company = row[1] if len(row) > 1 else None
+                phone = str(row[2]) if len(row) > 2 and row[2] else None
+                email = row[3] if len(row) > 3 else None
+                address = row[4] if len(row) > 4 else None
+                source = row[5] if len(row) > 5 else None
+                service = row[6] if len(row) > 6 else None
+                lead_type = row[7] if len(row) > 7 else 'New'
+                remarks = row[8] if len(row) > 8 else None
+                if not name:
+                    errors.append(f'Row {i}: Name is required — skipped')
+                    continue
+                if not phone:
+                    errors.append(f'Row {i}: Phone is required — skipped')
+                    continue
+                lead = Lead(
+                    name=str(name),
+                    company=str(company) if company else None,
+                    phone=str(phone),
+                    email=str(email) if email else None,
+                    address=str(address) if address else None,
+                    source=str(source) if source else None,
+                    service=str(service) if service else None,
+                    lead_type=str(lead_type) if lead_type else 'New',
+                    remarks=str(remarks) if remarks else None,
+                    representative=session['user_name'],
+                    due_date=datetime.now() + timedelta(hours=4)
+                )
+                db.session.add(lead)
+                count += 1
+            db.session.commit()
+            if errors:
+                flash(f'Imported {count} leads. Skipped: ' + ' | '.join(errors))
+            else:
+                flash(f'Successfully imported {count} leads!')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            flash(f'Error reading file: {str(e)}')
+            return redirect(url_for('import_leads'))
+    return render_template('import_leads.html')
 
+@app.route('/leads/template')
+@login_required
+def download_template():
+    from openpyxl import Workbook
+    from flask import make_response
+    import io
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Leads"
+    headers = ['Name*', 'Company', 'Phone*', 'Email', 'Address', 
+               'Source', 'Service', 'Lead Type', 'Remarks']
+    sources = 'Walk-in / WhatsApp / Referral / Social Media / Website / Other'
+    services = 'Trade License / Family Visa / PRO Services / Healthcare License / Umrah Package / Other'
+    ws.append(headers)
+    ws.append(['John Smith', 'ABC Trading LLC', '+971501234567', 
+               'john@abc.ae', 'Dubai', 'WhatsApp', 
+               'Trade License', 'New', 'Interested in mainland license'])
+    ws.append(['Sara Ahmed', '', '+971509876543', 
+               '', 'Sharjah', 'Referral', 
+               'Family Visa', 'New', ''])
+    from openpyxl.styles import Font, PatternFill
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or '')) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = max_length + 4
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = make_response(output.read())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = 'attachment; filename=tahfeel_leads_template.xlsx'
+    return response
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
