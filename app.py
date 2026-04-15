@@ -346,6 +346,130 @@ def import_leads():
 @login_required
 def download_template():
     from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, PatternFill
+    from openpyxl.worksheet.datavalidation import DataValidation
+    from flask import make_response
+    import io
+
+    services = Service.query.order_by(Service.name).all()
+    sources = Source.query.order_by(Source.name).all()
+    staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+
+    wb = Workbook()
+
+    # --- Main sheet ---
+    ws = wb.active
+    ws.title = "Leads"
+
+    headers = ['Name*', 'Company', 'Phone*', 'Email', 'Address',
+               'Source', 'Service', 'Lead Type', 'Remarks', 'Assigned To']
+    ws.append(headers)
+
+    # Sample rows
+    ws.append(['John Smith', 'ABC Trading LLC', '+971501234567',
+               'john@abc.ae', 'Dubai',
+               sources[0].name if sources else 'WhatsApp',
+               services[0].name if services else 'Trade License',
+               'New', 'Interested in mainland license',
+               staff[0].name if staff else ''])
+    ws.append(['Sara Ahmed', '', '+971509876543', '', 'Sharjah',
+               sources[1].name if len(sources) > 1 else '',
+               services[1].name if len(services) > 1 else '',
+               'New', '',
+               staff[1].name if len(staff) > 1 else ''])
+
+    # Style headers
+    from openpyxl.styles import Font, PatternFill
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+
+    # Column widths
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or '')) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = max_length + 4
+
+    # --- Reference sheet (hidden, stores dropdown values) ---
+    ref = wb.create_sheet(title="Reference")
+
+    # Write service list in column A
+    ref['A1'] = 'Services'
+    for i, s in enumerate(services, start=2):
+        ref.cell(row=i, column=1, value=s.name)
+
+    # Write source list in column B
+    ref['B1'] = 'Sources'
+    for i, s in enumerate(sources, start=2):
+        ref.cell(row=i, column=2, value=s.name)
+
+    # Write staff list in column C
+    ref['C1'] = 'Staff'
+    for i, u in enumerate(staff, start=2):
+        ref.cell(row=i, column=3, value=u.name)
+
+    # Write lead type in column D
+    ref['D1'] = 'Lead Type'
+    ref['D2'] = 'New'
+    ref['D3'] = 'Old Follow-up'
+
+    # Hide the reference sheet
+    ref.sheet_state = 'hidden'
+
+    # --- Add dropdown validations to Leads sheet ---
+    service_count = len(services) + 1
+    source_count = len(sources) + 1
+    staff_count = len(staff) + 1
+
+    # Source dropdown (column F = col 6)
+    dv_source = DataValidation(
+        type="list",
+        formula1=f"Reference!$B$2:$B${source_count}",
+        allow_blank=True,
+        showDropDown=False
+    )
+    dv_source.sqref = "F2:F1000"
+    ws.add_data_validation(dv_source)
+
+    # Service dropdown (column G = col 7)
+    dv_service = DataValidation(
+        type="list",
+        formula1=f"Reference!$A$2:$A${service_count}",
+        allow_blank=True,
+        showDropDown=False
+    )
+    dv_service.sqref = "G2:G1000"
+    ws.add_data_validation(dv_service)
+
+    # Lead type dropdown (column H = col 8)
+    dv_type = DataValidation(
+        type="list",
+        formula1="Reference!$D$2:$D$3",
+        allow_blank=True,
+        showDropDown=False
+    )
+    dv_type.sqref = "H2:H1000"
+    ws.add_data_validation(dv_type)
+
+    # Assigned To dropdown (column J = col 10)
+    dv_staff = DataValidation(
+        type="list",
+        formula1=f"Reference!$C$2:$C${staff_count}",
+        allow_blank=True,
+        showDropDown=False
+    )
+    dv_staff.sqref = "J2:J1000"
+    ws.add_data_validation(dv_staff)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = make_response(output.read())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = 'attachment; filename=tahfeel_leads_template.xlsx'
+    return response
+    from openpyxl import Workbook
     from flask import make_response
     import io
     wb = Workbook()
