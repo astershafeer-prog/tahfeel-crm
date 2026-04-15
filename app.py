@@ -617,6 +617,10 @@ def init_db():
     with app.app_context():
         db.create_all()
         try:
+            db.engine.execute('ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0')
+        except:
+            pass
+        try:
             admin = User.query.filter_by(email='admin@tahfeel.ae').first()
             if not admin:
                 new_admin = User(
