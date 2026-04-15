@@ -47,6 +47,7 @@ class Lead(db.Model):
     status = db.Column(db.String(50), default='New')
     created_at = db.Column(db.DateTime, default=datetime.now)
     customer_story = db.Column(db.Text)
+    potential_value = db.Column(db.Float, default=0)
     assignee = db.relationship('User', foreign_keys=[assigned_to])
     updates = db.relationship('LeadUpdate', backref='lead', lazy=True, order_by='LeadUpdate.created_at.desc()')
 
@@ -160,10 +161,13 @@ def dashboard():
                 'not_started': len([l for l in u_leads if l.status == 'New']),
                 'converted': len([l for l in u_leads if l.status == 'Converted']),
                 'overdue': len([l for l in u_leads if l.due_date < now and l.status not in ['Converted', 'Lost']]),
+                'potential_value': sum(l.potential_value or 0 for l in u_leads if l.status not in ['Converted', 'Lost']),
             })
+            total_potential = sum(l.potential_value or 0 for l in leads if l.status not in ['Converted', 'Lost'])
         return render_template('dashboard_admin.html', leads=leads, total=total,
                                overdue=overdue, converted=converted, pending=pending,
                                not_started=not_started, staff_stats=staff_stats,
+                               total_potential=total_potential,
                                users=users, now=now)
     else:
         leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
@@ -273,9 +277,15 @@ def lead_detail(lead_id):
             lost_reason=request.form.get('lost_reason'),
             future_potential=request.form.get('future_potential')
         )
-        lead.status = stage
+       lead.status = stage
         if request.form.get('customer_story'):
             lead.customer_story = request.form.get('customer_story')
+        potential_value = request.form.get('potential_value')
+        if potential_value and not lead.potential_value:
+            try:
+                lead.potential_value = float(potential_value)
+            except:
+                pass
         db.session.add(update)
         db.session.commit()
         flash('Update saved')
