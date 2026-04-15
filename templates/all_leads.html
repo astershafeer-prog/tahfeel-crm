@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — All Leads</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+    .topbar a { color: #DCDCBF; text-decoration: none; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
+    .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .btn-add:hover { background: #1E5AB8; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+    td { padding: 11px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-new { background: #E6F1FB; color: #0C447C; }
+    .badge-converted { background: #EAF3DE; color: #27500A; }
+    .badge-lost { background: #FCEBEB; color: #791F1F; }
+    .badge-potential { background: #FAEEDA; color: #633806; }
+    .badge-called { background: #EEEDFE; color: #3C3489; }
+    .badge-overdue { background: #FCEBEB; color: #c0392b; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-left: 6px; }
+    .actions { display: flex; gap: 6px; align-items: center; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; }
+    .btn-sm:hover { background: #133E87; color: white; }
+    .btn-edit { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #1D6F42; color: #1D6F42; white-space: nowrap; }
+    .btn-edit:hover { background: #1D6F42; color: white; }
+    .btn-delete { padding: 5px 12px; border-radius: 6px; font-size: 12px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; white-space: nowrap; }
+    .btn-delete:hover { background: #c0392b; color: white; }
+    .empty { padding: 40px; text-align: center; color: #aaa; font-size: 13px; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: 12px; padding: 28px; max-width: 400px; width: 90%; }
+    .modal h3 { font-size: 16px; color: #133E87; margin-bottom: 10px; }
+    .modal p { font-size: 13px; color: #555; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-cancel-modal { padding: 8px 18px; border-radius: 6px; font-size: 13px; border: 1px solid #ddd; color: #555; background: white; cursor: pointer; }
+    .btn-confirm-delete { padding: 8px 18px; border-radius: 6px; font-size: 13px; background: #c0392b; color: white; border: none; cursor: pointer; font-weight: 600; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div class="right">
+      <span>{{ session.user_name }} (Admin)</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/leads" class="active">All Leads</a>
+    <a href="/leads/add">Add Lead</a>
+    <a href="/leads/import">Import Leads</a>
+    <a href="/users">Manage Staff</a>
+  </div>
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}
+        <div class="flash">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>All Leads <span style="font-size:14px;color:#888;font-weight:400;">({{ leads|length }} total)</span></h2>
+      <a href="/leads/add" class="btn-add">+ Add Lead</a>
+    </div>
+
+    <div class="card">
+      {% if leads %}
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Company</th>
+            <th>Service</th>
+            <th>Source</th>
+            <th>Assigned to</th>
+            <th>Due date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lead in leads %}
+          <tr>
+            <td>
+              <strong>{{ lead.name }}</strong>
+              {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}
+                <span class="badge-overdue">Overdue</span>
+              {% endif %}
+            </td>
+            <td>{{ lead.company or '—' }}</td>
+            <td>{{ lead.service or '—' }}</td>
+            <td>{{ lead.source or '—' }}</td>
+            <td>{{ lead.assignee.name if lead.assignee else '—' }}</td>
+            <td {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}style="color:#c0392b;"{% endif %}>
+              {{ lead.due_date.strftime('%d %b %Y') }}
+            </td>
+            <td>
+              <span class="badge
+                {% if lead.status == 'Converted' %}badge-converted
+                {% elif lead.status == 'Lost' %}badge-lost
+                {% elif lead.status == 'Potential Lead' %}badge-potential
+                {% elif 'Called' in lead.status %}badge-called
+                {% else %}badge-new{% endif %}">
+                {{ lead.status }}
+              </span>
+            </td>
+            <td>
+              <div class="actions">
+                <a href="/leads/{{ lead.id }}" class="btn-sm">View</a>
+                <a href="/leads/{{ lead.id }}/edit" class="btn-edit">Edit</a>
+                <button class="btn-delete" onclick="confirmDelete({{ lead.id }}, '{{ lead.name }}')">Delete</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No leads yet. Click "+ Add Lead" to get started.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+      <h3>Delete Lead</h3>
+      <p id="deleteModalText">Are you sure you want to delete this lead? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn-cancel-modal" onclick="closeModal()">Cancel</button>
+        <a href="#" id="confirmDeleteBtn" class="btn-confirm-delete">Yes, Delete</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function confirmDelete(leadId, leadName) {
+      document.getElementById('deleteModalText').textContent =
+        'Are you sure you want to delete "' + leadName + '"? This action cannot be undone.';
+      document.getElementById('confirmDeleteBtn').href = '/leads/' + leadId + '/delete';
+      document.getElementById('deleteModal').classList.add('active');
+    }
+    function closeModal() {
+      document.getElementById('deleteModal').classList.remove('active');
+    }
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+  </script>
+
+</body>
+</html>
