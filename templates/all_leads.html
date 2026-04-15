@@ -16,10 +16,24 @@
     .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
     .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
     .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
+    .header-btns { display: flex; gap: 8px; }
     .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
     .btn-add:hover { background: #1E5AB8; }
+    .btn-export { background: #1D6F42; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .btn-export:hover { background: #155a34; }
+    .filters { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: white; outline: none; min-width: 140px; }
+    .filter-group select:focus, .filter-group input:focus { border-color: #133E87; }
+    .btn-filter { background: #133E87; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-filter:hover { background: #1E5AB8; }
+    .btn-reset { background: white; color: #555; padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; cursor: pointer; text-decoration: none; }
+    .btn-reset:hover { border-color: #133E87; color: #133E87; }
+    .custom-dates { display: none; gap: 8px; }
+    .custom-dates.visible { display: flex; }
     .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
@@ -78,8 +92,62 @@
 
     <div class="page-header">
       <h2>All Leads <span style="font-size:14px;color:#888;font-weight:400;">({{ leads|length }} total)</span></h2>
-      <a href="/leads/add" class="btn-add">+ Add Lead</a>
+      <div class="header-btns">
+        <a href="/leads/export?{{ request.query_string.decode() }}" class="btn-export">⬇ Export Excel</a>
+        <a href="/leads/add" class="btn-add">+ Add Lead</a>
+      </div>
     </div>
+
+    <!-- Filters -->
+    <form method="GET" action="/leads">
+      <div class="filters">
+        <div class="filter-group">
+          <label>Date Range</label>
+          <select name="date" id="dateFilter" onchange="toggleCustomDates(this.value)">
+            <option value="">All time</option>
+            <option value="today" {% if request.args.get('date') == 'today' %}selected{% endif %}>Today</option>
+            <option value="week" {% if request.args.get('date') == 'week' %}selected{% endif %}>This Week</option>
+            <option value="month" {% if request.args.get('date') == 'month' %}selected{% endif %}>This Month</option>
+            <option value="custom" {% if request.args.get('date') == 'custom' %}selected{% endif %}>Custom Range</option>
+          </select>
+        </div>
+        <div class="filter-group custom-dates {% if request.args.get('date') == 'custom' %}visible{% endif %}" id="customDates">
+          <label>From</label>
+          <input type="date" name="from" value="{{ request.args.get('from', '') }}">
+        </div>
+        <div class="filter-group custom-dates {% if request.args.get('date') == 'custom' %}visible{% endif %}" id="customDatesTo">
+          <label>To</label>
+          <input type="date" name="to" value="{{ request.args.get('to', '') }}">
+        </div>
+        <div class="filter-group">
+          <label>Status</label>
+          <select name="status">
+            <option value="">All statuses</option>
+            <option value="New" {% if request.args.get('status') == 'New' %}selected{% endif %}>New</option>
+            <option value="Called — No Answer" {% if request.args.get('status') == 'Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
+            <option value="Potential Lead" {% if request.args.get('status') == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
+            <option value="Converted" {% if request.args.get('status') == 'Converted' %}selected{% endif %}>Converted</option>
+            <option value="Lost" {% if request.args.get('status') == 'Lost' %}selected{% endif %}>Lost</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Assigned To</label>
+          <select name="staff">
+            <option value="">All staff</option>
+            {% for user in users %}
+            <option value="{{ user.id }}" {% if request.args.get('staff') == user.id|string %}selected{% endif %}>{{ user.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>&nbsp;</label>
+          <div style="display:flex;gap:6px;">
+            <button type="submit" class="btn-filter">Filter</button>
+            <a href="/leads" class="btn-reset">Reset</a>
+          </div>
+        </div>
+      </div>
+    </form>
 
     <div class="card">
       {% if leads %}
@@ -90,8 +158,8 @@
             <th>Company</th>
             <th>Service</th>
             <th>Source</th>
-            <th>Assigned to</th>
-            <th>Due date</th>
+            <th>Assigned To</th>
+            <th>Due Date</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -134,7 +202,7 @@
         </tbody>
       </table>
       {% else %}
-      <div class="empty">No leads yet. Click "+ Add Lead" to get started.</div>
+      <div class="empty">No leads found matching your filters.</div>
       {% endif %}
     </div>
   </div>
@@ -151,6 +219,11 @@
   </div>
 
   <script>
+    function toggleCustomDates(val) {
+      const show = val === 'custom';
+      document.getElementById('customDates').classList.toggle('visible', show);
+      document.getElementById('customDatesTo').classList.toggle('visible', show);
+    }
     function confirmDelete(leadId, leadName) {
       document.getElementById('deleteModalText').textContent =
         'Are you sure you want to delete "' + leadName + '"? This action cannot be undone.';
