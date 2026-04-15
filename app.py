@@ -7,7 +7,7 @@ from functools import wraps
 import os
 
 app = Flask(__name__)
-app.secret_key = 'tahfeel2026secretkey'
+app.secret_key = 'tahfeel2026secretkey' 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tahfeel.db')).replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
