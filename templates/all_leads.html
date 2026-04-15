@@ -267,16 +267,26 @@
       updateBulkBar();
     }
 
-    function updateBulkBar() {
-      const checked = document.querySelectorAll('.row-check:checked');
-      const btn = document.getElementById('bulkDeleteBtn');
-      const count = document.getElementById('selectedCount');
-      count.textContent = checked.length;
-      btn.classList.toggle('visible', checked.length > 0);
-      document.querySelectorAll('.row-check').forEach(c => {
-        c.closest('tr').classList.toggle('selected', c.checked);
-      });
+  function updateBulkBar() {
+  const checked = document.querySelectorAll('.row-check:checked');
+  const btn = document.getElementById('bulkDeleteBtn');
+  const count = document.getElementById('selectedCount');
+  count.textContent = checked.length;
+  btn.classList.toggle('visible', checked.length > 0);
+  const anyChecked = checked.length > 0;
+  document.querySelectorAll('.row-check').forEach(c => {
+    c.closest('tr').classList.toggle('selected', c.checked);
+  });
+  document.querySelectorAll('.btn-sm, .btn-edit').forEach(b => {
+    if (anyChecked) {
+      b.style.pointerEvents = 'none';
+      b.style.opacity = '0.3';
+    } else {
+      b.style.pointerEvents = '';
+      b.style.opacity = '';
     }
+  });
+}
 
     function confirmDelete(leadId, leadName) {
       document.getElementById('deleteModalText').textContent =
