@@ -13,8 +13,6 @@
     .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
     .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
     .nav a:hover { color: white; border-bottom-color: #DCDCBF; }
-    .nav a.danger { color: #FAC775; }
-    .nav a.danger:hover { color: #FFE0A0; }
     .nav a.admin-link { color: #FAC775; }
     .nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
     .container { padding: 24px; max-width: 1000px; margin: 0 auto; }
@@ -41,6 +39,8 @@
     .btn-primary { background: #133E87; color: white; padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
     .btn-primary:hover { background: #1E5AB8; }
     .lost-fields { display: none; background: #fff5f5; border: 1px solid #f5c6c6; border-radius: 8px; padding: 14px; margin-top: 10px; }
+    .potential-field { display: none; background: #f0f8ff; border: 1px solid #b5d4f4; border-radius: 8px; padding: 14px; margin-top: 10px; }
+    .followup-field { margin-bottom: 14px; }
     .timeline { padding: 0; }
     .timeline-item { padding: 14px 20px; border-bottom: 0.5px solid #f0f0f0; font-size: 13px; }
     .timeline-item:last-child { border-bottom: none; }
@@ -49,10 +49,12 @@
     .timeline-meta { font-size: 11px; color: #aaa; }
     .timeline-remark { color: #444; line-height: 1.5; }
     .timeline-followup { margin-top: 6px; font-size: 12px; color: #854F0B; background: #FAEEDA; padding: 3px 10px; border-radius: 4px; display: inline-block; }
+    .timeline-value { margin-top: 6px; font-size: 12px; color: #27500A; background: #EAF3DE; padding: 3px 10px; border-radius: 4px; display: inline-block; }
     .wa-link { display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 3px 10px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600; margin-left: 8px; }
     .wa-link:hover { background: #1da851; }
     .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
     .empty-timeline { padding: 24px; text-align: center; color: #aaa; font-size: 13px; }
+    .req { color: #c0392b; }
   </style>
 </head>
 <body>
@@ -66,8 +68,7 @@
     <a href="/leads/add">Add Lead</a>
     <a href="/leads/import">Import Leads</a>
     {% if session.role == 'admin' %}<a href="/admin" class="admin-link">⚙ Admin Panel</a>{% endif %}
-    <a href="/leads/{{ lead.id }}/edit">✏️ Edit Lead</a>
-    <a href="/leads/{{ lead.id }}/delete" class="danger" onclick="return confirm('Are you sure you want to delete this lead?')">Delete Lead</a>
+    <a href="/leads/{{ lead.id }}/delete" class="danger" onclick="return confirm('Are you sure you want to delete this lead?')" style="color:#FAC775;">Delete Lead</a>
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -108,21 +109,27 @@
           <div class="info-row"><span class="lbl">Assigned to</span><span class="val">{{ lead.assignee.name if lead.assignee else '—' }}</span></div>
           <div class="info-row"><span class="lbl">Due date</span><span class="val">{{ lead.due_date.strftime('%d %b %Y') }}</span></div>
           <div class="info-row"><span class="lbl">Created</span><span class="val">{{ lead.created_at.strftime('%d %b %Y') }}</span></div>
+          {% if lead.potential_value %}
+          <div class="info-row"><span class="lbl">Potential Value</span><span class="val" style="color:#27500A;font-weight:700;">AED {{ '{:,.0f}'.format(lead.potential_value) }}</span></div>
+          {% endif %}
         </div>
       </div>
       <div class="card">
         <div class="card-header"><h2>Update this lead</h2></div>
         <div class="card-body">
-          <form method="POST">
+          <form method="POST" id="updateForm">
             <div class="form-group">
               <label>Customer story</label>
               <textarea name="customer_story" placeholder="Brief profile — e.g. Big businessman, 50 staff">{{ lead.customer_story or '' }}</textarea>
             </div>
             <div class="form-group">
-              <label>Stage / Status</label>
-              <select name="stage" id="stageSelect" onchange="toggleLostFields()">
+              <label>Stage / Status <span class="req">*</span></label>
+              <select name="stage" id="stageSelect" onchange="handleStageChange()">
                 <option value="New" {% if lead.status == 'New' %}selected{% endif %}>New</option>
                 <option value="Called — No Answer" {% if lead.status == 'Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
+                <option value="Call Connected" {% if lead.status == 'Call Connected' %}selected{% endif %}>Call Connected</option>
+                <option value="Sent WhatsApp" {% if lead.status == 'Sent WhatsApp' %}selected{% endif %}>Sent WhatsApp</option>
+                <option value="Sent Mail" {% if lead.status == 'Sent Mail' %}selected{% endif %}>Sent Mail</option>
                 <option value="Called — Callback Requested" {% if lead.status == 'Called — Callback Requested' %}selected{% endif %}>Called — Callback Requested</option>
                 <option value="Meeting Scheduled" {% if lead.status == 'Meeting Scheduled' %}selected{% endif %}>Meeting Scheduled</option>
                 <option value="Potential Lead" {% if lead.status == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
@@ -130,6 +137,17 @@
                 <option value="Lost" {% if lead.status == 'Lost' %}selected{% endif %}>Lost</option>
               </select>
             </div>
+
+            <!-- Potential value — only show if not yet captured -->
+            {% if not lead.potential_value %}
+            <div class="potential-field" id="potentialField">
+              <label>Potential Value (AED) <span class="req">*</span></label>
+              <input type="number" name="potential_value" id="potentialInput" min="0" placeholder="e.g. 5000">
+              <small style="color:#555;font-size:11px;margin-top:4px;display:block;">Enter estimated value of this lead in AED</small>
+            </div>
+            {% endif %}
+
+            <!-- Lost fields -->
             <div class="lost-fields" id="lostFields">
               <div class="form-group">
                 <label>Reason for loss</label>
@@ -151,14 +169,18 @@
                 </select>
               </div>
             </div>
+
             <div class="form-group">
-              <label>Remark <span style="color:#c0392b;">*</span></label>
+              <label>Remark <span class="req">*</span></label>
               <textarea name="remark" required placeholder="What happened? What was discussed?"></textarea>
             </div>
-            <div class="form-group">
-              <label>Follow-up date & time</label>
-              <input type="datetime-local" name="followup_date">
+
+            <!-- Follow-up date — hidden for Converted and Lost -->
+            <div class="followup-field" id="followupField">
+              <label>Follow-up date <span class="req" id="followupReq">*</span></label>
+              <input type="date" name="followup_date" id="followupDate" min="{{ now.strftime('%Y-%m-%d') }}">
             </div>
+
             <button type="submit" class="btn-primary">Save Update</button>
           </form>
         </div>
@@ -174,11 +196,11 @@
         <div class="timeline-item">
           <div class="timeline-top">
             <span class="timeline-stage">{{ update.stage }}</span>
-            <span class="timeline-meta">{{ update.staff_name }} · {{ update.created_at.strftime('%d %b %Y %H:%M') }}</span>
+            <span class="timeline-meta">{{ update.staff_name }} · {{ update.created_at.strftime('%d %b %Y') }}</span>
           </div>
           <div class="timeline-remark">{{ update.remark }}</div>
           {% if update.followup_date %}
-          <div class="timeline-followup">Follow-up: {{ update.followup_date.strftime('%d %b %Y %H:%M') }}</div>
+          <div class="timeline-followup">Follow-up: {{ update.followup_date.strftime('%d %b %Y') }}</div>
           {% endif %}
           {% if update.lost_reason %}
           <div class="timeline-followup" style="background:#FCEBEB;color:#791F1F;">Loss reason: {{ update.lost_reason }}</div>
@@ -193,11 +215,40 @@
   </div>
 
   <script>
-    function toggleLostFields() {
+    const POSITIVE_STATUSES = ['Call Connected', 'Sent WhatsApp', 'Sent Mail', 'Potential Lead', 'Meeting Scheduled'];
+    const NO_FOLLOWUP_STATUSES = ['Converted', 'Lost'];
+    const today = '{{ now.strftime("%Y-%m-%d") }}';
+
+    function handleStageChange() {
       const stage = document.getElementById('stageSelect').value;
+
+      // Show/hide lost fields
       document.getElementById('lostFields').style.display = stage === 'Lost' ? 'block' : 'none';
+
+      // Show/hide potential value field
+      const potentialField = document.getElementById('potentialField');
+      if (potentialField) {
+        const show = POSITIVE_STATUSES.includes(stage);
+        potentialField.style.display = show ? 'block' : 'none';
+        document.getElementById('potentialInput').required = show;
+      }
+
+      // Show/hide followup date
+      const followupField = document.getElementById('followupField');
+      const followupDate = document.getElementById('followupDate');
+      const followupReq = document.getElementById('followupReq');
+      if (NO_FOLLOWUP_STATUSES.includes(stage)) {
+        followupField.style.display = 'none';
+        followupDate.required = false;
+      } else {
+        followupField.style.display = 'block';
+        followupDate.required = true;
+        followupDate.min = today;
+      }
     }
-    toggleLostFields();
+
+    // Run on page load
+    handleStageChange();
   </script>
 </body>
 </html>
