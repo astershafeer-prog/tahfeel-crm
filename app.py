@@ -219,7 +219,7 @@ def export_leads():
             lead.service or '',
             lead.lead_type or '',
             lead.assignee.name if lead.assignee else '',
-            lead.due_date.strftime('%d %b %Y %H:%M') if lead.due_date else '',
+            lead.due_date.strftime('%d %b %Y') if lead.due_date else '',
             lead.status or '',
             lead.remarks or '',
             lead.created_at.strftime('%d %b %Y') if lead.created_at else '',
@@ -243,7 +243,7 @@ def add_lead():
     users = User.query.filter_by(active=True, role='staff').all()
     if request.method == 'POST':
         due = request.form.get('due_date')
-        due_dt = datetime.strptime(due, '%Y-%m-%dT%H:%M') if due else datetime.now() + timedelta(hours=4)
+        due_dt = datetime.strptime(due, '%Y-%m-%d') if due else datetime.now() + timedelta(hours=4)
         lead = Lead(
             name=request.form['name'],
             company=request.form.get('company'),
@@ -411,7 +411,7 @@ def edit_lead(lead_id):
         lead.assigned_to = int(assigned) if assigned else None
         due = request.form.get('due_date')
         if due:
-            lead.due_date = datetime.strptime(due, '%Y-%m-%dT%H:%M')
+            lead.due_date = datetime.strptime(due, '%Y-%m-%d')
         db.session.commit()
         flash('Lead updated successfully')
         return redirect(url_for('lead_detail', lead_id=lead_id))
