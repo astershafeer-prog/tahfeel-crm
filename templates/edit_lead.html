@@ -13,6 +13,8 @@
     .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
     .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
     .nav a:hover { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
     .container { padding: 24px; max-width: 800px; margin: 0 auto; }
     .card { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 28px; }
     .card h2 { font-size: 16px; color: #133E87; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #133E87; }
@@ -42,7 +44,7 @@
     <a href="/leads">All Leads</a>
     <a href="/leads/add">Add Lead</a>
     <a href="/leads/import">Import Leads</a>
-    <a href="/users">Manage Staff</a>
+    {% if session.role == 'admin' %}<a href="/admin" class="admin-link">⚙ Admin Panel</a>{% endif %}
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -80,8 +82,8 @@
             <label>Service Enquired *</label>
             <select name="service" required>
               <option value="">— Select service —</option>
-              {% for s in ['Trade License','Family Visa','PRO Services','Healthcare License','Umrah Package','Other'] %}
-              <option {% if lead.service == s %}selected{% endif %}>{{ s }}</option>
+              {% for s in services %}
+              <option value="{{ s.name }}" {% if lead.service == s.name %}selected{% endif %}>{{ s.name }}</option>
               {% endfor %}
             </select>
           </div>
@@ -89,8 +91,8 @@
             <label>Source</label>
             <select name="source">
               <option value="">— Select source —</option>
-              {% for s in ['Walk-in','WhatsApp','Referral','Social Media','Website','Other'] %}
-              <option {% if lead.source == s %}selected{% endif %}>{{ s }}</option>
+              {% for s in sources %}
+              <option value="{{ s.name }}" {% if lead.source == s.name %}selected{% endif %}>{{ s.name }}</option>
               {% endfor %}
             </select>
           </div>
