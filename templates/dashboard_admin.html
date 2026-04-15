@@ -15,16 +15,17 @@
     .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
     .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
     .nav a.admin-link { color: #FAC775; }
-.nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
+    .nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
     .container { padding: 24px; max-width: 1100px; margin: 0 auto; }
     .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 28px; }
     .stat-card { background: white; border-radius: 12px; padding: 20px 22px; border: 0.5px solid #ddd; }
     .stat-card .label { font-size: 12px; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.4px; }
-    .stat-card .value { font-size: 32px; font-weight: 700; color: #133E87; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #133E87; }
     .stat-card .sub { font-size: 12px; color: #aaa; margin-top: 4px; }
     .stat-card.amber .value { color: #854F0B; }
     .stat-card.green .value { color: #1D6F42; }
+    .stat-card.teal .value { color: #0F6E56; font-size: 22px; }
     .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; margin-bottom: 24px; overflow: hidden; }
     .card-header { padding: 16px 20px; border-bottom: 0.5px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .card-header h2 { font-size: 15px; color: #133E87; font-weight: 700; }
@@ -40,6 +41,7 @@
     .num.notstarted { color: #555; }
     .num.converted { color: #1D6F42; }
     .num.overdue { color: #c0392b; }
+    .num.value { color: #0F6E56; font-size: 13px; }
     .progress-bar { height: 6px; background: #eee; border-radius: 4px; margin-top: 5px; overflow: hidden; }
     .progress-fill { height: 100%; background: #133E87; border-radius: 4px; }
     .empty { padding: 32px; text-align: center; color: #aaa; font-size: 13px; }
@@ -79,10 +81,11 @@
     {% if overdue %}
     <div class="overdue-alert">
       ⚠️ <span><strong>{{ overdue|length }} lead{{ 's' if overdue|length > 1 else '' }}</strong> overdue and need immediate attention</span>
-      <a href="/leads">View all leads →</a>
+      <a href="/leads?status=Overdue">View overdue leads →</a>
     </div>
     {% endif %}
 
+    <!-- Stats -->
     <div class="stats">
       <div class="stat-card">
         <div class="label">Total Leads</div>
@@ -104,8 +107,14 @@
         <div class="value">{{ converted|length }}</div>
         <div class="sub">Closed won</div>
       </div>
+      <div class="stat-card teal">
+        <div class="label">Potential Value</div>
+        <div class="value">AED {{ '{:,.0f}'.format(total_potential) }}</div>
+        <div class="sub">Active leads</div>
+      </div>
     </div>
 
+    <!-- Staff performance -->
     <div class="card">
       <div class="card-header">
         <h2>Staff Performance</h2>
@@ -124,6 +133,7 @@
             <th>Not Started</th>
             <th>Converted</th>
             <th>Overdue</th>
+            <th>Potential Value</th>
             <th>Progress</th>
           </tr>
         </thead>
@@ -136,6 +146,7 @@
             <td><span class="num notstarted">{{ s.not_started }}</span></td>
             <td><span class="num converted">{{ s.converted }}</span></td>
             <td><span class="num overdue">{{ s.overdue }}</span></td>
+            <td><span class="num value">AED {{ '{:,.0f}'.format(s.potential_value) }}</span></td>
             <td style="min-width:120px;">
               <div style="font-size:11px;color:#888;margin-bottom:4px;">{{ s.converted }}/{{ s.total }} converted</div>
               <div class="progress-bar">
