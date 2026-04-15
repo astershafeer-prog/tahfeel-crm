@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -110,10 +109,25 @@ def dashboard():
         total = len(leads)
         overdue = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
         converted = [l for l in leads if l.status == 'Converted']
-        pending = [l for l in leads if l.status not in ['Converted', 'Lost']]
-        users = User.query.filter_by(active=True).all()
+        pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
+        not_started = [l for l in leads if l.status == 'New']
+        users = User.query.filter_by(active=True, role='staff').all()
+
+        staff_stats = []
+        for u in users:
+            u_leads = [l for l in leads if l.assigned_to == u.id]
+            staff_stats.append({
+                'name': u.name,
+                'total': len(u_leads),
+                'pending': len([l for l in u_leads if l.status not in ['Converted', 'Lost', 'New']]),
+                'not_started': len([l for l in u_leads if l.status == 'New']),
+                'converted': len([l for l in u_leads if l.status == 'Converted']),
+                'overdue': len([l for l in u_leads if l.due_date < now and l.status not in ['Converted', 'Lost']]),
+            })
+
         return render_template('dashboard_admin.html', leads=leads, total=total,
                                overdue=overdue, converted=converted, pending=pending,
+                               not_started=not_started, staff_stats=staff_stats,
                                users=users, now=now)
     else:
         leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
@@ -125,6 +139,14 @@ def dashboard():
         ).all()
         return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
                                followups=followups, now=now)
+
+@app.route('/leads')
+@login_required
+@admin_required
+def all_leads():
+    now = datetime.now()
+    leads = Lead.query.order_by(Lead.due_date).all()
+    return render_template('all_leads.html', leads=leads, now=now)
 
 @app.route('/leads/add', methods=['GET', 'POST'])
 @login_required
@@ -271,6 +293,7 @@ def download_template():
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     response.headers['Content-Disposition'] = 'attachment; filename=tahfeel_leads_template.xlsx'
     return response
+
 @app.route('/leads/<int:lead_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_lead(lead_id):
@@ -306,7 +329,7 @@ def delete_lead(lead_id):
     db.session.commit()
     flash('Lead deleted successfully')
     return redirect(url_for('dashboard'))
-    
+
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
