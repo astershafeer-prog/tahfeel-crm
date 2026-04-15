@@ -536,7 +536,29 @@ def delete_lead(lead_id):
     db.session.delete(lead)
     db.session.commit()
     flash('Lead deleted successfully')
-    return redirect(url_for('dashboard'))
+    ref = request.referrer
+    if ref and '/leads' in ref:
+        return redirect(ref)
+    return redirect(url_for('all_leads'))
+
+@app.route('/leads/bulk-delete', methods=['POST'])
+@login_required
+@admin_required
+def bulk_delete_leads():
+    ids = request.form.getlist('lead_ids')
+    if not ids:
+        flash('No leads selected')
+        return redirect(url_for('all_leads'))
+    count = 0
+    for lead_id in ids:
+        lead = Lead.query.get(int(lead_id))
+        if lead:
+            LeadUpdate.query.filter_by(lead_id=lead.id).delete()
+            db.session.delete(lead)
+            count += 1
+    db.session.commit()
+    flash(f'{count} lead(s) deleted successfully')
+    return redirect(url_for('all_leads'))
 
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
