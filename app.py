@@ -630,7 +630,14 @@ def manage_users():
 @admin_required
 def toggle_user(user_id):
     return redirect(url_for('admin_toggle_staff', user_id=user_id))
-
+@app.route('/fix-lukman')
+def fix_lukman():
+    user = User.query.filter_by(email='lukman@tahfeel.ae').first()
+    if user:
+        user.name = 'Lukman'
+        db.session.commit()
+        return 'Fixed! Lukman name updated.'
+    return 'User not found.'
 def init_db():
     with app.app_context():
         db.create_all()
