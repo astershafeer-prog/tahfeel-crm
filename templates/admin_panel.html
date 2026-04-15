@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Admin Panel</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+    .topbar a { color: #DCDCBF; text-decoration: none; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .nav a.admin-link:hover, .nav a.admin-link.active { color: #FFE0A0; border-bottom-color: #FAC775; }
+    .container { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .page-title { font-size: 20px; font-weight: 700; color: #133E87; margin-bottom: 24px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid.full { grid-template-columns: 1fr; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 16px 20px; border-bottom: 0.5px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h2 { font-size: 15px; color: #133E87; font-weight: 700; }
+    .card-body { padding: 20px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 9px 14px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+    td { padding: 10px 14px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-staff { background: #E6F1FB; color: #0C447C; }
+    .badge-admin { background: #FAEEDA; color: #633806; }
+    .badge-active { background: #EAF3DE; color: #27500A; }
+    .badge-inactive { background: #f0f0f0; color: #888; }
+    .actions { display: flex; gap: 6px; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; cursor: pointer; background: none; }
+    .btn-sm:hover { background: #133E87; color: white; }
+    .btn-danger { border-color: #c0392b; color: #c0392b; }
+    .btn-danger:hover { background: #c0392b; color: white; }
+    .form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+    .form-group label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .form-group input, .form-group select { padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; }
+    .form-group input:focus, .form-group select:focus { border-color: #133E87; }
+    .btn-primary { background: #133E87; color: white; padding: 9px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-primary:hover { background: #1E5AB8; }
+    .divider { border: none; border-top: 0.5px solid #eee; margin: 20px 0; }
+    .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid #f0f0f0; font-size: 13px; }
+    .list-item:last-child { border-bottom: none; }
+    .empty { color: #aaa; font-size: 13px; padding: 12px 0; }
+    .protected { font-size: 12px; color: #aaa; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div class="right">
+      <span>{{ session.user_name }} (Admin)</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/leads">All Leads</a>
+    <a href="/leads/add">Add Lead</a>
+    <a href="/leads/import">Import Leads</a>
+    <a href="/admin" class="admin-link active">⚙ Admin Panel</a>
+  </div>
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}
+        <div class="flash">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-title">⚙ Admin Panel</div>
+
+    <!-- Staff Management -->
+    <div class="card">
+      <div class="card-header">
+        <h2>👥 Staff Management</h2>
+      </div>
+      <div class="card-body">
+        <!-- Add staff form -->
+        <form method="POST" action="/admin/staff/add">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" name="name" required placeholder="Staff name">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" name="email" required placeholder="email@tahfeel.ae">
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" name="password" required placeholder="Password">
+            </div>
+            <div class="form-group" style="max-width:130px;">
+              <label>Role</label>
+              <select name="role">
+                <option value="staff">Staff</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary">Add Staff</button>
+          </div>
+        </form>
+        <hr class="divider">
+        <!-- Staff table -->
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+            <tr>
+              <td><strong>{{ user.name }}</strong></td>
+              <td>{{ user.email }}</td>
+              <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span></td>
+              <td><span class="badge {{ 'badge-active' if user.active else 'badge-inactive' }}">{{ 'Active' if user.active else 'Inactive' }}</span></td>
+              <td>
+                {% if user.role == 'admin' %}
+                  <span class="protected">Protected</span>
+                {% else %}
+                <div class="actions">
+                  <a href="/admin/staff/{{ user.id }}/toggle" class="btn-sm">
+                    {{ 'Deactivate' if user.active else 'Activate' }}
+                  </a>
+                  <a href="/admin/staff/{{ user.id }}/delete" class="btn-sm btn-danger"
+                     onclick="return confirm('Delete {{ user.name }}? This cannot be undone.')">Delete</a>
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Services -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🔧 Services</h2>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="/admin/service/add">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" name="name" required placeholder="e.g. Trade License">
+              </div>
+              <button type="submit" class="btn-primary">Add</button>
+            </div>
+          </form>
+          <hr class="divider">
+          {% if services %}
+            {% for service in services %}
+            <div class="list-item">
+              <span>{{ service.name }}</span>
+              <a href="/admin/service/{{ service.id }}/delete" class="btn-sm btn-danger"
+                 onclick="return confirm('Remove {{ service.name }}?')">Remove</a>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No services yet. Add one above.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Sources -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📋 Lead Sources</h2>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="/admin/source/add">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Source Name</label>
+                <input type="text" name="name" required placeholder="e.g. WhatsApp">
+              </div>
+              <button type="submit" class="btn-primary">Add</button>
+            </div>
+          </form>
+          <hr class="divider">
+          {% if sources %}
+            {% for source in sources %}
+            <div class="list-item">
+              <span>{{ source.name }}</span>
+              <a href="/admin/source/{{ source.id }}/delete" class="btn-sm btn-danger"
+                 onclick="return confirm('Remove {{ source.name }}?')">Remove</a>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No sources yet. Add one above.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
