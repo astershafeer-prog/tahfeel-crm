@@ -6,7 +6,7 @@ from functools import wraps
 import os
 
 app = Flask(__name__)
-app.secret_key = 'tahfeel2026secretkey' 
+app.secret_key = 'tahfeel2026secretkey'
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tahfeel.db')).replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -60,6 +60,14 @@ class LeadUpdate(db.Model):
     lost_reason = db.Column(db.String(100))
     future_potential = db.Column(db.String(20))
 
+class Service(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+
+class Source(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -81,7 +89,6 @@ def apply_lead_filters(leads, args, now):
     date_filter = args.get('date')
     status_filter = args.get('status')
     staff_filter = args.get('staff')
-
     if date_filter == 'today':
         leads = [l for l in leads if l.due_date.date() == now.date()]
     elif date_filter == 'week':
@@ -99,13 +106,10 @@ def apply_lead_filters(leads, args, now):
         if to_date:
             to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
             leads = [l for l in leads if l.due_date.date() <= to_dt]
-
     if status_filter:
         leads = [l for l in leads if l.status == status_filter]
-
     if staff_filter:
         leads = [l for l in leads if l.assigned_to == int(staff_filter)]
-
     return leads
 
 @app.route('/')
@@ -143,7 +147,6 @@ def dashboard():
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
         not_started = [l for l in leads if l.status == 'New']
         users = User.query.filter_by(active=True, role='staff').all()
-
         staff_stats = []
         for u in users:
             u_leads = [l for l in leads if l.assigned_to == u.id]
@@ -155,7 +158,6 @@ def dashboard():
                 'converted': len([l for l in u_leads if l.status == 'Converted']),
                 'overdue': len([l for l in u_leads if l.due_date < now and l.status not in ['Converted', 'Lost']]),
             })
-
         return render_template('dashboard_admin.html', leads=leads, total=total,
                                overdue=overdue, converted=converted, pending=pending,
                                not_started=not_started, staff_stats=staff_stats,
@@ -189,46 +191,32 @@ def export_leads():
     from openpyxl.styles import Font, PatternFill
     from flask import make_response
     import io
-
     now = datetime.now()
     leads = Lead.query.order_by(Lead.due_date).all()
     leads = apply_lead_filters(leads, request.args, now)
-
     wb = Workbook()
     ws = wb.active
     ws.title = "Leads"
-
     headers = ['Name', 'Company', 'Phone', 'Email', 'Address', 'Source',
                'Service', 'Lead Type', 'Assigned To', 'Due Date', 'Status', 'Remarks', 'Created']
     ws.append(headers)
-
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
     for cell in ws[1]:
         cell.font = header_font
         cell.fill = header_fill
-
     for lead in leads:
         ws.append([
-            lead.name,
-            lead.company or '',
-            lead.phone or '',
-            lead.email or '',
-            lead.address or '',
-            lead.source or '',
-            lead.service or '',
-            lead.lead_type or '',
+            lead.name, lead.company or '', lead.phone or '', lead.email or '',
+            lead.address or '', lead.source or '', lead.service or '', lead.lead_type or '',
             lead.assignee.name if lead.assignee else '',
             lead.due_date.strftime('%d %b %Y') if lead.due_date else '',
-            lead.status or '',
-            lead.remarks or '',
+            lead.status or '', lead.remarks or '',
             lead.created_at.strftime('%d %b %Y') if lead.created_at else '',
         ])
-
     for col in ws.columns:
         max_length = max(len(str(cell.value or '')) for cell in col)
         ws.column_dimensions[col[0].column_letter].width = max_length + 4
-
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
@@ -241,6 +229,8 @@ def export_leads():
 @login_required
 def add_lead():
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    services = Service.query.order_by(Service.name).all()
+    sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
         due = request.form.get('due_date')
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else datetime.now() + timedelta(hours=4)
@@ -262,7 +252,7 @@ def add_lead():
         db.session.commit()
         flash('Lead added successfully')
         return redirect(url_for('dashboard'))
-    return render_template('add_lead.html', users=users)
+    return render_template('add_lead.html', users=users, services=services, sources=sources)
 
 @app.route('/leads/<int:lead_id>', methods=['GET', 'POST'])
 @login_required
@@ -274,11 +264,8 @@ def lead_detail(lead_id):
         followup = request.form.get('followup_date')
         followup_dt = datetime.strptime(followup, '%Y-%m-%dT%H:%M') if followup else None
         update = LeadUpdate(
-            lead_id=lead.id,
-            stage=stage,
-            remark=remark,
-            staff_name=session['user_name'],
-            followup_date=followup_dt,
+            lead_id=lead.id, stage=stage, remark=remark,
+            staff_name=session['user_name'], followup_date=followup_dt,
             lost_reason=request.form.get('lost_reason'),
             future_potential=request.form.get('future_potential')
         )
@@ -331,10 +318,8 @@ def import_leads():
                     errors.append(f'Row {i}: Phone is required — skipped')
                     continue
                 lead = Lead(
-                    name=str(name),
-                    company=str(company) if company else None,
-                    phone=str(phone),
-                    email=str(email) if email else None,
+                    name=str(name), company=str(company) if company else None,
+                    phone=str(phone), email=str(email) if email else None,
                     address=str(address) if address else None,
                     source=str(source) if source else None,
                     service=str(service) if service else None,
@@ -370,11 +355,10 @@ def download_template():
                'Source', 'Service', 'Lead Type', 'Remarks', 'Assigned To']
     ws.append(headers)
     ws.append(['John Smith', 'ABC Trading LLC', '+971501234567',
-               'john@abc.ae', 'Dubai', 'WhatsApp',
-               'Trade License', 'New', 'Interested in mainland license', 'Aslam'])
-    ws.append(['Sara Ahmed', '', '+971509876543',
-               '', 'Sharjah', 'Referral',
-               'Family Visa', 'New', '', 'Anfal'])
+               'john@abc.ae', 'Dubai', 'WhatsApp', 'Trade License', 'New',
+               'Interested in mainland license', 'Aslam'])
+    ws.append(['Sara Ahmed', '', '+971509876543', '', 'Sharjah',
+               'Referral', 'Family Visa', 'New', '', 'Anfal'])
     from openpyxl.styles import Font, PatternFill
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
@@ -397,6 +381,8 @@ def download_template():
 def edit_lead(lead_id):
     lead = Lead.query.get_or_404(lead_id)
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    services = Service.query.order_by(Service.name).all()
+    sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
         lead.name = request.form['name']
         lead.company = request.form.get('company')
@@ -415,7 +401,7 @@ def edit_lead(lead_id):
         db.session.commit()
         flash('Lead updated successfully')
         return redirect(url_for('lead_detail', lead_id=lead_id))
-    return render_template('edit_lead.html', lead=lead, users=users)
+    return render_template('edit_lead.html', lead=lead, users=users, services=services, sources=sources)
 
 @app.route('/leads/<int:lead_id>/delete')
 @login_required
@@ -428,45 +414,125 @@ def delete_lead(lead_id):
     flash('Lead deleted successfully')
     return redirect(url_for('dashboard'))
 
+@app.route('/admin', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_panel():
+    users = User.query.order_by(User.name).all()
+    services = Service.query.order_by(Service.name).all()
+    sources = Source.query.order_by(Source.name).all()
+    return render_template('admin_panel.html', users=users, services=services, sources=sources)
+
+@app.route('/admin/staff/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_staff():
+    email = request.form['email']
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        flash('This email already exists')
+        return redirect(url_for('admin_panel'))
+    try:
+        user = User(
+            name=request.form['name'],
+            email=email,
+            password=generate_password_hash(request.form['password']),
+            role=request.form['role']
+        )
+        db.session.add(user)
+        db.session.commit()
+        flash('Staff member added successfully')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error — ' + str(e))
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/staff/<int:user_id>/toggle')
+@login_required
+@admin_required
+def admin_toggle_staff(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.role == 'admin':
+        flash('Admin accounts cannot be deactivated')
+        return redirect(url_for('admin_panel'))
+    user.active = not user.active
+    db.session.commit()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/staff/<int:user_id>/delete')
+@login_required
+@admin_required
+def admin_delete_staff(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.role == 'admin':
+        flash('Admin accounts cannot be deleted')
+        return redirect(url_for('admin_panel'))
+    db.session.delete(user)
+    db.session.commit()
+    flash('Staff member removed')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/service/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_service():
+    name = request.form.get('name', '').strip()
+    if name:
+        existing = Service.query.filter_by(name=name).first()
+        if existing:
+            flash('Service already exists')
+        else:
+            db.session.add(Service(name=name))
+            db.session.commit()
+            flash(f'Service "{name}" added')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/service/<int:service_id>/delete')
+@login_required
+@admin_required
+def admin_delete_service(service_id):
+    service = Service.query.get_or_404(service_id)
+    db.session.delete(service)
+    db.session.commit()
+    flash(f'Service "{service.name}" removed')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/source/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_source():
+    name = request.form.get('name', '').strip()
+    if name:
+        existing = Source.query.filter_by(name=name).first()
+        if existing:
+            flash('Source already exists')
+        else:
+            db.session.add(Source(name=name))
+            db.session.commit()
+            flash(f'Source "{name}" added')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/source/<int:source_id>/delete')
+@login_required
+@admin_required
+def admin_delete_source(source_id):
+    source = Source.query.get_or_404(source_id)
+    db.session.delete(source)
+    db.session.commit()
+    flash(f'Source "{source.name}" removed')
+    return redirect(url_for('admin_panel'))
+
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def manage_users():
-    if request.method == 'POST':
-        email = request.form['email']
-        existing = User.query.filter_by(email=email).first()
-        if existing:
-            flash('This email already exists — please use a different email')
-            users = User.query.all()
-            return render_template('users.html', users=users)
-        try:
-            user = User(
-                name=request.form['name'],
-                email=email,
-                password=generate_password_hash(request.form['password']),
-                role=request.form['role']
-            )
-            db.session.add(user)
-            db.session.commit()
-            flash('User added successfully')
-        except Exception as e:
-            db.session.rollback()
-            flash('Error — ' + str(e))
-        return redirect(url_for('manage_users'))
-    users = User.query.all()
-    return render_template('users.html', users=users)
+    return redirect(url_for('admin_panel'))
 
 @app.route('/users/<int:user_id>/toggle')
 @login_required
 @admin_required
 def toggle_user(user_id):
-    user = User.query.get_or_404(user_id)
-    if user.role == 'admin':
-        flash('Admin accounts cannot be deactivated')
-        return redirect(url_for('manage_users'))
-    user.active = not user.active
-    db.session.commit()
-    return redirect(url_for('manage_users'))
+    return redirect(url_for('admin_toggle_staff', user_id=user_id))
 
 def init_db():
     with app.app_context():
@@ -475,16 +541,24 @@ def init_db():
             admin = User.query.filter_by(email='admin@tahfeel.ae').first()
             if not admin:
                 new_admin = User(
-                    name='Admin',
-                    email='admin@tahfeel.ae',
-                    password=generate_password_hash('tahfeel2026'),
-                    role='admin'
+                    name='Admin', email='admin@tahfeel.ae',
+                    password=generate_password_hash('tahfeel2026'), role='admin'
                 )
                 db.session.add(new_admin)
                 db.session.commit()
                 print('Admin user created')
             else:
                 print('Admin already exists — skipping')
+            if Service.query.count() == 0:
+                for s in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
+                    db.session.add(Service(name=s))
+                db.session.commit()
+                print('Default services created')
+            if Source.query.count() == 0:
+                for s in ['Walk-in', 'WhatsApp', 'Referral', 'Social Media', 'Website', 'Other']:
+                    db.session.add(Source(name=s))
+                db.session.commit()
+                print('Default sources created')
         except Exception as e:
             db.session.rollback()
             print(f'Init db error: {e}')
