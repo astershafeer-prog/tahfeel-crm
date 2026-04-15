@@ -217,6 +217,8 @@ def import_leads():
             ws = wb.active
             count = 0
             errors = []
+            all_staff = User.query.filter_by(active=True, role='staff').all()
+            staff_map = {u.name.strip().lower(): u.id for u in all_staff}
             for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
                 name = row[0] if len(row) > 0 else None
                 company = row[1] if len(row) > 1 else None
@@ -227,6 +229,12 @@ def import_leads():
                 service = row[6] if len(row) > 6 else None
                 lead_type = row[7] if len(row) > 7 else 'New'
                 remarks = row[8] if len(row) > 8 else None
+                assigned_name = str(row[9]).strip() if len(row) > 9 and row[9] else None
+                assigned_id = None
+                if assigned_name:
+                    assigned_id = staff_map.get(assigned_name.lower())
+                    if not assigned_id:
+                        errors.append(f'Row {i}: Staff "{assigned_name}" not found — lead imported unassigned')
                 if not name:
                     errors.append(f'Row {i}: Name is required — skipped')
                     continue
@@ -244,13 +252,14 @@ def import_leads():
                     lead_type=str(lead_type) if lead_type else 'New',
                     remarks=str(remarks) if remarks else None,
                     representative=session['user_name'],
+                    assigned_to=assigned_id,
                     due_date=datetime.now() + timedelta(hours=4)
                 )
                 db.session.add(lead)
                 count += 1
             db.session.commit()
             if errors:
-                flash(f'Imported {count} leads. Skipped: ' + ' | '.join(errors))
+                flash(f'Imported {count} leads. Notes: ' + ' | '.join(errors))
             else:
                 flash(f'Successfully imported {count} leads!')
             return redirect(url_for('dashboard'))
@@ -269,14 +278,14 @@ def download_template():
     ws = wb.active
     ws.title = "Leads"
     headers = ['Name*', 'Company', 'Phone*', 'Email', 'Address',
-               'Source', 'Service', 'Lead Type', 'Remarks']
+               'Source', 'Service', 'Lead Type', 'Remarks', 'Assigned To']
     ws.append(headers)
     ws.append(['John Smith', 'ABC Trading LLC', '+971501234567',
                'john@abc.ae', 'Dubai', 'WhatsApp',
-               'Trade License', 'New', 'Interested in mainland license'])
+               'Trade License', 'New', 'Interested in mainland license', 'Aslam'])
     ws.append(['Sara Ahmed', '', '+971509876543',
                '', 'Sharjah', 'Referral',
-               'Family Visa', 'New', ''])
+               'Family Visa', 'New', '', 'Anfal'])
     from openpyxl.styles import Font, PatternFill
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
@@ -344,7 +353,7 @@ def manage_users():
         try:
             user = User(
                 name=request.form['name'],
-                email=email,
+                email=request.form['email'],
                 password=generate_password_hash(request.form['password']),
                 role=request.form['role']
             )
