@@ -138,6 +138,7 @@
             <option value="Potential Lead" {% if request.args.get('status') == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
             <option value="Converted" {% if request.args.get('status') == 'Converted' %}selected{% endif %}>Converted</option>
             <option value="Lost" {% if request.args.get('status') == 'Lost' %}selected{% endif %}>Lost</option>
+<option value="Overdue" {% if request.args.get('status') == 'Overdue' %}selected{% endif %}>⚠ Overdue</option>
           </select>
         </div>
         <div class="filter-group">
