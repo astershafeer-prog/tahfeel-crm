@@ -4,3 +4,4 @@ werkzeug
 gunicorn
 openpyxl
 psycopg2-binary
+
