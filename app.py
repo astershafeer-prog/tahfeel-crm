@@ -526,17 +526,6 @@ def admin_add_staff():
         flash('Error — ' + str(e))
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/staff/<int:user_id>/toggle')
-@login_required
-@admin_required
-def admin_toggle_staff(user_id):
-    user = User.query.get_or_404(user_id)
-    if user.role == 'admin':
-        flash('Admin accounts cannot be deactivated')
-        return redirect(url_for('admin_panel'))
-    user.active = not user.active
-    db.session.commit()
-    return redirect(url_for('admin_panel'))
 @app.route('/admin/staff/<int:user_id>/edit', methods=['POST'])
 @login_required
 @admin_required
@@ -554,6 +543,18 @@ def admin_edit_staff(user_id):
         user.email = email
     db.session.commit()
     flash('Staff member updated successfully')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/staff/<int:user_id>/toggle')
+@login_required
+@admin_required
+def admin_toggle_staff(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.role == 'admin':
+        flash('Admin accounts cannot be deactivated')
+        return redirect(url_for('admin_panel'))
+    user.active = not user.active
+    db.session.commit()
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/staff/<int:user_id>/delete')
@@ -619,6 +620,11 @@ def admin_delete_source(source_id):
     flash(f'Source "{source.name}" removed')
     return redirect(url_for('admin_panel'))
 
+@app.route('/list-users')
+def list_users():
+    users = User.query.all()
+    return '<br>'.join([f'{u.id}: {u.name} | {u.email} | {u.role}' for u in users])
+
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -630,12 +636,7 @@ def manage_users():
 @admin_required
 def toggle_user(user_id):
     return redirect(url_for('admin_toggle_staff', user_id=user_id))
-@app.route('/list-users')
-def list_users():
-    users = User.query.all()
-    return '<br>'.join([f'{u.id}: {u.name} | {u.email} | {u.role}' for u in users])
 
-def init_db():
 def init_db():
     with app.app_context():
         db.create_all()
