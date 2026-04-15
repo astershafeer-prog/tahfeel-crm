@@ -1,4 +1,4 @@
-# v14
+# v15
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -47,6 +47,7 @@ class Lead(db.Model):
     status = db.Column(db.String(50), default='New')
     created_at = db.Column(db.DateTime, default=datetime.now)
     customer_story = db.Column(db.Text)
+    potential_value = db.Column(db.Float, default=0)
     assignee = db.relationship('User', foreign_keys=[assigned_to])
     updates = db.relationship('LeadUpdate', backref='lead', lazy=True, order_by='LeadUpdate.created_at.desc()')
 
@@ -108,7 +109,10 @@ def apply_lead_filters(leads, args, now):
             to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
             leads = [l for l in leads if l.due_date.date() <= to_dt]
     if status_filter:
-        leads = [l for l in leads if l.status == status_filter]
+        if status_filter == 'Overdue':
+            leads = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
+        else:
+            leads = [l for l in leads if l.status == status_filter]
     if staff_filter:
         leads = [l for l in leads if l.assigned_to == int(staff_filter)]
     return leads
@@ -158,10 +162,13 @@ def dashboard():
                 'not_started': len([l for l in u_leads if l.status == 'New']),
                 'converted': len([l for l in u_leads if l.status == 'Converted']),
                 'overdue': len([l for l in u_leads if l.due_date < now and l.status not in ['Converted', 'Lost']]),
+                'potential_value': sum(l.potential_value or 0 for l in u_leads if l.status not in ['Converted', 'Lost']),
             })
+        total_potential = sum(l.potential_value or 0 for l in leads if l.status not in ['Converted', 'Lost'])
         return render_template('dashboard_admin.html', leads=leads, total=total,
                                overdue=overdue, converted=converted, pending=pending,
                                not_started=not_started, staff_stats=staff_stats,
+                               total_potential=total_potential,
                                users=users, now=now)
     else:
         leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
@@ -199,7 +206,7 @@ def export_leads():
     ws = wb.active
     ws.title = "Leads"
     headers = ['Name', 'Company', 'Phone', 'Email', 'Address', 'Source',
-               'Service', 'Lead Type', 'Assigned To', 'Due Date', 'Status', 'Remarks', 'Created']
+               'Service', 'Lead Type', 'Assigned To', 'Due Date', 'Status', 'Remarks', 'Created', 'Potential Value']
     ws.append(headers)
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
@@ -214,6 +221,7 @@ def export_leads():
             lead.due_date.strftime('%d %b %Y') if lead.due_date else '',
             lead.status or '', lead.remarks or '',
             lead.created_at.strftime('%d %b %Y') if lead.created_at else '',
+            lead.potential_value or 0,
         ])
     for col in ws.columns:
         max_length = max(len(str(cell.value or '')) for cell in col)
@@ -259,12 +267,13 @@ def add_lead():
 @app.route('/leads/<int:lead_id>', methods=['GET', 'POST'])
 @login_required
 def lead_detail(lead_id):
+    now = datetime.now()
     lead = Lead.query.get_or_404(lead_id)
     if request.method == 'POST':
         stage = request.form['stage']
         remark = request.form['remark']
         followup = request.form.get('followup_date')
-        followup_dt = datetime.strptime(followup, '%Y-%m-%dT%H:%M') if followup else None
+        followup_dt = datetime.strptime(followup, '%Y-%m-%d') if followup else None
         update = LeadUpdate(
             lead_id=lead.id, stage=stage, remark=remark,
             staff_name=session['user_name'], followup_date=followup_dt,
@@ -274,11 +283,17 @@ def lead_detail(lead_id):
         lead.status = stage
         if request.form.get('customer_story'):
             lead.customer_story = request.form.get('customer_story')
+        potential_value = request.form.get('potential_value')
+        if potential_value and not lead.potential_value:
+            try:
+                lead.potential_value = float(potential_value)
+            except:
+                pass
         db.session.add(update)
         db.session.commit()
         flash('Update saved')
         return redirect(url_for('lead_detail', lead_id=lead_id))
-    return render_template('lead_detail.html', lead=lead)
+    return render_template('lead_detail.html', lead=lead, now=now)
 
 @app.route('/leads/import', methods=['GET', 'POST'])
 @login_required
