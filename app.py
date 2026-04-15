@@ -537,6 +537,24 @@ def admin_toggle_staff(user_id):
     user.active = not user.active
     db.session.commit()
     return redirect(url_for('admin_panel'))
+@app.route('/admin/staff/<int:user_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_staff(user_id):
+    user = User.query.get_or_404(user_id)
+    name = request.form.get('name', '').strip()
+    email = request.form.get('email', '').strip()
+    if name:
+        user.name = name
+    if email:
+        existing = User.query.filter_by(email=email).first()
+        if existing and existing.id != user_id:
+            flash('That email is already in use')
+            return redirect(url_for('admin_panel'))
+        user.email = email
+    db.session.commit()
+    flash('Staff member updated successfully')
+    return redirect(url_for('admin_panel'))
 
 @app.route('/admin/staff/<int:user_id>/delete')
 @login_required
