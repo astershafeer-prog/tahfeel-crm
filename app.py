@@ -630,7 +630,12 @@ def manage_users():
 @admin_required
 def toggle_user(user_id):
     return redirect(url_for('admin_toggle_staff', user_id=user_id))
+@app.route('/list-users')
+def list_users():
+    users = User.query.all()
+    return '<br>'.join([f'{u.id}: {u.name} | {u.email} | {u.role}' for u in users])
 
+def init_db():
 def init_db():
     with app.app_context():
         db.create_all()
