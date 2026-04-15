@@ -107,7 +107,7 @@
           </div>
           <div class="form-group">
             <label>Due Date</label>
-            <input type="date" name="due_date" value="{{ lead.due_date.strftime('%Y-%m-%d') }}">
+            <input type="date" name="due_date" value="{{ lead.due_date.strftime('%Y-%m-%d') }}" min="{{ now.strftime('%Y-%m-%d') }}">
           </div>
           <div class="form-group full">
             <label>Lead Type</label>
