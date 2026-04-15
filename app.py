@@ -108,14 +108,13 @@ def apply_lead_filters(leads, args, now):
             to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
             leads = [l for l in leads if l.due_date.date() <= to_dt]
     if status_filter:
-    if status_filter == 'Overdue':
-        leads = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
-    else:
-        leads = [l for l in leads if l.status == status_filter]
+        if status_filter == 'Overdue':
+            leads = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
+        else:
+            leads = [l for l in leads if l.status == status_filter]
     if staff_filter:
         leads = [l for l in leads if l.assigned_to == int(staff_filter)]
     return leads
-
 @app.route('/')
 def index():
     return redirect(url_for('login'))
