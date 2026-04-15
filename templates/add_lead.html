@@ -13,6 +13,8 @@
     .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
     .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
     .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
     .container { padding: 24px; max-width: 800px; margin: 0 auto; }
     .card { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 28px; }
     .card h2 { font-size: 16px; color: #133E87; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #133E87; }
@@ -42,7 +44,7 @@
     <a href="/leads">All Leads</a>
     <a href="/leads/add" class="active">Add Lead</a>
     <a href="/leads/import">Import Leads</a>
-    {% if session.role == 'admin' %}<a href="/users">Manage Staff</a>{% endif %}
+    {% if session.role == 'admin' %}<a href="/admin" class="admin-link">⚙ Admin Panel</a>{% endif %}
   </div>
   <div class="container">
     <div class="card">
@@ -75,24 +77,18 @@
             <label>Service Enquired <span class="req">*</span></label>
             <select name="service" required>
               <option value="">— Select service —</option>
-              <option>Trade License</option>
-              <option>Family Visa</option>
-              <option>PRO Services</option>
-              <option>Healthcare License</option>
-              <option>Umrah Package</option>
-              <option>Other</option>
+              {% for s in services %}
+              <option value="{{ s.name }}">{{ s.name }}</option>
+              {% endfor %}
             </select>
           </div>
           <div class="form-group">
             <label>Source</label>
             <select name="source">
               <option value="">— Select source —</option>
-              <option>Walk-in</option>
-              <option>WhatsApp</option>
-              <option>Referral</option>
-              <option>Social Media</option>
-              <option>Website</option>
-              <option>Other</option>
+              {% for s in sources %}
+              <option value="{{ s.name }}">{{ s.name }}</option>
+              {% endfor %}
             </select>
           </div>
           <div class="form-group">
@@ -105,7 +101,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Due Date & Time</label>
+            <label>Due Date</label>
             <input type="date" name="due_date">
           </div>
           <div class="form-group full">
