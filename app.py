@@ -177,7 +177,7 @@ def dashboard():
 def all_leads():
     now = datetime.now()
     leads = Lead.query.order_by(Lead.due_date).all()
-    users = User.query.filter_by(active=True, role='staff').all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     leads = apply_lead_filters(leads, request.args, now)
     return render_template('all_leads.html', leads=leads, now=now, users=users)
 
@@ -240,7 +240,7 @@ def export_leads():
 @app.route('/leads/add', methods=['GET', 'POST'])
 @login_required
 def add_lead():
-    users = User.query.filter_by(active=True, role='staff').all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     if request.method == 'POST':
         due = request.form.get('due_date')
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else datetime.now() + timedelta(hours=4)
@@ -306,7 +306,7 @@ def import_leads():
             ws = wb.active
             count = 0
             errors = []
-            all_staff = User.query.filter_by(active=True, role='staff').all()
+            all_staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
             staff_map = {u.name.strip().lower(): u.id for u in all_staff}
             for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
                 name = row[0] if len(row) > 0 else None
@@ -396,7 +396,7 @@ def download_template():
 @login_required
 def edit_lead(lead_id):
     lead = Lead.query.get_or_404(lead_id)
-    users = User.query.filter_by(active=True, role='staff').all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     if request.method == 'POST':
         lead.name = request.form['name']
         lead.company = request.form.get('company')
