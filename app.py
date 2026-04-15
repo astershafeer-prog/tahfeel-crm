@@ -617,7 +617,9 @@ def init_db():
     with app.app_context():
         db.create_all()
         try:
-            db.engine.execute('ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0')
+            with db.engine.connect() as conn:
+                conn.execute(db.text('ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0'))
+                conn.commit()
         except:
             pass
         try:
