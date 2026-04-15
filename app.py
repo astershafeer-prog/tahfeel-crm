@@ -621,6 +621,15 @@ def admin_delete_source(source_id):
     return redirect(url_for('admin_panel'))
 
 @app.route('/list-users')
+@app.route('/fix-lukman')
+def fix_lukman():
+    user = User.query.get(21)
+    if user:
+        user.name = 'Lukman'
+        user.email = 'lukman@tahfeel.ae'
+        db.session.commit()
+        return 'Fixed! Lukman name and email updated.'
+    return 'User not found.'
 def list_users():
     users = User.query.all()
     return '<br>'.join([f'{u.id}: {u.name} | {u.email} | {u.role}' for u in users])
