@@ -186,16 +186,13 @@
                 <input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="row-check" onchange="updateBulkBar()">
               </td>
               <td>
-                <strong>{{ lead.name }}</strong>
-                {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}
-                  <span class="badge-overdue">Overdue</span>
-                {% endif %}
+              <strong>{{ lead.name }}</strong>
               </td>
               <td>{{ lead.company or '—' }}</td>
               <td>{{ lead.service or '—' }}</td>
               <td>{{ lead.source or '—' }}</td>
               <td>{{ lead.assignee.name if lead.assignee else '—' }}</td>
-              <td {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}style="color:#c0392b;"{% endif %}>
+             <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;{% endif %}">
                 {{ lead.due_date.strftime('%d %b %Y') }}
               </td>
               <td>
@@ -210,8 +207,7 @@
               </td>
               <td>
                 <div class="actions">
-                  <a href="/leads/{{ lead.id }}" class="btn-sm">View</a>
-                <a href="/leads/{{ lead.id }}/edit" class="btn-edit">Edit</a>
+                 <a href="/leads/{{ lead.id }}" class="btn-sm">View</a>
                   <button type="button" class="btn-delete" onclick="confirmDelete({{ lead.id }}, '{{ lead.name }}')">Delete</button>
                 </div>
               </td>
