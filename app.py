@@ -77,6 +77,37 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def apply_lead_filters(leads, args, now):
+    date_filter = args.get('date')
+    status_filter = args.get('status')
+    staff_filter = args.get('staff')
+
+    if date_filter == 'today':
+        leads = [l for l in leads if l.due_date.date() == now.date()]
+    elif date_filter == 'week':
+        week_start = now.date() - timedelta(days=now.weekday())
+        week_end = week_start + timedelta(days=6)
+        leads = [l for l in leads if week_start <= l.due_date.date() <= week_end]
+    elif date_filter == 'month':
+        leads = [l for l in leads if l.due_date.year == now.year and l.due_date.month == now.month]
+    elif date_filter == 'custom':
+        from_date = args.get('from')
+        to_date = args.get('to')
+        if from_date:
+            from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
+            leads = [l for l in leads if l.due_date.date() >= from_dt]
+        if to_date:
+            to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
+            leads = [l for l in leads if l.due_date.date() <= to_dt]
+
+    if status_filter:
+        leads = [l for l in leads if l.status == status_filter]
+
+    if staff_filter:
+        leads = [l for l in leads if l.assigned_to == int(staff_filter)]
+
+    return leads
+
 @app.route('/')
 def index():
     return redirect(url_for('login'))
@@ -146,7 +177,65 @@ def dashboard():
 def all_leads():
     now = datetime.now()
     leads = Lead.query.order_by(Lead.due_date).all()
-    return render_template('all_leads.html', leads=leads, now=now)
+    users = User.query.filter_by(active=True, role='staff').all()
+    leads = apply_lead_filters(leads, request.args, now)
+    return render_template('all_leads.html', leads=leads, now=now, users=users)
+
+@app.route('/leads/export')
+@login_required
+@admin_required
+def export_leads():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import make_response
+    import io
+
+    now = datetime.now()
+    leads = Lead.query.order_by(Lead.due_date).all()
+    leads = apply_lead_filters(leads, request.args, now)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Leads"
+
+    headers = ['Name', 'Company', 'Phone', 'Email', 'Address', 'Source',
+               'Service', 'Lead Type', 'Assigned To', 'Due Date', 'Status', 'Remarks', 'Created']
+    ws.append(headers)
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+
+    for lead in leads:
+        ws.append([
+            lead.name,
+            lead.company or '',
+            lead.phone or '',
+            lead.email or '',
+            lead.address or '',
+            lead.source or '',
+            lead.service or '',
+            lead.lead_type or '',
+            lead.assignee.name if lead.assignee else '',
+            lead.due_date.strftime('%d %b %Y %H:%M') if lead.due_date else '',
+            lead.status or '',
+            lead.remarks or '',
+            lead.created_at.strftime('%d %b %Y') if lead.created_at else '',
+        ])
+
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or '')) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = max_length + 4
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = make_response(output.read())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename=tahfeel_leads_{now.strftime("%Y%m%d")}.xlsx'
+    return response
 
 @app.route('/leads/add', methods=['GET', 'POST'])
 @login_required
@@ -353,7 +442,7 @@ def manage_users():
         try:
             user = User(
                 name=request.form['name'],
-                email=request.form['email'],
+                email=email,
                 password=generate_password_hash(request.form['password']),
                 role=request.form['role']
             )
