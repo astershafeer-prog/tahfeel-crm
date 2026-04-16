@@ -659,11 +659,7 @@ def test_leads():
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def manage_users():
-    return redirect(url_for('admin_panel'))
-@app.route('/users', methods=['GET', 'POST'])
-@login_required
-@admin_required
+
 def manage_users():
     return redirect(url_for('admin_panel'))
 
