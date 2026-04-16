@@ -69,6 +69,25 @@
       {% endfor %}{% endif %}
     {% endwith %}
 
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #133E87;padding:12px 14px;">
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Invoiced</div>
+        <div style="font-size:17px;font-weight:700;color:#133E87;">AED {{ '{:,.0f}'.format(total_invoiced) }}</div>
+      </div>
+      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #854F0B;padding:12px 14px;">
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Received</div>
+        <div style="font-size:17px;font-weight:700;color:#854F0B;">AED {{ '{:,.0f}'.format(total_received) }}</div>
+      </div>
+      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #A32D2D;padding:12px 14px;">
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Pending</div>
+        <div style="font-size:17px;font-weight:700;color:#A32D2D;">AED {{ '{:,.0f}'.format(total_pending) }}</div>
+      </div>
+      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #27500A;padding:12px 14px;">
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Completed</div>
+        <div style="font-size:17px;font-weight:700;color:#27500A;">AED {{ '{:,.0f}'.format(completed_value) }}</div>
+      </div>
+    </div>
+
     {% if overdue %}
     <div class="overdue-alert">
       ⚠️ <strong>{{ overdue|length }} lead{{ 's' if overdue|length > 1 else '' }}</strong> overdue and need immediate attention!

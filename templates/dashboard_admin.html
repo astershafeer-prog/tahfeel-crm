@@ -36,6 +36,8 @@
     .stat-card.amber .val { color: #854F0B; }
     .fin-card { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 14px 16px; border-top: 3px solid #133E87; }
     .fin-card.green { border-top-color: #3B6D11; }
+    .fin-card.red { border-top-color: #A32D2D; }
+    .fin-card.red .val { color: #A32D2D; }
     .fin-card.amber { border-top-color: #854F0B; }
     .fin-card .lbl { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
     .fin-card .val { font-size: 20px; font-weight: 700; color: #133E87; }
@@ -120,22 +122,27 @@
       <a href="/dashboard" class="btn-reset">Reset</a>
     </form>
 
-    <div class="section-label">Financial Summary</div>
-    <div class="cards-3">
+    <div class="section-label">Financial Summary (Active Tasks)</div>
+    <div class="cards-4">
       <div class="fin-card">
-        <div class="lbl">Potential Value</div>
-        <div class="val">AED {{ '{:,.0f}'.format(potential_value) }}</div>
-        <div class="sub">Active leads — not yet converted or lost</div>
+        <div class="lbl">Total Invoiced</div>
+        <div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div>
+        <div class="sub">All active tasks</div>
       </div>
       <div class="fin-card amber">
-        <div class="lbl">Pending Revenue</div>
-        <div class="val">AED {{ '{:,.0f}'.format(pending_revenue) }}</div>
-        <div class="sub">Received — work still in progress</div>
+        <div class="lbl">Total Received</div>
+        <div class="val">AED {{ '{:,.0f}'.format(total_received) }}</div>
+        <div class="sub">Payments in hand</div>
+      </div>
+      <div class="fin-card red">
+        <div class="lbl">Pending</div>
+        <div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div>
+        <div class="sub">Invoiced minus received</div>
       </div>
       <div class="fin-card green">
-        <div class="lbl">Collected Revenue</div>
-        <div class="val">AED {{ '{:,.0f}'.format(collected_revenue) }}</div>
-        <div class="sub">Received — work completed</div>
+        <div class="lbl">Completed Value</div>
+        <div class="val">AED {{ '{:,.0f}'.format(completed_value) }}</div>
+        <div class="sub">Done tasks — sales value</div>
       </div>
     </div>
 

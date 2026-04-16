@@ -111,14 +111,30 @@ class Job(db.Model):
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))
     due_date = db.Column(db.DateTime)
     priority = db.Column(db.String(20), default='Medium')
-    status = db.Column(db.String(50), default='Assigned')
+    status = db.Column(db.String(50), default='Pending Finance Approval')
     internal_notes = db.Column(db.Text)
+    amount_invoiced = db.Column(db.Float, default=0)
     amount_received = db.Column(db.Float, default=0)
+    finance_approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    finance_approved_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     assignee = db.relationship('User', foreign_keys=[assigned_to])
     creator = db.relationship('User', foreign_keys=[created_by])
+    finance_approver = db.relationship('User', foreign_keys=[finance_approved_by])
     updates = db.relationship('JobUpdate', backref='job', lazy=True, order_by='JobUpdate.created_at.desc()')
+    subtasks = db.relationship('SubTask', backref='job', lazy=True, order_by='SubTask.created_at')
+
+class SubTask(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    status = db.Column(db.String(20), default='Pending')
+    remarks = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    assignee = db.relationship('User', foreign_keys=[assigned_to])
 
 class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -141,6 +157,15 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         if session.get('role') != 'admin':
             flash('Admin access required')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated
+
+def finance_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if session.get('role') not in ['admin', 'finance']:
+            flash('Finance access required')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated
@@ -203,14 +228,34 @@ def logout():
 @login_required
 def dashboard():
     now = datetime.now()
-    if session['role'] == 'admin':
+    role = session['role']
+
+    # ── Finance dashboard ────────────────────────────────────────────────────
+    if role == 'finance':
+        all_jobs = Job.query.order_by(Job.created_at.desc()).all()
+        active_jobs = [j for j in all_jobs if j.status != 'Done']
+        pending_approval = [j for j in all_jobs if j.status == 'Pending Finance Approval']
+        total_invoiced = sum(j.amount_invoiced or 0 for j in active_jobs)
+        total_received = sum(j.amount_received or 0 for j in active_jobs)
+        total_pending = total_invoiced - total_received
+        completed_value = sum(j.amount_received or 0 for j in all_jobs if j.status == 'Done')
+        return render_template('dashboard_finance.html',
+                               all_jobs=active_jobs,
+                               pending_approval=pending_approval,
+                               total_invoiced=total_invoiced,
+                               total_received=total_received,
+                               total_pending=total_pending,
+                               completed_value=completed_value,
+                               now=now)
+
+    # ── Admin dashboard ──────────────────────────────────────────────────────
+    if role == 'admin':
         all_leads = Lead.query.order_by(Lead.due_date).all()
         all_jobs = Job.query.order_by(Job.due_date).all()
         date_filter = request.args.get('date', '')
         from_date = request.args.get('from', '')
         to_date = request.args.get('to', '')
 
-        # Apply date filter to leads
         leads = all_leads
         if date_filter == 'today':
             leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()]
@@ -236,19 +281,18 @@ def dashboard():
         converted = [l for l in leads if l.status == 'Converted']
         lost = [l for l in leads if l.status == 'Lost']
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
-        not_started = [l for l in leads if l.status == 'New']
 
-        # Financial cards
-        potential_value = sum(l.potential_value or 0 for l in leads if l.status not in ['Converted', 'Lost'])
-        pending_revenue = sum(j.amount_received or 0 for j in jobs if j.status != 'Done')
-        collected_revenue = sum(j.amount_received or 0 for j in jobs if j.status == 'Done')
-
-        # Job stats
+        # Financial cards (active jobs only, Done separate)
         active_jobs = [j for j in jobs if j.status != 'Done']
-        overdue_jobs = [j for j in jobs if j.due_date and j.due_date < now and j.status != 'Done']
         done_jobs = [j for j in jobs if j.status == 'Done']
+        total_invoiced = sum(j.amount_invoiced or 0 for j in active_jobs)
+        total_received = sum(j.amount_received or 0 for j in active_jobs)
+        total_pending = total_invoiced - total_received
+        completed_value = sum(j.amount_received or 0 for j in done_jobs)
 
-        # Staff workload
+        overdue_jobs = [j for j in jobs if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
+        pending_approval = [j for j in jobs if j.status == 'Pending Finance Approval']
+
         users = User.query.filter_by(active=True, role='staff').all()
         staff_stats = []
         for u in users:
@@ -258,45 +302,57 @@ def dashboard():
                 'name': u.name,
                 'leads': len(u_leads),
                 'overdue_leads': len([l for l in u_leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]),
-                'active_jobs': len([j for j in u_jobs if j.status != 'Done']),
-                'overdue_jobs': len([j for j in u_jobs if j.due_date and j.due_date < now and j.status != 'Done']),
+                'active_jobs': len([j for j in u_jobs if j.status not in ['Done', 'Pending Finance Approval']]),
+                'overdue_jobs': len([j for j in u_jobs if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]),
             })
 
-        # Today's leads and active jobs for tables
         today_leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()][:10]
-        recent_jobs = [j for j in all_jobs if j.status != 'Done'][:10]
+        recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Pending Finance Approval']][:10]
 
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
                                total=total, overdue_leads=overdue_leads,
-                               converted=converted, lost=lost,
-                               pending=pending, not_started=not_started,
+                               converted=converted, lost=lost, pending=pending,
                                jobs=jobs, active_jobs=active_jobs,
                                overdue_jobs=overdue_jobs, done_jobs=done_jobs,
+                               pending_approval=pending_approval,
                                recent_jobs=recent_jobs,
-                               potential_value=potential_value,
-                               pending_revenue=pending_revenue,
-                               collected_revenue=collected_revenue,
+                               total_invoiced=total_invoiced,
+                               total_received=total_received,
+                               total_pending=total_pending,
+                               completed_value=completed_value,
                                staff_stats=staff_stats,
                                now=now, date_filter=date_filter,
                                from_date=from_date, to_date=to_date)
-    else:
-        leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
-        my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status != 'Done').order_by(Job.due_date).all()
-        overdue = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
-        converted = [l for l in leads if l.status == 'Converted']
-        lost = [l for l in leads if l.status == 'Lost']
-        pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
-        overdue_jobs = [j for j in my_jobs if j.due_date and j.due_date < now]
-        followups = LeadUpdate.query.filter(
-            LeadUpdate.staff_name == session['user_name'],
-            LeadUpdate.followup_date <= now + timedelta(days=1),
-            LeadUpdate.followup_date >= now
-        ).all()
-        return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
-                               converted=converted, lost=lost, pending=pending,
-                               my_jobs=my_jobs, overdue_jobs=overdue_jobs,
-                               followups=followups, now=now)
+
+    # ── Staff dashboard ──────────────────────────────────────────────────────
+    leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
+    my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status != 'Done').order_by(Job.due_date).all()
+    overdue = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
+    converted = [l for l in leads if l.status == 'Converted']
+    lost = [l for l in leads if l.status == 'Lost']
+    pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
+    overdue_jobs = [j for j in my_jobs if j.due_date and j.due_date < now and j.status != 'Pending Finance Approval']
+    # Financial summary for staff's own tasks
+    active_jobs = [j for j in my_jobs if j.status != 'Pending Finance Approval']
+    total_invoiced = sum(j.amount_invoiced or 0 for j in active_jobs)
+    total_received = sum(j.amount_received or 0 for j in active_jobs)
+    total_pending = total_invoiced - total_received
+    done_jobs = Job.query.filter_by(assigned_to=session['user_id'], status='Done').all()
+    completed_value = sum(j.amount_received or 0 for j in done_jobs)
+    followups = LeadUpdate.query.filter(
+        LeadUpdate.staff_name == session['user_name'],
+        LeadUpdate.followup_date <= now + timedelta(days=1),
+        LeadUpdate.followup_date >= now
+    ).all()
+    return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
+                           converted=converted, lost=lost, pending=pending,
+                           my_jobs=my_jobs, overdue_jobs=overdue_jobs,
+                           total_invoiced=total_invoiced,
+                           total_received=total_received,
+                           total_pending=total_pending,
+                           completed_value=completed_value,
+                           followups=followups, now=now)
 
 @app.route('/leads')
 @login_required
@@ -804,32 +860,35 @@ def add_customer():
 def customer_detail(customer_id):
     customer = Customer.query.get_or_404(customer_id)
     jobs = Job.query.filter_by(customer_id=customer_id).order_by(Job.created_at.desc()).all()
+    total_invoiced = sum(j.amount_invoiced or 0 for j in jobs)
     total_received = sum(j.amount_received or 0 for j in jobs)
-    pending_revenue = sum(j.amount_received or 0 for j in jobs if j.status != 'Done')
-    collected_revenue = sum(j.amount_received or 0 for j in jobs if j.status == 'Done')
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
-                           total_received=total_received, pending_revenue=pending_revenue,
-                           collected_revenue=collected_revenue)
+                           total_invoiced=total_invoiced, total_received=total_received)
 
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 
 JOB_STATUSES = ['Assigned', 'Job Started', 'Processing', 'Pending Authority', 'On Hold', 'Delayed', 'Final Stage', 'Done']
+JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES
 
 @app.route('/jobs')
 @login_required
 def jobs():
     now = datetime.now()
-    if session['role'] == 'admin':
-        job_list = Job.query.order_by(Job.due_date).all()
+    role = session['role']
+    if role in ['admin', 'finance']:
+        job_list = Job.query.order_by(Job.created_at.desc()).all()
     else:
-        job_list = Job.query.filter_by(assigned_to=session['user_id']).order_by(Job.due_date).all()
+        # Staff see their assigned jobs (excluding pending finance approval)
+        job_list = Job.query.filter_by(assigned_to=session['user_id']).filter(
+            Job.status != 'Pending Finance Approval'
+        ).order_by(Job.due_date).all()
     status_filter = request.args.get('status', '')
     priority_filter = request.args.get('priority', '')
     if status_filter:
         job_list = [j for j in job_list if j.status == status_filter]
     if priority_filter:
         job_list = [j for j in job_list if j.priority == priority_filter]
-    overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status != 'Done']
+    overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     return render_template('jobs.html', jobs=job_list, now=now, overdue=overdue,
                            statuses=JOB_STATUSES, users=users,
@@ -845,7 +904,7 @@ def add_job():
     if request.method == 'POST':
         due = request.form.get('due_date')
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else None
-        amount = request.form.get('amount_received') or 0
+        amount_invoiced = request.form.get('amount_invoiced') or 0
         job = Job(
             customer_id=int(request.form['customer_id']),
             job_type=request.form['job_type'],
@@ -853,14 +912,15 @@ def add_job():
             due_date=due_dt,
             priority=request.form.get('priority', 'Medium'),
             internal_notes=request.form.get('internal_notes'),
-            amount_received=float(amount),
+            amount_invoiced=float(amount_invoiced),
+            amount_received=0,
             created_by=session['user_id'],
-            status='Assigned'
+            status='Pending Finance Approval'
         )
         db.session.add(job)
         db.session.commit()
-        update = JobUpdate(job_id=job.id, status='Assigned',
-                           remark='Job created', staff_name=session['user_name'])
+        update = JobUpdate(job_id=job.id, status='Pending Finance Approval',
+                           remark='Task created — awaiting finance approval', staff_name=session['user_name'])
         db.session.add(update)
         db.session.commit()
         flash('Job created successfully')
@@ -872,32 +932,34 @@ def add_job():
 def job_detail(job_id):
     job = Job.query.get_or_404(job_id)
     now = datetime.now()
-    if session['role'] != 'admin' and job.assigned_to != session['user_id']:
+    role = session['role']
+    # Finance can see all jobs; staff only their own; admin all
+    if role == 'staff' and job.assigned_to != session['user_id']:
         flash('Access denied')
         return redirect(url_for('jobs'))
     if request.method == 'POST':
+        # Block staff from updating if pending finance approval
+        if job.status == 'Pending Finance Approval' and role == 'staff':
+            flash('This task is pending finance approval. You cannot update it yet.')
+            return redirect(url_for('job_detail', job_id=job_id))
         remark = request.form.get('remark', '').strip()
         if not remark:
             flash('Remark is required')
             return redirect(url_for('job_detail', job_id=job_id))
         new_status = request.form.get('status', job.status)
-        amount = request.form.get('amount_received')
-        if amount is not None and amount != '':
-            try:
-                job.amount_received = float(amount)
-            except:
-                pass
+        # Don't allow staff to set back to Pending Finance Approval
+        if role == 'staff' and new_status == 'Pending Finance Approval':
+            new_status = job.status
         job.status = new_status
         update = JobUpdate(job_id=job.id, status=new_status,
                            remark=remark, staff_name=session['user_name'])
         db.session.add(update)
         db.session.commit()
-        flash('Job updated')
+        flash('Task updated')
         return redirect(url_for('job_detail', job_id=job_id))
-    job_types = JobType.query.order_by(JobType.name).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     return render_template('job_detail.html', job=job, now=now,
-                           statuses=JOB_STATUSES, job_types=job_types, users=users)
+                           statuses=JOB_STATUSES, users=users)
 
 @app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -916,12 +978,13 @@ def edit_job(job_id):
         job.due_date = datetime.strptime(due, '%Y-%m-%d') if due else None
         job.priority = request.form.get('priority', 'Medium')
         job.internal_notes = request.form.get('internal_notes')
-        amount = request.form.get('amount_received')
-        if amount:
-            try:
-                job.amount_received = float(amount)
-            except:
-                pass
+        try:
+            ai = request.form.get('amount_invoiced')
+            ar = request.form.get('amount_received')
+            if ai: job.amount_invoiced = float(ai)
+            if ar: job.amount_received = float(ar)
+        except:
+            pass
         db.session.commit()
         flash('Job updated')
         return redirect(url_for('job_detail', job_id=job_id))
@@ -938,6 +1001,90 @@ def delete_job(job_id):
     db.session.commit()
     flash('Job deleted')
     return redirect(url_for('jobs'))
+
+# ── Finance ───────────────────────────────────────────────────────────────────
+
+@app.route('/jobs/<int:job_id>/approve', methods=['POST'])
+@login_required
+@finance_required
+def approve_job(job_id):
+    job = Job.query.get_or_404(job_id)
+    amount_invoiced = request.form.get('amount_invoiced', '').strip()
+    amount_received = request.form.get('amount_received', '').strip()
+    try:
+        if amount_invoiced:
+            job.amount_invoiced = float(amount_invoiced)
+        if amount_received:
+            job.amount_received = float(amount_received)
+    except:
+        pass
+    job.status = 'Assigned'
+    job.finance_approved_by = session['user_id']
+    job.finance_approved_at = datetime.now()
+    update = JobUpdate(job_id=job.id, status='Assigned',
+                       remark=f'Approved by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}',
+                       staff_name=session['user_name'])
+    db.session.add(update)
+    db.session.commit()
+    flash('Task approved and assigned to staff.')
+    return redirect(url_for('dashboard'))
+
+@app.route('/jobs/<int:job_id>/payment', methods=['POST'])
+@login_required
+@finance_required
+def update_payment(job_id):
+    job = Job.query.get_or_404(job_id)
+    try:
+        job.amount_invoiced = float(request.form.get('amount_invoiced') or job.amount_invoiced or 0)
+        job.amount_received = float(request.form.get('amount_received') or job.amount_received or 0)
+    except:
+        pass
+    db.session.commit()
+    flash('Payment updated.')
+    return redirect(request.referrer or url_for('jobs'))
+
+# ── Sub-tasks ─────────────────────────────────────────────────────────────────
+
+@app.route('/jobs/<int:job_id>/subtasks/add', methods=['POST'])
+@login_required
+@admin_required
+def add_subtask(job_id):
+    Job.query.get_or_404(job_id)
+    assigned = request.form.get('assigned_to')
+    subtask = SubTask(
+        job_id=job_id,
+        title=request.form['title'],
+        assigned_to=int(assigned) if assigned else None
+    )
+    db.session.add(subtask)
+    db.session.commit()
+    flash('Sub-task added.')
+    return redirect(url_for('job_detail', job_id=job_id))
+
+@app.route('/subtasks/<int:subtask_id>/done', methods=['POST'])
+@login_required
+def complete_subtask(subtask_id):
+    subtask = SubTask.query.get_or_404(subtask_id)
+    if session['role'] != 'admin' and subtask.assigned_to != session['user_id']:
+        flash('Access denied')
+        return redirect(url_for('jobs'))
+    subtask.status = 'Done'
+    subtask.remarks = request.form.get('remarks', '')
+    subtask.completed_at = datetime.now()
+    db.session.commit()
+    flash('Sub-task marked done.')
+    return redirect(url_for('job_detail', job_id=subtask.job_id))
+
+@app.route('/subtasks/<int:subtask_id>/delete')
+@login_required
+@admin_required
+def delete_subtask(subtask_id):
+    subtask = SubTask.query.get_or_404(subtask_id)
+    job_id = subtask.job_id
+    db.session.delete(subtask)
+    db.session.commit()
+    flash('Sub-task removed.')
+    return redirect(url_for('job_detail', job_id=job_id))
 
 # ── Admin — Job Types ─────────────────────────────────────────────────────────
 
@@ -974,6 +1121,9 @@ def init_db():
             with db.engine.connect() as conn:
                 conn.execute(db.text('ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0'))
                 conn.execute(db.text('ALTER TABLE lead ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)'))
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS amount_invoiced FLOAT DEFAULT 0'))
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_by INTEGER'))
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_at TIMESTAMP'))
                 conn.commit()
         except:
             pass

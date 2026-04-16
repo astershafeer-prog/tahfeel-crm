@@ -48,6 +48,7 @@
     .b-delayed { background: #FCEBEB; color: #791F1F; }
     .b-finalstage { background: #EAF3DE; color: #3B6D11; }
     .b-done { background: #EAF3DE; color: #27500A; }
+    .b-pendingfinanceapproval { background: #FAEEDA; color: #633806; }
     .b-high { background: #FCEBEB; color: #791F1F; }
     .b-medium { background: #FAEEDA; color: #633806; }
     .b-low { background: #f0f0f0; color: #555; }
@@ -94,6 +95,7 @@
         <label>Status</label>
         <select name="status">
           <option value="">All Statuses</option>
+          <option value="Pending Finance Approval" {% if status_filter == "Pending Finance Approval" %}selected{% endif %}>Pending Finance Approval</option>
           {% for s in statuses %}
           <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
           {% endfor %}
@@ -115,7 +117,7 @@
     <div class="card">
       <table>
         <thead>
-          <tr><th>Customer</th><th>Job Type</th><th>Assigned To</th><th>Due Date</th><th>Priority</th><th>Status</th><th>Amount Received</th><th>Actions</th></tr>
+          <tr><th>Customer</th><th>Task Type</th><th>Assigned To</th><th>Due Date</th><th>Priority</th><th>Status</th><th>Invoiced</th><th>Received</th><th>Actions</th></tr>
         </thead>
         <tbody>
           {% for job in jobs %}
@@ -131,11 +133,12 @@
             </td>
             <td><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></td>
             <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></td>
+            <td>AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</td>
             <td>AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</td>
             <td><a href="/jobs/{{ job.id }}" class="btn-sm">View</a></td>
           </tr>
           {% else %}
-          <tr><td colspan="8" class="empty">No jobs found.</td></tr>
+          <tr><td colspan="9" class="empty">No jobs found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

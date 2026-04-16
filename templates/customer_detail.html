@@ -101,16 +101,16 @@
 
     <div class="revenue-row">
       <div class="rev-card">
-        <div class="label">Pending revenue</div>
-        <div class="value">AED {{ '{:,.0f}'.format(pending_revenue) }}</div>
-      </div>
-      <div class="rev-card green">
-        <div class="label">Collected revenue</div>
-        <div class="value">AED {{ '{:,.0f}'.format(collected_revenue) }}</div>
+        <div class="label">Total Invoiced</div>
+        <div class="value">AED {{ '{:,.0f}'.format(total_invoiced) }}</div>
       </div>
       <div class="rev-card amber">
-        <div class="label">Total received</div>
+        <div class="label">Total Received</div>
         <div class="value">AED {{ '{:,.0f}'.format(total_received) }}</div>
+      </div>
+      <div class="rev-card green">
+        <div class="label">Pending</div>
+        <div class="value">AED {{ '{:,.0f}'.format(total_invoiced - total_received) }}</div>
       </div>
     </div>
 
