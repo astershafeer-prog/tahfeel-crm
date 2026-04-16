@@ -145,10 +145,30 @@ def logout():
 def dashboard():
     now = datetime.now()
     if session['role'] == 'admin':
-        leads = Lead.query.order_by(Lead.due_date).all()
+        all_leads = Lead.query.order_by(Lead.due_date).all()
+
+        # Date filter
+        date_filter = request.args.get('date', '')
+        from_date = request.args.get('from', '')
+        to_date = request.args.get('to', '')
+
+        leads = all_leads
+        if date_filter == 'today':
+            leads = [l for l in all_leads if l.created_at.date() == now.date()]
+        elif date_filter == 'week':
+            week_start = now.date() - timedelta(days=now.weekday())
+            leads = [l for l in all_leads if l.created_at.date() >= week_start]
+        elif date_filter == 'month':
+            leads = [l for l in all_leads if l.created_at.year == now.year and l.created_at.month == now.month]
+        elif date_filter == 'custom' and from_date and to_date:
+            from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
+            to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
+            leads = [l for l in all_leads if from_dt <= l.created_at.date() <= to_dt]
+
         total = len(leads)
         overdue = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
         converted = [l for l in leads if l.status == 'Converted']
+        lost = [l for l in leads if l.status == 'Lost']
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
         not_started = [l for l in leads if l.status == 'New']
         users = User.query.filter_by(active=True, role='staff').all()
@@ -161,15 +181,17 @@ def dashboard():
                 'pending': len([l for l in u_leads if l.status not in ['Converted', 'Lost', 'New']]),
                 'not_started': len([l for l in u_leads if l.status == 'New']),
                 'converted': len([l for l in u_leads if l.status == 'Converted']),
+                'lost': len([l for l in u_leads if l.status == 'Lost']),
                 'overdue': len([l for l in u_leads if l.due_date < now and l.status not in ['Converted', 'Lost']]),
                 'potential_value': sum(l.potential_value or 0 for l in u_leads if l.status not in ['Converted', 'Lost']),
             })
         total_potential = sum(l.potential_value or 0 for l in leads if l.status not in ['Converted', 'Lost'])
         return render_template('dashboard_admin.html', leads=leads, total=total,
-                               overdue=overdue, converted=converted, pending=pending,
-                               not_started=not_started, staff_stats=staff_stats,
-                               total_potential=total_potential,
-                               users=users, now=now)
+                               overdue=overdue, converted=converted, lost=lost,
+                               pending=pending, not_started=not_started,
+                               staff_stats=staff_stats, total_potential=total_potential,
+                               users=users, now=now,
+                               date_filter=date_filter, from_date=from_date, to_date=to_date)
     else:
         leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
         overdue = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
