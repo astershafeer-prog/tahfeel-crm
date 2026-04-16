@@ -861,7 +861,6 @@ def customers():
 
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_customer():
     converted_leads = Lead.query.filter_by(status='Converted').order_by(Lead.name).all()
     sources = Source.query.order_by(Source.name).all()
@@ -887,12 +886,12 @@ def add_customer():
         db.session.add(customer)
         db.session.commit()
         flash('Customer added successfully')
-        return redirect(url_for('customers'))
+        # Redirect to add_job with this customer pre-selected, or jobs list
+        return redirect(url_for('add_job') + f'?customer_id={customer.id}')
     return render_template('add_customer.html', converted_leads=converted_leads, sources=sources)
 
 @app.route('/customers/<int:customer_id>')
 @login_required
-@admin_required
 def customer_detail(customer_id):
     customer = Customer.query.get_or_404(customer_id)
     jobs = Job.query.filter_by(customer_id=customer_id).order_by(Job.created_at.desc()).all()

@@ -32,7 +32,7 @@
     .fin-card.red { border-top-color: #A32D2D; }
     .fin-card.green { border-top-color: #27500A; }
     .fin-card .lbl { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
-    .fin-card .val { font-size: 20px; font-weight: 700; color: #133E87; }
+    .fin-card .val { font-size: 15px; font-weight: 700; color: #133E87; }
     .fin-card.amber .val { color: #854F0B; }
     .fin-card.red .val { color: #A32D2D; }
     .fin-card.green .val { color: #27500A; }
@@ -69,9 +69,9 @@
     </div>
   </div>
   <div class="nav">
-    <a href="/dashboard" class="active">Dashboard</a>
-    <a href="/leads/add">Add Lead</a>
-    <a href="/jobs">Tasks</a>
+    <a href="/dashboard" class='active'>Dashboard</a>
+    <a href="/leads/add" >Add Lead</a>
+    <a href="/jobs" >Tasks</a>
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -128,7 +128,7 @@
       <div class="card">
         <div class="card-header">
           <h2>Overdue Leads</h2>
-          <a href="/leads/add" class="btn-sm">+ Add Lead</a>
+          <a href="/leads" style="font-size:12px;color:#133E87;text-decoration:none;">View all →</a>
         </div>
         {% set overdue_leads = leads|selectattr('due_date')|selectattr('status','ne','Converted')|selectattr('status','ne','Lost')|list %}
         {% set overdue_leads = overdue_leads|selectattr('due_date')|list %}
