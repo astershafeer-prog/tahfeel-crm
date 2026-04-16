@@ -140,8 +140,7 @@
                   <a href="/admin/staff/{{ user.id }}/toggle" class="btn-sm btn-warning">
                     {{ 'Deactivate' if user.active else 'Activate' }}
                   </a>
-                  <a href="/admin/staff/{{ user.id }}/delete" class="btn-sm btn-danger"
-                     onclick="return confirm('Delete {{ user.name }}? This cannot be undone.')">Delete</a>
+                 
                 </div>
                 {% endif %}
               </td>
