@@ -921,13 +921,21 @@ def jobs():
         job_list = [j for j in job_list if j.priority == priority_filter]
     overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    try:
+        jobs_invoiced = sum((j.amount_invoiced or 0) for j in job_list)
+        jobs_received = sum((j.amount_received or 0) for j in job_list)
+        jobs_pending = jobs_invoiced - jobs_received
+        jobs_completed = sum((j.amount_received or 0) for j in job_list if j.status == 'Done')
+    except:
+        jobs_invoiced = jobs_received = jobs_pending = jobs_completed = 0
     return render_template('jobs.html', jobs=job_list, now=now, overdue=overdue,
                            statuses=JOB_STATUSES, users=users,
-                           status_filter=status_filter, priority_filter=priority_filter)
+                           status_filter=status_filter, priority_filter=priority_filter,
+                           jobs_invoiced=jobs_invoiced, jobs_received=jobs_received,
+                           jobs_pending=jobs_pending, jobs_completed=jobs_completed)
 
 @app.route('/jobs/add', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_job():
     customers = Customer.query.order_by(Customer.name).all()
     job_types = JobType.query.order_by(JobType.name).all()
