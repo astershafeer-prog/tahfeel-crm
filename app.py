@@ -1,4 +1,4 @@
-# v16
+# v17
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -1146,16 +1146,22 @@ def admin_delete_jobtype(jobtype_id):
 def init_db():
     with app.app_context():
         db.create_all()
-        try:
-            with db.engine.connect() as conn:
-                conn.execute(db.text('ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0'))
-                conn.execute(db.text('ALTER TABLE lead ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)'))
-                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS amount_invoiced FLOAT DEFAULT 0'))
-                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_by INTEGER'))
-                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_at TIMESTAMP'))
-                conn.commit()
-        except:
-            pass
+        migrations = [
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0',
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS amount_invoiced FLOAT DEFAULT 0',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS amount_received FLOAT DEFAULT 0',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_by INTEGER',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_at TIMESTAMP',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
+        ]
+        for sql in migrations:
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text(sql))
+                    conn.commit()
+            except:
+                pass
         try:
             admin = User.query.filter_by(email='admin@tahfeel.ae').first()
             if not admin:
