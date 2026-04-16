@@ -31,10 +31,6 @@
     .form-actions { display: flex; gap: 10px; margin-top: 20px; }
     .btn-submit { background: #133E87; color: white; padding: 10px 24px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
     .btn-cancel { background: white; color: #555; padding: 10px 20px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
-    .btn-add-row { background: white; color: #133E87; padding: 7px 16px; border-radius: 8px; border: 1px solid #133E87; font-size: 12px; font-weight: 600; cursor: pointer; }
-    .subtask-row { background: #f8f9fa; border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 8px; position: relative; }
-    .subtask-row .remove-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #c0392b; font-size: 16px; cursor: pointer; line-height: 1; }
-    #subtasks-container { margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -130,77 +126,13 @@
         </div>
       </div>
 
-      <!-- Sub-tasks -->
-      <div class="card">
-        <div class="section-label">Sub-tasks (optional)</div>
-        <div id="subtasks-container"></div>
-        <button type="button" class="btn-add-row" onclick="addSubtask()">+ Add Sub-task</button>
-
-        <div class="form-actions">
+      <div class="form-actions">
           <button type="submit" class="btn-submit">Create Task</button>
           <a href="/jobs" class="btn-cancel">Cancel</a>
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 
-  <script>
-    // Store service types and users for sub-task dropdowns
-    const serviceTypes = [{% for jt in job_types %}'{{ jt.name }}',{% endfor %}];
-    const users = [{% for u in users %}{id: {{ u.id }}, name: '{{ u.name }}'},{% endfor %}];
-    const today = new Date(); today.setDate(today.getDate() + 1);
-    const tomorrow = today.toISOString().split('T')[0];
-    let stCount = 0;
-
-    function addSubtask() {
-      stCount++;
-      const n = stCount;
-      const container = document.getElementById('subtasks-container');
-
-      let stOptions = serviceTypes.map(s => `<option value="${s}">${s}</option>`).join('');
-      let userOptions = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
-
-      const row = document.createElement('div');
-      row.className = 'subtask-row';
-      row.id = `st-row-${n}`;
-      row.innerHTML = `
-        <button type="button" class="remove-btn" onclick="document.getElementById('st-row-${n}').remove()">✕</button>
-        <div class="form-row-2" style="margin-bottom:8px;">
-          <div class="form-group" style="margin:0;">
-            <label>Sub-task Title *</label>
-            <input type="text" name="st_title[]" placeholder="e.g. Medical fitness test" required>
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label>Service Type</label>
-            <select name="st_service_type[]">
-              <option value="">— Optional —</option>
-              ${stOptions}
-            </select>
-          </div>
-        </div>
-        <div class="form-row-3">
-          <div class="form-group" style="margin:0;">
-            <label>Assign To</label>
-            <select name="st_assigned_to[]">
-              <option value="">Inherit from main task</option>
-              ${userOptions}
-            </select>
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label>Due Date</label>
-            <input type="date" name="st_due_date[]" value="${tomorrow}">
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label>Priority</label>
-            <select name="st_priority[]">
-              <option value="High">High</option>
-              <option value="Medium" selected>Medium</option>
-              <option value="Low">Low</option>
-            </select>
-          </div>
-        </div>`;
-      container.appendChild(row);
-    }
-  </script>
 </body>
 </html>
