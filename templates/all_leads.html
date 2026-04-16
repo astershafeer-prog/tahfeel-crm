@@ -220,8 +220,8 @@
               </td>
               <td>
                 <span class="badge
-                  {% if lead.status == 'Converted' %}badge-converted
-                  {% elif lead.status == 'Lost' %}badge-lost
-                  {% elif lead.status == 'Potential Lead' %}badge-potential
-                  {% elif 'Called' in lead.status %}badge-called
-                  {
+  {% if lead.status == 'Converted' %}badge-converted
+  {% elif lead.status == 'Lost' %}badge-lost
+  {% elif lead.status == 'Potential Lead' %}badge-potential
+  {% elif 'Called' in lead.status %}badge-called
+  {% else %}badge-new{% endif %}">
