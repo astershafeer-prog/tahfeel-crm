@@ -646,7 +646,21 @@ def admin_delete_source(source_id):
     db.session.commit()
     flash(f'Source "{source.name}" removed')
     return redirect(url_for('admin_panel'))
+@app.route('/test-leads')
+@login_required
+def test_leads():
+    try:
+        now = datetime.now()
+        leads = Lead.query.order_by(Lead.due_date).all()
+        return f'OK - {len(leads)} leads found, role={session.get("role")}'
+    except Exception as e:
+        return f'ERROR: {str(e)}'
 
+@app.route('/users', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_users():
+    return redirect(url_for('admin_panel'))
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
