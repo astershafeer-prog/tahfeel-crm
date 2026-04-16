@@ -266,6 +266,10 @@ def add_lead():
     if request.method == 'POST':
         due = request.form.get('due_date')
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else datetime.now() + timedelta(days=1)
+        lead_date = request.form.get('lead_date')
+        created_dt = datetime.strptime(lead_date, '%Y-%m-%d') if lead_date else datetime.now()
+        if not due:
+            due_dt = created_dt + timedelta(days=1)
         lead = Lead(
             name=request.form['name'],
             company=request.form.get('company'),
@@ -278,7 +282,8 @@ def add_lead():
             lead_type=request.form.get('lead_type', 'New'),
             assigned_to=int(request.form['assigned_to']) if request.form.get('assigned_to') else None,
             due_date=due_dt,
-            remarks=request.form.get('remarks')
+            remarks=request.form.get('remarks'),
+            created_at=created_dt
         )
         db.session.add(lead)
         db.session.commit()
@@ -345,6 +350,7 @@ def import_leads():
                 lead_type = row[7] if len(row) > 7 else 'New'
                 remarks = row[8] if len(row) > 8 else None
                 assigned_name = str(row[9]).strip() if len(row) > 9 and row[9] else None
+                lead_date_str = str(row[10]).strip() if len(row) > 10 and row[10] else None
                 assigned_id = None
                 if assigned_name:
                     assigned_id = staff_map.get(assigned_name.lower())
@@ -366,7 +372,8 @@ def import_leads():
                     remarks=str(remarks) if remarks else None,
                     representative=session['user_name'],
                     assigned_to=assigned_id,
-                    due_date=datetime.now() + timedelta(days=1)
+                    created_at=datetime.strptime(lead_date_str, '%Y-%m-%d') if lead_date_str else datetime.now(),
+                    due_date=datetime.strptime(lead_date_str, '%Y-%m-%d') + timedelta(days=1) if lead_date_str else datetime.now() + timedelta(days=1)
                 )
                 db.session.add(lead)
                 count += 1
