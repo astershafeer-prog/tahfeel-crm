@@ -22,33 +22,25 @@
     .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
     .header-btns { display: flex; gap: 8px; }
     .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .btn-add:hover { background: #1E5AB8; }
     .btn-export { background: #1D6F42; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .btn-export:hover { background: #155a34; }
     .btn-bulk-delete { background: #c0392b; color: white; padding: 9px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: none; }
-    .btn-bulk-delete:hover { background: #a93226; }
     .btn-bulk-delete.visible { display: inline-block; }
     .search-bar { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 12px 16px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; }
     .search-bar input { flex: 1; padding: 9px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
     .search-bar input:focus { border-color: #133E87; }
     .btn-search { background: #133E87; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-search:hover { background: #1E5AB8; }
     .btn-clear { background: white; color: #555; padding: 9px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
-    .btn-clear:hover { border-color: #133E87; color: #133E87; }
     .filters { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
     .filter-group { display: flex; flex-direction: column; gap: 4px; }
     .filter-group label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
     .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: white; outline: none; min-width: 140px; }
-    .filter-group select:focus, .filter-group input:focus { border-color: #133E87; }
     .btn-filter { background: #133E87; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-filter:hover { background: #1E5AB8; }
-    .btn-reset { background: white; color: #555; padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; cursor: pointer; text-decoration: none; }
-    .btn-reset:hover { border-color: #133E87; color: #133E87; }
+    .btn-reset { background: white; color: #555; padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
     .custom-dates { display: none; gap: 8px; }
     .custom-dates.visible { display: flex; }
     .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; }
     td { padding: 11px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #fafbfc; }
@@ -78,7 +70,6 @@
   </style>
 </head>
 <body>
-
   <div class="topbar">
     <h1>Tahfeel Business Solutions — CRM</h1>
     <div class="right">
@@ -86,7 +77,6 @@
       <a href="/logout">Logout</a>
     </div>
   </div>
-
   <div class="nav">
     <a href="/dashboard">Dashboard</a>
     <a href="/leads" class="active">All Leads</a>
@@ -94,45 +84,42 @@
     <a href="/leads/import">Import Leads</a>
     <a href="/admin" class="admin-link">⚙ Admin Panel</a>
   </div>
-
   <div class="container">
     {% with messages = get_flashed_messages() %}
-      {% if messages %}{% for msg in messages %}
-        <div class="flash">{{ msg }}</div>
-      {% endfor %}{% endif %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
     {% endwith %}
 
     <div class="page-header">
       <h2>All Leads <span style="font-size:14px;color:#888;font-weight:400;">({{ leads|length }} total)</span></h2>
       <div class="header-btns">
         <button class="btn-bulk-delete" id="bulkDeleteBtn" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
-       <a href="/leads/export" class="btn-export">⬇ Export Excel</a>
+        <a href="/leads/export" class="btn-export">⬇ Export Excel</a>
         <a href="/leads/add" class="btn-add">+ Add Lead</a>
       </div>
     </div>
 
-    <!-- Search bar -->
-    <form method="GET" action="/leads" id="searchForm">
+    <form method="GET" action="/leads">
       <div class="search-bar">
         <input type="text" name="search" placeholder="Search by name, phone or company..." value="{{ search }}">
         <button type="submit" class="btn-search">Search</button>
         {% if search %}
-        <a href="/leads" class="btn-clear">Clear</a>
+          <a href="/leads" class="btn-clear">Clear</a>
         {% endif %}
       </div>
-      <!-- Keep filter params when searching -->
-      {% if request.args.get('date') %}<input type="hidden" name="date" value="{{ request.args.get('date') }}">{% endif %}
-      {% if request.args.get('status') %}<input type="hidden" name="status" value="{{ request.args.get('status') }}">{% endif %}
-      {% if request.args.get('staff') %}<input type="hidden" name="staff" value="{{ request.args.get('staff') }}">{% endif %}
     </form>
 
     {% if search %}
-    <div class="search-highlight">Showing results for: <strong>"{{ search }}"</strong></div>
+      <div class="search-highlight">Showing results for: <strong>"{{ search }}"</strong></div>
     {% endif %}
 
-    <!-- Filters -->
     <form method="GET" action="/leads">
-      {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+      {% if search %}
+        <input type="hidden" name="search" value="{{ search }}">
+      {% endif %}
       <div class="filters">
         <div class="filter-group">
           <label>Date Range</label>
@@ -173,7 +160,7 @@
           <select name="staff">
             <option value="">All staff</option>
             {% for user in users %}
-            <option value="{{ user.id }}" {% if request.args.get('staff') == user.id|string %}selected{% endif %}>{{ user.name }}</option>
+              <option value="{{ user.id }}" {% if request.args.get('staff') == user.id|string %}selected{% endif %}>{{ user.name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -190,38 +177,118 @@
     <form method="POST" action="/leads/bulk-delete" id="bulkForm">
       <div class="card">
         {% if leads %}
-        <table>
-          <thead>
-            <tr>
-              <th style="width:40px;">
-                <input type="checkbox" id="selectAll" onclick="toggleAll(this)">
-              </th>
-              <th>Name</th>
-              <th>Company</th>
-              <th>Service</th>
-              <th>Assigned To</th>
-              <th>Due Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for lead in leads %}
-            <tr id="row-{{ lead.id }}">
-              <td>
-                <input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="row-check" onchange="updateBulkBar()">
-              </td>
-              <td><strong>{{ lead.name }}</strong></td>
-              <td>{{ lead.company or '—' }}</td>
-              <td>{{ lead.service or '—' }}</td>
-              <td>{{ lead.assignee.name if lead.assignee else '—' }}</td>
-              <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;{% endif %}">
-                {{ lead.due_date.strftime('%d %b %Y') }}
-              </td>
-              <td>
-                <span class="badge
-  {% if lead.status == 'Converted' %}badge-converted
-  {% elif lead.status == 'Lost' %}badge-lost
-  {% elif lead.status == 'Potential Lead' %}badge-potential
-  {% elif 'Called' in lead.status %}badge-called
-  {% else %}badge-new{% endif %}">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px;"><input type="checkbox" id="selectAll" onclick="toggleAll(this)"></th>
+                <th>Name</th>
+                <th>Company</th>
+                <th>Service</th>
+                <th>Assigned To</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for lead in leads %}
+                <tr id="row-{{ lead.id }}">
+                  <td><input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="row-check" onchange="updateBulkBar()"></td>
+                  <td><strong>{{ lead.name }}</strong></td>
+                  <td>{{ lead.company or '—' }}</td>
+                  <td>{{ lead.service or '—' }}</td>
+                  <td>{{ lead.assignee.name if lead.assignee else '—' }}</td>
+                  <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;{% endif %}">
+                    {{ lead.due_date.strftime('%d %b %Y') }}
+                  </td>
+                  <td>
+                    {% if lead.status == 'Converted' %}
+                      <span class="badge badge-converted">{{ lead.status }}</span>
+                    {% elif lead.status == 'Lost' %}
+                      <span class="badge badge-lost">{{ lead.status }}</span>
+                    {% elif lead.status == 'Potential Lead' %}
+                      <span class="badge badge-potential">{{ lead.status }}</span>
+                    {% elif 'Called' in lead.status %}
+                      <span class="badge badge-called">{{ lead.status }}</span>
+                    {% else %}
+                      <span class="badge badge-new">{{ lead.status }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="actions">
+                      <a href="/leads/{{ lead.id }}" class="btn-sm">View</a>
+                      <button type="button" class="btn-delete" onclick="confirmDelete({{ lead.id }}, '{{ lead.name }}')">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty">No leads found.</div>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+      <h3>Delete Lead</h3>
+      <p id="deleteModalText">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn-cancel-modal" onclick="closeModal()">Cancel</button>
+        <a href="#" id="confirmDeleteBtn" class="btn-confirm-delete">Yes, Delete</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="bulkModal">
+    <div class="modal">
+      <h3>Delete Selected Leads</h3>
+      <p id="bulkModalText">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn-cancel-modal" onclick="closeBulkModal()">Cancel</button>
+        <button class="btn-confirm-delete" onclick="submitBulkDelete()">Yes, Delete All</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleCustomDates(val) {
+      const show = val === 'custom';
+      document.getElementById('customDates').classList.toggle('visible', show);
+      document.getElementById('customDatesTo').classList.toggle('visible', show);
+    }
+    function toggleAll(source) {
+      document.querySelectorAll('.row-check').forEach(c => {
+        c.checked = source.checked;
+        c.closest('tr').classList.toggle('selected', source.checked);
+      });
+      updateBulkBar();
+    }
+    function updateBulkBar() {
+      const checked = document.querySelectorAll('.row-check:checked');
+      document.getElementById('selectedCount').textContent = checked.length;
+      document.getElementById('bulkDeleteBtn').classList.toggle('visible', checked.length > 0);
+      document.querySelectorAll('.row-check').forEach(c => {
+        c.closest('tr').classList.toggle('selected', c.checked);
+      });
+    }
+    function confirmDelete(leadId, leadName) {
+      document.getElementById('deleteModalText').textContent = 'Are you sure you want to delete "' + leadName + '"?';
+      document.getElementById('confirmDeleteBtn').href = '/leads/' + leadId + '/delete';
+      document.getElementById('deleteModal').classList.add('active');
+    }
+    function closeModal() { document.getElementById('deleteModal').classList.remove('active'); }
+    function confirmBulkDelete() {
+      const count = document.querySelectorAll('.row-check:checked').length;
+      document.getElementById('bulkModalText').textContent = 'Delete ' + count + ' selected lead(s)?';
+      document.getElementById('bulkModal').classList.add('active');
+    }
+    function closeBulkModal() { document.getElementById('bulkModal').classList.remove('active'); }
+    function submitBulkDelete() { document.getElementById('bulkForm').submit(); }
+    document.getElementById('deleteModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+    document.getElementById('bulkModal').addEventListener('click', function(e) { if (e.target === this) closeBulkModal(); });
+  </script>
+</body>
+</html>
