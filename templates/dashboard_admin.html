@@ -148,65 +148,21 @@
 
     <div class="section-label">Leads</div>
     <div class="cards-4">
-      <div class="stat-card"><div class="lbl">Total</div><div class="val">{{ total }}</div></div>
-      <div class="stat-card red"><div class="lbl">Overdue</div><div class="val">{{ overdue_leads|length }}</div></div>
-      <div class="stat-card amber"><div class="lbl">Pending</div><div class="val">{{ pending|length }}</div></div>
-      <div class="stat-card green"><div class="lbl">Converted</div><div class="val">{{ converted|length }}</div></div>
+      <a href="/leads" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="lbl">Total Leads</div><div class="val">{{ total }}</div></div></a>
+      <a href="/leads?status=Overdue" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="lbl">Overdue</div><div class="val">{{ overdue_leads|length }}</div></div></a>
+      <a href="/leads?status=Called - Connected" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="lbl">Pending</div><div class="val">{{ pending|length }}</div></div></a>
+      <a href="/leads?status=Converted" style="text-decoration:none;"><div class="stat-card green" style="cursor:pointer;"><div class="lbl">Converted</div><div class="val">{{ converted|length }}</div></div></a>
     </div>
 
     <div class="section-label">Jobs</div>
     <div class="cards-4">
-      <div class="stat-card"><div class="lbl">Active Tasks</div><div class="val">{{ active_jobs|length }}</div></div>
+      <a href="/jobs" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="lbl">Active Tasks</div><div class="val">{{ active_jobs|length }}</div></div></a>
       <div class="stat-card red"><div class="lbl">Overdue Tasks</div><div class="val">{{ overdue_jobs|length }}</div></div>
       <div class="stat-card amber"><div class="lbl">Processing</div><div class="val">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div></div>
-      <div class="stat-card green"><div class="lbl">Done</div><div class="val">{{ done_jobs|length }}</div></div>
+      <a href="/jobs?status=Done" style="text-decoration:none;"><div class="stat-card green" style="cursor:pointer;"><div class="lbl">Done</div><div class="val">{{ done_jobs|length }}</div></div></a>
     </div>
 
     <div class="divider"></div>
-
-    <div class="two-col">
-      <div class="card">
-        <div class="card-header">
-          <span>Today's Leads</span>
-          <a href="/leads">View all →</a>
-        </div>
-        <table>
-          <thead><tr><th>Name</th><th>Service</th><th>Status</th></tr></thead>
-          <tbody>
-            {% for lead in today_leads %}
-            <tr class="{% if lead.due_date and lead.due_date < now and lead.status not in ['Converted','Lost'] %}overdue-row{% endif %}">
-              <td><a href="/leads/{{ lead.id }}" style="color:#133E87;text-decoration:none;font-weight:600;">{{ lead.name }}</a></td>
-              <td>{{ lead.service or '—' }}</td>
-              <td><span class="badge b-{{ lead.status|lower|replace(' ','') }}">{{ lead.status }}</span></td>
-            </tr>
-            {% else %}
-            <tr><td colspan="3" class="empty">No leads today.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span>Active Tasks</span>
-          <a href="/jobs">View all →</a>
-        </div>
-        <table>
-          <thead><tr><th>Customer</th><th>Job Type</th><th>Status</th></tr></thead>
-          <tbody>
-            {% for job in recent_jobs %}
-            <tr class="{% if job.due_date and job.due_date < now %}overdue-row{% endif %}">
-              <td><a href="/jobs/{{ job.id }}" style="color:#133E87;text-decoration:none;font-weight:600;">{{ job.customer.name }}</a></td>
-              <td>{{ job.job_type }}</td>
-              <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></td>
-            </tr>
-            {% else %}
-            <tr><td colspan="3" class="empty">No active jobs.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
 
     <div class="section-label" style="margin-top:14px;">Staff Workload</div>
     <div class="card">

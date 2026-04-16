@@ -159,6 +159,18 @@
                       <label>Email</label>
                       <input type="email" name="email" value="{{ user.email }}" required>
                     </div>
+                    <div class="form-group" style="max-width:130px;">
+                      <label>Role</label>
+                      <select name="role">
+                        <option value="staff" {% if user.role == 'staff' %}selected{% endif %}>Staff</option>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="finance" {% if user.role == 'finance' %}selected{% endif %}>Finance</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>New Password (optional)</label>
+                      <input type="password" name="password" placeholder="Leave blank to keep current">
+                    </div>
                     <button type="submit" class="btn-primary">Save</button>
                     <button type="button" class="btn-sm" onclick="toggleEdit({{ user.id }})">Cancel</button>
                   </div>

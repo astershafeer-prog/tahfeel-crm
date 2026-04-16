@@ -738,6 +738,7 @@ def admin_edit_staff(user_id):
     name = request.form.get('name', '').strip()
     email = request.form.get('email', '').strip()
     new_password = request.form.get('password', '').strip()
+    new_role = request.form.get('role', '').strip()
     if name:
         user.name = name
     if email:
@@ -746,6 +747,8 @@ def admin_edit_staff(user_id):
             flash('That email is already in use')
             return redirect(url_for('admin_panel'))
         user.email = email
+    if new_role in ['staff', 'admin', 'finance']:
+        user.role = new_role
     if new_password:
         user.password = generate_password_hash(new_password)
     db.session.commit()
@@ -812,7 +815,21 @@ def manage_users():
 @login_required
 @admin_required
 def toggle_user(user_id):
-    return redirect(url_for('admin_toggle_staff', user_id=user_id))
+    user = User.query.get_or_404(user_id)
+    user.active = not user.active
+    db.session.commit()
+    flash(f'{"Activated" if user.active else "Deactivated"} {user.name}')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/staff/<int:user_id>/toggle')
+@login_required
+@admin_required
+def admin_toggle_staff(user_id):
+    user = User.query.get_or_404(user_id)
+    user.active = not user.active
+    db.session.commit()
+    flash(f'{"Activated" if user.active else "Deactivated"} {user.name}')
+    return redirect(url_for('admin_panel'))
 
 # ── Customers ────────────────────────────────────────────────────────────────
 
@@ -1021,9 +1038,11 @@ def approve_job(job_id):
     job.status = 'Assigned'
     job.finance_approved_by = session['user_id']
     job.finance_approved_at = datetime.now()
-    update = JobUpdate(job_id=job.id, status='Assigned',
-                       remark=f'Approved by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}',
-                       staff_name=session['user_name'])
+    notes = request.form.get('finance_notes', '').strip()
+    remark = f'Approved by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}'
+    if notes:
+        remark += f'. Notes: {notes}'
+    update = JobUpdate(job_id=job.id, status='Assigned', remark=remark, staff_name=session['user_name'])
     db.session.add(update)
     db.session.commit()
     flash('Task approved and assigned to staff.')
@@ -1039,6 +1058,12 @@ def update_payment(job_id):
         job.amount_received = float(request.form.get('amount_received') or job.amount_received or 0)
     except:
         pass
+    notes = request.form.get('finance_notes', '').strip()
+    remark = f'Payment updated. Invoiced: AED {job.amount_invoiced:,.0f} / Received: AED {job.amount_received:,.0f}'
+    if notes:
+        remark += f'. Notes: {notes}'
+    update = JobUpdate(job_id=job.id, status=job.status, remark=remark, staff_name=session['user_name'])
+    db.session.add(update)
     db.session.commit()
     flash('Payment updated.')
     return redirect(request.referrer or url_for('jobs'))
