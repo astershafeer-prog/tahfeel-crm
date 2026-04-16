@@ -48,6 +48,7 @@ class Lead(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     customer_story = db.Column(db.Text)
     potential_value = db.Column(db.Float, default=0)
+    phone2 = db.Column(db.String(20))
     assignee = db.relationship('User', foreign_keys=[assigned_to])
     updates = db.relationship('LeadUpdate', backref='lead', lazy=True, order_by='LeadUpdate.created_at.desc()')
 
@@ -193,16 +194,21 @@ def dashboard():
                                users=users, now=now,
                                date_filter=date_filter, from_date=from_date, to_date=to_date)
     else:
-        leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
+   leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
         overdue = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
+        converted = [l for l in leads if l.status == 'Converted']
+        lost = [l for l in leads if l.status == 'Lost']
+        pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
+        potential_value = sum(l.potential_value or 0 for l in leads if l.status not in ['Converted', 'Lost'])
         followups = LeadUpdate.query.filter(
             LeadUpdate.staff_name == session['user_name'],
             LeadUpdate.followup_date <= now + timedelta(days=1),
             LeadUpdate.followup_date >= now
         ).all()
         return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
+                               converted=converted, lost=lost, pending=pending,
+                               potential_value=potential_value,
                                followups=followups, now=now)
-
 @app.route('/leads')
 @login_required
 @admin_required
@@ -210,8 +216,15 @@ def all_leads():
     now = datetime.now()
     leads = Lead.query.order_by(Lead.due_date).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    search = request.args.get('search', '').strip().lower()
+    if search:
+        leads = [l for l in leads if
+                 search in (l.name or '').lower() or
+                 search in (l.phone or '').lower() or
+                 search in (l.phone2 or '').lower() or
+                 search in (l.company or '').lower()]
     leads = apply_lead_filters(leads, request.args, now)
-    return render_template('all_leads.html', leads=leads, now=now, users=users)
+    return render_template('all_leads.html', leads=leads, now=now, users=users, search=search)
 
 @app.route('/leads/export')
 @login_required
@@ -481,6 +494,7 @@ def edit_lead(lead_id):
         lead.remarks = request.form.get('remarks')
         assigned = request.form.get('assigned_to')
         lead.assigned_to = int(assigned) if assigned else None
+	lead.phone2 = request.form.get('phone2')
         due = request.form.get('due_date')
         if due:
             lead.due_date = datetime.strptime(due, '%Y-%m-%d')
@@ -667,6 +681,7 @@ def init_db():
         try:
             with db.engine.connect() as conn:
                 conn.execute(db.text('ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0'))
+                conn.execute(db.text('ALTER TABLE lead ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)'))
                 conn.commit()
         except:
             pass
