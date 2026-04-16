@@ -101,6 +101,11 @@
             </select>
           </div>
           <div class="form-group">
+           <div class="form-group">
+            <label>Lead Date</label>
+            <input type="date" name="lead_date" value="{{ now.strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}">
+          </div>
+          <div class="form-group">
             <label>Due Date</label>
             <input type="date" name="due_date" min="{{ now.strftime('%Y-%m-%d') }}">
           </div>
