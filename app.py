@@ -271,6 +271,7 @@ def dashboard():
             all_jobs = Job.query.order_by(Job.created_at.desc()).all()
             active_jobs = [j for j in all_jobs if j.status != 'Done']
             pending_approval = [j for j in all_jobs if j.status == 'Pending Finance Approval']
+            pending_close = [j for j in all_jobs if j.status == 'Pending Finance Close']
             total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
             total_received = sum((j.amount_received or 0) for j in active_jobs)
             total_pending = total_invoiced - total_received
@@ -289,6 +290,7 @@ def dashboard():
                                docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
+                               pending_close=pending_close,
                                total_invoiced=total_invoiced,
                                total_received=total_received,
                                total_pending=total_pending,
@@ -322,7 +324,7 @@ def dashboard():
                 jobs = [j for j in all_jobs if j.created_at and from_dt <= j.created_at.date() <= to_dt]
             else:
                 jobs = all_jobs
-            active_jobs = [j for j in jobs if j.status != 'Done']
+            active_jobs = [j for j in jobs if j.status not in ['Done', 'Closed']]
             done_jobs = [j for j in jobs if j.status == 'Done']
             total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
             total_received = sum((j.amount_received or 0) for j in active_jobs)
@@ -330,7 +332,8 @@ def dashboard():
             completed_value = sum((j.amount_received or 0) for j in done_jobs)
             overdue_jobs = [j for j in jobs if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
             pending_approval = [j for j in jobs if j.status == 'Pending Finance Approval']
-            recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Pending Finance Approval']][:10]
+            pending_close = [j for j in jobs if j.status == 'Pending Finance Close']
+            recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Closed', 'Pending Finance Approval']][:10]
         except:
             jobs = all_jobs = active_jobs = done_jobs = overdue_jobs = pending_approval = recent_jobs = []
             total_invoiced = total_received = total_pending = completed_value = 0
@@ -371,6 +374,7 @@ def dashboard():
                                jobs=jobs, active_jobs=active_jobs,
                                overdue_jobs=overdue_jobs, done_jobs=done_jobs,
                                pending_approval=pending_approval,
+                               pending_close=pending_close,
                                recent_jobs=recent_jobs,
                                total_invoiced=total_invoiced,
                                total_received=total_received,
@@ -957,7 +961,7 @@ def customer_detail(customer_id):
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 
 JOB_STATUSES = ['Assigned', 'Job Started', 'Processing', 'Pending Authority', 'On Hold', 'Delayed', 'Final Stage', 'Done']
-JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES
+JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES + ['Pending Finance Close', 'Closed']
 
 @app.route('/jobs')
 @login_required
@@ -1077,9 +1081,17 @@ def job_detail(job_id):
         flash('Access denied')
         return redirect(url_for('jobs'))
     if request.method == 'POST':
+        # Block all updates on Closed tasks
+        if job.status == 'Closed' and role != 'admin':
+            flash('This task is closed. No further updates allowed.')
+            return redirect(url_for('job_detail', job_id=job_id))
         # Block staff from updating if pending finance approval
         if job.status == 'Pending Finance Approval' and role == 'staff':
             flash('This task is pending finance approval. You cannot update it yet.')
+            return redirect(url_for('job_detail', job_id=job_id))
+        # Block staff from updating if pending finance close
+        if job.status == 'Pending Finance Close' and role == 'staff':
+            flash('Work is complete. Awaiting finance to close this task.')
             return redirect(url_for('job_detail', job_id=job_id))
         remark = request.form.get('remark', '').strip()
         if not remark:
@@ -1088,10 +1100,14 @@ def job_detail(job_id):
         new_status = request.form.get('status', job.status)
         if role == 'staff' and new_status == 'Pending Finance Approval':
             new_status = job.status
+        # When staff marks Done → automatically move to Pending Finance Close
+        if new_status == 'Done' and role == 'staff':
+            new_status = 'Pending Finance Close'
         job.status = new_status
-        # Save completion fields when marking Done
-        if new_status == 'Done':
-            job.completed_at = datetime.now()
+        # Save completion fields when marking Done or Pending Finance Close
+        if new_status in ['Done', 'Pending Finance Close']:
+            if not job.completed_at:
+                job.completed_at = datetime.now()
             rating = request.form.get('customer_rating')
             if rating:
                 try: job.customer_rating = int(rating)
@@ -1234,6 +1250,32 @@ def update_payment(job_id):
     flash('Payment updated.')
     return redirect(request.referrer or url_for('jobs'))
 
+
+@app.route('/jobs/<int:job_id>/close', methods=['POST'])
+@login_required
+@finance_required
+def close_job(job_id):
+    job = Job.query.get_or_404(job_id)
+    try:
+        ai = request.form.get('amount_invoiced')
+        ar = request.form.get('amount_received')
+        if ai: job.amount_invoiced = float(ai)
+        if ar: job.amount_received = float(ar)
+    except:
+        pass
+    notes = request.form.get('finance_notes', '').strip()
+    if notes:
+        existing = job.finance_notes or ''
+        job.finance_notes = (existing + '\n' + notes).strip()
+    job.status = 'Closed'
+    remark = f'Task CLOSED by Finance. Final — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}'
+    if notes:
+        remark += f'. Notes: {notes}'
+    update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
+    db.session.add(update)
+    db.session.commit()
+    flash('Task closed successfully.')
+    return redirect(url_for('dashboard'))
 
 # ── Admin — Job Types ─────────────────────────────────────────────────────────
 

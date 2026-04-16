@@ -47,6 +47,8 @@
     .b-onhold { background: #FCEBEB; color: #791F1F; }
     .b-delayed { background: #FCEBEB; color: #791F1F; }
     .b-finalstage { background: #EAF3DE; color: #3B6D11; }
+    .b-pendingfinanceclose { background: #EEEDFE; color: #3C3489; }
+    .b-closed { background: #133E87; color: white; }
     .b-done { background: #EAF3DE; color: #27500A; }
     .b-pendingfinanceapproval { background: #FAEEDA; color: #633806; }
     .b-high { background: #FCEBEB; color: #791F1F; }
@@ -126,6 +128,8 @@
         <select name="status">
           <option value="">All Statuses</option>
           <option value="Pending Finance Approval" {% if status_filter == "Pending Finance Approval" %}selected{% endif %}>Pending Finance Approval</option>
+          <option value="Pending Finance Close" {% if status_filter == "Pending Finance Close" %}selected{% endif %}>Pending Finance Close</option>
+          <option value="Closed" {% if status_filter == "Closed" %}selected{% endif %}>Closed</option>
           {% for s in statuses %}
           <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
           {% endfor %}
