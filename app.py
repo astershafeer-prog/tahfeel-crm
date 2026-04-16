@@ -767,6 +767,7 @@ def delete_task(task_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def init_db():
+    with app.app_context():
         db.create_all()
         try:
             with db.engine.connect() as conn:
