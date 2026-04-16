@@ -1425,7 +1425,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS future_work_notes TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
-            'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',,
+            'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
         ]
         for sql in migrations:
             try:
