@@ -229,15 +229,29 @@ def all_leads():
     leads = Lead.query.order_by(Lead.due_date).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     search = request.args.get('search', '').strip().lower()
-    if not request.args:
-        leads = [l for l in leads if l.due_date.date() == now.date() and l.status not in ['Converted', 'Lost']]
-    if search:
-        leads = [l for l in leads if
-                 search in (l.name or '').lower() or
-                 search in (l.phone or '').lower() or
-                 search in (l.company or '').lower()]
-    leads = apply_lead_filters(leads, request.args, now)
-    return render_template('all_leads.html', leads=leads, now=now, users=users, search=search)
+    is_default = not any(request.args.get(k) for k in ['date', 'status', 'staff', 'search', 'from', 'to'])
+
+    if is_default:
+        leads = [l for l in leads if l.due_date and l.due_date.date() == now.date() and l.status not in ['Converted', 'Lost']]
+    else:
+        if search:
+            leads = [l for l in leads if
+                     search in (l.name or '').lower() or
+                     search in (l.phone or '').lower() or
+                     search in (l.company or '').lower()]
+        leads = apply_lead_filters(leads, request.args, now)
+
+    # Pagination
+    page = int(request.args.get('page', 1))
+    per_page = 50
+    total = len(leads)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    paginated = leads[(page - 1) * per_page: page * per_page]
+
+    return render_template('all_leads.html', leads=paginated, now=now, users=users,
+                           search=search, is_default=is_default,
+                           page=page, total_pages=total_pages, total=total)
 
 @app.route('/leads/export')
 @login_required
