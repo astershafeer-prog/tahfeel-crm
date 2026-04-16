@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tahfeel CRM — Add Job</title>
+  <title>Tahfeel CRM — Add Task</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f0f4f8; }
@@ -42,7 +42,7 @@
     <a href="/leads" >All Leads</a>
     <a href="/leads/add" >Add Lead</a>
     <a href="/leads/import" >Import Leads</a>
-    <a href="/jobs" class="active">Jobs</a>
+    <a href="/jobs" class="active">Tasks</a>
     <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
   </div>
   <div class="container">
@@ -50,7 +50,7 @@
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
     <div class="card">
-      <h2>Add New Job</h2>
+      <h2>Add New Task</h2>
       <form method="post">
         <div class="form-group">
           <label>Customer *</label>
@@ -107,7 +107,7 @@
           <textarea name="internal_notes" placeholder="Context, special instructions, client preferences..."></textarea>
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn-submit">Create Job</button>
+          <button type="submit" class="btn-submit">Create Task</button>
           <a href="/jobs" class="btn-cancel">Cancel</a>
         </div>
       </form>

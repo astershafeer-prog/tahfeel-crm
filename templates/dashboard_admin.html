@@ -86,7 +86,7 @@
     <a href="/leads" >All Leads</a>
     <a href="/leads/add" >Add Lead</a>
     <a href="/leads/import" >Import Leads</a>
-    <a href="/jobs" >Jobs</a>
+    <a href="/jobs" >Tasks</a>
     <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
   </div>
 
@@ -149,8 +149,8 @@
 
     <div class="section-label">Jobs</div>
     <div class="cards-4">
-      <div class="stat-card"><div class="lbl">Active Jobs</div><div class="val">{{ active_jobs|length }}</div></div>
-      <div class="stat-card red"><div class="lbl">Overdue Jobs</div><div class="val">{{ overdue_jobs|length }}</div></div>
+      <div class="stat-card"><div class="lbl">Active Tasks</div><div class="val">{{ active_jobs|length }}</div></div>
+      <div class="stat-card red"><div class="lbl">Overdue Tasks</div><div class="val">{{ overdue_jobs|length }}</div></div>
       <div class="stat-card amber"><div class="lbl">Processing</div><div class="val">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div></div>
       <div class="stat-card green"><div class="lbl">Done</div><div class="val">{{ done_jobs|length }}</div></div>
     </div>
@@ -181,7 +181,7 @@
 
       <div class="card">
         <div class="card-header">
-          <span>Active Jobs</span>
+          <span>Active Tasks</span>
           <a href="/jobs">View all →</a>
         </div>
         <table>
@@ -205,7 +205,7 @@
     <div class="card">
       <table>
         <thead>
-          <tr><th>Staff</th><th>Leads</th><th>Overdue Leads</th><th>Active Jobs</th><th>Overdue Jobs</th></tr>
+          <tr><th>Staff</th><th>Leads</th><th>Overdue Leads</th><th>Active Tasks</th><th>Overdue Tasks</th></tr>
         </thead>
         <tbody>
           {% for s in staff_stats %}

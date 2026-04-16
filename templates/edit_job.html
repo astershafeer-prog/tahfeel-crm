@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tahfeel CRM — Edit Job</title>
+  <title>Tahfeel CRM — Edit Task</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f0f4f8; }
@@ -42,7 +42,7 @@
     <a href="/leads" >All Leads</a>
     <a href="/leads/add" >Add Lead</a>
     <a href="/leads/import" >Import Leads</a>
-    <a href="/jobs" class="active">Jobs</a>
+    <a href="/jobs" class="active">Tasks</a>
     <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
   </div>
   <div class="container">
@@ -50,7 +50,7 @@
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
     <div class="card">
-      <h2>Edit Job</h2>
+      <h2>Edit Task</h2>
       <form method="post">
         <div class="form-group">
           <label>Customer *</label>

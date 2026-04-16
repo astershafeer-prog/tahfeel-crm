@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tahfeel CRM — Jobs</title>
+  <title>Tahfeel CRM — Tasks</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f0f4f8; }
@@ -69,7 +69,7 @@
     <a href="/leads" >All Leads</a>
     <a href="/leads/add" >Add Lead</a>
     <a href="/leads/import" >Import Leads</a>
-    <a href="/jobs" class="active">Jobs</a>
+    <a href="/jobs" class="active">Tasks</a>
     <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
   </div>
   <div class="container">
@@ -77,8 +77,8 @@
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
     <div class="page-header">
-      <h2>Jobs <span style="font-size:14px;color:#888;font-weight:400;">({{ jobs|length }} total)</span></h2>
-      {% if session.role == 'admin' %}<a href="/jobs/add" class="btn-add">+ Add Job</a>{% endif %}
+      <h2>Tasks <span style="font-size:14px;color:#888;font-weight:400;">({{ jobs|length }} total)</span></h2>
+      {% if session.role == 'admin' %}<a href="/jobs/add" class="btn-add">+ Add Task</a>{% endif %}
     </div>
 
     <div class="summary-row">

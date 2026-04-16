@@ -67,7 +67,7 @@
     <a href="/leads" >All Leads</a>
     <a href="/leads/add" >Add Lead</a>
     <a href="/leads/import" >Import Leads</a>
-    <a href="/jobs" class="active">Jobs</a>
+    <a href="/jobs" class="active">Tasks</a>
     <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
   </div>
   <div class="container">
@@ -81,7 +81,7 @@
           <div class="profile-name">{{ customer.name }}</div>
           <div class="profile-company">{{ customer.company or '' }}</div>
         </div>
-        <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Job</a>
+        <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Task</a>
       </div>
       <div class="details-grid">
         <div class="detail-item"><label>Phone</label><span>{{ customer.phone or '—' }}</span></div>
@@ -114,7 +114,7 @@
       </div>
     </div>
 
-    <div class="section-title">Jobs ({{ jobs|length }})</div>
+    <div class="section-title">Tasks ({{ jobs|length }})</div>
     <div class="card">
       <table>
         <thead>
