@@ -147,12 +147,9 @@ def dashboard():
     now = datetime.now()
     if session['role'] == 'admin':
         all_leads = Lead.query.order_by(Lead.due_date).all()
-
-        # Date filter
         date_filter = request.args.get('date', '')
         from_date = request.args.get('from', '')
         to_date = request.args.get('to', '')
-
         leads = all_leads
         if date_filter == 'today':
             leads = [l for l in all_leads if l.created_at.date() == now.date()]
@@ -165,7 +162,6 @@ def dashboard():
             from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
             to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
             leads = [l for l in all_leads if from_dt <= l.created_at.date() <= to_dt]
-
         total = len(leads)
         overdue = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
         converted = [l for l in leads if l.status == 'Converted']
@@ -209,6 +205,7 @@ def dashboard():
                                converted=converted, lost=lost, pending=pending,
                                potential_value=potential_value,
                                followups=followups, now=now)
+
 @app.route('/leads')
 @login_required
 @admin_required
@@ -240,7 +237,7 @@ def export_leads():
     wb = Workbook()
     ws = wb.active
     ws.title = "Leads"
-    headers = ['Name', 'Company', 'Phone', 'Email', 'Address', 'Source',
+    headers = ['Name', 'Company', 'Phone', 'Phone 2', 'Email', 'Address', 'Source',
                'Service', 'Lead Type', 'Assigned To', 'Due Date', 'Status', 'Remarks', 'Created', 'Potential Value']
     ws.append(headers)
     header_font = Font(bold=True, color="FFFFFF")
@@ -250,9 +247,9 @@ def export_leads():
         cell.fill = header_fill
     for lead in leads:
         ws.append([
-            lead.name, lead.company or '', lead.phone or '', lead.email or '',
-            lead.address or '', lead.source or '', lead.service or '', lead.lead_type or '',
-            lead.assignee.name if lead.assignee else '',
+            lead.name, lead.company or '', lead.phone or '', lead.phone2 or '',
+            lead.email or '', lead.address or '', lead.source or '', lead.service or '',
+            lead.lead_type or '', lead.assignee.name if lead.assignee else '',
             lead.due_date.strftime('%d %b %Y') if lead.due_date else '',
             lead.status or '', lead.remarks or '',
             lead.created_at.strftime('%d %b %Y') if lead.created_at else '',
@@ -278,15 +275,14 @@ def add_lead():
     sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
         due = request.form.get('due_date')
-        due_dt = datetime.strptime(due, '%Y-%m-%d') if due else datetime.now() + timedelta(days=1)
         lead_date = request.form.get('lead_date')
         created_dt = datetime.strptime(lead_date, '%Y-%m-%d') if lead_date else datetime.now()
-        if not due:
-            due_dt = created_dt + timedelta(days=1)
+        due_dt = datetime.strptime(due, '%Y-%m-%d') if due else created_dt + timedelta(days=1)
         lead = Lead(
             name=request.form['name'],
             company=request.form.get('company'),
             phone=request.form.get('phone'),
+            phone2=request.form.get('phone2'),
             email=request.form.get('email'),
             address=request.form.get('address'),
             source=request.form.get('source'),
@@ -375,6 +371,7 @@ def import_leads():
                 if not phone:
                     errors.append(f'Row {i}: Phone is required — skipped')
                     continue
+                created_dt = datetime.strptime(lead_date_str, '%Y-%m-%d') if lead_date_str else datetime.now()
                 lead = Lead(
                     name=str(name), company=str(company) if company else None,
                     phone=str(phone), email=str(email) if email else None,
@@ -385,8 +382,8 @@ def import_leads():
                     remarks=str(remarks) if remarks else None,
                     representative=session['user_name'],
                     assigned_to=assigned_id,
-                    created_at=datetime.strptime(lead_date_str, '%Y-%m-%d') if lead_date_str else datetime.now(),
-                    due_date=datetime.strptime(lead_date_str, '%Y-%m-%d') + timedelta(days=1) if lead_date_str else datetime.now() + timedelta(days=1)
+                    created_at=created_dt,
+                    due_date=created_dt + timedelta(days=1)
                 )
                 db.session.add(lead)
                 count += 1
@@ -416,19 +413,19 @@ def download_template():
     ws = wb.active
     ws.title = "Leads"
     headers = ['Name*', 'Company', 'Phone*', 'Email', 'Address',
-           'Source', 'Service', 'Lead Type', 'Remarks', 'Assigned To', 'Lead Date']
+               'Source', 'Service', 'Lead Type', 'Remarks', 'Assigned To', 'Lead Date']
     ws.append(headers)
     ws.append(['John Smith', 'ABC Trading LLC', '+971501234567',
                'john@abc.ae', 'Dubai',
                sources[0].name if sources else 'WhatsApp',
                services[0].name if services else 'Trade License',
                'New', 'Interested in mainland license',
-               staff[0].name if staff else ''])
+               staff[0].name if staff else '', '2026-04-16'])
     ws.append(['Sara Ahmed', '', '+971509876543', '', 'Sharjah',
                sources[1].name if len(sources) > 1 else '',
                services[1].name if len(services) > 1 else '',
                'New', '',
-               staff[1].name if len(staff) > 1 else ''])
+               staff[1].name if len(staff) > 1 else '', '2026-04-16'])
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
     for cell in ws[1]:
@@ -486,6 +483,7 @@ def edit_lead(lead_id):
         lead.name = request.form['name']
         lead.company = request.form.get('company')
         lead.phone = request.form.get('phone')
+        lead.phone2 = request.form.get('phone2')
         lead.email = request.form.get('email')
         lead.address = request.form.get('address')
         lead.source = request.form.get('source')
@@ -494,7 +492,6 @@ def edit_lead(lead_id):
         lead.remarks = request.form.get('remarks')
         assigned = request.form.get('assigned_to')
         lead.assigned_to = int(assigned) if assigned else None
-    lead.phone2 = request.form.get('phone2')
         due = request.form.get('due_date')
         if due:
             lead.due_date = datetime.strptime(due, '%Y-%m-%d')
@@ -598,19 +595,6 @@ def admin_toggle_staff(user_id):
         return redirect(url_for('admin_panel'))
     user.active = not user.active
     db.session.commit()
-    return redirect(url_for('admin_panel'))
-
-@app.route('/admin/staff/<int:user_id>/delete')
-@login_required
-@admin_required
-def admin_delete_staff(user_id):
-    user = User.query.get_or_404(user_id)
-    if user.role == 'admin':
-        flash('Admin accounts cannot be deleted')
-        return redirect(url_for('admin_panel'))
-    db.session.delete(user)
-    db.session.commit()
-    flash('Staff member removed')
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/service/add', methods=['POST'])
