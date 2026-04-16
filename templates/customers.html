@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Customers</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .container { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
+    .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; }
+    td { padding: 11px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; }
+    .btn-sm:hover { background: #133E87; color: white; }
+    .empty { padding: 40px; text-align: center; color: #aaa; font-size: 13px; }
+    .from-lead { background: #EAF3DE; color: #27500A; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
+      <span>{{ session.user_name }} (Admin)</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/leads">All Leads</a>
+    <a href="/leads/add">Add Lead</a>
+    <a href="/leads/import">Import Leads</a>
+    <a href="/customers" class="active">Customers</a>
+    <a href="/jobs">Jobs</a>
+    <a href="/tasks">Tasks</a>
+    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+  </div>
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    <div class="page-header">
+      <h2>Customers <span style="font-size:14px;color:#888;font-weight:400;">({{ customers|length }} total)</span></h2>
+      <a href="/customers/add" class="btn-add">+ Add Customer</a>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Company</th>
+            <th>Phone</th>
+            <th>Source</th>
+            <th>Jobs</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in customers %}
+          <tr>
+            <td>
+              <strong>{{ c.name }}</strong>
+              {% if c.lead_id %}<span class="from-lead">from lead</span>{% endif %}
+            </td>
+            <td>{{ c.company or '—' }}</td>
+            <td>{{ c.phone or '—' }}</td>
+            <td>{{ c.source or '—' }}</td>
+            <td>{{ c.jobs|length }}</td>
+            <td><a href="/customers/{{ c.id }}" class="btn-sm">View</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="empty">No customers yet. Add one to get started.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

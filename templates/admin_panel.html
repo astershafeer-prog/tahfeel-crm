@@ -230,6 +230,31 @@
           {% endif %}
         </div>
       </div>
+
+      <!-- Job Types -->
+      <div class="section-card">
+        <div class="section-inner">
+          <h2>💼 Job Types</h2>
+          <form method="POST" action="/admin/jobtype/add">
+            <div class="form-row">
+              <label>Job Type Name</label>
+              <input type="text" name="name" placeholder="e.g. Trade License" required>
+              <button type="submit" class="btn-sm btn-primary">Add</button>
+            </div>
+          </form>
+          {% if job_types %}
+            {% for jt in job_types %}
+            <div class="list-item">
+              <span>{{ jt.name }}</span>
+              <a href="/admin/jobtype/{{ jt.id }}/delete" class="btn-sm btn-danger"
+                 onclick="return confirm('Remove {{ jt.name }}?')">Remove</a>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No job types yet.</div>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 

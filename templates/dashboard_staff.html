@@ -171,6 +171,42 @@
       <div class="empty">No leads assigned to you yet.</div>
       {% endif %}
     </div>
+
+    {% if my_jobs %}
+    <div class="card" style="margin-top:16px;">
+      <div class="card-header" style="padding:12px 20px;border-bottom:0.5px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="font-size:15px;font-weight:700;color:#133E87;">My Active Jobs ({{ my_jobs|length }})</h3>
+        <a href="/jobs" style="font-size:12px;color:#133E87;text-decoration:none;">View all →</a>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Job Type</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in my_jobs %}
+          <tr {% if job.due_date and job.due_date < now %}class="overdue-row"{% endif %}>
+            <td><strong>{{ job.customer.name }}</strong></td>
+            <td>{{ job.job_type }}</td>
+            <td>
+              {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
+              {% if job.due_date and job.due_date < now %}
+              <span class="overdue-tag">Overdue</span>
+              {% endif %}
+            </td>
+            <td>{{ job.status }}</td>
+            <td><a href="/jobs/{{ job.id }}" class="btn-sm">Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
   </div>
 </body>
 </html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Customer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .container { padding: 24px; max-width: 1000px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .profile-card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 24px; margin-bottom: 16px; }
+    .profile-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .profile-name { font-size: 20px; font-weight: 700; color: #133E87; }
+    .profile-company { font-size: 14px; color: #888; margin-top: 2px; }
+    .btn-add { background: #133E87; color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .detail-item label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; display: block; margin-bottom: 3px; }
+    .detail-item span { font-size: 13px; color: #333; }
+    .revenue-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .rev-card { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 14px 18px; }
+    .rev-card .label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .rev-card .value { font-size: 20px; font-weight: 700; color: #133E87; }
+    .rev-card.green .value { color: #27500A; }
+    .rev-card.amber .value { color: #854F0B; }
+    .section-title { font-size: 15px; font-weight: 700; color: #133E87; margin-bottom: 12px; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; }
+    td { padding: 11px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .b-assigned { background: #E6F1FB; color: #0C447C; }
+    .b-started { background: #EEEDFE; color: #3C3489; }
+    .b-processing { background: #FAEEDA; color: #633806; }
+    .b-pending { background: #F1EFE8; color: #5F5E5A; }
+    .b-onhold { background: #FCEBEB; color: #791F1F; }
+    .b-delayed { background: #FCEBEB; color: #791F1F; }
+    .b-final { background: #EAF3DE; color: #3B6D11; }
+    .b-done { background: #EAF3DE; color: #27500A; }
+    .b-high { background: #FCEBEB; color: #791F1F; }
+    .b-medium { background: #FAEEDA; color: #633806; }
+    .b-low { background: #f0f0f0; color: #555; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; }
+    .btn-sm:hover { background: #133E87; color: white; }
+    .empty { padding: 30px; text-align: center; color: #aaa; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
+      <span>{{ session.user_name }} (Admin)</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/leads">All Leads</a>
+    <a href="/leads/add">Add Lead</a>
+    <a href="/leads/import">Import Leads</a>
+    <a href="/customers" class="active">Customers</a>
+    <a href="/jobs">Jobs</a>
+    <a href="/tasks">Tasks</a>
+    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+  </div>
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="profile-card">
+      <div class="profile-header">
+        <div>
+          <div class="profile-name">{{ customer.name }}</div>
+          <div class="profile-company">{{ customer.company or '' }}</div>
+        </div>
+        <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Job</a>
+      </div>
+      <div class="details-grid">
+        <div class="detail-item"><label>Phone</label><span>{{ customer.phone or '—' }}</span></div>
+        <div class="detail-item"><label>Email</label><span>{{ customer.email or '—' }}</span></div>
+        <div class="detail-item"><label>Source</label><span>{{ customer.source or '—' }}</span></div>
+        <div class="detail-item"><label>Address</label><span>{{ customer.address or '—' }}</span></div>
+        <div class="detail-item"><label>Customer since</label><span>{{ customer.created_at.strftime('%d %b %Y') }}</span></div>
+        {% if customer.lead_id %}<div class="detail-item"><label>From lead</label><span><a href="/leads/{{ customer.lead_id }}" style="color:#133E87;">View original lead</a></span></div>{% endif %}
+      </div>
+      {% if customer.notes %}
+      <div style="margin-top:14px;padding-top:14px;border-top:0.5px solid #eee;">
+        <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Notes</div>
+        <div style="font-size:13px;color:#444;">{{ customer.notes }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="revenue-row">
+      <div class="rev-card">
+        <div class="label">Pending revenue</div>
+        <div class="value">AED {{ '{:,.0f}'.format(pending_revenue) }}</div>
+      </div>
+      <div class="rev-card green">
+        <div class="label">Collected revenue</div>
+        <div class="value">AED {{ '{:,.0f}'.format(collected_revenue) }}</div>
+      </div>
+      <div class="rev-card amber">
+        <div class="label">Total received</div>
+        <div class="value">AED {{ '{:,.0f}'.format(total_received) }}</div>
+      </div>
+    </div>
+
+    <div class="section-title">Jobs ({{ jobs|length }})</div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>Job Type</th><th>Assigned To</th><th>Due Date</th><th>Priority</th><th>Status</th><th>Amount Received</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr>
+            <td><strong>{{ job.job_type }}</strong></td>
+            <td>{{ job.assignee.name if job.assignee else '—' }}</td>
+            <td>{{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}</td>
+            <td><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></td>
+            <td><span class="badge b-{{ job.status|lower|replace(' ', '') }}">{{ job.status }}</span></td>
+            <td>AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</td>
+            <td><a href="/jobs/{{ job.id }}" class="btn-sm">View</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="empty">No jobs yet for this customer.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Edit Job</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .container { padding: 24px; max-width: 700px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 28px; }
+    .card h2 { font-size: 17px; font-weight: 700; color: #133E87; margin-bottom: 24px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; font-family: Arial, sans-serif; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #133E87; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-actions { display: flex; gap: 10px; margin-top: 24px; }
+    .btn-submit { background: #133E87; color: white; padding: 10px 24px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { background: white; color: #555; padding: 10px 20px; border-radius: 8px; border: 1px solid #ddd; font-size: 14px; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
+      <span>{{ session.user_name }} (Admin)</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/leads">All Leads</a>
+    <a href="/leads/add">Add Lead</a>
+    <a href="/leads/import">Import Leads</a>
+    <a href="/customers">Customers</a>
+    <a href="/jobs" class="active">Jobs</a>
+    <a href="/tasks">Tasks</a>
+    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+  </div>
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    <div class="card">
+      <h2>Edit Job</h2>
+      <form method="post">
+        <div class="form-group">
+          <label>Customer *</label>
+          <select name="customer_id" required>
+            {% for c in customers %}
+            <option value="{{ c.id }}" {% if job.customer_id == c.id %}selected{% endif %}>{{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Job Type *</label>
+            <select name="job_type" required>
+              {% for jt in job_types %}
+              <option value="{{ jt.name }}" {% if job.job_type == jt.name %}selected{% endif %}>{{ jt.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Assigned To</label>
+            <select name="assigned_to">
+              <option value="">— Unassigned —</option>
+              {% for u in users %}
+              <option value="{{ u.id }}" {% if job.assigned_to == u.id %}selected{% endif %}>{{ u.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Due Date</label>
+            <input type="date" name="due_date" value="{{ job.due_date.strftime('%Y-%m-%d') if job.due_date else '' }}">
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select name="priority">
+              <option value="High" {% if job.priority=='High' %}selected{% endif %}>High</option>
+              <option value="Medium" {% if job.priority=='Medium' %}selected{% endif %}>Medium</option>
+              <option value="Low" {% if job.priority=='Low' %}selected{% endif %}>Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Amount Received (AED)</label>
+          <input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Internal Notes</label>
+          <textarea name="internal_notes">{{ job.internal_notes or '' }}</textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-submit">Save Changes</button>
+          <a href="/jobs/{{ job.id }}" class="btn-cancel">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

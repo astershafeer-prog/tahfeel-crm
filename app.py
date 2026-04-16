@@ -86,6 +86,48 @@ class Source(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
 
+class JobType(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+
+class Customer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    company = db.Column(db.String(100))
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(100))
+    address = db.Column(db.String(200))
+    source = db.Column(db.String(50))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    lead_id = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=True)
+    lead = db.relationship('Lead', foreign_keys=[lead_id])
+    jobs = db.relationship('Job', backref='customer', lazy=True, order_by='Job.created_at.desc()')
+
+class Job(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)
+    job_type = db.Column(db.String(100), nullable=False)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))
+    due_date = db.Column(db.DateTime)
+    priority = db.Column(db.String(20), default='Medium')
+    status = db.Column(db.String(50), default='Assigned')
+    internal_notes = db.Column(db.Text)
+    amount_received = db.Column(db.Float, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    assignee = db.relationship('User', foreign_keys=[assigned_to])
+    creator = db.relationship('User', foreign_keys=[created_by])
+    updates = db.relationship('JobUpdate', backref='job', lazy=True, order_by='JobUpdate.created_at.desc()')
+
+class JobUpdate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    status = db.Column(db.String(50))
+    remark = db.Column(db.Text, nullable=False)
+    staff_name = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -163,55 +205,89 @@ def dashboard():
     now = datetime.now()
     if session['role'] == 'admin':
         all_leads = Lead.query.order_by(Lead.due_date).all()
+        all_jobs = Job.query.order_by(Job.due_date).all()
         date_filter = request.args.get('date', '')
         from_date = request.args.get('from', '')
         to_date = request.args.get('to', '')
+
+        # Apply date filter to leads
         leads = all_leads
         if date_filter == 'today':
-            leads = [l for l in all_leads if l.created_at.date() == now.date()]
+            leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()]
+            jobs = [j for j in all_jobs if j.created_at and j.created_at.date() == now.date()]
         elif date_filter == 'week':
             week_start = now.date() - timedelta(days=now.weekday())
-            leads = [l for l in all_leads if l.created_at.date() >= week_start]
+            leads = [l for l in all_leads if l.created_at and l.created_at.date() >= week_start]
+            jobs = [j for j in all_jobs if j.created_at and j.created_at.date() >= week_start]
         elif date_filter == 'month':
-            leads = [l for l in all_leads if l.created_at.year == now.year and l.created_at.month == now.month]
+            leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
+            jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
         elif date_filter == 'custom' and from_date and to_date:
             from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
             to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
-            leads = [l for l in all_leads if from_dt <= l.created_at.date() <= to_dt]
+            leads = [l for l in all_leads if l.created_at and from_dt <= l.created_at.date() <= to_dt]
+            jobs = [j for j in all_jobs if j.created_at and from_dt <= j.created_at.date() <= to_dt]
+        else:
+            jobs = all_jobs
+
+        # Lead stats
         total = len(leads)
-        overdue = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
+        overdue_leads = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
         converted = [l for l in leads if l.status == 'Converted']
         lost = [l for l in leads if l.status == 'Lost']
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
         not_started = [l for l in leads if l.status == 'New']
+
+        # Financial cards
+        potential_value = sum(l.potential_value or 0 for l in leads if l.status not in ['Converted', 'Lost'])
+        pending_revenue = sum(j.amount_received or 0 for j in jobs if j.status != 'Done')
+        collected_revenue = sum(j.amount_received or 0 for j in jobs if j.status == 'Done')
+
+        # Job stats
+        active_jobs = [j for j in jobs if j.status != 'Done']
+        overdue_jobs = [j for j in jobs if j.due_date and j.due_date < now and j.status != 'Done']
+        done_jobs = [j for j in jobs if j.status == 'Done']
+
+        # Staff workload
         users = User.query.filter_by(active=True, role='staff').all()
         staff_stats = []
         for u in users:
             u_leads = [l for l in leads if l.assigned_to == u.id]
+            u_jobs = [j for j in jobs if j.assigned_to == u.id]
             staff_stats.append({
                 'name': u.name,
-                'total': len(u_leads),
-                'pending': len([l for l in u_leads if l.status not in ['Converted', 'Lost', 'New']]),
-                'not_started': len([l for l in u_leads if l.status == 'New']),
-                'converted': len([l for l in u_leads if l.status == 'Converted']),
-                'lost': len([l for l in u_leads if l.status == 'Lost']),
-                'overdue': len([l for l in u_leads if l.due_date < now and l.status not in ['Converted', 'Lost']]),
-                'potential_value': sum(l.potential_value or 0 for l in u_leads if l.status not in ['Converted', 'Lost']),
+                'leads': len(u_leads),
+                'overdue_leads': len([l for l in u_leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]),
+                'active_jobs': len([j for j in u_jobs if j.status != 'Done']),
+                'overdue_jobs': len([j for j in u_jobs if j.due_date and j.due_date < now and j.status != 'Done']),
             })
-        total_potential = sum(l.potential_value or 0 for l in leads if l.status not in ['Converted', 'Lost'])
-        return render_template('dashboard_admin.html', leads=leads, total=total,
-                               overdue=overdue, converted=converted, lost=lost,
+
+        # Today's leads and active jobs for tables
+        today_leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()][:10]
+        recent_jobs = [j for j in all_jobs if j.status != 'Done'][:10]
+
+        return render_template('dashboard_admin.html',
+                               leads=leads, today_leads=today_leads,
+                               total=total, overdue_leads=overdue_leads,
+                               converted=converted, lost=lost,
                                pending=pending, not_started=not_started,
-                               staff_stats=staff_stats, total_potential=total_potential,
-                               users=users, now=now,
-                               date_filter=date_filter, from_date=from_date, to_date=to_date)
+                               jobs=jobs, active_jobs=active_jobs,
+                               overdue_jobs=overdue_jobs, done_jobs=done_jobs,
+                               recent_jobs=recent_jobs,
+                               potential_value=potential_value,
+                               pending_revenue=pending_revenue,
+                               collected_revenue=collected_revenue,
+                               staff_stats=staff_stats,
+                               now=now, date_filter=date_filter,
+                               from_date=from_date, to_date=to_date)
     else:
         leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
-        overdue = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
+        my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status != 'Done').order_by(Job.due_date).all()
+        overdue = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
         converted = [l for l in leads if l.status == 'Converted']
         lost = [l for l in leads if l.status == 'Lost']
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
-        potential_value = sum(l.potential_value or 0 for l in leads if l.status not in ['Converted', 'Lost'])
+        overdue_jobs = [j for j in my_jobs if j.due_date and j.due_date < now]
         followups = LeadUpdate.query.filter(
             LeadUpdate.staff_name == session['user_name'],
             LeadUpdate.followup_date <= now + timedelta(days=1),
@@ -219,7 +295,7 @@ def dashboard():
         ).all()
         return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
                                converted=converted, lost=lost, pending=pending,
-                               potential_value=potential_value,
+                               my_jobs=my_jobs, overdue_jobs=overdue_jobs,
                                followups=followups, now=now)
 
 @app.route('/leads')
@@ -571,7 +647,8 @@ def admin_panel():
     users = User.query.order_by(User.name).all()
     services = Service.query.order_by(Service.name).all()
     sources = Source.query.order_by(Source.name).all()
-    return render_template('admin_panel.html', users=users, services=services, sources=sources)
+    job_types = JobType.query.order_by(JobType.name).all()
+    return render_template('admin_panel.html', users=users, services=services, sources=sources, job_types=job_types)
 
 @app.route('/admin/staff/add', methods=['POST'])
 @login_required
@@ -779,6 +856,213 @@ def delete_task(task_id):
     flash('Task deleted')
     return redirect(url_for('tasks'))
 
+# ── Customers ────────────────────────────────────────────────────────────────
+
+@app.route('/customers')
+@login_required
+@admin_required
+def customers():
+    customer_list = Customer.query.order_by(Customer.name).all()
+    return render_template('customers.html', customers=customer_list)
+
+@app.route('/customers/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_customer():
+    converted_leads = Lead.query.filter_by(status='Converted').order_by(Lead.name).all()
+    sources = Source.query.order_by(Source.name).all()
+    if request.method == 'POST':
+        lead_id = request.form.get('lead_id') or None
+        if lead_id:
+            lead = Lead.query.get(int(lead_id))
+            customer = Customer(
+                name=lead.name, company=lead.company, phone=lead.phone,
+                email=lead.email, address=lead.address, source=lead.source,
+                notes=request.form.get('notes'), lead_id=int(lead_id)
+            )
+        else:
+            customer = Customer(
+                name=request.form['name'],
+                company=request.form.get('company'),
+                phone=request.form.get('phone'),
+                email=request.form.get('email'),
+                address=request.form.get('address'),
+                source=request.form.get('source'),
+                notes=request.form.get('notes')
+            )
+        db.session.add(customer)
+        db.session.commit()
+        flash('Customer added successfully')
+        return redirect(url_for('customers'))
+    return render_template('add_customer.html', converted_leads=converted_leads, sources=sources)
+
+@app.route('/customers/<int:customer_id>')
+@login_required
+@admin_required
+def customer_detail(customer_id):
+    customer = Customer.query.get_or_404(customer_id)
+    jobs = Job.query.filter_by(customer_id=customer_id).order_by(Job.created_at.desc()).all()
+    total_received = sum(j.amount_received or 0 for j in jobs)
+    pending_revenue = sum(j.amount_received or 0 for j in jobs if j.status != 'Done')
+    collected_revenue = sum(j.amount_received or 0 for j in jobs if j.status == 'Done')
+    return render_template('customer_detail.html', customer=customer, jobs=jobs,
+                           total_received=total_received, pending_revenue=pending_revenue,
+                           collected_revenue=collected_revenue)
+
+# ── Jobs ──────────────────────────────────────────────────────────────────────
+
+JOB_STATUSES = ['Assigned', 'Job Started', 'Processing', 'Pending Authority', 'On Hold', 'Delayed', 'Final Stage', 'Done']
+
+@app.route('/jobs')
+@login_required
+def jobs():
+    now = datetime.now()
+    if session['role'] == 'admin':
+        job_list = Job.query.order_by(Job.due_date).all()
+    else:
+        job_list = Job.query.filter_by(assigned_to=session['user_id']).order_by(Job.due_date).all()
+    status_filter = request.args.get('status', '')
+    priority_filter = request.args.get('priority', '')
+    if status_filter:
+        job_list = [j for j in job_list if j.status == status_filter]
+    if priority_filter:
+        job_list = [j for j in job_list if j.priority == priority_filter]
+    overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status != 'Done']
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    return render_template('jobs.html', jobs=job_list, now=now, overdue=overdue,
+                           statuses=JOB_STATUSES, users=users,
+                           status_filter=status_filter, priority_filter=priority_filter)
+
+@app.route('/jobs/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_job():
+    customers = Customer.query.order_by(Customer.name).all()
+    job_types = JobType.query.order_by(JobType.name).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    if request.method == 'POST':
+        due = request.form.get('due_date')
+        due_dt = datetime.strptime(due, '%Y-%m-%d') if due else None
+        amount = request.form.get('amount_received') or 0
+        job = Job(
+            customer_id=int(request.form['customer_id']),
+            job_type=request.form['job_type'],
+            assigned_to=int(request.form['assigned_to']) if request.form.get('assigned_to') else None,
+            due_date=due_dt,
+            priority=request.form.get('priority', 'Medium'),
+            internal_notes=request.form.get('internal_notes'),
+            amount_received=float(amount),
+            created_by=session['user_id'],
+            status='Assigned'
+        )
+        db.session.add(job)
+        db.session.commit()
+        update = JobUpdate(job_id=job.id, status='Assigned',
+                           remark='Job created', staff_name=session['user_name'])
+        db.session.add(update)
+        db.session.commit()
+        flash('Job created successfully')
+        return redirect(url_for('jobs'))
+    return render_template('add_job.html', customers=customers, job_types=job_types, users=users)
+
+@app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
+@login_required
+def job_detail(job_id):
+    job = Job.query.get_or_404(job_id)
+    now = datetime.now()
+    if session['role'] != 'admin' and job.assigned_to != session['user_id']:
+        flash('Access denied')
+        return redirect(url_for('jobs'))
+    if request.method == 'POST':
+        remark = request.form.get('remark', '').strip()
+        if not remark:
+            flash('Remark is required')
+            return redirect(url_for('job_detail', job_id=job_id))
+        new_status = request.form.get('status', job.status)
+        amount = request.form.get('amount_received')
+        if amount is not None and amount != '':
+            try:
+                job.amount_received = float(amount)
+            except:
+                pass
+        job.status = new_status
+        update = JobUpdate(job_id=job.id, status=new_status,
+                           remark=remark, staff_name=session['user_name'])
+        db.session.add(update)
+        db.session.commit()
+        flash('Job updated')
+        return redirect(url_for('job_detail', job_id=job_id))
+    job_types = JobType.query.order_by(JobType.name).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    return render_template('job_detail.html', job=job, now=now,
+                           statuses=JOB_STATUSES, job_types=job_types, users=users)
+
+@app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_job(job_id):
+    job = Job.query.get_or_404(job_id)
+    customers = Customer.query.order_by(Customer.name).all()
+    job_types = JobType.query.order_by(JobType.name).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    if request.method == 'POST':
+        job.job_type = request.form['job_type']
+        job.customer_id = int(request.form['customer_id'])
+        assigned = request.form.get('assigned_to')
+        job.assigned_to = int(assigned) if assigned else None
+        due = request.form.get('due_date')
+        job.due_date = datetime.strptime(due, '%Y-%m-%d') if due else None
+        job.priority = request.form.get('priority', 'Medium')
+        job.internal_notes = request.form.get('internal_notes')
+        amount = request.form.get('amount_received')
+        if amount:
+            try:
+                job.amount_received = float(amount)
+            except:
+                pass
+        db.session.commit()
+        flash('Job updated')
+        return redirect(url_for('job_detail', job_id=job_id))
+    return render_template('edit_job.html', job=job, customers=customers,
+                           job_types=job_types, users=users, statuses=JOB_STATUSES)
+
+@app.route('/jobs/<int:job_id>/delete')
+@login_required
+@admin_required
+def delete_job(job_id):
+    job = Job.query.get_or_404(job_id)
+    JobUpdate.query.filter_by(job_id=job_id).delete()
+    db.session.delete(job)
+    db.session.commit()
+    flash('Job deleted')
+    return redirect(url_for('jobs'))
+
+# ── Admin — Job Types ─────────────────────────────────────────────────────────
+
+@app.route('/admin/jobtype/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_jobtype():
+    name = request.form.get('name', '').strip()
+    if name:
+        if not JobType.query.filter_by(name=name).first():
+            db.session.add(JobType(name=name))
+            db.session.commit()
+            flash(f'Job type "{name}" added')
+        else:
+            flash('Job type already exists')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/jobtype/<int:jobtype_id>/delete')
+@login_required
+@admin_required
+def admin_delete_jobtype(jobtype_id):
+    jt = JobType.query.get_or_404(jobtype_id)
+    db.session.delete(jt)
+    db.session.commit()
+    flash(f'Job type "{jt.name}" removed')
+    return redirect(url_for('admin_panel'))
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 def init_db():
@@ -813,6 +1097,11 @@ def init_db():
                     db.session.add(Source(name=s))
                 db.session.commit()
                 print('Default sources created')
+            if JobType.query.count() == 0:
+                for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
+                    db.session.add(JobType(name=jt))
+                db.session.commit()
+                print('Default job types created')
         except Exception as e:
             db.session.rollback()
             print(f'Init db error: {e}')

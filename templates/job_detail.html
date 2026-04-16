@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Job Detail</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .container { padding: 24px; max-width: 900px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .flash.error { background: #FCEBEB; color: #791F1F; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 24px; margin-bottom: 16px; }
+    .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .job-title { font-size: 20px; font-weight: 700; color: #133E87; }
+    .job-customer { font-size: 14px; color: #555; margin-top: 3px; }
+    .header-actions { display: flex; gap: 8px; }
+    .btn-edit { background: white; color: #133E87; padding: 7px 16px; border-radius: 8px; border: 1px solid #133E87; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .btn-delete { background: white; color: #c0392b; padding: 7px 16px; border-radius: 8px; border: 1px solid #c0392b; text-decoration: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 0.5px solid #eee; }
+    .detail-item label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; display: block; margin-bottom: 3px; }
+    .detail-item span { font-size: 13px; color: #333; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .b-assigned { background: #E6F1FB; color: #0C447C; }
+    .b-jobstarted { background: #EEEDFE; color: #3C3489; }
+    .b-processing { background: #FAEEDA; color: #633806; }
+    .b-pendingauthority { background: #F1EFE8; color: #5F5E5A; }
+    .b-onhold { background: #FCEBEB; color: #791F1F; }
+    .b-delayed { background: #FCEBEB; color: #791F1F; }
+    .b-finalstage { background: #EAF3DE; color: #3B6D11; }
+    .b-done { background: #EAF3DE; color: #27500A; }
+    .b-high { background: #FCEBEB; color: #791F1F; }
+    .b-medium { background: #FAEEDA; color: #633806; }
+    .b-low { background: #f0f0f0; color: #555; }
+    .update-form { background: #f8fbff; border: 1px solid #d0e4f7; border-radius: 10px; padding: 20px; }
+    .update-form h3 { font-size: 14px; font-weight: 700; color: #133E87; margin-bottom: 16px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .form-group select, .form-group textarea, .form-group input { width: 100%; padding: 9px 13px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; font-family: Arial, sans-serif; }
+    .form-group select:focus, .form-group textarea:focus, .form-group input:focus { border-color: #133E87; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .btn-submit { background: #133E87; color: white; padding: 10px 24px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .section-title { font-size: 15px; font-weight: 700; color: #133E87; margin-bottom: 14px; }
+    .timeline { }
+    .timeline-item { display: flex; gap: 14px; padding: 14px 0; border-bottom: 0.5px solid #f0f0f0; }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-dot { width: 10px; height: 10px; border-radius: 50%; background: #133E87; margin-top: 5px; flex-shrink: 0; }
+    .timeline-content { flex: 1; }
+    .timeline-status { font-size: 12px; font-weight: 700; color: #133E87; margin-bottom: 3px; }
+    .timeline-remark { font-size: 13px; color: #333; margin-bottom: 4px; }
+    .timeline-meta { font-size: 11px; color: #888; }
+    .notes-box { background: #fffbf0; border: 1px solid #faeeda; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #444; }
+    .amount-box { background: #f0f7ff; border: 1px solid #d0e4f7; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .amount-box .label { font-size: 12px; color: #555; font-weight: 600; text-transform: uppercase; }
+    .amount-box .value { font-size: 18px; font-weight: 700; color: #133E87; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
+      <span>{{ session.user_name }} {% if session.role == 'admin' %}(Admin){% endif %}</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    {% if session.role == 'admin' %}
+    <a href="/leads">All Leads</a>
+    <a href="/leads/add">Add Lead</a>
+    <a href="/leads/import">Import Leads</a>
+    <a href="/customers">Customers</a>
+    {% endif %}
+    <a href="/jobs" class="active">Jobs</a>
+    <a href="/tasks">Tasks</a>
+    {% if session.role == 'admin' %}<a href="/admin" class="admin-link">⚙ Admin Panel</a>{% endif %}
+  </div>
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="card">
+      <div class="job-header">
+        <div>
+          <div class="job-title">{{ job.job_type }}</div>
+          <div class="job-customer">
+            <a href="/customers/{{ job.customer_id }}" style="color:#133E87;text-decoration:none;">{{ job.customer.name }}</a>
+            {% if job.customer.company %} — {{ job.customer.company }}{% endif %}
+          </div>
+        </div>
+        <div class="header-actions">
+          {% if session.role == 'admin' %}
+          <a href="/jobs/{{ job.id }}/edit" class="btn-edit">Edit</a>
+          <button class="btn-delete" onclick="if(confirm('Delete this job and all its history?')) window.location='/jobs/{{ job.id }}/delete'">Delete</button>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="details-grid">
+        <div class="detail-item">
+          <label>Status</label>
+          <span><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></span>
+        </div>
+        <div class="detail-item">
+          <label>Priority</label>
+          <span><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></span>
+        </div>
+        <div class="detail-item">
+          <label>Assigned To</label>
+          <span>{{ job.assignee.name if job.assignee else '—' }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Due Date</label>
+          <span>
+            {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
+            {% if job.due_date and job.due_date < now and job.status != 'Done' %}
+            <span style="color:#c0392b;font-size:11px;font-weight:600;"> ⚠ Overdue</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="detail-item">
+          <label>Created</label>
+          <span>{{ job.created_at.strftime('%d %b %Y') }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Customer phone</label>
+          <span>
+            {{ job.customer.phone or '—' }}
+            {% if job.customer.phone %}
+            <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="margin-left:6px;font-size:11px;color:#25D366;text-decoration:none;font-weight:600;">WhatsApp</a>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="amount-box" style="margin-bottom:14px;">
+        <div class="label">Amount Received</div>
+        <div class="value">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div>
+      </div>
+
+      {% if job.internal_notes %}
+      <div class="notes-box">
+        <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Internal Notes</div>
+        {{ job.internal_notes }}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="update-form">
+        <h3>Add Update</h3>
+        <form method="post">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Status *</label>
+              <select name="status">
+                {% for s in statuses %}
+                <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Amount Received (AED)</label>
+              <input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01" placeholder="Update if changed">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Remark * (required)</label>
+            <textarea name="remark" placeholder="Describe what happened, next steps..." required></textarea>
+          </div>
+          <button type="submit" class="btn-submit">Save Update</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Timeline ({{ job.updates|length }} updates)</div>
+      <div class="timeline">
+        {% for u in job.updates %}
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-status">{{ u.status }}</div>
+            <div class="timeline-remark">{{ u.remark }}</div>
+            <div class="timeline-meta">{{ u.staff_name }} &nbsp;·&nbsp; {{ u.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+          </div>
+        </div>
+        {% else %}
+        <div style="padding:20px;text-align:center;color:#aaa;font-size:13px;">No updates yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
