@@ -236,13 +236,17 @@ def dashboard():
 
     # ── Finance dashboard ────────────────────────────────────────────────────
     if role == 'finance':
-        all_jobs = Job.query.order_by(Job.created_at.desc()).all()
-        active_jobs = [j for j in all_jobs if j.status != 'Done']
-        pending_approval = [j for j in all_jobs if j.status == 'Pending Finance Approval']
-        total_invoiced = sum(j.amount_invoiced or 0 for j in active_jobs)
-        total_received = sum(j.amount_received or 0 for j in active_jobs)
-        total_pending = total_invoiced - total_received
-        completed_value = sum(j.amount_received or 0 for j in all_jobs if j.status == 'Done')
+        try:
+            all_jobs = Job.query.order_by(Job.created_at.desc()).all()
+            active_jobs = [j for j in all_jobs if j.status != 'Done']
+            pending_approval = [j for j in all_jobs if j.status == 'Pending Finance Approval']
+            total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
+            total_received = sum((j.amount_received or 0) for j in active_jobs)
+            total_pending = total_invoiced - total_received
+            completed_value = sum((j.amount_received or 0) for j in all_jobs if j.status == 'Done')
+        except:
+            active_jobs = pending_approval = []
+            total_invoiced = total_received = total_pending = completed_value = 0
         return render_template('dashboard_finance.html',
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
@@ -255,29 +259,42 @@ def dashboard():
     # ── Admin dashboard ──────────────────────────────────────────────────────
     if role == 'admin':
         all_leads = Lead.query.order_by(Lead.due_date).all()
-        all_jobs = Job.query.order_by(Job.due_date).all()
         date_filter = request.args.get('date', '')
         from_date = request.args.get('from', '')
         to_date = request.args.get('to', '')
 
         leads = all_leads
-        if date_filter == 'today':
-            leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()]
-            jobs = [j for j in all_jobs if j.created_at and j.created_at.date() == now.date()]
-        elif date_filter == 'week':
-            week_start = now.date() - timedelta(days=now.weekday())
-            leads = [l for l in all_leads if l.created_at and l.created_at.date() >= week_start]
-            jobs = [j for j in all_jobs if j.created_at and j.created_at.date() >= week_start]
-        elif date_filter == 'month':
-            leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
-            jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
-        elif date_filter == 'custom' and from_date and to_date:
-            from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
-            to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
-            leads = [l for l in all_leads if l.created_at and from_dt <= l.created_at.date() <= to_dt]
-            jobs = [j for j in all_jobs if j.created_at and from_dt <= j.created_at.date() <= to_dt]
-        else:
-            jobs = all_jobs
+        try:
+            all_jobs = Job.query.order_by(Job.due_date).all()
+            if date_filter == 'today':
+                leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()]
+                jobs = [j for j in all_jobs if j.created_at and j.created_at.date() == now.date()]
+            elif date_filter == 'week':
+                week_start = now.date() - timedelta(days=now.weekday())
+                leads = [l for l in all_leads if l.created_at and l.created_at.date() >= week_start]
+                jobs = [j for j in all_jobs if j.created_at and j.created_at.date() >= week_start]
+            elif date_filter == 'month':
+                leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
+                jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
+            elif date_filter == 'custom' and from_date and to_date:
+                from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
+                to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
+                leads = [l for l in all_leads if l.created_at and from_dt <= l.created_at.date() <= to_dt]
+                jobs = [j for j in all_jobs if j.created_at and from_dt <= j.created_at.date() <= to_dt]
+            else:
+                jobs = all_jobs
+            active_jobs = [j for j in jobs if j.status != 'Done']
+            done_jobs = [j for j in jobs if j.status == 'Done']
+            total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
+            total_received = sum((j.amount_received or 0) for j in active_jobs)
+            total_pending = total_invoiced - total_received
+            completed_value = sum((j.amount_received or 0) for j in done_jobs)
+            overdue_jobs = [j for j in jobs if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
+            pending_approval = [j for j in jobs if j.status == 'Pending Finance Approval']
+            recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Pending Finance Approval']][:10]
+        except:
+            jobs = all_jobs = active_jobs = done_jobs = overdue_jobs = pending_approval = recent_jobs = []
+            total_invoiced = total_received = total_pending = completed_value = 0
 
         # Lead stats
         total = len(leads)
@@ -285,17 +302,6 @@ def dashboard():
         converted = [l for l in leads if l.status == 'Converted']
         lost = [l for l in leads if l.status == 'Lost']
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
-
-        # Financial cards (active jobs only, Done separate)
-        active_jobs = [j for j in jobs if j.status != 'Done']
-        done_jobs = [j for j in jobs if j.status == 'Done']
-        total_invoiced = sum(j.amount_invoiced or 0 for j in active_jobs)
-        total_received = sum(j.amount_received or 0 for j in active_jobs)
-        total_pending = total_invoiced - total_received
-        completed_value = sum(j.amount_received or 0 for j in done_jobs)
-
-        overdue_jobs = [j for j in jobs if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
-        pending_approval = [j for j in jobs if j.status == 'Pending Finance Approval']
 
         users = User.query.filter_by(active=True, role='staff').all()
         staff_stats = []
@@ -311,7 +317,6 @@ def dashboard():
             })
 
         today_leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()][:10]
-        recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Pending Finance Approval']][:10]
 
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
@@ -331,19 +336,23 @@ def dashboard():
 
     # ── Staff dashboard ──────────────────────────────────────────────────────
     leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
-    my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status != 'Done').order_by(Job.due_date).all()
     overdue = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
     converted = [l for l in leads if l.status == 'Converted']
     lost = [l for l in leads if l.status == 'Lost']
     pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
-    overdue_jobs = [j for j in my_jobs if j.due_date and j.due_date < now and j.status != 'Pending Finance Approval']
-    # Financial summary for staff's own tasks
-    active_jobs = [j for j in my_jobs if j.status != 'Pending Finance Approval']
-    total_invoiced = sum(j.amount_invoiced or 0 for j in active_jobs)
-    total_received = sum(j.amount_received or 0 for j in active_jobs)
-    total_pending = total_invoiced - total_received
-    done_jobs = Job.query.filter_by(assigned_to=session['user_id'], status='Done').all()
-    completed_value = sum(j.amount_received or 0 for j in done_jobs)
+    try:
+        my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status != 'Done').order_by(Job.due_date).all()
+        overdue_jobs = [j for j in my_jobs if j.due_date and j.due_date < now and j.status != 'Pending Finance Approval']
+        active_jobs = [j for j in my_jobs if j.status != 'Pending Finance Approval']
+        total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
+        total_received = sum((j.amount_received or 0) for j in active_jobs)
+        total_pending = total_invoiced - total_received
+        done_jobs = Job.query.filter_by(assigned_to=session['user_id'], status='Done').all()
+        completed_value = sum((j.amount_received or 0) for j in done_jobs)
+    except:
+        my_jobs = []
+        overdue_jobs = []
+        total_invoiced = total_received = total_pending = completed_value = 0
     followups = LeadUpdate.query.filter(
         LeadUpdate.staff_name == session['user_name'],
         LeadUpdate.followup_date <= now + timedelta(days=1),
