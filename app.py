@@ -222,7 +222,9 @@ def all_leads():
                  search in (l.phone or '').lower() or
                  search in (l.company or '').lower()]
     leads = apply_lead_filters(leads, request.args, now)
-    return render_template('all_leads.html', leads=leads, now=now, users=users, search=search)@app.route('/leads/export')
+    return render_template('all_leads.html', leads=leads, now=now, users=users, search=search)
+
+@app.route('/leads/export')
 @login_required
 @admin_required
 def export_leads():
