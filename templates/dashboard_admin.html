@@ -165,12 +165,12 @@
 
     <div class="divider"></div>
 
-    {% if expiring_docs > 0 %}
-    <div style="background:#fff8f8;border:1px solid #f7c1c1;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:13px;color:#791F1F;font-weight:600;">⚠ {{ expiring_docs }} document{{ 's' if expiring_docs > 1 else '' }} expiring within 30 days</span>
-      <a href="/documents" style="font-size:12px;color:#791F1F;text-decoration:none;font-weight:600;">View →</a>
+    <div class="section-label">Documents</div>
+    <div class="cards-3" style="margin-bottom:16px;">
+      <a href="/documents" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="lbl">Total Documents</div><div class="val">{{ total_docs }}</div></div></a>
+      <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="lbl">Expiring ≤30 Days</div><div class="val">{{ docs_30 }}</div></div></a>
+      <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="lbl">Expiring 31–60 Days</div><div class="val">{{ docs_60 }}</div></div></a>
     </div>
-    {% endif %}
     <div class="section-label" style="margin-top:14px;">Staff Workload</div>
     <div class="card">
       <table>

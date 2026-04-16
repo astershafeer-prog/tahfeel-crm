@@ -165,6 +165,7 @@ class Document(db.Model):
     customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)
     expiry_date = db.Column(db.DateTime, nullable=True)
     notes = db.Column(db.Text)
+    file_name = db.Column(db.String(255), nullable=True)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.now)
     uploader = db.relationship('User', foreign_keys=[uploaded_by])
@@ -278,21 +279,21 @@ def dashboard():
             active_jobs = pending_approval = []
             total_invoiced = total_received = total_pending = completed_value = 0
         try:
-            expiring_docs = Document.query.filter(
-                Document.expiry_date != None,
-                Document.expiry_date >= now,
-                Document.expiry_date <= now + timedelta(days=30)
-            ).count()
+            all_docs = Document.query.all()
+            docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
+            docs_60 = len([d for d in all_docs if d.expiry_date and 30 < (d.expiry_date - now).days <= 60])
+            total_docs = len(all_docs)
         except:
-            expiring_docs = 0
+            docs_30 = docs_60 = total_docs = 0
         return render_template('dashboard_finance.html',
+                               docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
                                total_invoiced=total_invoiced,
                                total_received=total_received,
                                total_pending=total_pending,
                                completed_value=completed_value,
-                               expiring_docs=expiring_docs,
+                               docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
                                now=now)
 
     # ── Admin dashboard ──────────────────────────────────────────────────────
@@ -358,13 +359,12 @@ def dashboard():
         today_leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()][:10]
 
         try:
-            expiring_docs = Document.query.filter(
-                Document.expiry_date != None,
-                Document.expiry_date >= now,
-                Document.expiry_date <= now + timedelta(days=30)
-            ).count()
+            all_docs = Document.query.all()
+            docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
+            docs_60 = len([d for d in all_docs if d.expiry_date and 30 < (d.expiry_date - now).days <= 60])
+            total_docs = len(all_docs)
         except:
-            expiring_docs = 0
+            docs_30 = docs_60 = total_docs = 0
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
                                total=total, overdue_leads=overdue_leads,
@@ -378,7 +378,7 @@ def dashboard():
                                total_pending=total_pending,
                                completed_value=completed_value,
                                staff_stats=staff_stats,
-                               expiring_docs=expiring_docs,
+                               docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
                                now=now, date_filter=date_filter,
                                from_date=from_date, to_date=to_date)
 
@@ -407,13 +407,12 @@ def dashboard():
         LeadUpdate.followup_date >= now
     ).all()
     try:
-        expiring_docs = Document.query.filter(
-            Document.expiry_date != None,
-            Document.expiry_date >= now,
-            Document.expiry_date <= now + timedelta(days=30)
-        ).count()
+        all_docs = Document.query.all()
+        docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
+        docs_60 = len([d for d in all_docs if d.expiry_date and 30 < (d.expiry_date - now).days <= 60])
+        total_docs = len(all_docs)
     except:
-        expiring_docs = 0
+        docs_30 = docs_60 = total_docs = 0
     return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
                            converted=converted, lost=lost, pending=pending,
                            my_jobs=my_jobs, overdue_jobs=overdue_jobs,
@@ -421,7 +420,7 @@ def dashboard():
                            total_received=total_received,
                            total_pending=total_pending,
                            completed_value=completed_value,
-                           expiring_docs=expiring_docs,
+                           docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
                            followups=followups, now=now)
 
 @app.route('/leads')
@@ -947,10 +946,13 @@ def add_customer():
 @login_required
 def customer_detail(customer_id):
     customer = Customer.query.get_or_404(customer_id)
+    now = datetime.now()
     jobs = Job.query.filter_by(customer_id=customer_id).order_by(Job.created_at.desc()).all()
+    docs = Document.query.filter_by(customer_id=customer_id).order_by(Document.expiry_date).all()
     total_invoiced = sum(j.amount_invoiced or 0 for j in jobs)
     total_received = sum(j.amount_received or 0 for j in jobs)
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
+                           documents=docs, now=now,
                            total_invoiced=total_invoiced, total_received=total_received)
 
 # ── Jobs ──────────────────────────────────────────────────────────────────────
@@ -1266,14 +1268,58 @@ def admin_delete_jobtype(jobtype_id):
 @login_required
 def documents():
     now = datetime.now()
+    search = request.args.get('search', '').strip().lower()
+    belongs_filter = request.args.get('belongs_to', '')
+    doc_type_filter = request.args.get('doc_type', '')
+    customer_filter = request.args.get('customer_id', '')
+    expiry_filter = request.args.get('expiry', '')
+
     doc_list = Document.query.order_by(Document.expiry_date).all()
+
+    # Summary counts (all docs)
+    total_docs = len(doc_list)
+    expiring_30 = [d for d in doc_list if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30]
+    expiring_60 = [d for d in doc_list if d.expiry_date and 30 < (d.expiry_date - now).days <= 60]
+    expired_docs = [d for d in doc_list if d.expiry_date and d.expiry_date < now]
+
+    # Apply filters
+    if search:
+        doc_list = [d for d in doc_list if
+                    search in (d.owner_name or '').lower() or
+                    search in (d.doc_type or '').lower() or
+                    (d.customer and search in d.customer.name.lower())]
+    if belongs_filter:
+        doc_list = [d for d in doc_list if d.belongs_to == belongs_filter]
+    if doc_type_filter:
+        doc_list = [d for d in doc_list if d.doc_type == doc_type_filter]
+    if customer_filter:
+        doc_list = [d for d in doc_list if d.customer_id == int(customer_filter)]
+    if expiry_filter == '30':
+        doc_list = [d for d in doc_list if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30]
+    elif expiry_filter == '60':
+        doc_list = [d for d in doc_list if d.expiry_date and 30 < (d.expiry_date - now).days <= 60]
+    elif expiry_filter == 'expired':
+        doc_list = [d for d in doc_list if d.expiry_date and d.expiry_date < now]
+
+    # Pagination
+    page = int(request.args.get('page', 1))
+    per_page = 50
+    total = len(doc_list)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    paginated = doc_list[(page-1)*per_page: page*per_page]
+
     customers = Customer.query.order_by(Customer.name).all()
     doc_types = DocType.query.order_by(DocType.name).all()
-    expiring_soon = [d for d in doc_list if d.expiry_date and (d.expiry_date - now).days <= 30 and d.expiry_date >= now]
-    expired = [d for d in doc_list if d.expiry_date and d.expiry_date < now]
-    return render_template('documents.html', documents=doc_list, customers=customers,
-                           doc_types=doc_types, expiring_soon=expiring_soon,
-                           expired=expired, now=now)
+    return render_template('documents.html',
+                           documents=paginated, customers=customers, doc_types=doc_types,
+                           total_docs=total_docs, expiring_30=len(expiring_30),
+                           expiring_60=len(expiring_60), expired_count=len(expired_docs),
+                           search=search, belongs_filter=belongs_filter,
+                           doc_type_filter=doc_type_filter, customer_filter=customer_filter,
+                           expiry_filter=expiry_filter,
+                           total=total, page=page, total_pages=total_pages,
+                           now=now)
 
 @app.route('/documents/add', methods=['GET', 'POST'])
 @login_required
@@ -1285,7 +1331,6 @@ def add_document():
         expiry = request.form.get('expiry_date')
         expiry_dt = datetime.strptime(expiry, '%Y-%m-%d') if expiry else None
         customer_id = request.form.get('customer_id') or None
-        # Handle new customer creation
         if request.form.get('new_customer_name'):
             new_cust = Customer(
                 name=request.form['new_customer_name'],
@@ -1297,6 +1342,12 @@ def add_document():
             db.session.add(new_cust)
             db.session.flush()
             customer_id = new_cust.id
+        # Handle file upload (dummy — store filename only for now)
+        file_name = None
+        if 'document_file' in request.files:
+            f = request.files['document_file']
+            if f and f.filename:
+                file_name = f.filename  # TODO: upload to Cloudinary
         doc = Document(
             doc_type=request.form['doc_type'],
             belongs_to=request.form['belongs_to'],
@@ -1304,6 +1355,7 @@ def add_document():
             customer_id=int(customer_id) if customer_id else None,
             expiry_date=expiry_dt,
             notes=request.form.get('notes'),
+            file_name=file_name,
             uploaded_by=session['user_id'],
         )
         db.session.add(doc)
@@ -1373,6 +1425,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS future_work_notes TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
+            'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',,
         ]
         for sql in migrations:
             try:
