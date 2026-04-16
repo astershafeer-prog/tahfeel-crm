@@ -70,9 +70,8 @@
   </div>
   <div class="nav">
     <a href="/dashboard" class="active">Dashboard</a>
-    <a href="/leads/add" >Add Lead</a>
-    <a href="/leads/import" >Import Leads</a>
-    <a href="/jobs" >Tasks</a>
+    <a href="/leads/add">Add Lead</a>
+    <a href="/jobs">Tasks</a>
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -94,11 +93,12 @@
       <div class="stat-card green"><div class="label">Converted</div><div class="value">{{ converted|length }}</div></div>
       <div class="stat-card"><div class="label">Lost</div><div class="value">{{ lost|length }}</div></div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px;">
       <div class="stat-card"><div class="label">My Tasks</div><div class="value">{{ my_jobs|length }}</div></div>
-      <div class="stat-card amber"><div class="label">Pending Tasks</div><div class="value">{{ my_jobs|selectattr('status','ne','Done')|list|length }}</div></div>
-      <div class="stat-card red"><div class="label">Overdue Tasks</div><div class="value">{{ overdue_jobs|length }}</div></div>
-      <div class="stat-card green"><div class="label">Done Tasks</div><div class="value">{{ my_jobs|selectattr('status','eq','Done')|list|length }}</div></div>
+      <div class="stat-card amber"><div class="label">Pending</div><div class="value">{{ my_jobs|selectattr('status','ne','Done')|list|length }}</div></div>
+      <div class="stat-card red"><div class="label">Overdue</div><div class="value">{{ overdue_jobs|length }}</div></div>
+      <div class="stat-card"><div class="label">On Hold</div><div class="value">{{ my_jobs|selectattr('status','eq','On Hold')|list|length }}</div></div>
+      <div class="stat-card green"><div class="label">Done</div><div class="value">{{ my_jobs|selectattr('status','eq','Done')|list|length }}</div></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
       <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>

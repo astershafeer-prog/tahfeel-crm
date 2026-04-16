@@ -90,7 +90,8 @@ class Source(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
 
-class JobType(db.Model):
+class ServiceType(db.Model):
+    __tablename__ = 'job_type'  # keep same DB table name
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
 
@@ -122,6 +123,7 @@ class Job(db.Model):
     num_persons = db.Column(db.Integer, default=1)
     finance_approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     finance_approved_at = db.Column(db.DateTime, nullable=True)
+    finance_notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     assignee = db.relationship('User', foreign_keys=[assigned_to])
@@ -134,7 +136,10 @@ class SubTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
+    service_type = db.Column(db.String(100))
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    due_date = db.Column(db.DateTime)
+    priority = db.Column(db.String(20), default='Medium')
     status = db.Column(db.String(20), default='Pending')
     remarks = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -717,7 +722,7 @@ def admin_panel():
     users = User.query.order_by(User.name).all()
     services = Service.query.order_by(Service.name).all()
     sources = Source.query.order_by(Source.name).all()
-    job_types = JobType.query.order_by(JobType.name).all()
+    job_types = ServiceType.query.order_by(ServiceType.name).all()
     return render_template('admin_panel.html', users=users, services=services, sources=sources, job_types=job_types)
 
 @app.route('/admin/staff/add', methods=['POST'])
@@ -938,7 +943,7 @@ def jobs():
 @login_required
 def add_job():
     customers = Customer.query.order_by(Customer.name).all()
-    job_types = JobType.query.order_by(JobType.name).all()
+    job_types = ServiceType.query.order_by(ServiceType.name).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     if request.method == 'POST':
         due = request.form.get('due_date')
@@ -998,8 +1003,10 @@ def job_detail(job_id):
         flash('Task updated')
         return redirect(url_for('job_detail', job_id=job_id))
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    service_types = ServiceType.query.order_by(ServiceType.name).all()
     return render_template('job_detail.html', job=job, now=now,
-                           statuses=JOB_STATUSES, users=users)
+                           statuses=JOB_STATUSES, users=users,
+                           service_types=service_types, timedelta=timedelta)
 
 @app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1007,7 +1014,7 @@ def job_detail(job_id):
 def edit_job(job_id):
     job = Job.query.get_or_404(job_id)
     customers = Customer.query.order_by(Customer.name).all()
-    job_types = JobType.query.order_by(JobType.name).all()
+    job_types = ServiceType.query.order_by(ServiceType.name).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     if request.method == 'POST':
         job.job_type = request.form['job_type']
@@ -1064,6 +1071,8 @@ def approve_job(job_id):
     job.finance_approved_by = session['user_id']
     job.finance_approved_at = datetime.now()
     notes = request.form.get('finance_notes', '').strip()
+    if notes:
+        job.finance_notes = notes  # save to job record
     remark = f'Approved by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}'
     if notes:
         remark += f'. Notes: {notes}'
@@ -1084,6 +1093,10 @@ def update_payment(job_id):
     except:
         pass
     notes = request.form.get('finance_notes', '').strip()
+    if notes:
+        # Append to existing finance notes
+        existing = job.finance_notes or ''
+        job.finance_notes = (existing + '\n' + notes).strip()
     remark = f'Payment updated. Invoiced: AED {job.amount_invoiced:,.0f} / Received: AED {job.amount_received:,.0f}'
     if notes:
         remark += f'. Notes: {notes}'
@@ -1099,15 +1112,24 @@ def update_payment(job_id):
 @login_required
 def add_subtask(job_id):
     job = Job.query.get_or_404(job_id)
-    # Staff can only add subtasks to jobs assigned to them
     if session['role'] == 'staff' and job.assigned_to != session['user_id']:
         flash('Access denied')
         return redirect(url_for('jobs'))
     assigned = request.form.get('assigned_to')
+    # Inherit parent assigned_to if not specified
+    assigned_id = int(assigned) if assigned else (job.assigned_to or session['user_id'])
+    due_str = request.form.get('due_date')
+    if due_str:
+        due_dt = datetime.strptime(due_str, '%Y-%m-%d')
+    else:
+        due_dt = datetime.now() + timedelta(days=1)
     subtask = SubTask(
         job_id=job_id,
         title=request.form['title'],
-        assigned_to=int(assigned) if assigned else session['user_id']
+        service_type=request.form.get('service_type'),
+        assigned_to=assigned_id,
+        due_date=due_dt,
+        priority=request.form.get('priority', 'Medium'),
     )
     db.session.add(subtask)
     db.session.commit()
@@ -1160,8 +1182,8 @@ def delete_subtask(subtask_id):
 def admin_add_jobtype():
     name = request.form.get('name', '').strip()
     if name:
-        if not JobType.query.filter_by(name=name).first():
-            db.session.add(JobType(name=name))
+        if not ServiceType.query.filter_by(name=name).first():
+            db.session.add(ServiceType(name=name))
             db.session.commit()
             flash(f'Job type "{name}" added')
         else:
@@ -1172,7 +1194,7 @@ def admin_add_jobtype():
 @login_required
 @admin_required
 def admin_delete_jobtype(jobtype_id):
-    jt = JobType.query.get_or_404(jobtype_id)
+    jt = ServiceType.query.get_or_404(jobtype_id)
     db.session.delete(jt)
     db.session.commit()
     flash(f'Job type "{jt.name}" removed')
@@ -1191,6 +1213,10 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_by INTEGER',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_at TIMESTAMP',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS num_persons INTEGER DEFAULT 1',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_notes TEXT',
+            'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS service_type VARCHAR(100)',
+            'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS due_date TIMESTAMP',
+            'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT \'Medium\'',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
         ]
         for sql in migrations:
@@ -1222,9 +1248,9 @@ def init_db():
                     db.session.add(Source(name=s))
                 db.session.commit()
                 print('Default sources created')
-            if JobType.query.count() == 0:
+            if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
-                    db.session.add(JobType(name=jt))
+                    db.session.add(ServiceType(name=jt))
                 db.session.commit()
                 print('Default job types created')
         except Exception as e:

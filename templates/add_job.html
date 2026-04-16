@@ -70,9 +70,9 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Job Type *</label>
+            <label>Service Type *</label>
             <select name="job_type" required>
-              <option value="">— Select type —</option>
+              <option value="">— Select service type —</option>
               {% for jt in job_types %}
               <option value="{{ jt.name }}">{{ jt.name }}</option>
               {% endfor %}

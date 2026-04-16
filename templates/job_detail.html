@@ -6,7 +6,7 @@
   <title>Tahfeel CRM — Task Detail</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; font-size: 13px; }
     .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
     .topbar h1 { font-size: 18px; font-weight: 700; }
     .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
@@ -14,20 +14,19 @@
     .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
     .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
     .nav a.admin-link { color: #FAC775; }
-    .container { padding: 24px; max-width: 960px; margin: 0 auto; }
-    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; }
-    .flash.warning { background: #FAEEDA; color: #633806; }
-    .back { font-size: 13px; color: #555; text-decoration: none; display: inline-block; margin-bottom: 14px; }
+    .container { padding: 20px 24px; max-width: 960px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+    .back { font-size: 13px; color: #555; text-decoration: none; display: inline-block; margin-bottom: 12px; }
     .back:hover { color: #133E87; }
-    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 22px; margin-bottom: 14px; }
-    .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-    .job-title { font-size: 20px; font-weight: 700; color: #133E87; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 20px; margin-bottom: 12px; }
+    .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .job-title { font-size: 19px; font-weight: 700; color: #133E87; }
     .job-customer { font-size: 13px; color: #555; margin-top: 3px; }
     .header-actions { display: flex; gap: 8px; }
-    .btn-edit { color: #133E87; padding: 7px 14px; border-radius: 8px; border: 1px solid #133E87; text-decoration: none; font-size: 12px; font-weight: 600; }
-    .btn-delete { color: #c0392b; padding: 7px 14px; border-radius: 8px; border: 1px solid #c0392b; background: none; font-size: 12px; font-weight: 600; cursor: pointer; }
-    .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding-bottom: 16px; border-bottom: 0.5px solid #eee; margin-bottom: 14px; }
-    .detail-item label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; display: block; margin-bottom: 3px; }
+    .btn-edit { color: #133E87; padding: 6px 14px; border-radius: 8px; border: 1px solid #133E87; text-decoration: none; font-size: 12px; font-weight: 600; }
+    .btn-delete { color: #c0392b; padding: 6px 14px; border-radius: 8px; border: 1px solid #c0392b; background: none; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-bottom: 14px; border-bottom: 0.5px solid #eee; margin-bottom: 12px; }
+    .detail-item label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; display: block; margin-bottom: 2px; }
     .detail-item span { font-size: 13px; color: #333; }
     .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
     .b-pendingfinanceapproval { background: #FAEEDA; color: #633806; }
@@ -41,71 +40,71 @@
     .b-high { background: #FCEBEB; color: #791F1F; }
     .b-medium { background: #FAEEDA; color: #633806; }
     .b-low { background: #f0f0f0; color: #555; }
-    .fin-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-    .fin-card { background: #f8fbff; border: 0.5px solid #d0e4f7; border-radius: 8px; padding: 12px 14px; }
-    .fin-card .lbl { font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 3px; }
-    .fin-card .val { font-size: 14px; font-weight: 700; color: #133E87; }
+    .fin-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .fin-card { background: #f8fbff; border: 0.5px solid #d0e4f7; border-radius: 8px; padding: 10px 12px; }
+    .fin-card .lbl { font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 2px; }
+    .fin-card .val { font-size: 13px; font-weight: 700; color: #133E87; }
     .fin-card.amber { background: #fffbf0; border-color: #faeeda; }
     .fin-card.amber .val { color: #854F0B; }
     .fin-card.green { background: #f0f9f0; border-color: #c0ddb0; }
     .fin-card.green .val { color: #27500A; }
     .fin-card.red { background: #fff8f8; border-color: #f7c1c1; }
     .fin-card.red .val { color: #A32D2D; }
-    .blocked-banner { background: #FAEEDA; border: 1px solid #FAC775; border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; font-size: 13px; color: #633806; font-weight: 600; }
-    .finance-form { background: #f0f9f0; border: 1px solid #c0ddb0; border-radius: 10px; padding: 18px; }
-    .finance-form h3 { font-size: 14px; font-weight: 700; color: #27500A; margin-bottom: 14px; }
-    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 11px; font-weight: 600; color: #555; margin-bottom: 5px; text-transform: uppercase; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; font-family: Arial, sans-serif; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #133E87; }
-    .form-group textarea { resize: vertical; min-height: 75px; }
-    .btn-approve { background: #27500A; color: white; padding: 10px 22px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-submit { background: #133E87; color: white; padding: 10px 22px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-pay { background: #854F0B; color: white; padding: 10px 22px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .update-box { background: #f8fbff; border: 1px solid #d0e4f7; border-radius: 10px; padding: 18px; }
-    .update-box h3 { font-size: 14px; font-weight: 700; color: #133E87; margin-bottom: 14px; }
-    .section-title { font-size: 14px; font-weight: 700; color: #133E87; margin-bottom: 12px; }
-    .timeline-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 0.5px solid #f0f0f0; }
+    .blocked-banner { background: #FAEEDA; border: 1px solid #FAC775; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: #633806; font-weight: 600; }
+    .finance-box { background: #f0f9f0; border: 1px solid #c0ddb0; border-radius: 10px; padding: 16px; }
+    .finance-box h3 { font-size: 13px; font-weight: 700; color: #27500A; margin-bottom: 12px; }
+    .finance-notes-box { background: #fffbf0; border: 1px solid #faeeda; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: #633806; white-space: pre-wrap; }
+    .update-box { background: #f8fbff; border: 1px solid #d0e4f7; border-radius: 10px; padding: 16px; }
+    .update-box h3 { font-size: 13px; font-weight: 700; color: #133E87; margin-bottom: 12px; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 10px; font-weight: 600; color: #555; margin-bottom: 4px; text-transform: uppercase; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 11px; border: 1px solid #ddd; border-radius: 7px; font-size: 13px; outline: none; font-family: Arial, sans-serif; }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+    .btn-approve { background: #27500A; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-submit { background: #133E87; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-pay { background: #854F0B; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .section-title { font-size: 13px; font-weight: 700; color: #133E87; margin-bottom: 10px; }
+    .timeline-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid #f0f0f0; }
     .timeline-item:last-child { border-bottom: none; }
-    .timeline-dot { width: 9px; height: 9px; border-radius: 50%; background: #133E87; margin-top: 5px; flex-shrink: 0; }
+    .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: #133E87; margin-top: 4px; flex-shrink: 0; }
     .timeline-status { font-size: 11px; font-weight: 700; color: #133E87; margin-bottom: 2px; }
-    .timeline-remark { font-size: 13px; color: #333; margin-bottom: 3px; }
+    .timeline-remark { font-size: 13px; color: #333; margin-bottom: 2px; }
     .timeline-meta { font-size: 11px; color: #888; }
-    .subtask-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid #f0f0f0; gap: 10px; }
+    .subtask-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 0.5px solid #f0f0f0; gap: 8px; }
     .subtask-item:last-child { border-bottom: none; }
     .subtask-title { font-size: 13px; font-weight: 600; color: #333; }
-    .subtask-assignee { font-size: 11px; color: #888; }
-    .subtask-done { background: #EAF3DE; color: #27500A; }
-    .subtask-pending { background: #f0f0f0; color: #555; }
-    .subtask-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-    .btn-xs { padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid #133E87; color: #133E87; background: none; cursor: pointer; text-decoration: none; white-space: nowrap; }
+    .subtask-meta { font-size: 11px; color: #888; margin-top: 2px; }
+    .subtask-actions { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+    .btn-xs { padding: 3px 10px; border-radius: 5px; font-size: 11px; border: 1px solid #133E87; color: #133E87; background: none; cursor: pointer; text-decoration: none; white-space: nowrap; }
     .btn-xs:hover { background: #133E87; color: white; }
-    .btn-xs-danger { padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; }
-    .btn-xs-danger:hover { background: #c0392b; color: white; }
-    .add-subtask-form { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-top: 12px; display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    .btn-xs-danger { padding: 3px 10px; border-radius: 5px; font-size: 11px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; }
+    .add-subtask-form { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-top: 10px; }
+    .add-subtask-form .form-row-3 { margin-bottom: 8px; }
     .empty { padding: 16px; text-align: center; color: #aaa; font-size: 12px; }
-    .notes-box { background: #fffbf0; border: 1px solid #faeeda; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #444; margin-top: 10px; }
+    .notes-box { background: #fffbf0; border: 1px solid #faeeda; border-radius: 7px; padding: 10px 12px; font-size: 13px; color: #444; margin-top: 8px; }
+    .subtask-done .subtask-title { text-decoration: line-through; color: #aaa; }
   </style>
 </head>
 <body>
   <div class="topbar">
     <h1>Tahfeel Business Solutions — CRM</h1>
     <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
-      <span>{{ session.user_name }} {% if session.role == 'admin' %}(Admin){% elif session.role == 'finance' %}(Finance){% endif %}</span>
+      <span>{{ session.user_name }}{% if session.role == 'admin' %} (Admin){% elif session.role == 'finance' %} (Finance){% endif %}</span>
       <a href="/logout">Logout</a>
     </div>
   </div>
   <div class="nav">
-    <a href="/dashboard" >Dashboard</a>
-    <a href="/leads/add" >Add Lead</a>
-    <a href="/leads/import" >Import Leads</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/leads/add">Add Lead</a>
     {% if session.role == 'admin' %}
-    <a href="/leads" >All Leads</a>
+    <a href="/leads">All Leads</a>
+    <a href="/leads/import">Import Leads</a>
     {% endif %}
     <a href="/jobs" class="active">Tasks</a>
     {% if session.role == 'admin' %}
-    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
+    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
     {% endif %}
   </div>
 
@@ -116,7 +115,6 @@
 
     <a href="/jobs" class="back">← Back to Tasks</a>
 
-    <!-- Main job card -->
     <div class="card">
       <div class="job-header">
         <div>
@@ -129,127 +127,71 @@
         <div class="header-actions">
           {% if session.role == 'admin' %}
           <a href="/jobs/{{ job.id }}/edit" class="btn-edit">Edit</a>
-          <button class="btn-delete" onclick="if(confirm('Delete this task and all its history?')) window.location='/jobs/{{ job.id }}/delete'">Delete</button>
+          <button class="btn-delete" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'">Delete</button>
           {% endif %}
         </div>
       </div>
 
       <div class="details-grid">
-        <div class="detail-item">
-          <label>Status</label>
-          <span><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></span>
+        <div class="detail-item"><label>Status</label><span><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></span></div>
+        <div class="detail-item"><label>Priority</label><span><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></span></div>
+        <div class="detail-item"><label>Assigned To</label><span>{{ job.assignee.name if job.assignee else '—' }}</span></div>
+        <div class="detail-item"><label>Due Date</label>
+          <span>{{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
+          {% if job.due_date and job.due_date < now and job.status not in ['Done','Pending Finance Approval'] %}
+          <span style="color:#c0392b;font-size:11px;font-weight:600;"> ⚠ Overdue</span>{% endif %}</span>
         </div>
-        <div class="detail-item">
-          <label>Priority</label>
-          <span><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></span>
+        <div class="detail-item"><label>No. of Persons</label><span>{{ job.num_persons or 1 }}</span></div>
+        <div class="detail-item"><label>Customer Phone</label>
+          <span>{{ job.customer.phone or '—' }}
+          {% if job.customer.phone %}
+          <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="margin-left:5px;font-size:11px;color:#25D366;font-weight:600;">WA</a>
+          {% endif %}</span>
         </div>
-        <div class="detail-item">
-          <label>Assigned To</label>
-          <span>{{ job.assignee.name if job.assignee else '—' }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Due Date</label>
-          <span>
-            {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
-            {% if job.due_date and job.due_date < now and job.status not in ['Done','Pending Finance Approval'] %}
-            <span style="color:#c0392b;font-size:11px;font-weight:600;"> ⚠ Overdue</span>
-            {% endif %}
-          </span>
-        </div>
-        <div class="detail-item">
-          <label>Created</label>
-          <span>{{ job.created_at.strftime('%d %b %Y') }}</span>
-        </div>
-        <div class="detail-item">
-          <label>No. of Persons</label>
-          <span>{{ job.num_persons or 1 }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Customer Phone</label>
-          <span>
-            {{ job.customer.phone or '—' }}
-            {% if job.customer.phone %}
-            <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="margin-left:6px;font-size:11px;color:#25D366;font-weight:600;">WhatsApp</a>
-            {% endif %}
-          </span>
+        <div class="detail-item"><label>Created</label><span>{{ job.created_at.strftime('%d %b %Y') }}</span></div>
+        <div class="detail-item"><label>Finance</label>
+          <span>{% if job.finance_approved_at %}✓ {{ job.finance_approved_at.strftime('%d %b') }}{% else %}Pending{% endif %}</span>
         </div>
       </div>
 
-      <!-- Financial summary -->
       <div class="fin-row">
-        <div class="fin-card">
-          <div class="lbl">Invoiced</div>
-          <div class="val">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</div>
-        </div>
-        <div class="fin-card amber">
-          <div class="lbl">Received</div>
-          <div class="val">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div>
-        </div>
-        <div class="fin-card red">
-          <div class="lbl">Pending</div>
-          <div class="val">AED {{ '{:,.0f}'.format((job.amount_invoiced or 0) - (job.amount_received or 0)) }}</div>
-        </div>
-        <div class="fin-card green">
-          <div class="lbl">Finance</div>
-          <div class="val" style="font-size:12px;">
-            {% if job.finance_approved_at %}
-            ✓ Approved {{ job.finance_approved_at.strftime('%d %b') }}
-            {% else %}
-            Pending approval
-            {% endif %}
-          </div>
-        </div>
+        <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</div></div>
+        <div class="fin-card amber"><div class="lbl">Received</div><div class="val">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div></div>
+        <div class="fin-card red"><div class="lbl">Pending</div><div class="val">AED {{ '{:,.0f}'.format((job.amount_invoiced or 0)-(job.amount_received or 0)) }}</div></div>
+        <div class="fin-card green"><div class="lbl">Status</div><div class="val" style="font-size:11px;">{% if job.finance_approved_at %}✓ Approved{% else %}Awaiting Finance{% endif %}</div></div>
       </div>
 
+      {% if job.finance_notes %}
+      <div class="notes-box"><strong style="font-size:10px;text-transform:uppercase;color:#888;">Finance Notes</strong><br>{{ job.finance_notes }}</div>
+      {% endif %}
       {% if job.internal_notes %}
-      <div class="notes-box">
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Internal Notes</div>
-        {{ job.internal_notes }}
-      </div>
+      <div class="notes-box" style="margin-top:6px;"><strong style="font-size:10px;text-transform:uppercase;color:#888;">Internal Notes</strong><br>{{ job.internal_notes }}</div>
       {% endif %}
     </div>
 
-    <!-- Finance approval / payment update -->
+    <!-- Finance section -->
     {% if session.role in ['finance', 'admin'] %}
     <div class="card">
       {% if job.status == 'Pending Finance Approval' %}
-      <div class="finance-form">
+      <div class="finance-box">
         <h3>✓ Finance Approval</h3>
         <form method="post" action="/jobs/{{ job.id }}/approve">
           <div class="form-row-2">
-            <div class="form-group">
-              <label>Invoice Amount (AED)</label>
-              <input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" placeholder="0">
-            </div>
-            <div class="form-group">
-              <label>Amount Received (AED)</label>
-              <input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01" placeholder="0">
-            </div>
+            <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" placeholder="0"></div>
+            <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01" placeholder="0"></div>
           </div>
-          <div class="form-group">
-            <label>Finance Notes (optional)</label>
-            <textarea name="finance_notes" placeholder="Any comments, conditions, or notes..."></textarea>
-          </div>
+          <div class="form-group"><label>Finance Notes (optional)</label><textarea name="finance_notes" placeholder="Any comments, conditions..."></textarea></div>
           <button type="submit" class="btn-approve">Approve & Start Task</button>
         </form>
       </div>
       {% else %}
-      <div style="margin-bottom:12px;font-size:13px;font-weight:700;color:#133E87;">Update Payment</div>
+      <div style="font-size:13px;font-weight:700;color:#133E87;margin-bottom:10px;">Update Payment</div>
       <form method="post" action="/jobs/{{ job.id }}/payment">
         <div class="form-row-2">
-          <div class="form-group">
-            <label>Invoice Amount (AED)</label>
-            <input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Amount Received (AED)</label>
-            <input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01">
-          </div>
+          <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
+          <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
         </div>
-        <div class="form-group">
-            <label>Finance Notes (optional)</label>
-            <textarea name="finance_notes" placeholder="Any comments or notes..."></textarea>
-          </div>
+        <div class="form-group"><label>Finance Notes (optional)</label><textarea name="finance_notes" placeholder="Payment notes..."></textarea></div>
         <button type="submit" class="btn-pay">Update Payment</button>
       </form>
       {% endif %}
@@ -258,96 +200,107 @@
 
     <!-- Blocked banner for staff -->
     {% if job.status == 'Pending Finance Approval' and session.role == 'staff' %}
-    <div class="blocked-banner">
-      ⏳ This task is awaiting finance approval. You will be able to update it once approved.
-    </div>
+    <div class="blocked-banner">⏳ Awaiting finance approval. You can view but not update this task yet.</div>
     {% endif %}
 
-    <!-- Update form (staff/admin, only if not pending) -->
-    {% if job.status != 'Pending Finance Approval' or session.role == 'admin' %}
+    <!-- Update form — staff/admin only, not finance, not if pending -->
+    {% if session.role in ['admin', 'staff'] and job.status != 'Pending Finance Approval' %}
     <div class="card">
       <div class="update-box">
         <h3>Add Update</h3>
         <form method="post">
-          <div class="form-row-2">
-            <div class="form-group">
-              <label>Status *</label>
-              <select name="status">
-                {% for s in statuses %}
-                <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
           <div class="form-group">
-            <label>Remark * (required)</label>
-            <textarea name="remark" placeholder="Describe what happened, next steps..." required></textarea>
+            <label>Status *</label>
+            <select name="status">
+              {% for s in statuses %}
+              <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
           </div>
+          <div class="form-group"><label>Remark * (required)</label><textarea name="remark" placeholder="Describe what happened, next steps..." required></textarea></div>
           <button type="submit" class="btn-submit">Save Update</button>
         </form>
       </div>
     </div>
     {% endif %}
 
-    <!-- Sub-tasks -->
+    <!-- Sub-tasks — not shown to finance -->
+    {% if session.role != 'finance' %}
     <div class="card">
       <div class="section-title">Sub-tasks ({{ job.subtasks|length }})</div>
-      {% if job.subtasks %}
-        {% for st in job.subtasks %}
-        <div class="subtask-item">
-          <div>
-            <div class="subtask-title">
-              {% if st.status == 'Done' %}<s style="color:#aaa;">{{ st.title }}</s>{% else %}{{ st.title }}{% endif %}
-            </div>
-            <div class="subtask-assignee">
-              {% if st.assignee %}Assigned: {{ st.assignee.name }}{% else %}Unassigned{% endif %}
-              {% if st.completed_at %} · Done {{ st.completed_at.strftime('%d %b') }}{% endif %}
-            </div>
-          </div>
-          <div class="subtask-actions">
-            <span class="badge {% if st.status == 'Done' %}subtask-done{% else %}subtask-pending{% endif %}">{{ st.status }}</span>
-            {% if st.status != 'Done' and (session.role in ['admin','finance'] or st.assigned_to == session.user_id or job.assigned_to == session.user_id) %}
-            <form method="post" action="/subtasks/{{ st.id }}/done" style="display:inline;">
-              <input type="hidden" name="remarks" value="">
-              <button type="submit" class="btn-xs">Mark Done</button>
-            </form>
-            {% endif %}
-            {% if st.status == 'Done' and (session.role in ['admin','finance'] or st.assigned_to == session.user_id) %}
-            <a href="/subtasks/{{ st.id }}/reopen" class="btn-xs">Reopen</a>
-            {% endif %}
-            {% if session.role == 'admin' %}
-            <a href="/subtasks/{{ st.id }}/delete" class="btn-xs-danger" onclick="return confirm('Remove this sub-task?')">Remove</a>
-            {% endif %}
+      {% for st in job.subtasks %}
+      <div class="subtask-item {% if st.status == 'Done' %}subtask-done{% endif %}">
+        <div style="flex:1;">
+          <div class="subtask-title">{{ st.title }}{% if st.service_type %} <span style="font-size:11px;color:#888;font-weight:400;">— {{ st.service_type }}</span>{% endif %}</div>
+          <div class="subtask-meta">
+            {{ st.assignee.name if st.assignee else '—' }}
+            {% if st.due_date %} · Due {{ st.due_date.strftime('%d %b') }}{% if st.due_date < now and st.status != 'Done' %} <span style="color:#c0392b;">⚠</span>{% endif %}{% endif %}
+            {% if st.priority %} · <span class="badge b-{{ st.priority|lower }}">{{ st.priority }}</span>{% endif %}
+            {% if st.completed_at %} · Done {{ st.completed_at.strftime('%d %b') }}{% endif %}
           </div>
         </div>
-        {% endfor %}
+        <div class="subtask-actions">
+          <span class="badge {% if st.status == 'Done' %}b-done{% else %}b-medium{% endif %}">{{ st.status }}</span>
+          {% if st.status != 'Done' and (session.role == 'admin' or st.assigned_to == session.user_id or job.assigned_to == session.user_id) %}
+          <form method="post" action="/subtasks/{{ st.id }}/done" style="display:inline;">
+            <input type="hidden" name="remarks" value="">
+            <button type="submit" class="btn-xs">Done</button>
+          </form>
+          {% endif %}
+          {% if st.status == 'Done' and (session.role == 'admin' or st.assigned_to == session.user_id) %}
+          <a href="/subtasks/{{ st.id }}/reopen" class="btn-xs">Reopen</a>
+          {% endif %}
+          {% if session.role == 'admin' %}
+          <a href="/subtasks/{{ st.id }}/delete" class="btn-xs-danger" onclick="return confirm('Remove?')">✕</a>
+          {% endif %}
+        </div>
+      </div>
       {% else %}
       <div class="empty">No sub-tasks yet.</div>
-      {% endif %}
+      {% endfor %}
 
-      {% if session.role in ['admin', 'staff', 'finance'] %}
-      <form method="post" action="/jobs/{{ job.id }}/subtasks/add" class="add-subtask-form">
-        <div class="form-group" style="flex:1;margin:0;">
-          <label>Sub-task title</label>
-          <input type="text" name="title" placeholder="e.g. Medical fitness appointment" required>
-        </div>
-        <div class="form-group" style="min-width:160px;margin:0;">
-          <label>Assign to</label>
-          <select name="assigned_to">
-            <option value="">— Select staff —</option>
-            {% for u in users %}
-            <option value="{{ u.id }}">{{ u.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <button type="submit" class="btn-submit" style="align-self:flex-end;">Add</button>
-      </form>
-      {% endif %}
+      <!-- Add sub-task form -->
+      <div class="add-subtask-form">
+        <div style="font-size:12px;font-weight:700;color:#133E87;margin-bottom:8px;">+ Add Sub-task</div>
+        <form method="post" action="/jobs/{{ job.id }}/subtasks/add">
+          <div class="form-row-2" style="margin-bottom:8px;">
+            <div class="form-group" style="margin:0;"><label>Title *</label><input type="text" name="title" placeholder="e.g. Medical fitness test" required></div>
+            <div class="form-group" style="margin:0;"><label>Service Type</label>
+              <select name="service_type">
+                <option value="">— Optional —</option>
+                {% for jt in service_types %}
+                <option value="{{ jt.name }}">{{ jt.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-row-3" style="margin-bottom:8px;">
+            <div class="form-group" style="margin:0;"><label>Assign To</label>
+              <select name="assigned_to">
+                <option value="">Inherit ({{ job.assignee.name if job.assignee else 'Unassigned' }})</option>
+                {% for u in users %}
+                <option value="{{ u.id }}">{{ u.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;"><label>Due Date</label><input type="date" name="due_date" value="{{ (now + timedelta(days=1)).strftime('%Y-%m-%d') }}"></div>
+            <div class="form-group" style="margin:0;"><label>Priority</label>
+              <select name="priority">
+                <option value="High">High</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn-submit" style="font-size:12px;padding:7px 16px;">Add Sub-task</button>
+        </form>
+      </div>
     </div>
+    {% endif %}
 
     <!-- Timeline -->
     <div class="card">
-      <div class="section-title">Timeline ({{ job.updates|length }} updates)</div>
+      <div class="section-title">Timeline ({{ job.updates|length }})</div>
       {% for u in job.updates %}
       <div class="timeline-item">
         <div class="timeline-dot"></div>
