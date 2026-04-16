@@ -210,10 +210,13 @@ def dashboard():
 @login_required
 @admin_required
 def all_leads():
+ def all_leads():
     now = datetime.now()
     leads = Lead.query.order_by(Lead.due_date).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     search = request.args.get('search', '').strip().lower()
+    if not request.args:
+        leads = [l for l in leads if l.due_date.date() == now.date() and l.status not in ['Converted', 'Lost']]
     if search:
         leads = [l for l in leads if
                  search in (l.name or '').lower() or
