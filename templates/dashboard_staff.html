@@ -125,6 +125,12 @@
     </div>
     {% endif %}
 
+    <div class="cards-3" style="margin-bottom:14px;">
+      <a href="/documents" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">Total Documents</div><div class="value" style="font-size:22px;font-weight:700;color:#133E87;">{{ total_docs }}</div></div></a>
+      <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">Expiring ≤30 Days</div><div class="value" style="font-size:22px;font-weight:700;color:#A32D2D;">{{ docs_30 }}</div></div></a>
+      <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">Expiring 31–60 Days</div><div class="value" style="font-size:22px;font-weight:700;color:#854F0B;">{{ docs_60 }}</div></div></a>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;">
       <!-- Overdue Leads -->
       <div class="card">
@@ -134,13 +140,7 @@
         </div>
         {% set overdue_leads = leads|selectattr('due_date')|selectattr('status','ne','Converted')|selectattr('status','ne','Lost')|list %}
         {% set overdue_leads = overdue_leads|selectattr('due_date')|list %}
-        <div class="section-label" style="margin-top:0">Documents</div>
-    <div class="cards-3" style="margin-bottom:16px;">
-      <a href="/documents" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="lbl">Total Documents</div><div class="val">{{ total_docs }}</div></div></a>
-      <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="lbl">Expiring ≤30 Days</div><div class="val">{{ docs_30 }}</div></div></a>
-      <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="lbl">Expiring 31–60 Days</div><div class="val">{{ docs_60 }}</div></div></a>
-    </div>
-    {% if overdue %}
+        {% if overdue %}
         <table>
           <thead><tr><th>Name</th><th>Service</th><th>Due</th><th></th></tr></thead>
           <tbody>

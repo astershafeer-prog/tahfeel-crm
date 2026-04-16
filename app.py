@@ -1359,8 +1359,10 @@ def add_document():
         )
         db.session.add(doc)
         db.session.commit()
-        flash('Document added successfully')
-        return redirect(url_for('documents'))
+        # Option A: redirect back to add form with customer pre-selected + success message
+        customer_id_param = f'?customer_id={customer_id}&added=1' if customer_id else '?added=1'
+        flash('Document saved successfully!')
+        return redirect(url_for('add_document') + customer_id_param)
     return render_template('add_document.html', customers=customers,
                            doc_types=doc_types, sources=sources)
 

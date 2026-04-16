@@ -58,7 +58,14 @@
 
   <div class="container">
     {% with messages = get_flashed_messages() %}
-      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+      {% if messages %}
+        {% for msg in messages %}
+        <div class="flash" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>✓ {{ msg }}</span>
+          <a href="/documents" style="background:#133E87;color:white;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">View All Documents →</a>
+        </div>
+        {% endfor %}
+      {% endif %}
     {% endwith %}
 
     <form method="post" enctype="multipart/form-data">
@@ -113,7 +120,7 @@
           <select name="customer_id" id="customerSelect">
             <option value="">— None / New customer below —</option>
             {% for c in customers %}
-            <option value="{{ c.id }}">{{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}</option>
+            <option value="{{ c.id }}" {% if request.args.get("customer_id") == c.id|string %}selected{% endif %}>{{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}</option>
             {% endfor %}
           </select>
         </div>
