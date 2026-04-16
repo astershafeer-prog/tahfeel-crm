@@ -70,6 +70,7 @@
   </div>
   <div class="nav">
     <a href="/dashboard" class="active">Dashboard</a>
+    <a href="/leads/add" >Add Lead</a>
     <a href="/jobs" >Tasks</a>
   </div>
   <div class="container">
@@ -81,22 +82,20 @@
 
 {% if overdue %}
     <div class="overdue-alert">
-      ⚠️ <strong>{{ overdue|length }} lead{{ 's' if overdue|length > 1 else '' }}</strong> overdue and need immediate attention!
+      ⚠️ <strong>{{ overdue|length }} overdue lead{{ 's' if overdue|length > 1 else '' }}</strong> — need immediate attention!
     </div>
     {% endif %}
 
-    <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">My Leads</div>
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
-      <div class="stat-card"><div class="label">Total</div><div class="value">{{ leads|length }}</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:10px;">
+      <div class="stat-card"><div class="label">My Leads</div><div class="value">{{ leads|length }}</div></div>
       <div class="stat-card amber"><div class="label">Pending</div><div class="value">{{ pending|length }}</div></div>
+      <div class="stat-card red"><div class="label">Overdue Leads</div><div class="value">{{ overdue|length }}</div></div>
       <div class="stat-card green"><div class="label">Converted</div><div class="value">{{ converted|length }}</div></div>
-      <div class="stat-card red"><div class="label">Overdue</div><div class="value">{{ overdue|length }}</div></div>
     </div>
-    <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Financials</div>
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
       <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>
       <div class="fin-card amber"><div class="lbl">Received</div><div class="val">AED {{ '{:,.0f}'.format(total_received) }}</div></div>
-      <div class="fin-card red"><div class="lbl">Pending</div><div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div></div>
+      <div class="fin-card red"><div class="lbl">Pending Payment</div><div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div></div>
       <div class="fin-card green"><div class="lbl">Completed</div><div class="val">AED {{ '{:,.0f}'.format(completed_value) }}</div></div>
     </div>
 
