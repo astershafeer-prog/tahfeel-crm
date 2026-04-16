@@ -213,7 +213,14 @@ def all_leads():
     now = datetime.now()
     leads = Lead.query.order_by(Lead.due_date).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
-    return render_template('all_leads.html', leads=leads, now=now, users=users, search='')
+    search = request.args.get('search', '').strip().lower()
+    if search:
+        leads = [l for l in leads if
+                 search in (l.name or '').lower() or
+                 search in (l.phone or '').lower() or
+                 search in (l.company or '').lower()]
+    leads = apply_lead_filters(leads, request.args, now)
+    return render_template('all_leads.html', leads=leads, now=now, users=users, search=search)
 @app.route('/leads/export')
 @login_required
 @admin_required
