@@ -28,6 +28,13 @@
     .btn-bulk-delete { background: #c0392b; color: white; padding: 9px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: none; }
     .btn-bulk-delete:hover { background: #a93226; }
     .btn-bulk-delete.visible { display: inline-block; }
+    .search-bar { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 12px 16px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; }
+    .search-bar input { flex: 1; padding: 9px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+    .search-bar input:focus { border-color: #133E87; }
+    .btn-search { background: #133E87; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-search:hover { background: #1E5AB8; }
+    .btn-clear { background: white; color: #555; padding: 9px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
+    .btn-clear:hover { border-color: #133E87; color: #133E87; }
     .filters { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
     .filter-group { display: flex; flex-direction: column; gap: 4px; }
     .filter-group label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
@@ -52,17 +59,12 @@
     .badge-lost { background: #FCEBEB; color: #791F1F; }
     .badge-potential { background: #FAEEDA; color: #633806; }
     .badge-called { background: #EEEDFE; color: #3C3489; }
-    .badge-overdue { background: #FCEBEB; color: #c0392b; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-left: 6px; }
     .actions { display: flex; gap: 6px; align-items: center; }
     .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; }
     .btn-sm:hover { background: #133E87; color: white; }
-    .btn-edit { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #1D6F42; color: #1D6F42; white-space: nowrap; }
-    .btn-edit:hover { background: #1D6F42; color: white; }
     .btn-delete { padding: 5px 12px; border-radius: 6px; font-size: 12px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; white-space: nowrap; }
     .btn-delete:hover { background: #c0392b; color: white; }
     .empty { padding: 40px; text-align: center; color: #aaa; font-size: 13px; }
-    .bulk-bar { background: #133E87; color: white; padding: 10px 20px; font-size: 13px; display: none; align-items: center; gap: 12px; }
-    .bulk-bar.visible { display: flex; }
     input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #133E87; }
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.active { display: flex; }
@@ -72,6 +74,7 @@
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
     .btn-cancel-modal { padding: 8px 18px; border-radius: 6px; font-size: 13px; border: 1px solid #ddd; color: #555; background: white; cursor: pointer; }
     .btn-confirm-delete { padding: 8px 18px; border-radius: 6px; font-size: 13px; background: #c0392b; color: white; border: none; cursor: pointer; font-weight: 600; text-decoration: none; }
+    .search-highlight { background: #fff3cd; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #633806; }
   </style>
 </head>
 <body>
@@ -108,8 +111,28 @@
       </div>
     </div>
 
+    <!-- Search bar -->
+    <form method="GET" action="/leads" id="searchForm">
+      <div class="search-bar">
+        <input type="text" name="search" placeholder="Search by name, phone or company..." value="{{ search }}">
+        <button type="submit" class="btn-search">Search</button>
+        {% if search %}
+        <a href="/leads" class="btn-clear">Clear</a>
+        {% endif %}
+      </div>
+      <!-- Keep filter params when searching -->
+      {% if request.args.get('date') %}<input type="hidden" name="date" value="{{ request.args.get('date') }}">{% endif %}
+      {% if request.args.get('status') %}<input type="hidden" name="status" value="{{ request.args.get('status') }}">{% endif %}
+      {% if request.args.get('staff') %}<input type="hidden" name="staff" value="{{ request.args.get('staff') }}">{% endif %}
+    </form>
+
+    {% if search %}
+    <div class="search-highlight">Showing results for: <strong>"{{ search }}"</strong></div>
+    {% endif %}
+
     <!-- Filters -->
     <form method="GET" action="/leads">
+      {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
       <div class="filters">
         <div class="filter-group">
           <label>Date Range</label>
@@ -134,11 +157,15 @@
           <select name="status">
             <option value="">All statuses</option>
             <option value="New" {% if request.args.get('status') == 'New' %}selected{% endif %}>New</option>
+            <option value="Call Connected" {% if request.args.get('status') == 'Call Connected' %}selected{% endif %}>Call Connected</option>
             <option value="Called — No Answer" {% if request.args.get('status') == 'Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
+            <option value="Sent WhatsApp" {% if request.args.get('status') == 'Sent WhatsApp' %}selected{% endif %}>Sent WhatsApp</option>
+            <option value="Sent Mail" {% if request.args.get('status') == 'Sent Mail' %}selected{% endif %}>Sent Mail</option>
             <option value="Potential Lead" {% if request.args.get('status') == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
+            <option value="Meeting Scheduled" {% if request.args.get('status') == 'Meeting Scheduled' %}selected{% endif %}>Meeting Scheduled</option>
             <option value="Converted" {% if request.args.get('status') == 'Converted' %}selected{% endif %}>Converted</option>
             <option value="Lost" {% if request.args.get('status') == 'Lost' %}selected{% endif %}>Lost</option>
-<option value="Overdue" {% if request.args.get('status') == 'Overdue' %}selected{% endif %}>⚠ Overdue</option>
+            <option value="Overdue" {% if request.args.get('status') == 'Overdue' %}selected{% endif %}>⚠ Overdue</option>
           </select>
         </div>
         <div class="filter-group">
@@ -160,7 +187,6 @@
       </div>
     </form>
 
-    <!-- Bulk delete form wraps the table -->
     <form method="POST" action="/leads/bulk-delete" id="bulkForm">
       <div class="card">
         {% if leads %}
@@ -173,7 +199,6 @@
               <th>Name</th>
               <th>Company</th>
               <th>Service</th>
-              <th>Source</th>
               <th>Assigned To</th>
               <th>Due Date</th>
               <th>Status</th>
@@ -186,14 +211,11 @@
               <td>
                 <input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="row-check" onchange="updateBulkBar()">
               </td>
-              <td>
-              <strong>{{ lead.name }}</strong>
-              </td>
+              <td><strong>{{ lead.name }}</strong></td>
               <td>{{ lead.company or '—' }}</td>
               <td>{{ lead.service or '—' }}</td>
-              <td>{{ lead.source or '—' }}</td>
               <td>{{ lead.assignee.name if lead.assignee else '—' }}</td>
-             <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;{% endif %}">
+              <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;{% endif %}">
                 {{ lead.due_date.strftime('%d %b %Y') }}
               </td>
               <td>
@@ -202,122 +224,4 @@
                   {% elif lead.status == 'Lost' %}badge-lost
                   {% elif lead.status == 'Potential Lead' %}badge-potential
                   {% elif 'Called' in lead.status %}badge-called
-                  {% else %}badge-new{% endif %}">
-                  {{ lead.status }}
-                </span>
-              </td>
-              <td>
-                <div class="actions">
-                 <a href="/leads/{{ lead.id }}" class="btn-sm">View</a>
-                  <button type="button" class="btn-delete" onclick="confirmDelete({{ lead.id }}, '{{ lead.name }}')">Delete</button>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% else %}
-        <div class="empty">No leads found matching your filters.</div>
-        {% endif %}
-      </div>
-    </form>
-  </div>
-
-  <!-- Single delete modal -->
-  <div class="modal-overlay" id="deleteModal">
-    <div class="modal">
-      <h3>Delete Lead</h3>
-      <p id="deleteModalText">Are you sure you want to delete this lead?</p>
-      <div class="modal-actions">
-        <button class="btn-cancel-modal" onclick="closeModal()">Cancel</button>
-        <a href="#" id="confirmDeleteBtn" class="btn-confirm-delete">Yes, Delete</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bulk delete modal -->
-  <div class="modal-overlay" id="bulkModal">
-    <div class="modal">
-      <h3>Delete Selected Leads</h3>
-      <p id="bulkModalText">Are you sure you want to delete the selected leads? This cannot be undone.</p>
-      <div class="modal-actions">
-        <button class="btn-cancel-modal" onclick="closeBulkModal()">Cancel</button>
-        <button class="btn-confirm-delete" onclick="submitBulkDelete()">Yes, Delete All</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    function toggleCustomDates(val) {
-      const show = val === 'custom';
-      document.getElementById('customDates').classList.toggle('visible', show);
-      document.getElementById('customDatesTo').classList.toggle('visible', show);
-    }
-
-    function toggleAll(source) {
-      const checks = document.querySelectorAll('.row-check');
-      checks.forEach(c => {
-        c.checked = source.checked;
-        const row = c.closest('tr');
-        row.classList.toggle('selected', source.checked);
-      });
-      updateBulkBar();
-    }
-
-  function updateBulkBar() {
-  const checked = document.querySelectorAll('.row-check:checked');
-  const btn = document.getElementById('bulkDeleteBtn');
-  const count = document.getElementById('selectedCount');
-  count.textContent = checked.length;
-  btn.classList.toggle('visible', checked.length > 0);
-  const anyChecked = checked.length > 0;
-  document.querySelectorAll('.row-check').forEach(c => {
-    c.closest('tr').classList.toggle('selected', c.checked);
-  });
-  document.querySelectorAll('.btn-sm, .btn-edit').forEach(b => {
-    if (anyChecked) {
-      b.style.pointerEvents = 'none';
-      b.style.opacity = '0.3';
-    } else {
-      b.style.pointerEvents = '';
-      b.style.opacity = '';
-    }
-  });
-}
-
-    function confirmDelete(leadId, leadName) {
-      document.getElementById('deleteModalText').textContent =
-        'Are you sure you want to delete "' + leadName + '"? This cannot be undone.';
-      document.getElementById('confirmDeleteBtn').href = '/leads/' + leadId + '/delete';
-      document.getElementById('deleteModal').classList.add('active');
-    }
-
-    function closeModal() {
-      document.getElementById('deleteModal').classList.remove('active');
-    }
-
-    function confirmBulkDelete() {
-      const count = document.querySelectorAll('.row-check:checked').length;
-      document.getElementById('bulkModalText').textContent =
-        'Are you sure you want to delete ' + count + ' selected lead(s)? This cannot be undone.';
-      document.getElementById('bulkModal').classList.add('active');
-    }
-
-    function closeBulkModal() {
-      document.getElementById('bulkModal').classList.remove('active');
-    }
-
-    function submitBulkDelete() {
-      document.getElementById('bulkForm').submit();
-    }
-
-    document.getElementById('deleteModal').addEventListener('click', function(e) {
-      if (e.target === this) closeModal();
-    });
-    document.getElementById('bulkModal').addEventListener('click', function(e) {
-      if (e.target === this) closeBulkModal();
-    });
-  </script>
-
-</body>
-</html>
+                  {

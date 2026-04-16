@@ -3,46 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tahfeel CRM — My Tasks</title>
+  <title>Tahfeel CRM — My Dashboard</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f0f4f8; }
     .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
     .topbar h1 { font-size: 18px; font-weight: 700; }
-    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+    .topbar a { color: #DCDCBF; text-decoration: none; }
     .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
     .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
     .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
     .container { padding: 24px; max-width: 1000px; margin: 0 auto; }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
-    .stat-card { background: white; border-radius: 10px; padding: 18px 20px; border: 0.5px solid #ddd; }
-    .stat-card .label { font-size: 12px; color: #888; margin-bottom: 6px; }
-    .stat-card .value { font-size: 28px; font-weight: 700; color: #133E87; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: white; border-radius: 12px; padding: 18px 16px; border: 0.5px solid #ddd; }
+    .stat-card .label { font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat-card .value { font-size: 26px; font-weight: 700; color: #133E87; }
+    .stat-card .sub { font-size: 11px; color: #aaa; margin-top: 4px; }
     .stat-card.red .value { color: #c0392b; }
     .stat-card.amber .value { color: #854F0B; }
-    .card { background: white; border-radius: 10px; border: 0.5px solid #ddd; margin-bottom: 20px; }
+    .stat-card.green .value { color: #1D6F42; }
+    .stat-card.teal .value { color: #0F6E56; font-size: 18px; }
+    .overdue-alert { background: #fff5f5; border: 1px solid #f5c6c6; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: #c0392b; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; margin-bottom: 20px; overflow: hidden; }
     .card-header { padding: 16px 20px; border-bottom: 0.5px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .card-header h2 { font-size: 15px; color: #133E87; font-weight: 700; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; }
-    td { padding: 12px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; }
+    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; }
+    td { padding: 12px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #f8f9fa; }
+    tr:hover td { background: #fafbfc; }
+    tr.overdue-row td { background: #fff5f5; }
     .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
     .badge-new { background: #E6F1FB; color: #0C447C; }
     .badge-converted { background: #EAF3DE; color: #27500A; }
     .badge-lost { background: #FCEBEB; color: #791F1F; }
     .badge-potential { background: #FAEEDA; color: #633806; }
     .badge-called { background: #EEEDFE; color: #3C3489; }
-    .overdue-row td { background: #fff5f5; }
     .overdue-tag { background: #FCEBEB; color: #c0392b; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-left: 6px; }
-    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; }
     .btn-sm:hover { background: #133E87; color: white; }
     .empty { padding: 24px; text-align: center; color: #aaa; font-size: 13px; }
-    .followup-item { padding: 12px 20px; border-bottom: 0.5px solid #f0f0f0; font-size: 13px; }
+    .followup-item { padding: 12px 20px; border-bottom: 0.5px solid #f0f0f0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
     .followup-item:last-child { border-bottom: none; }
     .followup-item strong { color: #133E87; }
-    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -54,47 +59,83 @@
     </div>
   </div>
   <div class="nav">
-    <a href="/dashboard" class="active">My Tasks</a>
+    <a href="/dashboard" class="active">My Dashboard</a>
+    <a href="/leads/add">Add Lead</a>
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for msg in messages %}
-          <div class="flash">{{ msg }}</div>
-        {% endfor %}
-      {% endif %}
+      {% if messages %}{% for msg in messages %}
+        <div class="flash">{{ msg }}</div>
+      {% endfor %}{% endif %}
     {% endwith %}
+
+    {% if overdue %}
+    <div class="overdue-alert">
+      ⚠️ <strong>{{ overdue|length }} lead{{ 's' if overdue|length > 1 else '' }}</strong> overdue and need immediate attention!
+    </div>
+    {% endif %}
+
+    <!-- Stats -->
     <div class="stats">
       <div class="stat-card">
-        <div class="label">My total leads</div>
+        <div class="label">Total Leads</div>
         <div class="value">{{ leads|length }}</div>
+        <div class="sub">Assigned to me</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="label">Pending</div>
+        <div class="value">{{ pending|length }}</div>
+        <div class="sub">In progress</div>
+      </div>
+      <div class="stat-card green">
+        <div class="label">Converted</div>
+        <div class="value">{{ converted|length }}</div>
+        <div class="sub">Closed won</div>
       </div>
       <div class="stat-card red">
         <div class="label">Overdue</div>
         <div class="value">{{ overdue|length }}</div>
+        <div class="sub">Need attention</div>
       </div>
-      <div class="stat-card amber">
-        <div class="label">Follow-ups today</div>
-        <div class="value">{{ followups|length }}</div>
+      <div class="stat-card teal">
+        <div class="label">Potential Value</div>
+        <div class="value">AED {{ '{:,.0f}'.format(potential_value) }}</div>
+        <div class="sub">Active leads</div>
       </div>
     </div>
+
+    <!-- Follow-ups -->
     {% if followups %}
     <div class="card">
-      <div class="card-header"><h2>Follow-ups due today</h2></div>
+      <div class="card-header"><h2>⏰ Follow-ups due today</h2></div>
       {% for f in followups %}
       <div class="followup-item">
-        <strong>{{ f.lead.name }}</strong> — {{ f.remark[:80] }}
-        <a href="/leads/{{ f.lead_id }}" class="btn-sm" style="margin-left:10px;">View</a>
+        <div>
+          <strong>{{ f.lead.name }}</strong>
+          <span style="color:#888;font-size:12px;margin-left:8px;">{{ f.remark[:60] }}{% if f.remark|length > 60 %}...{% endif %}</span>
+        </div>
+        <a href="/leads/{{ f.lead_id }}" class="btn-sm">Open</a>
       </div>
       {% endfor %}
     </div>
     {% endif %}
+
+    <!-- My Leads -->
     <div class="card">
-      <div class="card-header"><h2>My assigned leads</h2></div>
+      <div class="card-header">
+        <h2>My Assigned Leads</h2>
+        <a href="/leads/add" class="btn-sm">+ Add Lead</a>
+      </div>
       {% if leads %}
       <table>
         <thead>
-          <tr><th>Customer</th><th>Service</th><th>Due date</th><th>Status</th><th></th></tr>
+          <tr>
+            <th>Customer</th>
+            <th>Service</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
         </thead>
         <tbody>
           {% for lead in leads %}
@@ -107,8 +148,8 @@
               {% if lead.company %}<br><span style="color:#888;font-size:12px;">{{ lead.company }}</span>{% endif %}
             </td>
             <td>{{ lead.service or '—' }}</td>
-            <td {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}style="color:#c0392b;font-weight:600;"{% endif %}>
-              {{ lead.due_date.strftime('%d %b %Y %H:%M') }}
+            <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;font-weight:600;{% endif %}">
+              {{ lead.due_date.strftime('%d %b %Y') }}
             </td>
             <td>
               <span class="badge
@@ -126,7 +167,7 @@
         </tbody>
       </table>
       {% else %}
-      <div class="empty">No tasks assigned to you yet.</div>
+      <div class="empty">No leads assigned to you yet.</div>
       {% endif %}
     </div>
   </div>
