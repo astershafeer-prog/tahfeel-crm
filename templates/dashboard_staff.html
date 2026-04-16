@@ -6,7 +6,7 @@
   <title>Tahfeel CRM — My Dashboard</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; font-size: 13px; }
     .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
     .topbar h1 { font-size: 18px; font-weight: 700; }
     .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
@@ -26,6 +26,16 @@
     .stat-card.green .value { color: #1D6F42; }
     .stat-card.teal .value { color: #0F6E56; font-size: 18px; }
     .overdue-alert { background: #fff5f5; border: 1px solid #f5c6c6; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: #c0392b; }
+
+    .fin-card { background: white; border-radius: 10px; border: 0.5px solid #ddd; border-top: 3px solid #133E87; padding: 14px 16px; }
+    .fin-card.amber { border-top-color: #854F0B; }
+    .fin-card.red { border-top-color: #A32D2D; }
+    .fin-card.green { border-top-color: #27500A; }
+    .fin-card .lbl { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .fin-card .val { font-size: 20px; font-weight: 700; color: #133E87; }
+    .fin-card.amber .val { color: #854F0B; }
+    .fin-card.red .val { color: #A32D2D; }
+    .fin-card.green .val { color: #27500A; }
     .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; margin-bottom: 20px; overflow: hidden; }
     .card-header { padding: 16px 20px; border-bottom: 0.5px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .card-header h2 { font-size: 15px; color: #133E87; font-weight: 700; }
@@ -69,22 +79,22 @@
       {% endfor %}{% endif %}
     {% endwith %}
 
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
-      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #133E87;padding:12px 14px;">
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Invoiced</div>
-        <div style="font-size:17px;font-weight:700;color:#133E87;">AED {{ '{:,.0f}'.format(total_invoiced) }}</div>
+    <div class="fin-row" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+      <div class="fin-card">
+        <div class="lbl">Invoiced</div>
+        <div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div>
       </div>
-      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #854F0B;padding:12px 14px;">
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Received</div>
-        <div style="font-size:17px;font-weight:700;color:#854F0B;">AED {{ '{:,.0f}'.format(total_received) }}</div>
+      <div class="fin-card amber">
+        <div class="lbl">Received</div>
+        <div class="val">AED {{ '{:,.0f}'.format(total_received) }}</div>
       </div>
-      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #A32D2D;padding:12px 14px;">
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Pending</div>
-        <div style="font-size:17px;font-weight:700;color:#A32D2D;">AED {{ '{:,.0f}'.format(total_pending) }}</div>
+      <div class="fin-card red">
+        <div class="lbl">Pending</div>
+        <div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div>
       </div>
-      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #27500A;padding:12px 14px;">
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Completed</div>
-        <div style="font-size:17px;font-weight:700;color:#27500A;">AED {{ '{:,.0f}'.format(completed_value) }}</div>
+      <div class="fin-card green">
+        <div class="lbl">Completed</div>
+        <div class="val">AED {{ '{:,.0f}'.format(completed_value) }}</div>
       </div>
     </div>
 

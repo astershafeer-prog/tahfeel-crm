@@ -16,11 +16,15 @@ db = SQLAlchemy(app)
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
-    return redirect(url_for('dashboard'))
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
 @app.errorhandler(404)
 def not_found(error):
-    return redirect(url_for('dashboard'))
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
