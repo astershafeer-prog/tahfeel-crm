@@ -72,6 +72,7 @@
     <a href="/leads/add" >Add Lead</a>
     <a href="/leads/import" >Import Leads</a>
     <a href="/jobs" >Tasks</a>
+    <a href="/documents">Documents</a>
     <a href="/admin" class="admin-link active">⚙ Admin Panel</a>
   </div>
 
@@ -270,6 +271,36 @@
             {% endfor %}
           {% else %}
             <div class="empty">No job types yet.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Document Types -->
+      <div class="card" style="grid-column: 1 / -1; max-width: 50%;">
+        <div class="card-header">
+          <h2>📄 Document Types</h2>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="/admin/doctype/add">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Document Type Name</label>
+                <input type="text" name="name" required placeholder="e.g. Emirates ID">
+              </div>
+              <button type="submit" class="btn-primary">Add</button>
+            </div>
+          </form>
+          <hr class="divider">
+          {% if doc_types %}
+            {% for dt in doc_types %}
+            <div class="list-item">
+              <span>{{ dt.name }}</span>
+              <a href="/admin/doctype/{{ dt.id }}/delete" class="btn-sm btn-danger"
+                 onclick="return confirm('Remove {{ dt.name }}?')">Remove</a>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No document types yet.</div>
           {% endif %}
         </div>
       </div>

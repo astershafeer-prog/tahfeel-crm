@@ -103,6 +103,7 @@
     {% endif %}
     <a href="/leads/add" >Add Lead</a>
     <a href="/jobs" class='active'>Tasks</a>
+    <a href="/documents">Documents</a>
     {% if session.role == 'admin' %}
     <a href="/admin" class="admin-link">⚙ Admin Panel</a>
     {% endif %}
@@ -163,6 +164,19 @@
         <div class="fin-card green"><div class="lbl">Status</div><div class="val" style="font-size:11px;">{% if job.finance_approved_at %}✓ Approved{% else %}Awaiting Finance{% endif %}</div></div>
       </div>
 
+
+      {% if job.status == 'Done' and job.final_remarks %}
+      <div style="background:#f0f9f0;border:1px solid #c0ddb0;border-radius:8px;padding:12px 14px;margin-top:10px;">
+        <div style="font-size:10px;font-weight:600;color:#27500A;text-transform:uppercase;margin-bottom:8px;">Completion Summary</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px;font-size:12px;">
+          {% if job.customer_rating %}<div><span style="color:#888;font-size:10px;display:block;">Rating</span>{{ '⭐' * job.customer_rating }}</div>{% endif %}
+          {% if job.google_review %}<div><span style="color:#888;font-size:10px;display:block;">Google Review</span>{{ job.google_review }}</div>{% endif %}
+          {% if job.testimonial %}<div><span style="color:#888;font-size:10px;display:block;">Testimonial</span>{{ job.testimonial }}</div>{% endif %}
+        </div>
+        {% if job.final_remarks %}<div style="font-size:12px;color:#333;margin-bottom:4px;"><strong>Final:</strong> {{ job.final_remarks }}</div>{% endif %}
+        {% if job.future_work_notes %}<div style="font-size:12px;color:#555;"><strong>Future work:</strong> {{ job.future_work_notes }}</div>{% endif %}
+      </div>
+      {% endif %}
       {% if job.finance_notes %}
       <div class="notes-box"><strong style="font-size:10px;text-transform:uppercase;color:#888;">Finance Notes</strong><br>{{ job.finance_notes }}</div>
       {% endif %}
@@ -213,15 +227,67 @@
         <form method="post">
           <div class="form-group">
             <label>Status *</label>
-            <select name="status">
+            <select name="status" id="statusSelect" onchange="toggleCompletion()">
               {% for s in statuses %}
               <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
               {% endfor %}
             </select>
           </div>
           <div class="form-group"><label>Remark * (required)</label><textarea name="remark" placeholder="Describe what happened, next steps..." required></textarea></div>
-          <button type="submit" class="btn-submit">Save Update</button>
+
+          <!-- Completion fields — shown when Done selected -->
+          <div id="completionFields" style="display:none;background:#f0f9f0;border:1px solid #c0ddb0;border-radius:8px;padding:14px;margin-top:10px;">
+            <div style="font-size:11px;font-weight:700;color:#27500A;text-transform:uppercase;margin-bottom:10px;">Task Completion</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+              <div class="form-group" style="margin:0;">
+                <label>Customer Rating</label>
+                <select name="customer_rating">
+                  <option value="">— Optional —</option>
+                  <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+                  <option value="4">⭐⭐⭐⭐ Good</option>
+                  <option value="3">⭐⭐⭐ Average</option>
+                  <option value="2">⭐⭐ Below Average</option>
+                  <option value="1">⭐ Poor</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>Google Review</label>
+                <select name="google_review">
+                  <option value="">— Optional —</option>
+                  <option value="Received">✓ Received</option>
+                  <option value="Requested">Requested</option>
+                  <option value="Not Applicable">Not Applicable</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>Testimonial</label>
+                <select name="testimonial">
+                  <option value="">— Optional —</option>
+                  <option value="Collected">✓ Collected</option>
+                  <option value="Not Collected">Not Collected</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label>Final Remarks</label>
+              <textarea name="final_remarks" placeholder="Summary of outcome..." style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label>Future Work Notes</label>
+              <textarea name="future_work_notes" placeholder="Services this client may need next..." style="min-height:50px;"></textarea>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" style="margin-top:10px;">Save Update</button>
         </form>
+        <script>
+          function toggleCompletion() {
+            const status = document.getElementById('statusSelect').value;
+            document.getElementById('completionFields').style.display = status === 'Done' ? 'block' : 'none';
+          }
+          // Show on load if already Done
+          toggleCompletion();
+        </script>
       </div>
     </div>
     {% endif %}

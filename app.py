@@ -124,6 +124,13 @@ class Job(db.Model):
     finance_approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     finance_approved_at = db.Column(db.DateTime, nullable=True)
     finance_notes = db.Column(db.Text)
+    # Completion fields
+    customer_rating = db.Column(db.Integer, nullable=True)  # 1-5
+    google_review = db.Column(db.String(30), nullable=True)  # Requested/Received/Not Applicable
+    testimonial = db.Column(db.String(30), nullable=True)    # Collected/Not Collected
+    final_remarks = db.Column(db.Text, nullable=True)
+    future_work_notes = db.Column(db.Text, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     assignee = db.relationship('User', foreign_keys=[assigned_to])
@@ -145,6 +152,23 @@ class SubTask(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     completed_at = db.Column(db.DateTime, nullable=True)
     assignee = db.relationship('User', foreign_keys=[assigned_to])
+
+class DocType(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+
+class Document(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    doc_type = db.Column(db.String(100), nullable=False)
+    belongs_to = db.Column(db.String(20), nullable=False)  # Company / Individual / Staff
+    owner_name = db.Column(db.String(100), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)
+    expiry_date = db.Column(db.DateTime, nullable=True)
+    notes = db.Column(db.Text)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    uploader = db.relationship('User', foreign_keys=[uploaded_by])
+    customer = db.relationship('Customer', foreign_keys=[customer_id])
 
 class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -253,6 +277,14 @@ def dashboard():
         except:
             active_jobs = pending_approval = []
             total_invoiced = total_received = total_pending = completed_value = 0
+        try:
+            expiring_docs = Document.query.filter(
+                Document.expiry_date != None,
+                Document.expiry_date >= now,
+                Document.expiry_date <= now + timedelta(days=30)
+            ).count()
+        except:
+            expiring_docs = 0
         return render_template('dashboard_finance.html',
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
@@ -260,6 +292,7 @@ def dashboard():
                                total_received=total_received,
                                total_pending=total_pending,
                                completed_value=completed_value,
+                               expiring_docs=expiring_docs,
                                now=now)
 
     # ── Admin dashboard ──────────────────────────────────────────────────────
@@ -324,6 +357,14 @@ def dashboard():
 
         today_leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()][:10]
 
+        try:
+            expiring_docs = Document.query.filter(
+                Document.expiry_date != None,
+                Document.expiry_date >= now,
+                Document.expiry_date <= now + timedelta(days=30)
+            ).count()
+        except:
+            expiring_docs = 0
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
                                total=total, overdue_leads=overdue_leads,
@@ -337,6 +378,7 @@ def dashboard():
                                total_pending=total_pending,
                                completed_value=completed_value,
                                staff_stats=staff_stats,
+                               expiring_docs=expiring_docs,
                                now=now, date_filter=date_filter,
                                from_date=from_date, to_date=to_date)
 
@@ -364,6 +406,14 @@ def dashboard():
         LeadUpdate.followup_date <= now + timedelta(days=1),
         LeadUpdate.followup_date >= now
     ).all()
+    try:
+        expiring_docs = Document.query.filter(
+            Document.expiry_date != None,
+            Document.expiry_date >= now,
+            Document.expiry_date <= now + timedelta(days=30)
+        ).count()
+    except:
+        expiring_docs = 0
     return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
                            converted=converted, lost=lost, pending=pending,
                            my_jobs=my_jobs, overdue_jobs=overdue_jobs,
@@ -371,6 +421,7 @@ def dashboard():
                            total_received=total_received,
                            total_pending=total_pending,
                            completed_value=completed_value,
+                           expiring_docs=expiring_docs,
                            followups=followups, now=now)
 
 @app.route('/leads')
@@ -723,7 +774,9 @@ def admin_panel():
     services = Service.query.order_by(Service.name).all()
     sources = Source.query.order_by(Source.name).all()
     job_types = ServiceType.query.order_by(ServiceType.name).all()
-    return render_template('admin_panel.html', users=users, services=services, sources=sources, job_types=job_types)
+    doc_types = DocType.query.order_by(DocType.name).all()
+    return render_template('admin_panel.html', users=users, services=services,
+                           sources=sources, job_types=job_types, doc_types=doc_types)
 
 @app.route('/admin/staff/add', methods=['POST'])
 @login_required
@@ -1032,10 +1085,20 @@ def job_detail(job_id):
             flash('Remark is required')
             return redirect(url_for('job_detail', job_id=job_id))
         new_status = request.form.get('status', job.status)
-        # Don't allow staff to set back to Pending Finance Approval
         if role == 'staff' and new_status == 'Pending Finance Approval':
             new_status = job.status
         job.status = new_status
+        # Save completion fields when marking Done
+        if new_status == 'Done':
+            job.completed_at = datetime.now()
+            rating = request.form.get('customer_rating')
+            if rating:
+                try: job.customer_rating = int(rating)
+                except: pass
+            job.google_review = request.form.get('google_review') or None
+            job.testimonial = request.form.get('testimonial') or None
+            job.final_remarks = request.form.get('final_remarks') or None
+            job.future_work_notes = request.form.get('future_work_notes') or None
         update = JobUpdate(job_id=job.id, status=new_status,
                            remark=remark, staff_name=session['user_name'])
         db.session.add(update)
@@ -1197,6 +1260,95 @@ def admin_delete_jobtype(jobtype_id):
     flash(f'Job type "{jt.name}" removed')
     return redirect(url_for('admin_panel'))
 
+# ── Documents ─────────────────────────────────────────────────────────────────
+
+@app.route('/documents')
+@login_required
+def documents():
+    now = datetime.now()
+    doc_list = Document.query.order_by(Document.expiry_date).all()
+    customers = Customer.query.order_by(Customer.name).all()
+    doc_types = DocType.query.order_by(DocType.name).all()
+    expiring_soon = [d for d in doc_list if d.expiry_date and (d.expiry_date - now).days <= 30 and d.expiry_date >= now]
+    expired = [d for d in doc_list if d.expiry_date and d.expiry_date < now]
+    return render_template('documents.html', documents=doc_list, customers=customers,
+                           doc_types=doc_types, expiring_soon=expiring_soon,
+                           expired=expired, now=now)
+
+@app.route('/documents/add', methods=['GET', 'POST'])
+@login_required
+def add_document():
+    customers = Customer.query.order_by(Customer.name).all()
+    doc_types = DocType.query.order_by(DocType.name).all()
+    sources = Source.query.order_by(Source.name).all()
+    if request.method == 'POST':
+        expiry = request.form.get('expiry_date')
+        expiry_dt = datetime.strptime(expiry, '%Y-%m-%d') if expiry else None
+        customer_id = request.form.get('customer_id') or None
+        # Handle new customer creation
+        if request.form.get('new_customer_name'):
+            new_cust = Customer(
+                name=request.form['new_customer_name'],
+                company=request.form.get('new_customer_company'),
+                phone=request.form.get('new_customer_phone'),
+                email=request.form.get('new_customer_email'),
+                source=request.form.get('new_customer_source'),
+            )
+            db.session.add(new_cust)
+            db.session.flush()
+            customer_id = new_cust.id
+        doc = Document(
+            doc_type=request.form['doc_type'],
+            belongs_to=request.form['belongs_to'],
+            owner_name=request.form['owner_name'],
+            customer_id=int(customer_id) if customer_id else None,
+            expiry_date=expiry_dt,
+            notes=request.form.get('notes'),
+            uploaded_by=session['user_id'],
+        )
+        db.session.add(doc)
+        db.session.commit()
+        flash('Document added successfully')
+        return redirect(url_for('documents'))
+    return render_template('add_document.html', customers=customers,
+                           doc_types=doc_types, sources=sources)
+
+@app.route('/documents/<int:doc_id>/delete')
+@login_required
+@admin_required
+def delete_document(doc_id):
+    doc = Document.query.get_or_404(doc_id)
+    db.session.delete(doc)
+    db.session.commit()
+    flash('Document removed')
+    return redirect(url_for('documents'))
+
+# ── Admin — Document Types ────────────────────────────────────────────────────
+
+@app.route('/admin/doctype/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_doctype():
+    name = request.form.get('name', '').strip()
+    if name:
+        if not DocType.query.filter_by(name=name).first():
+            db.session.add(DocType(name=name))
+            db.session.commit()
+            flash(f'Document type "{name}" added')
+        else:
+            flash('Document type already exists')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/doctype/<int:doctype_id>/delete')
+@login_required
+@admin_required
+def admin_delete_doctype(doctype_id):
+    dt = DocType.query.get_or_404(doctype_id)
+    db.session.delete(dt)
+    db.session.commit()
+    flash(f'Document type "{dt.name}" removed')
+    return redirect(url_for('admin_panel'))
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 def init_db():
@@ -1214,6 +1366,12 @@ def init_db():
             'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS service_type VARCHAR(100)',
             'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS due_date TIMESTAMP',
             'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT \'Medium\'',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS customer_rating INTEGER',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS google_review VARCHAR(30)',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS testimonial VARCHAR(30)',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS final_remarks TEXT',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS future_work_notes TEXT',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
         ]
         for sql in migrations:
@@ -1251,6 +1409,11 @@ def init_db():
                     db.session.add(ServiceType(name=jt))
                 db.session.commit()
                 print('Default job types created')
+            if DocType.query.count() == 0:
+                for dt in ['Trade License', 'Emirates ID', 'Passport', 'Visa', 'Medical Certificate', 'Insurance', 'Contract', 'NOC', 'Ejari', 'Other']:
+                    db.session.add(DocType(name=dt))
+                db.session.commit()
+                print('Default doc types created')
         except Exception as e:
             db.session.rollback()
             print(f'Init db error: {e}')

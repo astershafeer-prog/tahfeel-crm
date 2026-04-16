@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Add Document</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; font-size: 13px; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .container { padding: 24px; max-width: 750px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 24px; margin-bottom: 14px; }
+    .card h2 { font-size: 16px; font-weight: 700; color: #133E87; margin-bottom: 20px; }
+    .section-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 10px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 600; color: #555; margin-bottom: 5px; text-transform: uppercase; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 13px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; font-family: Arial, sans-serif; }
+    .form-group input:focus, .form-group select:focus { border-color: #133E87; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-submit { background: #133E87; color: white; padding: 10px 24px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { background: white; color: #555; padding: 10px 20px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
+    .divider { border: none; border-top: 1px dashed #ddd; margin: 16px 0; }
+    #new-customer-fields { display: none; background: #f8f9fa; border-radius: 8px; padding: 14px; margin-top: 8px; }
+    #new-customer-fields.visible { display: block; }
+    .toggle-new { background: white; border: 1px solid #133E87; color: #133E87; padding: 7px 14px; border-radius: 7px; font-size: 12px; cursor: pointer; font-weight: 600; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
+      <span>{{ session.user_name }}</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    {% if session.role == 'admin' %}
+    <a href="/leads">All Leads</a>
+    <a href="/leads/import">Import Leads</a>
+    {% endif %}
+    <a href="/leads/add">Add Lead</a>
+    <a href="/jobs">Tasks</a>
+    <a href="/documents" class="active">Documents</a>
+    {% if session.role == 'admin' %}
+    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+    {% endif %}
+  </div>
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <form method="post">
+      <div class="card">
+        <h2>Add Document</h2>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Document Type *</label>
+            <select name="doc_type" required>
+              <option value="">— Select —</option>
+              {% for dt in doc_types %}
+              <option value="{{ dt.name }}">{{ dt.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Belongs To *</label>
+            <select name="belongs_to" required>
+              <option value="">— Select —</option>
+              <option value="Company">Company</option>
+              <option value="Individual">Individual</option>
+              <option value="Staff">Staff</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Owner Name *</label>
+            <input type="text" name="owner_name" placeholder="Name on document" required>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Expiry Date</label>
+            <input type="date" name="expiry_date">
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <input type="text" name="notes" placeholder="Any additional info">
+          </div>
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">Link to Customer (optional)</div>
+
+        <div class="form-group">
+          <label>Select Existing Customer</label>
+          <select name="customer_id" id="customerSelect">
+            <option value="">— None / New customer below —</option>
+            {% for c in customers %}
+            <option value="{{ c.id }}">{{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="button" class="toggle-new" onclick="toggleNew()">+ Or create new customer</button>
+
+        <div id="new-customer-fields">
+          <div style="font-size:11px;color:#888;margin-bottom:10px;font-weight:600;text-transform:uppercase;">New Customer Details</div>
+          <div class="form-row-2">
+            <div class="form-group"><label>Name</label><input type="text" name="new_customer_name" placeholder="Full name"></div>
+            <div class="form-group"><label>Company</label><input type="text" name="new_customer_company" placeholder="Company name"></div>
+          </div>
+          <div class="form-row-3">
+            <div class="form-group"><label>Phone</label><input type="text" name="new_customer_phone" placeholder="+971 50..."></div>
+            <div class="form-group"><label>Email</label><input type="email" name="new_customer_email" placeholder="email@example.com"></div>
+            <div class="form-group"><label>Source</label>
+              <select name="new_customer_source">
+                <option value="">— Select —</option>
+                {% for s in sources %}
+                <option value="{{ s.name }}">{{ s.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-submit">Save Document</button>
+          <a href="/documents" class="btn-cancel">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function toggleNew() {
+      const el = document.getElementById('new-customer-fields');
+      const visible = el.classList.toggle('visible');
+      if (visible) document.getElementById('customerSelect').value = '';
+      event.target.textContent = visible ? '— Hide new customer form' : '+ Or create new customer';
+    }
+  </script>
+</body>
+</html>

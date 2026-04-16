@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Documents</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; font-size: 13px; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
+    .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .alert-banner { background: #FCEBEB; border: 1px solid #f7c1c1; border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; }
+    .alert-banner h3 { font-size: 13px; font-weight: 700; color: #791F1F; margin-bottom: 10px; }
+    .alert-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 0.5px solid #f7c1c1; font-size: 12px; }
+    .alert-item:last-child { border-bottom: none; }
+    .days-badge { background: #791F1F; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+    .wa-btn { background: #25D366; color: white; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 600; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
+    .filters { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 12px 16px; margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .filter-group { display: flex; flex-direction: column; gap: 3px; }
+    .filter-group label { font-size: 10px; color: #888; font-weight: 600; text-transform: uppercase; }
+    .filter-group select, .filter-group input { padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; min-width: 130px; }
+    .btn-filter { background: #133E87; color: white; padding: 7px 16px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-reset { background: white; color: #555; padding: 7px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 9px 14px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 11px; text-transform: uppercase; }
+    td { padding: 10px 14px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+    tr.expiring td { background: #fff8f8; }
+    tr.expiring td:first-child { border-left: 3px solid #c0392b; }
+    tr.expired td { background: #fff0f0; opacity: 0.7; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+    .b-company { background: #E6F1FB; color: #0C447C; }
+    .b-individual { background: #EEEDFE; color: #3C3489; }
+    .b-staff { background: #EAF3DE; color: #27500A; }
+    .btn-sm { padding: 4px 10px; border-radius: 6px; font-size: 11px; text-decoration: none; border: 1px solid #133E87; color: #133E87; }
+    .btn-del { padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; }
+    .empty { padding: 30px; text-align: center; color: #aaa; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
+      <span>{{ session.user_name }}</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    {% if session.role == 'admin' %}
+    <a href="/leads">All Leads</a>
+    <a href="/leads/import">Import Leads</a>
+    {% endif %}
+    <a href="/leads/add">Add Lead</a>
+    <a href="/jobs">Tasks</a>
+    <a href="/documents" class="active">Documents</a>
+    {% if session.role == 'admin' %}
+    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+    {% endif %}
+  </div>
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>Documents <span style="font-size:14px;color:#888;font-weight:400;">({{ documents|length }} total)</span></h2>
+      <a href="/documents/add" class="btn-add">+ Add Document</a>
+    </div>
+
+    {% if expiring_soon %}
+    <div class="alert-banner">
+      <h3>⚠ Expiring within 30 days ({{ expiring_soon|length }})</h3>
+      {% for doc in expiring_soon %}
+      <div class="alert-item">
+        <div>
+          <strong>{{ doc.owner_name }}</strong>
+          <span style="color:#555;"> — {{ doc.doc_type }}</span>
+          {% if doc.customer %}<span style="color:#888;font-size:11px;"> ({{ doc.customer.name }})</span>{% endif %}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          {% set days = (doc.expiry_date - now).days %}
+          <span class="days-badge">{{ days }} days left</span>
+          <span style="font-size:11px;color:#555;">{{ doc.expiry_date.strftime('%d %b %Y') }}</span>
+          {% if doc.customer and doc.customer.phone %}
+          <a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ doc.customer.name|urlencode }}%2C%20your%20{{ doc.doc_type|urlencode }}%20is%20expiring%20on%20{{ doc.expiry_date.strftime('%d %b %Y') }}%2E%20Please%20contact%20us%20to%20arrange%20renewal.%20Tahfeel%20Business%20Solutions." target="_blank" class="wa-btn">WhatsApp</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="get" class="filters">
+      <div class="filter-group">
+        <label>Belongs To</label>
+        <select name="belongs_to">
+          <option value="">All Types</option>
+          <option value="Company" {% if request.args.get('belongs_to')=='Company' %}selected{% endif %}>Company</option>
+          <option value="Individual" {% if request.args.get('belongs_to')=='Individual' %}selected{% endif %}>Individual</option>
+          <option value="Staff" {% if request.args.get('belongs_to')=='Staff' %}selected{% endif %}>Staff</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Doc Type</label>
+        <select name="doc_type">
+          <option value="">All Types</option>
+          {% for dt in doc_types %}
+          <option value="{{ dt.name }}" {% if request.args.get('doc_type')==dt.name %}selected{% endif %}>{{ dt.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Customer</label>
+        <select name="customer_id">
+          <option value="">All Customers</option>
+          {% for c in customers %}
+          <option value="{{ c.id }}" {% if request.args.get('customer_id')==c.id|string %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn-filter">Filter</button>
+      <a href="/documents" class="btn-reset">Reset</a>
+    </form>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>Document Type</th><th>Owner Name</th><th>Belongs To</th><th>Customer</th><th>Expiry Date</th><th>Added By</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% set bt = request.args.get('belongs_to') %}
+          {% set dt = request.args.get('doc_type') %}
+          {% set cid = request.args.get('customer_id') %}
+          {% set filtered = documents %}
+          {% if bt %}{% set filtered = filtered|selectattr('belongs_to','eq',bt)|list %}{% endif %}
+          {% if dt %}{% set filtered = filtered|selectattr('doc_type','eq',dt)|list %}{% endif %}
+          {% if cid %}{% set filtered = filtered|selectattr('customer_id','eq',cid|int)|list %}{% endif %}
+          {% for doc in filtered %}
+          <tr class="{% if doc.expiry_date and (doc.expiry_date - now).days <= 30 and doc.expiry_date >= now %}expiring{% elif doc.expiry_date and doc.expiry_date < now %}expired{% endif %}">
+            <td><strong>{{ doc.doc_type }}</strong></td>
+            <td>{{ doc.owner_name }}</td>
+            <td><span class="badge b-{{ doc.belongs_to|lower }}">{{ doc.belongs_to }}</span></td>
+            <td>{% if doc.customer %}<a href="/customers/{{ doc.customer_id }}" style="color:#133E87;text-decoration:none;">{{ doc.customer.name }}</a>{% else %}—{% endif %}</td>
+            <td>
+              {% if doc.expiry_date %}
+                {% set days = (doc.expiry_date - now).days %}
+                {{ doc.expiry_date.strftime('%d %b %Y') }}
+                {% if days <= 30 and days >= 0 %}
+                <span style="color:#c0392b;font-size:11px;font-weight:600;"> ⚠ {{ days }}d</span>
+                {% elif days < 0 %}
+                <span style="color:#c0392b;font-size:11px;font-weight:600;"> EXPIRED</span>
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td>{{ doc.uploader.name if doc.uploader else '—' }}</td>
+            <td>
+              <div style="display:flex;gap:5px;">
+                {% if doc.customer and doc.customer.phone and doc.expiry_date and (doc.expiry_date - now).days <= 30 %}
+                <a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ doc.customer.name|urlencode }}%2C%20your%20{{ doc.doc_type|urlencode }}%20is%20expiring%20on%20{{ doc.expiry_date.strftime('%d %b %Y') }}%2E%20Please%20contact%20us%20for%20renewal.%20Tahfeel%20Business%20Solutions." target="_blank" class="wa-btn" style="font-size:11px;">WA</a>
+                {% endif %}
+                {% if session.role == 'admin' %}
+                <a href="/documents/{{ doc.id }}/delete" class="btn-del" onclick="return confirm('Remove this document?')">Del</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="empty">No documents found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

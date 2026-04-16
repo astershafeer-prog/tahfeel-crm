@@ -72,6 +72,7 @@
     <a href="/dashboard" class='active'>Dashboard</a>
     <a href="/leads/add" >Add Lead</a>
     <a href="/jobs" >Tasks</a>
+    <a href="/documents">Documents</a>
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -132,7 +133,13 @@
         </div>
         {% set overdue_leads = leads|selectattr('due_date')|selectattr('status','ne','Converted')|selectattr('status','ne','Lost')|list %}
         {% set overdue_leads = overdue_leads|selectattr('due_date')|list %}
-        {% if overdue %}
+        {% if expiring_docs > 0 %}
+    <div style="background:#fff8f8;border:1px solid #f7c1c1;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;color:#791F1F;font-weight:600;">⚠ {{ expiring_docs }} document{{ 's' if expiring_docs > 1 else '' }} expiring within 30 days</span>
+      <a href="/documents" style="font-size:12px;color:#791F1F;font-weight:600;text-decoration:none;">View →</a>
+    </div>
+    {% endif %}
+    {% if overdue %}
         <table>
           <thead><tr><th>Name</th><th>Service</th><th>Due</th><th></th></tr></thead>
           <tbody>
