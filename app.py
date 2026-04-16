@@ -194,7 +194,7 @@ def dashboard():
                                users=users, now=now,
                                date_filter=date_filter, from_date=from_date, to_date=to_date)
     else:
-   leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
+        leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
         overdue = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
         converted = [l for l in leads if l.status == 'Converted']
         lost = [l for l in leads if l.status == 'Lost']
