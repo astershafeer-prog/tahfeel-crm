@@ -44,7 +44,7 @@
     .fin-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .fin-card { background: #f8fbff; border: 0.5px solid #d0e4f7; border-radius: 8px; padding: 12px 14px; }
     .fin-card .lbl { font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 3px; }
-    .fin-card .val { font-size: 17px; font-weight: 700; color: #133E87; }
+    .fin-card .val { font-size: 14px; font-weight: 700; color: #133E87; }
     .fin-card.amber { background: #fffbf0; border-color: #faeeda; }
     .fin-card.amber .val { color: #854F0B; }
     .fin-card.green { background: #f0f9f0; border-color: #c0ddb0; }
@@ -98,11 +98,11 @@
   </div>
   <div class="nav">
     <a href="/dashboard" >Dashboard</a>
+    <a href="/leads/add" >Add Lead</a>
+    <a href="/leads/import" >Import Leads</a>
     {% if session.role == 'admin' %}
     <a href="/leads" >All Leads</a>
-    <a href="/leads/import" >Import Leads</a>
     {% endif %}
-    <a href="/leads/add" >Add Lead</a>
     <a href="/jobs" class="active">Tasks</a>
     {% if session.role == 'admin' %}
     <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
@@ -159,6 +159,10 @@
         <div class="detail-item">
           <label>Created</label>
           <span>{{ job.created_at.strftime('%d %b %Y') }}</span>
+        </div>
+        <div class="detail-item">
+          <label>No. of Persons</label>
+          <span>{{ job.num_persons or 1 }}</span>
         </div>
         <div class="detail-item">
           <label>Customer Phone</label>
@@ -302,11 +306,14 @@
           </div>
           <div class="subtask-actions">
             <span class="badge {% if st.status == 'Done' %}subtask-done{% else %}subtask-pending{% endif %}">{{ st.status }}</span>
-            {% if st.status != 'Done' and (session.role in ['admin'] or st.assigned_to == session.user_id) %}
+            {% if st.status != 'Done' and (session.role in ['admin','finance'] or st.assigned_to == session.user_id or job.assigned_to == session.user_id) %}
             <form method="post" action="/subtasks/{{ st.id }}/done" style="display:inline;">
               <input type="hidden" name="remarks" value="">
               <button type="submit" class="btn-xs">Mark Done</button>
             </form>
+            {% endif %}
+            {% if st.status == 'Done' and (session.role in ['admin','finance'] or st.assigned_to == session.user_id) %}
+            <a href="/subtasks/{{ st.id }}/reopen" class="btn-xs">Reopen</a>
             {% endif %}
             {% if session.role == 'admin' %}
             <a href="/subtasks/{{ st.id }}/delete" class="btn-xs-danger" onclick="return confirm('Remove this sub-task?')">Remove</a>
@@ -318,7 +325,7 @@
       <div class="empty">No sub-tasks yet.</div>
       {% endif %}
 
-      {% if session.role == 'admin' %}
+      {% if session.role in ['admin', 'staff', 'finance'] %}
       <form method="post" action="/jobs/{{ job.id }}/subtasks/add" class="add-subtask-form">
         <div class="form-group" style="flex:1;margin:0;">
           <label>Sub-task title</label>

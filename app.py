@@ -119,6 +119,7 @@ class Job(db.Model):
     internal_notes = db.Column(db.Text)
     amount_invoiced = db.Column(db.Float, default=0)
     amount_received = db.Column(db.Float, default=0)
+    num_persons = db.Column(db.Integer, default=1)
     finance_approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     finance_approved_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -944,6 +945,7 @@ def add_job():
             internal_notes=request.form.get('internal_notes'),
             amount_invoiced=float(amount_invoiced),
             amount_received=0,
+            num_persons=int(request.form.get('num_persons') or 1),
             created_by=session['user_id'],
             status='Pending Finance Approval'
         )
@@ -1008,6 +1010,8 @@ def edit_job(job_id):
         job.due_date = datetime.strptime(due, '%Y-%m-%d') if due else None
         job.priority = request.form.get('priority', 'Medium')
         job.internal_notes = request.form.get('internal_notes')
+        if request.form.get('num_persons'):
+            job.num_persons = int(request.form.get('num_persons'))
         try:
             ai = request.form.get('amount_invoiced')
             ar = request.form.get('amount_received')
@@ -1085,14 +1089,17 @@ def update_payment(job_id):
 
 @app.route('/jobs/<int:job_id>/subtasks/add', methods=['POST'])
 @login_required
-@admin_required
 def add_subtask(job_id):
-    Job.query.get_or_404(job_id)
+    job = Job.query.get_or_404(job_id)
+    # Staff can only add subtasks to jobs assigned to them
+    if session['role'] == 'staff' and job.assigned_to != session['user_id']:
+        flash('Access denied')
+        return redirect(url_for('jobs'))
     assigned = request.form.get('assigned_to')
     subtask = SubTask(
         job_id=job_id,
         title=request.form['title'],
-        assigned_to=int(assigned) if assigned else None
+        assigned_to=int(assigned) if assigned else session['user_id']
     )
     db.session.add(subtask)
     db.session.commit()
@@ -1103,7 +1110,7 @@ def add_subtask(job_id):
 @login_required
 def complete_subtask(subtask_id):
     subtask = SubTask.query.get_or_404(subtask_id)
-    if session['role'] != 'admin' and subtask.assigned_to != session['user_id']:
+    if session['role'] not in ['admin', 'finance'] and subtask.assigned_to != session['user_id']:
         flash('Access denied')
         return redirect(url_for('jobs'))
     subtask.status = 'Done'
@@ -1111,6 +1118,19 @@ def complete_subtask(subtask_id):
     subtask.completed_at = datetime.now()
     db.session.commit()
     flash('Sub-task marked done.')
+    return redirect(url_for('job_detail', job_id=subtask.job_id))
+
+@app.route('/subtasks/<int:subtask_id>/reopen')
+@login_required
+def reopen_subtask(subtask_id):
+    subtask = SubTask.query.get_or_404(subtask_id)
+    if session['role'] not in ['admin', 'finance'] and subtask.assigned_to != session['user_id']:
+        flash('Access denied')
+        return redirect(url_for('jobs'))
+    subtask.status = 'Pending'
+    subtask.completed_at = None
+    db.session.commit()
+    flash('Sub-task reopened.')
     return redirect(url_for('job_detail', job_id=subtask.job_id))
 
 @app.route('/subtasks/<int:subtask_id>/delete')
@@ -1162,6 +1182,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS amount_received FLOAT DEFAULT 0',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_by INTEGER',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_at TIMESTAMP',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS num_persons INTEGER DEFAULT 1',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
         ]
         for sql in migrations:

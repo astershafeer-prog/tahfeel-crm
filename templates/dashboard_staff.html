@@ -71,6 +71,7 @@
   <div class="nav">
     <a href="/dashboard" class="active">Dashboard</a>
     <a href="/leads/add" >Add Lead</a>
+    <a href="/leads/import" >Import Leads</a>
     <a href="/jobs" >Tasks</a>
   </div>
   <div class="container">
@@ -86,11 +87,18 @@
     </div>
     {% endif %}
 
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:10px;">
+    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:10px;">
       <div class="stat-card"><div class="label">My Leads</div><div class="value">{{ leads|length }}</div></div>
       <div class="stat-card amber"><div class="label">Pending</div><div class="value">{{ pending|length }}</div></div>
-      <div class="stat-card red"><div class="label">Overdue Leads</div><div class="value">{{ overdue|length }}</div></div>
+      <div class="stat-card red"><div class="label">Overdue</div><div class="value">{{ overdue|length }}</div></div>
       <div class="stat-card green"><div class="label">Converted</div><div class="value">{{ converted|length }}</div></div>
+      <div class="stat-card"><div class="label">Lost</div><div class="value">{{ lost|length }}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+      <div class="stat-card"><div class="label">My Tasks</div><div class="value">{{ my_jobs|length }}</div></div>
+      <div class="stat-card amber"><div class="label">Pending Tasks</div><div class="value">{{ my_jobs|selectattr('status','ne','Done')|list|length }}</div></div>
+      <div class="stat-card red"><div class="label">Overdue Tasks</div><div class="value">{{ overdue_jobs|length }}</div></div>
+      <div class="stat-card green"><div class="label">Done Tasks</div><div class="value">{{ my_jobs|selectattr('status','eq','Done')|list|length }}</div></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
       <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>
@@ -115,92 +123,60 @@
     </div>
     {% endif %}
 
-    <!-- My Leads -->
-    <div class="card">
-      <div class="card-header">
-        <h2>My Assigned Leads</h2>
-        <a href="/leads/add" class="btn-sm">+ Add Lead</a>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;">
+      <!-- Overdue Leads -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Overdue Leads</h2>
+          <a href="/leads/add" class="btn-sm">+ Add Lead</a>
+        </div>
+        {% set overdue_leads = leads|selectattr('due_date')|selectattr('status','ne','Converted')|selectattr('status','ne','Lost')|list %}
+        {% set overdue_leads = overdue_leads|selectattr('due_date')|list %}
+        {% if overdue %}
+        <table>
+          <thead><tr><th>Name</th><th>Service</th><th>Due</th><th></th></tr></thead>
+          <tbody>
+            {% for lead in overdue %}
+            <tr class="overdue-row">
+              <td><strong>{{ lead.name }}</strong></td>
+              <td>{{ lead.service or '—' }}</td>
+              <td style="color:#c0392b;font-weight:600;white-space:nowrap;">{{ lead.due_date.strftime('%d %b') }}</td>
+              <td><a href="/leads/{{ lead.id }}" class="btn-sm">Open</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty">No overdue leads.</div>
+        {% endif %}
       </div>
-      {% if leads %}
-      <table>
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th>Service</th>
-            <th>Due Date</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for lead in leads %}
-          <tr {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}class="overdue-row"{% endif %}>
-            <td>
-              <strong>{{ lead.name }}</strong>
-              {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}
-                <span class="overdue-tag">Overdue</span>
-              {% endif %}
-              {% if lead.company %}<br><span style="color:#888;font-size:12px;">{{ lead.company }}</span>{% endif %}
-            </td>
-            <td>{{ lead.service or '—' }}</td>
-            <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;font-weight:600;{% endif %}">
-              {{ lead.due_date.strftime('%d %b %Y') }}
-            </td>
-            <td>
-              <span class="badge
-                {% if lead.status == 'Converted' %}badge-converted
-                {% elif lead.status == 'Lost' %}badge-lost
-                {% elif lead.status == 'Potential Lead' %}badge-potential
-                {% elif 'Called' in lead.status %}badge-called
-                {% else %}badge-new{% endif %}">
-                {{ lead.status }}
-              </span>
-            </td>
-            <td><a href="/leads/{{ lead.id }}" class="btn-sm">Open</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="empty">No leads assigned to you yet.</div>
-      {% endif %}
-    </div>
 
-    {% if my_jobs %}
-    <div class="card" style="margin-top:16px;">
-      <div class="card-header" style="padding:12px 20px;border-bottom:0.5px solid #eee;display:flex;justify-content:space-between;align-items:center;">
-        <h3 style="font-size:15px;font-weight:700;color:#133E87;">My Active Tasks ({{ my_jobs|length }})</h3>
-        <a href="/jobs" style="font-size:12px;color:#133E87;text-decoration:none;">View all →</a>
+      <!-- High Priority Tasks -->
+      <div class="card">
+        <div class="card-header">
+          <h2>High Priority Tasks</h2>
+          <a href="/jobs" style="font-size:12px;color:#133E87;text-decoration:none;">View all →</a>
+        </div>
+        {% set high_jobs = my_jobs|selectattr('priority','eq','High')|selectattr('status','ne','Done')|list %}
+        {% if high_jobs %}
+        <table>
+          <thead><tr><th>Customer</th><th>Task</th><th>Due</th><th></th></tr></thead>
+          <tbody>
+            {% for job in high_jobs %}
+            <tr {% if job.due_date and job.due_date < now %}class="overdue-row"{% endif %}>
+              <td><strong>{{ job.customer.name }}</strong></td>
+              <td>{{ job.job_type }}</td>
+              <td style="white-space:nowrap;">{{ job.due_date.strftime('%d %b') if job.due_date else '—' }}</td>
+              <td><a href="/jobs/{{ job.id }}" class="btn-sm">Open</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty">No high priority tasks.</div>
+        {% endif %}
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th>Job Type</th>
-            <th>Due Date</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for job in my_jobs %}
-          <tr {% if job.due_date and job.due_date < now %}class="overdue-row"{% endif %}>
-            <td><strong>{{ job.customer.name }}</strong></td>
-            <td>{{ job.job_type }}</td>
-            <td>
-              {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
-              {% if job.due_date and job.due_date < now %}
-              <span class="overdue-tag">Overdue</span>
-              {% endif %}
-            </td>
-            <td>{{ job.status }}</td>
-            <td><a href="/jobs/{{ job.id }}" class="btn-sm">Open</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
     </div>
-    {% endif %}
   </div>
 </body>
 </html>
