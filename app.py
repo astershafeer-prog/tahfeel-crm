@@ -1,4 +1,4 @@
-# v17
+# v18
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -910,28 +910,46 @@ JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES
 def jobs():
     now = datetime.now()
     role = session['role']
-    if role in ['admin', 'finance']:
-        job_list = Job.query.order_by(Job.created_at.desc()).all()
-    else:
-        # Staff see their assigned jobs (excluding pending finance approval)
-        job_list = Job.query.filter_by(assigned_to=session['user_id']).filter(
-            Job.status != 'Pending Finance Approval'
-        ).order_by(Job.due_date).all()
-    status_filter = request.args.get('status', '')
-    priority_filter = request.args.get('priority', '')
-    if status_filter:
-        job_list = [j for j in job_list if j.status == status_filter]
-    if priority_filter:
-        job_list = [j for j in job_list if j.priority == priority_filter]
-    overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
-    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
     try:
+        if role in ['admin', 'finance']:
+            job_list = Job.query.order_by(Job.created_at.desc()).all()
+        else:
+            job_list = Job.query.filter_by(assigned_to=session['user_id']).filter(
+                Job.status != 'Pending Finance Approval'
+            ).order_by(Job.due_date).all()
+        status_filter = request.args.get('status', '')
+        priority_filter = request.args.get('priority', '')
+        if status_filter:
+            job_list = [j for j in job_list if j.status == status_filter]
+        if priority_filter:
+            job_list = [j for j in job_list if j.priority == priority_filter]
+        overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
+        users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
         jobs_invoiced = sum((j.amount_invoiced or 0) for j in job_list)
         jobs_received = sum((j.amount_received or 0) for j in job_list)
         jobs_pending = jobs_invoiced - jobs_received
         jobs_completed = sum((j.amount_received or 0) for j in job_list if j.status == 'Done')
-    except:
-        jobs_invoiced = jobs_received = jobs_pending = jobs_completed = 0
+    except Exception as e:
+        # DB migration not complete yet — run it now
+        try:
+            with db.engine.connect() as conn:
+                for col, typ in [
+                    ('amount_invoiced', 'FLOAT DEFAULT 0'),
+                    ('amount_received', 'FLOAT DEFAULT 0'),
+                    ('num_persons', 'INTEGER DEFAULT 1'),
+                    ('finance_approved_by', 'INTEGER'),
+                    ('finance_approved_at', 'TIMESTAMP'),
+                    ('finance_notes', 'TEXT'),
+                ]:
+                    try:
+                        conn.execute(db.text(f'ALTER TABLE job ADD COLUMN IF NOT EXISTS {col} {typ}'))
+                    except:
+                        pass
+                conn.commit()
+        except:
+            pass
+        flash('System update applied. Please refresh.')
+        return redirect(url_for('dashboard'))
     return render_template('jobs.html', jobs=job_list, now=now, overdue=overdue,
                            statuses=JOB_STATUSES, users=users,
                            status_filter=status_filter, priority_filter=priority_filter,
@@ -1223,8 +1241,9 @@ def init_db():
                 with db.engine.connect() as conn:
                     conn.execute(db.text(sql))
                     conn.commit()
-            except:
-                pass
+                    print(f'Migration OK: {sql[:60]}')
+            except Exception as e:
+                print(f'Migration skip: {sql[:60]} — {e}')
         try:
             admin = User.query.filter_by(email='admin@tahfeel.ae').first()
             if not admin:
