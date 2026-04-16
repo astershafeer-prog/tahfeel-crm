@@ -42,7 +42,7 @@ class Lead(db.Model):
     representative = db.Column(db.String(100))
     lead_type = db.Column(db.String(20), default='New')
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))
-    due_date = db.Column(db.DateTime, default=lambda: datetime.now() + timedelta(hours=4))
+    due_date = db.Column(db.DateTime, default=lambda: datetime.now() + timedelta(days=1))
     remarks = db.Column(db.Text)
     status = db.Column(db.String(50), default='New')
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -265,7 +265,7 @@ def add_lead():
     sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
         due = request.form.get('due_date')
-        due_dt = datetime.strptime(due, '%Y-%m-%d') if due else datetime.now() + timedelta(hours=4)
+        due_dt = datetime.strptime(due, '%Y-%m-%d') if due else datetime.now() + timedelta(days=1)
         lead = Lead(
             name=request.form['name'],
             company=request.form.get('company'),
@@ -366,7 +366,7 @@ def import_leads():
                     remarks=str(remarks) if remarks else None,
                     representative=session['user_name'],
                     assigned_to=assigned_id,
-                    due_date=datetime.now() + timedelta(hours=4)
+                    due_date=datetime.now() + timedelta(days=1)
                 )
                 db.session.add(lead)
                 count += 1
