@@ -106,7 +106,7 @@
       <h2>All Leads <span style="font-size:14px;color:#888;font-weight:400;">({{ leads|length }} total)</span></h2>
       <div class="header-btns">
         <button class="btn-bulk-delete" id="bulkDeleteBtn" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
-        <a href="/leads/export?{{ request.query_string.decode() }}" class="btn-export">⬇ Export Excel</a>
+       <a href="/leads/export" class="btn-export">⬇ Export Excel</a>
         <a href="/leads/add" class="btn-add">+ Add Lead</a>
       </div>
     </div>
