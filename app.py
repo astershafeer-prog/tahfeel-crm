@@ -494,7 +494,7 @@ def edit_lead(lead_id):
         lead.remarks = request.form.get('remarks')
         assigned = request.form.get('assigned_to')
         lead.assigned_to = int(assigned) if assigned else None
-	lead.phone2 = request.form.get('phone2')
+    lead.phone2 = request.form.get('phone2')
         due = request.form.get('due_date')
         if due:
             lead.due_date = datetime.strptime(due, '%Y-%m-%d')
