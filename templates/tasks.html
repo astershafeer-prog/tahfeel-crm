@@ -69,16 +69,13 @@
     </div>
   </div>
   <div class="nav">
-    <a href="/dashboard">Dashboard</a>
-    {% if session.role == 'admin' %}
-    <a href="/leads">All Leads</a>
-    <a href="/leads/add">Add Lead</a>
-    <a href="/leads/import">Import Leads</a>
-    {% endif %}
-    <a href="/tasks" class="active">Tasks</a>
-    {% if session.role == 'admin' %}
-    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
-    {% endif %}
+    <a href="/dashboard" >Dashboard</a>
+    <a href="/leads" >All Leads</a>
+    <a href="/leads/add" >Add Lead</a>
+    <a href="/leads/import" >Import Leads</a>
+    <a href="/jobs" >Jobs</a>
+    <a href="/tasks" class="active">All Tasks</a>
+    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
