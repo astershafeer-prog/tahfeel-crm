@@ -110,13 +110,13 @@
           <a href="/leads" class="btn-clear">Clear</a>
         {% endif %}
       </div>
-    </form>
+    
 
     {% if search %}
       <div class="search-highlight">Showing results for: <strong>"{{ search }}"</strong></div>
     {% endif %}
 
-    <form method="GET" action="/leads">
+    
       {% if search %}
         <input type="hidden" name="search" value="{{ search }}">
       {% endif %}
