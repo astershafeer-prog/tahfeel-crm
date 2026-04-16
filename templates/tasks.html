@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Tasks</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+    .topbar a { color: #DCDCBF; text-decoration: none; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
+    .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
+    .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .filters { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .filter-group select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: white; outline: none; min-width: 140px; }
+    .btn-filter { background: #133E87; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-reset { background: white; color: #555; padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
+    .summary-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .summary-card { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 14px 20px; flex: 1; min-width: 130px; }
+    .summary-card .label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .summary-card .value { font-size: 22px; font-weight: 700; color: #133E87; }
+    .summary-card.red .value { color: #c0392b; }
+    .summary-card.green .value { color: #27500A; }
+    .summary-card.orange .value { color: #b35c00; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; }
+    td { padding: 11px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-pending { background: #E6F1FB; color: #0C447C; }
+    .badge-inprogress { background: #EEEDFE; color: #3C3489; }
+    .badge-done { background: #EAF3DE; color: #27500A; }
+    .badge-high { background: #FCEBEB; color: #791F1F; }
+    .badge-medium { background: #FAEEDA; color: #633806; }
+    .badge-low { background: #f0f0f0; color: #555; }
+    .overdue-row td { background: #fff8f8; }
+    .overdue-row td:first-child { border-left: 3px solid #c0392b; }
+    .actions { display: flex; gap: 6px; align-items: center; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; }
+    .btn-sm:hover { background: #133E87; color: white; }
+    .btn-delete { padding: 5px 12px; border-radius: 6px; font-size: 12px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; white-space: nowrap; }
+    .btn-delete:hover { background: #c0392b; color: white; }
+    .status-form select { padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; cursor: pointer; }
+    .empty { padding: 40px; text-align: center; color: #aaa; font-size: 13px; }
+    .lead-link { color: #133E87; text-decoration: none; font-size: 12px; }
+    .lead-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div class="right">
+      <span>{{ session.user_name }} {% if session.role == 'admin' %}(Admin){% endif %}</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    {% if session.role == 'admin' %}
+    <a href="/leads">All Leads</a>
+    <a href="/leads/add">Add Lead</a>
+    <a href="/leads/import">Import Leads</a>
+    {% endif %}
+    <a href="/tasks" class="active">Tasks</a>
+    {% if session.role == 'admin' %}
+    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+    {% endif %}
+  </div>
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>Tasks <span style="font-size:14px;color:#888;font-weight:400;">({{ tasks|length }} total)</span></h2>
+      <a href="/tasks/add" class="btn-add">+ Add Task</a>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="label">Total</div>
+        <div class="value">{{ tasks|length }}</div>
+      </div>
+      <div class="summary-card red">
+        <div class="label">Overdue</div>
+        <div class="value">{{ overdue|length }}</div>
+      </div>
+      <div class="summary-card orange">
+        <div class="label">Pending</div>
+        <div class="value">{{ tasks|selectattr('status','eq','Pending')|list|length }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">In Progress</div>
+        <div class="value">{{ tasks|selectattr('status','eq','In Progress')|list|length }}</div>
+      </div>
+      <div class="summary-card green">
+        <div class="label">Done</div>
+        <div class="value">{{ tasks|selectattr('status','eq','Done')|list|length }}</div>
+      </div>
+    </div>
+
+    <form method="get" class="filters">
+      <div class="filter-group">
+        <label>Status</label>
+        <select name="status">
+          <option value="">All Statuses</option>
+          <option value="Pending" {% if status_filter=='Pending' %}selected{% endif %}>Pending</option>
+          <option value="In Progress" {% if status_filter=='In Progress' %}selected{% endif %}>In Progress</option>
+          <option value="Done" {% if status_filter=='Done' %}selected{% endif %}>Done</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Priority</label>
+        <select name="priority">
+          <option value="">All Priorities</option>
+          <option value="High" {% if priority_filter=='High' %}selected{% endif %}>High</option>
+          <option value="Medium" {% if priority_filter=='Medium' %}selected{% endif %}>Medium</option>
+          <option value="Low" {% if priority_filter=='Low' %}selected{% endif %}>Low</option>
+        </select>
+      </div>
+      {% if session.role == 'admin' %}
+      <div class="filter-group">
+        <label>Staff</label>
+        <select name="staff">
+          <option value="">All Staff</option>
+          {% for u in users %}
+          <option value="{{ u.id }}" {% if staff_filter==u.id|string %}selected{% endif %}>{{ u.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <button type="submit" class="btn-filter">Filter</button>
+      <a href="/tasks" class="btn-reset">Reset</a>
+    </form>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Assigned To</th>
+            <th>Due Date</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Linked Lead</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in tasks %}
+          <tr class="{% if task.due_date and task.due_date < now and task.status != 'Done' %}overdue-row{% endif %}">
+            <td>
+              <strong>{{ task.title }}</strong>
+              {% if task.description %}<br><span style="color:#888;font-size:12px;">{{ task.description[:80] }}{% if task.description|length > 80 %}…{% endif %}</span>{% endif %}
+              {% if task.due_date and task.due_date < now and task.status != 'Done' %}
+              <br><span style="color:#c0392b;font-size:11px;font-weight:600;">⚠ Overdue</span>
+              {% endif %}
+            </td>
+            <td>{{ task.assignee.name if task.assignee else '—' }}</td>
+            <td>{{ task.due_date.strftime('%d %b %Y') if task.due_date else '—' }}</td>
+            <td>
+              <span class="badge badge-{{ task.priority|lower }}">{{ task.priority }}</span>
+            </td>
+            <td>
+              <form method="post" action="/tasks/{{ task.id }}/status" class="status-form">
+                <select name="status" onchange="this.form.submit()">
+                  <option value="Pending" {% if task.status=='Pending' %}selected{% endif %}>Pending</option>
+                  <option value="In Progress" {% if task.status=='In Progress' %}selected{% endif %}>In Progress</option>
+                  <option value="Done" {% if task.status=='Done' %}selected{% endif %}>Done</option>
+                </select>
+              </form>
+            </td>
+            <td>
+              {% if task.lead %}
+              <a href="/leads/{{ task.lead_id }}" class="lead-link">{{ task.lead.name }}</a>
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              <div class="actions">
+                <a href="/tasks/{{ task.id }}/edit" class="btn-sm">Edit</a>
+                {% if session.role == 'admin' %}
+                <button class="btn-delete" onclick="if(confirm('Delete this task?')) window.location='/tasks/{{ task.id }}/delete'">Delete</button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="empty">No tasks found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

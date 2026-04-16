@@ -44,7 +44,8 @@
     <a href="/leads">All Leads</a>
     <a href="/leads/add" class="active">Add Lead</a>
     <a href="/leads/import">Import Leads</a>
-    {% if session.role == 'admin' %}<a href="/admin" class="admin-link">⚙ Admin Panel</a>{% endif %}
+    {% if session.role == 'admin' %}<a href="/tasks">Tasks</a>
+    <a href="/admin" class="admin-link">⚙ Admin Panel</a>{% endif %}
   </div>
   <div class="container">
     <div class="card">

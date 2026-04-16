@@ -1,4 +1,4 @@
-# v15
+# v16
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -62,6 +62,21 @@ class LeadUpdate(db.Model):
     followup_date = db.Column(db.DateTime)
     lost_reason = db.Column(db.String(100))
     future_potential = db.Column(db.String(20))
+
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    due_date = db.Column(db.DateTime)
+    priority = db.Column(db.String(20), default='Medium')  # Low, Medium, High
+    status = db.Column(db.String(20), default='Pending')   # Pending, In Progress, Done
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    lead_id = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=True)
+    assignee = db.relationship('User', foreign_keys=[assigned_to])
+    creator = db.relationship('User', foreign_keys=[created_by])
+    lead = db.relationship('Lead', foreign_keys=[lead_id])
 
 class Service(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -588,6 +603,7 @@ def admin_edit_staff(user_id):
     db.session.commit()
     flash('Staff member updated successfully')
     return redirect(url_for('admin_panel'))
+
 @app.route('/admin/service/add', methods=['POST'])
 @login_required
 @admin_required
@@ -637,10 +653,10 @@ def admin_delete_source(source_id):
     db.session.commit()
     flash(f'Source "{source.name}" removed')
     return redirect(url_for('admin_panel'))
+
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
-
 def manage_users():
     return redirect(url_for('admin_panel'))
 
@@ -650,8 +666,107 @@ def manage_users():
 def toggle_user(user_id):
     return redirect(url_for('admin_toggle_staff', user_id=user_id))
 
+# ── Task Management ──────────────────────────────────────────────────────────
+
+@app.route('/tasks')
+@login_required
+def tasks():
+    now = datetime.now()
+    if session['role'] == 'admin':
+        task_list = Task.query.order_by(Task.due_date).all()
+    else:
+        task_list = Task.query.filter_by(assigned_to=session['user_id']).order_by(Task.due_date).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    status_filter = request.args.get('status', '')
+    priority_filter = request.args.get('priority', '')
+    staff_filter = request.args.get('staff', '')
+    if status_filter:
+        task_list = [t for t in task_list if t.status == status_filter]
+    if priority_filter:
+        task_list = [t for t in task_list if t.priority == priority_filter]
+    if staff_filter and session['role'] == 'admin':
+        task_list = [t for t in task_list if t.assigned_to == int(staff_filter)]
+    overdue = [t for t in task_list if t.due_date and t.due_date < now and t.status != 'Done']
+    return render_template('tasks.html', tasks=task_list, now=now, users=users,
+                           overdue=overdue, status_filter=status_filter,
+                           priority_filter=priority_filter, staff_filter=staff_filter)
+
+@app.route('/tasks/add', methods=['GET', 'POST'])
+@login_required
+def add_task():
+    now = datetime.now()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    leads = Lead.query.order_by(Lead.name).all()
+    if request.method == 'POST':
+        due = request.form.get('due_date')
+        due_dt = datetime.strptime(due, '%Y-%m-%d') if due else None
+        assigned = request.form.get('assigned_to')
+        lead_id = request.form.get('lead_id') or None
+        task = Task(
+            title=request.form['title'],
+            description=request.form.get('description'),
+            assigned_to=int(assigned) if assigned else session['user_id'],
+            created_by=session['user_id'],
+            due_date=due_dt,
+            priority=request.form.get('priority', 'Medium'),
+            lead_id=int(lead_id) if lead_id else None
+        )
+        db.session.add(task)
+        db.session.commit()
+        flash('Task added successfully')
+        return redirect(url_for('tasks'))
+    return render_template('add_task.html', users=users, leads=leads, now=now)
+
+@app.route('/tasks/<int:task_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    now = datetime.now()
+    if session['role'] != 'admin' and task.assigned_to != session['user_id'] and task.created_by != session['user_id']:
+        flash('Access denied')
+        return redirect(url_for('tasks'))
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    leads = Lead.query.order_by(Lead.name).all()
+    if request.method == 'POST':
+        task.title = request.form['title']
+        task.description = request.form.get('description')
+        assigned = request.form.get('assigned_to')
+        task.assigned_to = int(assigned) if assigned else task.assigned_to
+        due = request.form.get('due_date')
+        task.due_date = datetime.strptime(due, '%Y-%m-%d') if due else None
+        task.priority = request.form.get('priority', 'Medium')
+        task.status = request.form.get('status', 'Pending')
+        lead_id = request.form.get('lead_id') or None
+        task.lead_id = int(lead_id) if lead_id else None
+        db.session.commit()
+        flash('Task updated')
+        return redirect(url_for('tasks'))
+    return render_template('edit_task.html', task=task, users=users, leads=leads, now=now)
+
+@app.route('/tasks/<int:task_id>/status', methods=['POST'])
+@login_required
+def update_task_status(task_id):
+    task = Task.query.get_or_404(task_id)
+    if session['role'] != 'admin' and task.assigned_to != session['user_id']:
+        flash('Access denied')
+        return redirect(url_for('tasks'))
+    task.status = request.form.get('status', task.status)
+    db.session.commit()
+    return redirect(url_for('tasks'))
+
+@app.route('/tasks/<int:task_id>/delete')
+@login_required
+@admin_required
+def delete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    flash('Task deleted')
+    return redirect(url_for('tasks'))
+
+# ─────────────────────────────────────────────────────────────────────────────
+
 def init_db():
-    with app.app_context():
         db.create_all()
         try:
             with db.engine.connect() as conn:
