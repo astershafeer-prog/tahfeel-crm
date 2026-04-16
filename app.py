@@ -403,7 +403,7 @@ def download_template():
     ws = wb.active
     ws.title = "Leads"
     headers = ['Name*', 'Company', 'Phone*', 'Email', 'Address',
-               'Source', 'Service', 'Lead Type', 'Remarks', 'Assigned To']
+           'Source', 'Service', 'Lead Type', 'Remarks', 'Assigned To', 'Lead Date']
     ws.append(headers)
     ws.append(['John Smith', 'ABC Trading LLC', '+971501234567',
                'john@abc.ae', 'Dubai',
