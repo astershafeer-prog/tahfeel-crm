@@ -79,54 +79,25 @@
       {% endfor %}{% endif %}
     {% endwith %}
 
-    <div class="fin-row" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
-      <div class="fin-card">
-        <div class="lbl">Invoiced</div>
-        <div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div>
-      </div>
-      <div class="fin-card amber">
-        <div class="lbl">Received</div>
-        <div class="val">AED {{ '{:,.0f}'.format(total_received) }}</div>
-      </div>
-      <div class="fin-card red">
-        <div class="lbl">Pending</div>
-        <div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div>
-      </div>
-      <div class="fin-card green">
-        <div class="lbl">Completed</div>
-        <div class="val">AED {{ '{:,.0f}'.format(completed_value) }}</div>
-      </div>
-    </div>
-
-    {% if overdue %}
+{% if overdue %}
     <div class="overdue-alert">
       ⚠️ <strong>{{ overdue|length }} lead{{ 's' if overdue|length > 1 else '' }}</strong> overdue and need immediate attention!
     </div>
     {% endif %}
 
-    <!-- Stats -->
-    <div class="stats">
-      <div class="stat-card">
-        <div class="label">Total Leads</div>
-        <div class="value">{{ leads|length }}</div>
-        <div class="sub">Assigned to me</div>
-      </div>
-      <div class="stat-card amber">
-        <div class="label">Pending</div>
-        <div class="value">{{ pending|length }}</div>
-        <div class="sub">In progress</div>
-      </div>
-      <div class="stat-card green">
-        <div class="label">Converted</div>
-        <div class="value">{{ converted|length }}</div>
-        <div class="sub">Closed won</div>
-      </div>
-      <div class="stat-card red">
-        <div class="label">Overdue</div>
-        <div class="value">{{ overdue|length }}</div>
-        <div class="sub">Need attention</div>
-      </div>
-
+    <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">My Leads</div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+      <div class="stat-card"><div class="label">Total</div><div class="value">{{ leads|length }}</div></div>
+      <div class="stat-card amber"><div class="label">Pending</div><div class="value">{{ pending|length }}</div></div>
+      <div class="stat-card green"><div class="label">Converted</div><div class="value">{{ converted|length }}</div></div>
+      <div class="stat-card red"><div class="label">Overdue</div><div class="value">{{ overdue|length }}</div></div>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Financials</div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+      <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>
+      <div class="fin-card amber"><div class="lbl">Received</div><div class="val">AED {{ '{:,.0f}'.format(total_received) }}</div></div>
+      <div class="fin-card red"><div class="lbl">Pending</div><div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div></div>
+      <div class="fin-card green"><div class="lbl">Completed</div><div class="val">AED {{ '{:,.0f}'.format(completed_value) }}</div></div>
     </div>
 
     <!-- Follow-ups -->

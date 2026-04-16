@@ -64,11 +64,15 @@
   </div>
   <div class="nav">
     <a href="/dashboard" >Dashboard</a>
+    {% if session.role == 'admin' %}
     <a href="/leads" >All Leads</a>
     <a href="/leads/add" >Add Lead</a>
     <a href="/leads/import" >Import Leads</a>
+    {% endif %}
     <a href="/jobs" class="active">Tasks</a>
+    {% if session.role == 'admin' %}
     <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
+    {% endif %}
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
