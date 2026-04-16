@@ -293,7 +293,6 @@ def dashboard():
                                total_received=total_received,
                                total_pending=total_pending,
                                completed_value=completed_value,
-                               docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
                                now=now)
 
     # ── Admin dashboard ──────────────────────────────────────────────────────
