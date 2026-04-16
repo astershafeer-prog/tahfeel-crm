@@ -966,10 +966,11 @@ def add_job():
         due = request.form.get('due_date')
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else None
         amount_invoiced = request.form.get('amount_invoiced') or 0
+        assigned = request.form.get('assigned_to')
         job = Job(
             customer_id=int(request.form['customer_id']),
             job_type=request.form['job_type'],
-            assigned_to=int(request.form['assigned_to']) if request.form.get('assigned_to') else None,
+            assigned_to=int(assigned) if assigned else None,
             due_date=due_dt,
             priority=request.form.get('priority', 'Medium'),
             internal_notes=request.form.get('internal_notes'),
@@ -982,10 +983,32 @@ def add_job():
         db.session.add(job)
         db.session.commit()
         update = JobUpdate(job_id=job.id, status='Pending Finance Approval',
-                           remark='Task created — awaiting finance approval', staff_name=session['user_name'])
+                           remark='Task created — awaiting finance approval',
+                           staff_name=session['user_name'])
         db.session.add(update)
+        # Process sub-tasks submitted inline
+        st_titles = request.form.getlist('st_title[]')
+        st_service_types = request.form.getlist('st_service_type[]')
+        st_assigned_tos = request.form.getlist('st_assigned_to[]')
+        st_due_dates = request.form.getlist('st_due_date[]')
+        st_priorities = request.form.getlist('st_priority[]')
+        for i, title in enumerate(st_titles):
+            if not title.strip():
+                continue
+            st_assigned = st_assigned_tos[i] if i < len(st_assigned_tos) and st_assigned_tos[i] else None
+            st_due_str = st_due_dates[i] if i < len(st_due_dates) and st_due_dates[i] else None
+            st_due = datetime.strptime(st_due_str, '%Y-%m-%d') if st_due_str else datetime.now() + timedelta(days=1)
+            subtask = SubTask(
+                job_id=job.id,
+                title=title.strip(),
+                service_type=st_service_types[i] if i < len(st_service_types) else None,
+                assigned_to=int(st_assigned) if st_assigned else (job.assigned_to or session['user_id']),
+                due_date=st_due,
+                priority=st_priorities[i] if i < len(st_priorities) else 'Medium',
+            )
+            db.session.add(subtask)
         db.session.commit()
-        flash('Job created successfully')
+        flash('Task created successfully')
         return redirect(url_for('jobs'))
     return render_template('add_job.html', customers=customers, job_types=job_types, users=users)
 
@@ -1027,9 +1050,12 @@ def job_detail(job_id):
 
 @app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def edit_job(job_id):
     job = Job.query.get_or_404(job_id)
+    # Staff can only edit tasks assigned to them
+    if session['role'] == 'staff' and job.assigned_to != session['user_id']:
+        flash('Access denied')
+        return redirect(url_for('jobs'))
     customers = Customer.query.order_by(Customer.name).all()
     job_types = ServiceType.query.order_by(ServiceType.name).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
@@ -1052,7 +1078,7 @@ def edit_job(job_id):
         except:
             pass
         db.session.commit()
-        flash('Job updated')
+        flash('Task updated')
         return redirect(url_for('job_detail', job_id=job_id))
     return render_template('edit_job.html', job=job, customers=customers,
                            job_types=job_types, users=users, statuses=JOB_STATUSES)
@@ -1062,10 +1088,31 @@ def edit_job(job_id):
 @admin_required
 def delete_job(job_id):
     job = Job.query.get_or_404(job_id)
+    SubTask.query.filter_by(job_id=job_id).delete()
     JobUpdate.query.filter_by(job_id=job_id).delete()
     db.session.delete(job)
     db.session.commit()
-    flash('Job deleted')
+    flash('Task deleted')
+    return redirect(url_for('jobs'))
+
+@app.route('/jobs/bulk-delete', methods=['POST'])
+@login_required
+@admin_required
+def bulk_delete_jobs():
+    ids = request.form.getlist('job_ids')
+    if not ids:
+        flash('No tasks selected')
+        return redirect(url_for('jobs'))
+    count = 0
+    for job_id in ids:
+        job = Job.query.get(int(job_id))
+        if job:
+            SubTask.query.filter_by(job_id=job.id).delete()
+            JobUpdate.query.filter_by(job_id=job.id).delete()
+            db.session.delete(job)
+            count += 1
+    db.session.commit()
+    flash(f'{count} task(s) deleted')
     return redirect(url_for('jobs'))
 
 # ── Finance ───────────────────────────────────────────────────────────────────

@@ -125,8 +125,10 @@
           </div>
         </div>
         <div class="header-actions">
-          {% if session.role == 'admin' %}
+          {% if session.role in ['admin', 'staff'] %}
           <a href="/jobs/{{ job.id }}/edit" class="btn-edit">Edit</a>
+          {% endif %}
+          {% if session.role == 'admin' %}
           <button class="btn-delete" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'">Delete</button>
           {% endif %}
         </div>

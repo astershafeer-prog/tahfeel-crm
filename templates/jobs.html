@@ -55,6 +55,9 @@
     .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; }
     .btn-sm:hover { background: #133E87; color: white; }
     .empty { padding: 40px; text-align: center; color: #aaa; font-size: 13px; }
+    .btn-bulk-delete { background: #c0392b; color: white; padding: 9px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: #133E87; }
+    tr.selected td { background: #EAF3DE; }
   </style>
 </head>
 <body>
@@ -83,7 +86,10 @@
     {% endwith %}
     <div class="page-header">
       <h2>Tasks <span style="font-size:14px;color:#888;font-weight:400;">({{ jobs|length }} total)</span></h2>
-      <a href="/jobs/add" class="btn-add">+ Add Task</a>
+      <div style="display:flex;gap:8px;">
+        <button id="bulkDeleteBtn" class="btn-bulk-delete" style="display:none;" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
+        <a href="/jobs/add" class="btn-add">+ Add Task</a>
+      </div>
     </div>
 
     <div class="summary-row">
@@ -137,6 +143,7 @@
       <a href="/jobs" class="btn-reset">Reset</a>
     </form>
 
+    <form method="post" action="/jobs/bulk-delete" id="bulkForm">
     <div class="card">
       <table>
         <thead>
@@ -144,7 +151,8 @@
         </thead>
         <tbody>
           {% for job in jobs %}
-          <tr class="{% if job.due_date and job.due_date < now and job.status != 'Done' %}overdue{% endif %}">
+          <tr class="{% if job.due_date and job.due_date < now and job.status != 'Done' %}overdue{% endif %}" onclick="toggleRow(this, event)">
+            <td onclick="event.stopPropagation()"><input type="checkbox" name="job_ids" value="{{ job.id }}" class="job-checkbox" onchange="updateCount()"></td>
             <td><strong>{{ job.customer.name }}</strong><br><span style="color:#888;font-size:11px;">{{ job.customer.company or '' }}</span></td>
             <td>{{ job.job_type }}</td>
             <td>{{ job.assignee.name if job.assignee else '—' }}</td>
@@ -158,7 +166,15 @@
             <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></td>
             <td>AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</td>
             <td>AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</td>
-            <td><a href="/jobs/{{ job.id }}" class="btn-sm">View</a></td>
+            <td>
+              <div style="display:flex;gap:5px;">
+                <a href="/jobs/{{ job.id }}" class="btn-sm">View</a>
+                <a href="/jobs/{{ job.id }}/edit" class="btn-sm">Edit</a>
+                {% if session.role == 'admin' %}
+                <a href="/jobs/{{ job.id }}/delete" class="btn-sm" style="border-color:#c0392b;color:#c0392b;" onclick="return confirm('Delete this task?')">Del</a>
+                {% endif %}
+              </div>
+            </td>
           </tr>
           {% else %}
           <tr><td colspan="9" class="empty">No jobs found.</td></tr>
@@ -167,5 +183,31 @@
       </table>
     </div>
   </div>
+  <script>
+    function toggleAll() {
+      const checked = document.getElementById('selectAll').checked;
+      document.querySelectorAll('.job-checkbox').forEach(cb => {
+        cb.checked = checked;
+        cb.closest('tr').classList.toggle('selected', checked);
+      });
+      updateCount();
+    }
+    function toggleRow(row, e) {
+      if (e.target.type === 'checkbox' || e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+      const cb = row.querySelector('.job-checkbox');
+      if (cb) { cb.checked = !cb.checked; row.classList.toggle('selected', cb.checked); updateCount(); }
+    }
+    function updateCount() {
+      const count = document.querySelectorAll('.job-checkbox:checked').length;
+      document.getElementById('selectedCount').textContent = count;
+      document.getElementById('bulkDeleteBtn').style.display = count > 0 ? 'inline-block' : 'none';
+    }
+    function confirmBulkDelete() {
+      const count = document.querySelectorAll('.job-checkbox:checked').length;
+      if (confirm(`Delete ${count} selected task(s)? This cannot be undone.`)) {
+        document.getElementById('bulkForm').submit();
+      }
+    }
+  </script>
 </body>
 </html>
