@@ -108,21 +108,22 @@ def apply_lead_filters(leads, args, now):
     status_filter = args.get('status')
     staff_filter = args.get('staff')
     if date_filter == 'today':
-        leads = [l for l in leads if l.due_date.date() == now.date()]
+        leads = [l for l in leads if l.created_at and l.created_at.date() == now.date()]
     elif date_filter == 'week':
         week_start = now.date() - timedelta(days=now.weekday())
         week_end = week_start + timedelta(days=6)
-        leads = [l for l in leads if week_start <= l.due_date.date() <= week_end]
+        leads = [l for l in leads if l.created_at and week_start <= l.created_at.date() <= week_end]
     elif date_filter == 'month':
-        leads = [l for l in leads if l.due_date.year == now.year and l.due_date.month == now.month]
+        leads = [l for l in leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
     elif date_filter == 'custom':
         from_date = args.get('from')
         to_date = args.get('to')
         if from_date:
             from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
-            leads = [l for l in leads if l.due_date.date() >= from_dt]
+            leads = [l for l in leads if l.created_at and l.created_at.date() >= from_dt]
         if to_date:
             to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
+            leads = [l for l in leads if l.created_at and l.created_at.date() <= to_dt]
             leads = [l for l in leads if l.due_date.date() <= to_dt]
     if status_filter:
         if status_filter == 'Overdue':
@@ -232,7 +233,7 @@ def all_leads():
     is_default = not any(request.args.get(k) for k in ['date', 'status', 'staff', 'search', 'from', 'to'])
 
     if is_default:
-        leads = [l for l in leads if l.due_date and l.due_date.date() == now.date() and l.status not in ['Converted', 'Lost']]
+        leads = [l for l in leads if l.created_at and l.created_at.date() == now.date()]
     else:
         if search:
             leads = [l for l in leads if
