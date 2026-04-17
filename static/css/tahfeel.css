@@ -952,3 +952,64 @@ tr.selected td { background: var(--info-bg) !important; }
   color: var(--text-primary);
   font-weight: 500;
 }
+
+/* ── Import Leads Page ──────────────────────────────────── */
+.btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1.5px solid #b8ddb0;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+.btn-download:hover { background: var(--success); color: white; }
+.info-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.7;
+}
+.columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.col-item {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.col-required {
+  background: var(--danger-bg);
+  border-color: #f7c1c1;
+  color: var(--danger);
+}
+.upload-area {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 14px;
+  transition: var(--transition);
+  background: var(--bg);
+}
+.upload-area:hover { border-color: var(--primary); background: var(--info-bg); }
+.upload-area p { margin: 4px 0; font-size: 13px; color: var(--text-secondary); }
+.upload-area input[type="file"] { display: none; }
+.file-name { margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--primary); }
