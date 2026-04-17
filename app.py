@@ -171,6 +171,33 @@ class Document(db.Model):
     uploader = db.relationship('User', foreign_keys=[uploaded_by])
     customer = db.relationship('Customer', foreign_keys=[customer_id])
 
+
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    log_date = db.Column(db.Date, nullable=False)
+    # Activity counts
+    calls_existing = db.Column(db.Integer, default=0)
+    calls_cold = db.Column(db.Integer, default=0)
+    dm_instagram = db.Column(db.Integer, default=0)
+    dm_facebook = db.Column(db.Integer, default=0)
+    dm_linkedin = db.Column(db.Integer, default=0)
+    posts_social = db.Column(db.Integer, default=0)
+    videos_instagram = db.Column(db.Integer, default=0)
+    linkedin_writing = db.Column(db.Integer, default=0)
+    whatsapp_prospecting = db.Column(db.Integer, default=0)
+    community_active = db.Column(db.Integer, default=0)
+    google_reviews = db.Column(db.Integer, default=0)
+    real_estate_relations = db.Column(db.Integer, default=0)
+    content_marketing = db.Column(db.Integer, default=0)
+    referral_building = db.Column(db.Integer, default=0)
+    networking_activities = db.Column(db.Integer, default=0)
+    networking_events = db.Column(db.Integer, default=0)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    user = db.relationship('User', foreign_keys=[user_id])
+
 class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
@@ -1274,6 +1301,115 @@ def close_job(job_id):
     flash('Task closed successfully.')
     return redirect(url_for('dashboard'))
 
+# ── Daily Activity Log ────────────────────────────────────────────────────────
+
+ACTIVITIES = [
+    ('calls_existing',       'Calls to Existing/Potential Clients', 5),
+    ('calls_cold',           'Cold Calling to Customer List',       5),
+    ('dm_instagram',         'Instagram Direct Messages',           5),
+    ('dm_facebook',          'Facebook Messages',                   5),
+    ('dm_linkedin',          'LinkedIn Messages',                   5),
+    ('posts_social',         'Social Media Posts (IG/FB/LinkedIn)', 2),
+    ('videos_instagram',     'Instagram Video (Cross-post)',        1),
+    ('linkedin_writing',     'LinkedIn Writing/Articles',           1),
+    ('whatsapp_prospecting', 'WhatsApp Prospecting',               5),
+    ('community_active',     'Active in Communities',               2),
+    ('google_reviews',       'Google Review Collection',            1),
+    ('real_estate_relations','Real Estate Agent Relationships',     2),
+    ('content_marketing',    'Content for Marketing',               2),
+    ('referral_building',    'Referral Building',                   2),
+    ('networking_activities','Networking/Community Activities',     1),
+    ('networking_events',    'Attended Networking Event',           1),
+]
+
+@app.route('/activity')
+@login_required
+def activity_log():
+    if session['role'] not in ['sales', 'admin']:
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
+    now = datetime.now()
+    # Date range — default current week
+    week_start = (now - timedelta(days=now.weekday())).date()
+    from_date = request.args.get('from', week_start.strftime('%Y-%m-%d'))
+    to_date = request.args.get('to', now.date().strftime('%Y-%m-%d'))
+    view = request.args.get('view', 'week')  # week / month / all
+
+    from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
+    to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
+
+    if session['role'] == 'admin':
+        # Admin sees all sales staff
+        sales_users = User.query.filter(User.role == 'sales', User.active == True).all()
+        logs = ActivityLog.query.filter(
+            ActivityLog.log_date >= from_dt,
+            ActivityLog.log_date <= to_dt
+        ).all()
+    else:
+        sales_users = [User.query.get(session['user_id'])]
+        logs = ActivityLog.query.filter_by(user_id=session['user_id']).filter(
+            ActivityLog.log_date >= from_dt,
+            ActivityLog.log_date <= to_dt
+        ).all()
+
+    # Build summary per user
+    user_summaries = {}
+    for u in sales_users:
+        user_logs = [l for l in logs if l.user_id == u.id]
+        summary = {}
+        for field, label, target in ACTIVITIES:
+            total = sum(getattr(l, field, 0) or 0 for l in user_logs)
+            days = (to_dt - from_dt).days + 1
+            weekly_target = target * 6  # 6 working days
+            period_target = round(target * days)
+            pct = round((total / period_target * 100) if period_target > 0 else 0)
+            summary[field] = {'total': total, 'target': period_target, 'pct': pct}
+        user_summaries[u.id] = {'user': u, 'summary': summary, 'logs': user_logs}
+
+    # Today's log for current user (for the entry form)
+    today_log = None
+    if session['role'] == 'sales':
+        today_log = ActivityLog.query.filter_by(
+            user_id=session['user_id'],
+            log_date=now.date()
+        ).first()
+
+    return render_template('activity_log.html',
+                           activities=ACTIVITIES,
+                           user_summaries=user_summaries,
+                           sales_users=sales_users,
+                           today_log=today_log,
+                           from_date=from_date, to_date=to_date,
+                           view=view, now=now)
+
+@app.route('/activity/log', methods=['POST'])
+@login_required
+def save_activity():
+    if session['role'] not in ['sales', 'admin']:
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
+    log_date_str = request.form.get('log_date', datetime.now().date().strftime('%Y-%m-%d'))
+    log_date = datetime.strptime(log_date_str, '%Y-%m-%d').date()
+    user_id = session['user_id']
+
+    # Upsert — update if exists for this date
+    log = ActivityLog.query.filter_by(user_id=user_id, log_date=log_date).first()
+    if not log:
+        log = ActivityLog(user_id=user_id, log_date=log_date)
+        db.session.add(log)
+
+    for field, label, target in ACTIVITIES:
+        val = request.form.get(field, '0').strip()
+        try:
+            setattr(log, field, int(val) if val else 0)
+        except:
+            setattr(log, field, 0)
+    log.notes = request.form.get('notes', '')
+    log.updated_at = datetime.now()
+    db.session.commit()
+    flash(f'Activity log saved for {log_date.strftime("%d %b %Y")}')
+    return redirect(url_for('activity_log'))
+
 # ── Admin — Job Types ─────────────────────────────────────────────────────────
 
 @app.route('/admin/jobtype/add', methods=['POST'])
@@ -1466,6 +1602,30 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
+            '''CREATE TABLE IF NOT EXISTS activity_log (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES "user"(id),
+                log_date DATE NOT NULL,
+                calls_existing INTEGER DEFAULT 0,
+                calls_cold INTEGER DEFAULT 0,
+                dm_instagram INTEGER DEFAULT 0,
+                dm_facebook INTEGER DEFAULT 0,
+                dm_linkedin INTEGER DEFAULT 0,
+                posts_social INTEGER DEFAULT 0,
+                videos_instagram INTEGER DEFAULT 0,
+                linkedin_writing INTEGER DEFAULT 0,
+                whatsapp_prospecting INTEGER DEFAULT 0,
+                community_active INTEGER DEFAULT 0,
+                google_reviews INTEGER DEFAULT 0,
+                real_estate_relations INTEGER DEFAULT 0,
+                content_marketing INTEGER DEFAULT 0,
+                referral_building INTEGER DEFAULT 0,
+                networking_activities INTEGER DEFAULT 0,
+                networking_events INTEGER DEFAULT 0,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )''',
         ]
         for sql in migrations:
             try:

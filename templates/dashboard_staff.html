@@ -75,6 +75,9 @@
     <a href="/leads" >All Leads</a>
     <a href="/jobs" >Tasks</a>
     <a href="/documents" >Documents</a>
+    {% if session.role in ['sales', 'admin'] %}
+    <a href="/activity">Daily Log</a>
+    {% endif %}
   </div>
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -132,6 +135,15 @@
       <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">Expiring 31–60 Days</div><div class="value" style="font-size:22px;font-weight:700;color:#854F0B;">{{ docs_60 }}</div></div></a>
     </div>
 
+    {% if session.role == 'sales' %}
+    <div style="background:white;border:0.5px solid #ddd;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;">Daily Activity Log</div>
+        <div style="font-size:13px;font-weight:600;color:#133E87;margin-top:2px;">Log today's activities to track your performance</div>
+      </div>
+      <a href="/activity" style="background:#133E87;color:white;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">Open Log →</a>
+    </div>
+    {% endif %}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;">
       <!-- Overdue Leads -->
       <div class="card">

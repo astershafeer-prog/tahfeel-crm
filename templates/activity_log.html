@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Daily Activity Log</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; font-size: 13px; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .container { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 20px; margin-bottom: 14px; }
+    .card-title { font-size: 14px; font-weight: 700; color: #133E87; margin-bottom: 14px; }
+    /* Date range filter */
+    .filter-bar { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 12px 16px; margin-bottom: 14px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .filter-bar label { font-size: 10px; color: #888; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 3px; }
+    .filter-bar input, .filter-bar select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+    .btn-filter { background: #133E87; color: white; padding: 7px 16px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .quick-btn { padding: 7px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; text-decoration: none; color: #555; background: white; }
+    .quick-btn.active { background: #133E87; color: white; border-color: #133E87; }
+    /* Entry form */
+    .entry-form { background: #f8fbff; border: 1px solid #d0e4f7; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+    .entry-form h3 { font-size: 13px; font-weight: 700; color: #133E87; margin-bottom: 12px; }
+    .activity-row { display: grid; grid-template-columns: 1fr 80px 60px; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 0.5px solid #eee; }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-name { font-size: 12px; color: #333; }
+    .activity-target { font-size: 11px; color: #888; text-align: center; }
+    .activity-input { padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; width: 100%; text-align: center; font-weight: 600; }
+    .activity-input:focus { border-color: #133E87; outline: none; }
+    .btn-save { background: #133E87; color: white; padding: 10px 28px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+    /* Review table */
+    .review-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .review-table th { background: #f0f4f8; padding: 8px 12px; text-align: left; font-size: 11px; color: #555; font-weight: 600; border-bottom: 1px solid #eee; }
+    .review-table td { padding: 8px 12px; border-bottom: 0.5px solid #f0f0f0; }
+    .review-table tr:last-child td { border-bottom: none; }
+    .progress-bar { background: #eee; border-radius: 4px; height: 6px; width: 100%; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .pct-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+    .pct-good { background: #EAF3DE; color: #27500A; }
+    .pct-mid { background: #FAEEDA; color: #633806; }
+    .pct-low { background: #FCEBEB; color: #791F1F; }
+    /* Staff tabs (admin view) */
+    .staff-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .staff-tab { padding: 6px 14px; border-radius: 20px; font-size: 12px; border: 1px solid #ddd; background: white; color: #555; cursor: pointer; }
+    .staff-tab.active { background: #133E87; color: white; border-color: #133E87; font-weight: 600; }
+    .staff-panel { display: none; }
+    .staff-panel.active { display: block; }
+    /* Comparison table (admin) */
+    .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .compare-table th { background: #f0f4f8; padding: 8px 12px; text-align: center; font-size: 11px; font-weight: 600; border-bottom: 1px solid #eee; }
+    .compare-table th:first-child { text-align: left; }
+    .compare-table td { padding: 7px 12px; border-bottom: 0.5px solid #f0f0f0; text-align: center; }
+    .compare-table td:first-child { text-align: left; color: #333; }
+    .num-cell { font-weight: 700; color: #133E87; }
+    .zero-cell { color: #bbb; }
+    .date-header { font-size: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div style="display:flex;gap:16px;align-items:center;">
+      <span>{{ session.user_name }}</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/leads/add">Add Lead</a>
+    {% if session.role in ['admin', 'sales'] %}
+    <a href="/leads">All Leads</a>
+    {% endif %}
+    {% if session.role in ['admin', 'sales'] %}
+    <a href="/leads/import">Import Leads</a>
+    {% endif %}
+    <a href="/jobs">Tasks</a>
+    <a href="/documents">Documents</a>
+    <a href="/activity" class="active">Daily Log</a>
+    {% if session.role == 'admin' %}
+    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+    {% endif %}
+  </div>
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>Daily Activity Log</h2>
+      {% if session.role == 'admin' %}
+      <span style="font-size:12px;color:#888;">Admin View — All Sales Staff</span>
+      {% endif %}
+    </div>
+
+    <!-- Date Range Filter -->
+    <form method="get" class="filter-bar">
+      <div>
+        <label>From</label>
+        <input type="date" name="from" value="{{ from_date }}">
+      </div>
+      <div>
+        <label>To</label>
+        <input type="date" name="to" value="{{ to_date }}">
+      </div>
+      <button type="submit" class="btn-filter">Apply</button>
+      <a href="/activity?view=week" class="quick-btn {% if view=='week' %}active{% endif %}">This Week</a>
+      <a href="/activity?view=month&from={{ now.strftime('%Y-%m-01') }}&to={{ now.strftime('%Y-%m-%d') }}" class="quick-btn {% if view=='month' %}active{% endif %}">This Month</a>
+    </form>
+
+    {% if session.role == 'sales' %}
+    <!-- ── Sales Staff View ───────────────────────────────────────────── -->
+
+    <!-- Today's Entry Form -->
+    <div class="card">
+      <div class="card-title">📝 Log Today's Activities — {{ now.strftime('%A, %d %b %Y') }}</div>
+      <div class="entry-form">
+        <form method="post" action="/activity/log">
+          <input type="hidden" name="log_date" value="{{ now.date().strftime('%Y-%m-%d') }}">
+          <div style="display:grid;grid-template-columns:1fr 80px 60px;gap:10px;padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid #ccc;">
+            <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;">Activity</div>
+            <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;text-align:center;">Daily Target</div>
+            <div style="font-size:10px;font-weight:700;color:#133E87;text-transform:uppercase;text-align:center;">Today</div>
+          </div>
+          {% for field, label, target in activities %}
+          <div class="activity-row">
+            <div class="activity-name">{{ label }}</div>
+            <div class="activity-target">{{ target }}/day</div>
+            <input type="number" name="{{ field }}" min="0" max="999" class="activity-input"
+              value="{{ today_log|attr(field) if today_log else '' }}"
+              placeholder="0">
+          </div>
+          {% endfor %}
+          <div style="margin-top:10px;">
+            <label style="font-size:10px;font-weight:600;color:#888;text-transform:uppercase;display:block;margin-bottom:4px;">Notes (optional)</label>
+            <textarea name="notes" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;resize:vertical;min-height:50px;">{{ today_log.notes if today_log else '' }}</textarea>
+          </div>
+          <button type="submit" class="btn-save">Save Today's Log</button>
+          {% if today_log %}<span style="font-size:11px;color:#27500A;margin-left:10px;">✓ Already logged today — saving will update</span>{% endif %}
+        </form>
+      </div>
+    </div>
+
+    <!-- My Summary for Period -->
+    {% for uid, data in user_summaries.items() %}
+    <div class="card">
+      <div class="card-title">📊 My Summary — {{ from_date }} to {{ to_date }}</div>
+      <table class="review-table">
+        <thead>
+          <tr><th>Activity</th><th>Target</th><th>Actual</th><th>Achievement</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for field, label, target in activities %}
+          {% set s = data.summary[field] %}
+          <tr>
+            <td>{{ label }}</td>
+            <td style="color:#888;">{{ s.target }}</td>
+            <td style="font-weight:700;color:#133E87;">{{ s.total }}</td>
+            <td>
+              <span class="pct-badge {% if s.pct >= 80 %}pct-good{% elif s.pct >= 50 %}pct-mid{% else %}pct-low{% endif %}">
+                {{ s.pct }}%
+              </span>
+            </td>
+            <td style="width:100px;">
+              <div class="progress-bar">
+                <div class="progress-fill" style="width:{{ [s.pct, 100]|min }}%;background:{% if s.pct >= 80 %}#27500A{% elif s.pct >= 50 %}#854F0B{% else %}#c0392b{% endif %};"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <!-- ── Admin View — All Staff Side by Side ────────────────────────── -->
+    {% if sales_users %}
+
+    <div class="card">
+      <div class="card-title">📊 Team Activity Summary — {{ from_date }} to {{ to_date }}</div>
+
+      {% if sales_users|length > 1 %}
+      <div class="staff-tabs">
+        <button class="staff-tab active" onclick="showTab('all')">All Staff</button>
+        {% for u in sales_users %}
+        <button class="staff-tab" onclick="showTab('{{ u.id }}')">{{ u.name }}</button>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- All Staff Comparison Table -->
+      <div class="staff-panel active" id="tab-all">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Activity</th>
+              <th>Daily Target</th>
+              {% for u in sales_users %}
+              <th>{{ u.name }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for field, label, target in activities %}
+            <tr>
+              <td>{{ label }}</td>
+              <td style="color:#888;font-size:11px;">{{ target }}/day</td>
+              {% for u in sales_users %}
+              {% set s = user_summaries[u.id].summary[field] %}
+              <td class="{% if s.total > 0 %}num-cell{% else %}zero-cell{% endif %}">
+                {{ s.total }}
+                <span style="font-size:10px;color:{% if s.pct >= 80 %}#27500A{% elif s.pct >= 50 %}#854F0B{% else %}#c0392b{% endif %};">({{ s.pct }}%)</span>
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Individual Staff Panels -->
+      {% for u in sales_users %}
+      <div class="staff-panel" id="tab-{{ u.id }}">
+        <table class="review-table">
+          <thead><tr><th>Activity</th><th>Target</th><th>Actual</th><th>Achievement</th><th></th></tr></thead>
+          <tbody>
+            {% for field, label, target in activities %}
+            {% set s = user_summaries[u.id].summary[field] %}
+            <tr>
+              <td>{{ label }}</td>
+              <td style="color:#888;">{{ s.target }}</td>
+              <td style="font-weight:700;color:#133E87;">{{ s.total }}</td>
+              <td>
+                <span class="pct-badge {% if s.pct >= 80 %}pct-good{% elif s.pct >= 50 %}pct-mid{% else %}pct-low{% endif %}">
+                  {{ s.pct }}%
+                </span>
+              </td>
+              <td style="width:100px;">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width:{{ [s.pct, 100]|min }}%;background:{% if s.pct >= 80 %}#27500A{% elif s.pct >= 50 %}#854F0B{% else %}#c0392b{% endif %};"></div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="card" style="text-align:center;padding:40px;color:#888;">
+      No sales staff found. Assign "Sales" role to staff members in the Admin Panel.
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.staff-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.staff-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    // Auto-calculate week dates
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.get('from') && !urlParams.get('to')) {
+      const today = new Date();
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - today.getDay() + 1);
+      document.querySelector('input[name="from"]').value = monday.toISOString().split('T')[0];
+      document.querySelector('input[name="to"]').value = today.toISOString().split('T')[0];
+    }
+  </script>
+</body>
+</html>
