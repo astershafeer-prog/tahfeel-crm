@@ -833,3 +833,64 @@ tr.selected td { background: var(--info-bg) !important; }
 .sum-card.amber .val { color: var(--warning); }
 .sum-card.gray { border-top-color: var(--text-muted); }
 .sum-card.gray .val { color: var(--text-muted); }
+
+/* ── Delete Modal ──────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.modal-box h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.modal-box p  { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 10px; justify-content: center; }
+.btn-confirm-delete {
+  background: var(--danger);
+  color: white;
+  padding: 9px 22px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-confirm-delete:hover { background: #8B1515; color: white; }
+.btn-modal-cancel {
+  background: white;
+  color: var(--text-secondary);
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* ── Bulk Delete Bar ───────────────────────────────────── */
+.bulk-bar {
+  display: none;
+  background: var(--info-bg);
+  border: 1px solid #BDD4F5;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  margin-bottom: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bulk-bar.visible { display: flex; }

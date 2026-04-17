@@ -24,10 +24,10 @@
 
     <!-- Summary cards -->
     <div class="cards-4" style="margin-bottom:14px;">
-      <a href="/documents" class="sum-card"><div class="lbl">Total</div><div class="val">{{ total_docs }}</div></a>
-      <a href="/documents?expiry=30" class="sum-card red"><div class="lbl">Expiring ≤30 Days</div><div class="val">{{ expiring_30 }}</div></a>
-      <a href="/documents?expiry=60" class="sum-card amber"><div class="lbl">Expiring 31–60 Days</div><div class="val">{{ expiring_60 }}</div></a>
-      <a href="/documents?expiry=expired" class="sum-card gray"><div class="lbl">Expired</div><div class="val">{{ expired_count }}</div></a>
+      <a href="/documents" class="sum-card"><div class="lbl">Total Docs</div><div class="val">{{ total_docs }}</div></a>
+      <a href="/documents?expiry=30" class="sum-card red"><div class="lbl">≤30 Days</div><div class="val">{{ expiring_30 }}</div></a>
+      <a href="/documents?expiry=60" class="sum-card amber"><div class="lbl">31–60 Days</div><div class="val">{{ expiring_60 }}</div></a>
+      <a href="/documents?expiry=90" class="sum-card" style="border-top-color:#4A5568;"><div class="lbl">61–90 Days</div><div class="val" style="color:#4A5568;">{{ expiring_90 }}</div></a>
     </div>
 
     <!-- Search -->
@@ -76,6 +76,7 @@
           <option value="">All</option>
           <option value="30" {% if expiry_filter=='30' %}selected{% endif %}>≤30 days</option>
           <option value="60" {% if expiry_filter=='60' %}selected{% endif %}>31–60 days</option>
+          <option value="90" {% if expiry_filter=='90' %}selected{% endif %}>61–90 days</option>
           <option value="expired" {% if expiry_filter=='expired' %}selected{% endif %}>Expired</option>
         </select>
       </div>

@@ -100,9 +100,11 @@
                     <div class="form-group" style="max-width:130px;">
                       <label>Role</label>
                       <select name="role">
-                        <option value="staff" {% if user.role == 'staff' %}selected{% endif %}>Staff</option>
-                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="sales" {% if user.role == 'sales' %}selected{% endif %}>Sales</option>
+                        <option value="operations" {% if user.role == 'operations' %}selected{% endif %}>Operations</option>
                         <option value="finance" {% if user.role == 'finance' %}selected{% endif %}>Finance</option>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="staff" {% if user.role == 'staff' %}selected{% endif %}>Staff (legacy)</option>
                       </select>
                     </div>
                     <div class="form-group">

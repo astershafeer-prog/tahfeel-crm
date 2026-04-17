@@ -310,11 +310,12 @@ def dashboard():
             all_docs = Document.query.all()
             docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
             docs_60 = len([d for d in all_docs if d.expiry_date and 30 < (d.expiry_date - now).days <= 60])
+            docs_90 = len([d for d in all_docs if d.expiry_date and 60 < (d.expiry_date - now).days <= 90])
             total_docs = len(all_docs)
         except:
-            docs_30 = docs_60 = total_docs = 0
+            docs_30 = docs_60 = docs_90 = total_docs = 0
         return render_template('dashboard_finance.html',
-                               docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
+                               docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
                                pending_close=pending_close,
@@ -372,7 +373,7 @@ def dashboard():
         lost = [l for l in leads if l.status == 'Lost']
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
 
-        users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'staff'])).all()
+        users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'staff', 'admin'])).all()
         staff_stats = []
         for u in users:
             u_leads = [l for l in leads if l.assigned_to == u.id]
@@ -391,9 +392,10 @@ def dashboard():
             all_docs = Document.query.all()
             docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
             docs_60 = len([d for d in all_docs if d.expiry_date and 30 < (d.expiry_date - now).days <= 60])
+            docs_90 = len([d for d in all_docs if d.expiry_date and 60 < (d.expiry_date - now).days <= 90])
             total_docs = len(all_docs)
         except:
-            docs_30 = docs_60 = total_docs = 0
+            docs_30 = docs_60 = docs_90 = total_docs = 0
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
                                total=total, overdue_leads=overdue_leads,
@@ -441,9 +443,10 @@ def dashboard():
         all_docs = Document.query.all()
         docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
         docs_60 = len([d for d in all_docs if d.expiry_date and 30 < (d.expiry_date - now).days <= 60])
+        docs_90 = len([d for d in all_docs if d.expiry_date and 60 < (d.expiry_date - now).days <= 90])
         total_docs = len(all_docs)
     except:
-        docs_30 = docs_60 = total_docs = 0
+        docs_30 = docs_60 = docs_90 = total_docs = 0
     return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
                            converted=converted, lost=lost, pending=pending,
                            my_jobs=my_jobs, overdue_jobs=overdue_jobs,
@@ -563,7 +566,7 @@ def add_lead():
         db.session.add(lead)
         db.session.commit()
         flash('Lead added successfully')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('all_leads'))
     return render_template('add_lead.html', users=users, services=services, sources=sources, now=now)
 
 @app.route('/leads/<int:lead_id>', methods=['GET', 'POST'])
@@ -1501,6 +1504,7 @@ def documents():
     total_docs = len(doc_list)
     expiring_30 = [d for d in doc_list if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30]
     expiring_60 = [d for d in doc_list if d.expiry_date and 30 < (d.expiry_date - now).days <= 60]
+    expiring_90 = [d for d in doc_list if d.expiry_date and 60 < (d.expiry_date - now).days <= 90]
     expired_docs = [d for d in doc_list if d.expiry_date and d.expiry_date < now]
 
     # Apply filters
@@ -1520,6 +1524,8 @@ def documents():
         doc_list = [d for d in doc_list if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30]
     elif expiry_filter == '60':
         doc_list = [d for d in doc_list if d.expiry_date and 30 < (d.expiry_date - now).days <= 60]
+    elif expiry_filter == '90':
+        doc_list = [d for d in doc_list if d.expiry_date and 60 < (d.expiry_date - now).days <= 90]
     elif expiry_filter == 'expired':
         doc_list = [d for d in doc_list if d.expiry_date and d.expiry_date < now]
 
@@ -1536,7 +1542,8 @@ def documents():
     return render_template('documents.html',
                            documents=paginated, customers=customers, doc_types=doc_types,
                            total_docs=total_docs, expiring_30=len(expiring_30),
-                           expiring_60=len(expiring_60), expired_count=len(expired_docs),
+                           expiring_60=len(expiring_60), expiring_90=len(expiring_90),
+                           expired_count=len(expired_docs),
                            search=search, belongs_filter=belongs_filter,
                            doc_type_filter=doc_type_filter, customer_filter=customer_filter,
                            expiry_filter=expiry_filter,
