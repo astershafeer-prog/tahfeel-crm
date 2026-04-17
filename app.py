@@ -1154,7 +1154,9 @@ def add_job():
         flash(f'{count} task(s) created successfully')
         return redirect(url_for('jobs'))
     tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
-    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow)
+    import json
+    service_days = {jt.name: (jt.default_days or 1) for jt in job_types}
+    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days=json.dumps(service_days))
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
 @login_required
@@ -1825,6 +1827,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
             'ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)',
+            'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS default_days INTEGER DEFAULT 1',
             '''CREATE TABLE IF NOT EXISTS activity_type (
                 id SERIAL PRIMARY KEY,
                 field_key VARCHAR(50) UNIQUE NOT NULL,
