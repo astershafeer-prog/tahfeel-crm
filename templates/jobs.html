@@ -72,13 +72,15 @@
   </div>
   <div class="nav">
     <a href="/dashboard" >Dashboard</a>
-    {% if session.role == 'admin' %}
+    <a href="/leads/add" >Add Lead</a>
+    {% if session.role in ['admin', 'sales'] %}
     <a href="/leads" >All Leads</a>
     <a href="/leads/import" >Import Leads</a>
+    {% elif session.role == 'operations' %}
+    <a href="/leads" >All Leads</a>
     {% endif %}
-    <a href="/leads/add" >Add Lead</a>
     <a href="/jobs" class='active'>Tasks</a>
-    <a href="/documents">Documents</a>
+    <a href="/documents" >Documents</a>
     {% if session.role == 'admin' %}
     <a href="/admin" class="admin-link">⚙ Admin Panel</a>
     {% endif %}
@@ -90,9 +92,11 @@
     <div class="page-header">
       <h2>Tasks <span style="font-size:14px;color:#888;font-weight:400;">({{ jobs|length }} total)</span></h2>
       <div style="display:flex;gap:8px;">
-        <button id="bulkDeleteBtn" class="btn-bulk-delete" style="display:none;" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
+        {% if session.role in ['admin', 'operations'] %}
+      <button id="bulkDeleteBtn" class="btn-bulk-delete" style="display:none;" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
         <a href="/jobs/add" class="btn-add">+ Add Task</a>
       </div>
+      {% endif %}
     </div>
 
     <div class="summary-row">
@@ -163,7 +167,7 @@
               <div style="display:flex;gap:5px;">
                 <a href="/jobs/{{ job.id }}" class="btn-sm">View</a>
                 <a href="/jobs/{{ job.id }}/edit" class="btn-sm">Edit</a>
-                {% if session.role == 'admin' %}
+                {% if session.role in ['admin', 'operations'] %}
                 <a href="/jobs/{{ job.id }}/delete" class="btn-sm" style="border-color:#c0392b;color:#c0392b;" onclick="return confirm('Delete this task?')">Del</a>
                 {% endif %}
               </div>

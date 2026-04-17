@@ -226,7 +226,6 @@ def apply_lead_filters(leads, args, now):
         if to_date:
             to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
             leads = [l for l in leads if l.created_at and l.created_at.date() <= to_dt]
-            leads = [l for l in leads if l.due_date.date() <= to_dt]
     if status_filter:
         if status_filter == 'Overdue':
             leads = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
@@ -277,7 +276,7 @@ def dashboard():
             total_pending = total_invoiced - total_received
             completed_value = sum((j.amount_received or 0) for j in all_jobs if j.status == 'Done')
         except:
-            active_jobs = pending_approval = []
+            active_jobs = pending_approval = pending_close = []
             total_invoiced = total_received = total_pending = completed_value = 0
         try:
             all_docs = Document.query.all()
@@ -335,7 +334,7 @@ def dashboard():
             pending_close = [j for j in jobs if j.status == 'Pending Finance Close']
             recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Closed', 'Pending Finance Approval']][:10]
         except:
-            jobs = all_jobs = active_jobs = done_jobs = overdue_jobs = pending_approval = recent_jobs = []
+            jobs = all_jobs = active_jobs = done_jobs = overdue_jobs = pending_approval = pending_close = recent_jobs = []
             total_invoiced = total_received = total_pending = completed_value = 0
 
         # Lead stats
@@ -432,7 +431,7 @@ def dashboard():
 def all_leads():
     now = datetime.now()
     leads = Lead.query.order_by(Lead.due_date).all()
-    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     search = request.args.get('search', '').strip().lower()
     is_default = not any(request.args.get(k) for k in ['date', 'status', 'staff', 'search', 'from', 'to'])
 
@@ -505,7 +504,7 @@ def export_leads():
 @login_required
 def add_lead():
     now = datetime.now()
-    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     services = Service.query.order_by(Service.name).all()
     sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
@@ -581,7 +580,7 @@ def import_leads():
             ws = wb.active
             count = 0
             errors = []
-            all_staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+            all_staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
             staff_map = {u.name.strip().lower(): u.id for u in all_staff}
             for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
                 name = row[0] if len(row) > 0 else None
@@ -643,7 +642,7 @@ def download_template():
     import io
     services = Service.query.order_by(Service.name).all()
     sources = Source.query.order_by(Source.name).all()
-    staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     wb = Workbook()
     ws = wb.active
     ws.title = "Leads"
@@ -711,7 +710,7 @@ def download_template():
 def edit_lead(lead_id):
     now = datetime.now()
     lead = Lead.query.get_or_404(lead_id)
-    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     services = Service.query.order_by(Service.name).all()
     sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
@@ -794,7 +793,7 @@ def admin_add_staff():
             name=request.form['name'],
             email=email,
             password=generate_password_hash(request.form['password']),
-            role=request.form['role']
+            role=request.form.get('role', 'staff')
         )
         db.session.add(user)
         db.session.commit()
@@ -821,7 +820,7 @@ def admin_edit_staff(user_id):
             flash('That email is already in use')
             return redirect(url_for('admin_panel'))
         user.email = email
-    if new_role in ['staff', 'admin', 'finance']:
+    if new_role in ['staff', 'sales', 'operations', 'admin', 'finance']:
         user.role = new_role
     if new_password:
         user.password = generate_password_hash(new_password)
@@ -877,12 +876,6 @@ def admin_delete_source(source_id):
     db.session.delete(source)
     db.session.commit()
     flash(f'Source "{source.name}" removed')
-    return redirect(url_for('admin_panel'))
-
-@app.route('/users', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def manage_users():
     return redirect(url_for('admin_panel'))
 
 @app.route('/users/<int:user_id>/toggle')
@@ -982,7 +975,7 @@ def jobs():
         if priority_filter:
             job_list = [j for j in job_list if j.priority == priority_filter]
         overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
-        users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+        users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
         jobs_invoiced = sum((j.amount_invoiced or 0) for j in job_list)
         jobs_received = sum((j.amount_received or 0) for j in job_list)
         jobs_pending = jobs_invoiced - jobs_received
@@ -1019,7 +1012,7 @@ def jobs():
 def add_job():
     customers = Customer.query.order_by(Customer.name).all()
     job_types = ServiceType.query.order_by(ServiceType.name).all()
-    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     if request.method == 'POST':
         due = request.form.get('due_date')
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else None
@@ -1076,8 +1069,8 @@ def job_detail(job_id):
     job = Job.query.get_or_404(job_id)
     now = datetime.now()
     role = session['role']
-    # Finance can see all jobs; staff only their own; admin all
-    if role == 'staff' and job.assigned_to != session['user_id']:
+    # Finance/sales/operations can see their own jobs; admin all
+    if role in ['staff', 'sales'] and job.assigned_to != session['user_id']:
         flash('Access denied')
         return redirect(url_for('jobs'))
     if request.method == 'POST':
@@ -1122,7 +1115,7 @@ def job_detail(job_id):
         db.session.commit()
         flash('Task updated')
         return redirect(url_for('job_detail', job_id=job_id))
-    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     service_types = ServiceType.query.order_by(ServiceType.name).all()
     return render_template('job_detail.html', job=job, now=now,
                            statuses=JOB_STATUSES, users=users,
@@ -1138,7 +1131,7 @@ def edit_job(job_id):
         return redirect(url_for('jobs'))
     customers = Customer.query.order_by(Customer.name).all()
     job_types = ServiceType.query.order_by(ServiceType.name).all()
-    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'admin'])).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     if request.method == 'POST':
         job.job_type = request.form['job_type']
         job.customer_id = int(request.form['customer_id'])
@@ -1165,8 +1158,10 @@ def edit_job(job_id):
 
 @app.route('/jobs/<int:job_id>/delete')
 @login_required
-@admin_required
 def delete_job(job_id):
+    if session['role'] not in ['admin', 'operations']:
+        flash('Access denied')
+        return redirect(url_for('jobs'))
     job = Job.query.get_or_404(job_id)
     SubTask.query.filter_by(job_id=job_id).delete()
     JobUpdate.query.filter_by(job_id=job_id).delete()
@@ -1177,8 +1172,10 @@ def delete_job(job_id):
 
 @app.route('/jobs/bulk-delete', methods=['POST'])
 @login_required
-@admin_required
 def bulk_delete_jobs():
+    if session['role'] not in ['admin', 'operations']:
+        flash('Access denied')
+        return redirect(url_for('jobs'))
     ids = request.form.getlist('job_ids')
     if not ids:
         flash('No tasks selected')
