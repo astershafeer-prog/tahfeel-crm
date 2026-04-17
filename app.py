@@ -418,7 +418,17 @@ def dashboard():
                                from_date=from_date, to_date=to_date)
 
     # ── Staff dashboard ──────────────────────────────────────────────────────
-    leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
+    period = request.args.get('period', 'today')
+    all_leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
+    if period == 'today':
+        leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()]
+    elif period == 'week':
+        week_start = now.date() - timedelta(days=now.weekday())
+        leads = [l for l in all_leads if l.created_at and l.created_at.date() >= week_start]
+    elif period == 'month':
+        leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
+    else:
+        leads = all_leads
     overdue = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
     converted = [l for l in leads if l.status == 'Converted']
     lost = [l for l in leads if l.status == 'Lost']
@@ -497,8 +507,10 @@ def all_leads():
 
 @app.route('/leads/export')
 @login_required
-@admin_required
 def export_leads():
+    if session['role'] not in ['admin', 'sales']:
+        flash('Access denied')
+        return redirect(url_for('all_leads'))
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     from flask import make_response
@@ -941,6 +953,7 @@ def admin_toggle_staff(user_id):
 @app.route('/customers')
 @login_required
 def customers():
+    # All roles can view customers
     customer_list = Customer.query.order_by(Customer.name).all()
     return render_template('customers.html', customers=customer_list)
 
@@ -999,12 +1012,8 @@ def jobs():
     now = datetime.now()
     role = session['role']
     try:
-        if role in ['admin', 'finance']:
-            job_list = Job.query.order_by(Job.created_at.desc()).all()
-        else:
-            job_list = Job.query.filter_by(assigned_to=session['user_id']).filter(
-                Job.status != 'Pending Finance Approval'
-            ).order_by(Job.due_date).all()
+        # All roles see all tasks
+        job_list = Job.query.order_by(Job.created_at.desc()).all()
         status_filter = request.args.get('status', '')
         priority_filter = request.args.get('priority', '')
         if status_filter:
@@ -1461,11 +1470,35 @@ def save_activity():
     return redirect(url_for('activity_log'))
 
 
+
+@app.route('/activity/<int:log_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_activity_log(log_id):
+    log = ActivityLog.query.get_or_404(log_id)
+    if session['role'] != 'admin' and log.user_id != session['user_id']:
+        flash('Access denied')
+        return redirect(url_for('activity_log'))
+    if request.method == 'POST':
+        for field, label, target in ACTIVITIES:
+            val = request.form.get(field, '0').strip()
+            try: setattr(log, field, int(val) if val else 0)
+            except: setattr(log, field, 0)
+        log.off_day = request.form.get('off_day', '') or None
+        log.notes = request.form.get('notes', '')
+        log.updated_at = datetime.now()
+        db.session.commit()
+        flash(f'Activity log updated for {log.log_date.strftime("%d %b %Y")}')
+        return redirect(url_for('activity_log'))
+    return redirect(url_for('activity_log'))
+
 @app.route('/activity/<int:log_id>/delete')
 @login_required
-@admin_required
 def delete_activity_log(log_id):
     log = ActivityLog.query.get_or_404(log_id)
+    # Admin can delete any, sales can delete their own
+    if session['role'] != 'admin' and log.user_id != session['user_id']:
+        flash('Access denied')
+        return redirect(url_for('activity_log'))
     db.session.delete(log)
     db.session.commit()
     flash('Activity log entry deleted')

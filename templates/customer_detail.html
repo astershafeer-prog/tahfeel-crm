@@ -10,7 +10,7 @@
 <body>
   {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
-  {{ nav('jobs') }}
+  {{ nav('customers') }}
   <div class="container" style="max-width:960px;">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}

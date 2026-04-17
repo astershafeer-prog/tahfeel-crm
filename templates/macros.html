@@ -30,6 +30,7 @@
   <a href="/leads/import" {% if active=='import_leads' %}class="active"{% endif %}>Import</a>
   {% endif %}
   <a href="/jobs" {% if active=='jobs' %}class="active"{% endif %}>Tasks</a>
+  <a href="/customers" {% if active=='customers' %}class="active"{% endif %}>Customers</a>
   <a href="/documents" {% if active=='documents' %}class="active"{% endif %}>Documents</a>
   {% if session.role in ['admin', 'sales'] %}
   <a href="/activity" {% if active=='activity' %}class="active"{% endif %}>Daily Log</a>
