@@ -125,26 +125,10 @@
 
     <div class="section-label">Financial Summary (Active Tasks)</div>
     <div class="cards-4">
-      <div class="fin-card">
-        <div class="lbl">Total Invoiced</div>
-        <div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div>
-        <div class="sub">All active tasks</div>
-      </div>
-      <div class="fin-card amber">
-        <div class="lbl">Total Received</div>
-        <div class="val">AED {{ '{:,.0f}'.format(total_received) }}</div>
-        <div class="sub">Payments in hand</div>
-      </div>
-      <div class="fin-card red">
-        <div class="lbl">Pending</div>
-        <div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div>
-        <div class="sub">Invoiced minus received</div>
-      </div>
-      <div class="fin-card green">
-        <div class="lbl">Completed Value</div>
-        <div class="val">AED {{ '{:,.0f}'.format(completed_value) }}</div>
-        <div class="sub">Done tasks — sales value</div>
-      </div>
+      <div class="stat-card"><div class="lbl">Total Invoiced</div><div class="val" style="font-size:15px;">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>
+      <div class="stat-card amber"><div class="lbl">Total Received</div><div class="val" style="font-size:15px;">AED {{ '{:,.0f}'.format(total_received) }}</div></div>
+      <div class="stat-card red"><div class="lbl">Pending</div><div class="val" style="font-size:15px;">AED {{ '{:,.0f}'.format(total_pending) }}</div></div>
+      <div class="stat-card green"><div class="lbl">Completed Value</div><div class="val" style="font-size:15px;">AED {{ '{:,.0f}'.format(completed_value) }}</div></div>
     </div>
 
     <div class="section-label">Leads</div>

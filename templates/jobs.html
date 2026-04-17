@@ -103,23 +103,11 @@
       <div class="summary-card green"><div class="label">Done</div><div class="value">{{ jobs|selectattr('status','eq','Done')|list|length }}</div></div>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px;">
-      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #133E87;padding:12px 14px;">
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Total Invoiced</div>
-        <div style="font-size:16px;font-weight:700;color:#133E87;">AED {{ '{:,.0f}'.format(jobs_invoiced) }}</div>
-      </div>
-      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #854F0B;padding:12px 14px;">
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Total Received</div>
-        <div style="font-size:16px;font-weight:700;color:#854F0B;">AED {{ '{:,.0f}'.format(jobs_received) }}</div>
-      </div>
-      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #A32D2D;padding:12px 14px;">
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Pending Payment</div>
-        <div style="font-size:16px;font-weight:700;color:#A32D2D;">AED {{ '{:,.0f}'.format(jobs_pending) }}</div>
-      </div>
-      <div style="background:white;border:0.5px solid #ddd;border-radius:10px;border-top:3px solid #27500A;padding:12px 14px;">
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Completed Value</div>
-        <div style="font-size:16px;font-weight:700;color:#27500A;">AED {{ '{:,.0f}'.format(jobs_completed) }}</div>
-      </div>
+    <div class="summary-row" style="grid-template-columns:repeat(4,1fr);">
+      <div class="summary-card"><div class="label">Total Invoiced</div><div class="value" style="font-size:15px;">AED {{ '{:,.0f}'.format(jobs_invoiced) }}</div></div>
+      <div class="summary-card" style="border-top:3px solid #854F0B;"><div class="label">Total Received</div><div class="value" style="font-size:15px;color:#854F0B;">AED {{ '{:,.0f}'.format(jobs_received) }}</div></div>
+      <div class="summary-card red"><div class="label">Pending Payment</div><div class="value" style="font-size:15px;">AED {{ '{:,.0f}'.format(jobs_pending) }}</div></div>
+      <div class="summary-card green"><div class="label">Completed Value</div><div class="value" style="font-size:15px;">AED {{ '{:,.0f}'.format(jobs_completed) }}</div></div>
     </div>
 
     <form method="get" class="filters">
