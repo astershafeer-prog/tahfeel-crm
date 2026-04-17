@@ -811,3 +811,25 @@ tr.selected td { background: var(--info-bg) !important; }
 .actions { display: flex; gap: 10px; margin-top: 20px; grid-column: 1 / -1; }
 .btn-view { padding: 4px 10px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; border: 1.5px solid var(--primary); color: var(--primary); text-decoration: none; }
 .btn-view:hover { background: var(--primary); color: white; }
+
+/* ── Sum Cards (Documents page) ───────────────────────── */
+.sum-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  border-top: 3px solid var(--primary);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  display: block;
+  transition: var(--transition);
+}
+.sum-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.sum-card .lbl { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.sum-card .val { font-size: 24px; font-weight: 700; color: var(--primary); letter-spacing: -.5px; }
+.sum-card.red { border-top-color: var(--danger); }
+.sum-card.red .val { color: var(--danger); }
+.sum-card.amber { border-top-color: var(--warning); }
+.sum-card.amber .val { color: var(--warning); }
+.sum-card.gray { border-top-color: var(--text-muted); }
+.sum-card.gray .val { color: var(--text-muted); }
