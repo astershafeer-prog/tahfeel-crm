@@ -20,52 +20,93 @@
     <div class="grid">
       <a href="/leads" style="display:inline-block;margin-bottom:12px;color:#555;text-decoration:none;font-size:13px;">← Back to Leads</a>
     <div class="card">
-        <div class="card-header">
-          <h2>Customer details</h2>
-          <span class="badge
-            {% if lead.status == 'Converted' %}badge-converted
-            {% elif lead.status == 'Lost' %}badge-lost
-            {% elif lead.status == 'Potential Lead' %}badge-potential
-            {% elif 'Called' in lead.status %}badge-called
-            {% else %}badge-new{% endif %}">
-            {{ lead.status }}
-          </span>
-        </div>
-        <div class="card-body">
-          <a href="/leads/{{ lead.id }}/edit" class="btn-edit">✏️ Edit Lead Info</a>
-          <div class="info-row"><span class="lbl">Name</span><span class="val">{{ lead.name }}</span></div>
-          <div class="info-row"><span class="lbl">Company</span><span class="val">{{ lead.company or '—' }}</span></div>
-          <div class="info-row">
-            <span class="lbl">Phone</span>
-            <span class="val">
-              {{ lead.phone or '—' }}
-              {% if lead.phone %}
-              <a href="https://wa.me/{{ lead.phone | replace(' ','') | replace('+','') }}" target="_blank" class="wa-link">WA</a>
-              {% endif %}
-            </span>
-          </div>
-          {% if lead.phone2 %}
-          <div class="info-row">
-            <span class="lbl">Phone 2</span>
-            <span class="val">
-              {{ lead.phone2 }}
-              <a href="https://wa.me/{{ lead.phone2 | replace(' ','') | replace('+','') }}" target="_blank" class="wa-link">WA</a>
-            </span>
-          </div>
-          {% endif %}
-          <div class="info-row"><span class="lbl">Email</span><span class="val">{{ lead.email or '—' }}</span></div>
-          <div class="info-row"><span class="lbl">Address</span><span class="val">{{ lead.address or '—' }}</span></div>
-          <div class="info-row"><span class="lbl">Service</span><span class="val">{{ lead.service or '—' }}</span></div>
-          <div class="info-row"><span class="lbl">Source</span><span class="val">{{ lead.source or '—' }}</span></div>
-          <div class="info-row"><span class="lbl">Type</span><span class="val">{{ lead.lead_type }}</span></div>
-          <div class="info-row"><span class="lbl">Assigned to</span><span class="val">{{ lead.assignee.name if lead.assignee else '—' }}</span></div>
-          <div class="info-row"><span class="lbl">Due date</span><span class="val">{{ lead.due_date.strftime('%d %b %Y') }}</span></div>
-          <div class="info-row"><span class="lbl">Created</span><span class="val">{{ lead.created_at.strftime('%d %b %Y') }}</span></div>
-          {% if lead.potential_value %}
-          <div class="info-row"><span class="lbl">Potential Value</span><span class="val" style="color:#27500A;font-weight:700;">AED {{ '{:,.0f}'.format(lead.potential_value) }}</span></div>
-          {% endif %}
+      <div class="card-header">
+        <h2>Customer Details</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="badge b-{{ lead.status|lower|replace(' ','')|replace('—','') }}">{{ lead.status }}</span>
+          <a href="/leads/{{ lead.id }}/edit" class="btn-sm">✏ Edit</a>
         </div>
       </div>
+      <div class="card-body">
+
+        <div style="background:var(--bg);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:14px;">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Customer Information</div>
+          <div class="form-row-2" style="gap:12px;">
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Full Name</div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-primary);">{{ lead.name }}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Company</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.company or '—' }}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Phone</div>
+              <div style="font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+                {{ lead.phone or '—' }}
+                {% if lead.phone %}
+                <a href="https://wa.me/{{ lead.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+                {% endif %}
+              </div>
+            </div>
+            {% if lead.phone2 %}
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Phone 2</div>
+              <div style="font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+                {{ lead.phone2 }}
+                <a href="https://wa.me/{{ lead.phone2|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+              </div>
+            </div>
+            {% endif %}
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Email</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.email or '—' }}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Address</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.address or '—' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg);border-radius:var(--radius-md);padding:16px 20px;">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Lead Details</div>
+          <div class="form-row-2" style="gap:12px;">
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Service Enquired</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.service or '—' }}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Source</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.source or '—' }}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Lead Type</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.lead_type }}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Assigned To</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.assignee.name if lead.assignee else '—' }}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Due Date</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.due_date.strftime('%d %b %Y') if lead.due_date else '—' }}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Created</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.created_at.strftime('%d %b %Y') }}</div>
+            </div>
+            {% if lead.potential_value %}
+            <div style="grid-column:1/-1;">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Potential Value</div>
+              <div style="font-size:18px;font-weight:700;color:var(--success);">AED {{ '{:,.0f}'.format(lead.potential_value) }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
       <div class="card">
         <div class="card-header"><h2>Update this lead</h2></div>
         <div class="card-body">
