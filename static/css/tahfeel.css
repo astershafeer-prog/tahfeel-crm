@@ -86,7 +86,7 @@ input, select, textarea, button { font-family: var(--font); }
   height: 38px;
   width: auto;
   object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(255,255,255,.3));
+  /* white logo on dark topbar — no filter needed */
 }
 .topbar-title {
   color: white;
