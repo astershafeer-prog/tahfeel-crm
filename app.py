@@ -193,6 +193,7 @@ class ActivityLog(db.Model):
     referral_building = db.Column(db.Integer, default=0)
     networking_activities = db.Column(db.Integer, default=0)
     networking_events = db.Column(db.Integer, default=0)
+    off_day = db.Column(db.String(20), nullable=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
@@ -456,8 +457,10 @@ def dashboard():
 
 @app.route('/leads')
 @login_required
-@admin_required
 def all_leads():
+    if session['role'] == 'finance':
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
     now = datetime.now()
     leads = Lead.query.order_by(Lead.due_date).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
@@ -1408,7 +1411,10 @@ def save_activity():
         return redirect(url_for('dashboard'))
     log_date_str = request.form.get('log_date', datetime.now().date().strftime('%Y-%m-%d'))
     log_date = datetime.strptime(log_date_str, '%Y-%m-%d').date()
-    user_id = session['user_id']
+    # Admin can log for any user
+    user_id = int(request.form.get('user_id_override') or session['user_id'])
+    if request.form.get('user_id_override') and session['role'] != 'admin':
+        flash('Access denied'); return redirect(url_for('activity_log'))
 
     # Upsert — update if exists for this date
     log = ActivityLog.query.filter_by(user_id=user_id, log_date=log_date).first()
@@ -1422,10 +1428,22 @@ def save_activity():
             setattr(log, field, int(val) if val else 0)
         except:
             setattr(log, field, 0)
+    log.off_day = request.form.get('off_day', '') or None
     log.notes = request.form.get('notes', '')
     log.updated_at = datetime.now()
     db.session.commit()
     flash(f'Activity log saved for {log_date.strftime("%d %b %Y")}')
+    return redirect(url_for('activity_log'))
+
+
+@app.route('/activity/<int:log_id>/delete')
+@login_required
+@admin_required
+def delete_activity_log(log_id):
+    log = ActivityLog.query.get_or_404(log_id)
+    db.session.delete(log)
+    db.session.commit()
+    flash('Activity log entry deleted')
     return redirect(url_for('activity_log'))
 
 # ── Admin — Job Types ─────────────────────────────────────────────────────────
@@ -1490,7 +1508,8 @@ def documents():
         doc_list = [d for d in doc_list if
                     search in (d.owner_name or '').lower() or
                     search in (d.doc_type or '').lower() or
-                    (d.customer and search in d.customer.name.lower())]
+                    (d.customer and search in d.customer.name.lower()) or
+                    (d.customer and d.customer.company and search in d.customer.company.lower())]
     if belongs_filter:
         doc_list = [d for d in doc_list if d.belongs_to == belongs_filter]
     if doc_type_filter:
@@ -1631,6 +1650,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
+            'ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)',
             'UPDATE \"user\" SET role = \'sales\' WHERE role = \'staff\'',
 
         ]

@@ -23,7 +23,7 @@
 <div class="nav">
   <a href="/dashboard" {% if active=='dashboard' %}class="active"{% endif %}>📊 Dashboard</a>
   <a href="/leads/add" {% if active=='add_lead' %}class="active"{% endif %}>+ Add Lead</a>
-  {% if session.role in ['admin', 'sales', 'operations'] %}
+  {% if session.role != 'finance' %}
   <a href="/leads" {% if active=='leads' %}class="active"{% endif %}>All Leads</a>
   {% endif %}
   {% if session.role in ['admin', 'sales'] %}

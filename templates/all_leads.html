@@ -10,7 +10,6 @@
 <body>
     {%- from 'macros.html' import topbar, nav, welcome -%}
   {{ topbar() }}
-  </div>
   {{ nav('leads') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}

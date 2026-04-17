@@ -4,120 +4,118 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Add Document</title>
-    <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
-  </div>
   {{ nav('documents') }}
-
-  <div class="container">
+  <div class="container" style="max-width:780px;">
     {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for msg in messages %}
-        <div class="flash" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>✓ {{ msg }}</span>
-          <a href="/documents" style="background:#133E87;color:white;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">View All Documents →</a>
-        </div>
-        {% endfor %}
-      {% endif %}
+      {% if messages %}{% for msg in messages %}
+      <div class="flash" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>✓ {{ msg }}</span>
+        <a href="/documents" style="background:var(--primary);color:white;padding:5px 14px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">View All Documents →</a>
+      </div>
+      {% endfor %}{% endif %}
     {% endwith %}
+
+    <a href="javascript:history.back()" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back</a>
 
     <form method="post" enctype="multipart/form-data">
       <div class="card">
-        <h2>Add Document</h2>
+        <div class="card-header"><h2>Add Document</h2></div>
+        <div class="card-body">
 
-        <div class="form-row-3">
+          <div class="form-row-3">
+            <div class="form-group">
+              <label>Document Type *</label>
+              <select name="doc_type" required>
+                <option value="">— Select —</option>
+                {% for dt in doc_types %}<option value="{{ dt.name }}">{{ dt.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Belongs To *</label>
+              <select name="belongs_to" required>
+                <option value="">— Select —</option>
+                <option value="Company">Company</option>
+                <option value="Individual">Individual</option>
+                <option value="Staff">Staff</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Owner Name *</label>
+              <input type="text" name="owner_name" placeholder="Name on document" required>
+            </div>
+          </div>
+
+          <div class="form-row-3">
+            <div class="form-group">
+              <label>Expiry Date</label>
+              <input type="date" name="expiry_date">
+            </div>
+            <div class="form-group">
+              <label>Attach File (PDF/Image/Word)</label>
+              <input type="file" name="document_file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="padding:6px;">
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <input type="text" name="notes" placeholder="Any additional info">
+            </div>
+          </div>
+
+          <hr class="divider">
+          <div class="section-label" style="margin-bottom:10px;">Link to Customer (optional)</div>
+
           <div class="form-group">
-            <label>Document Type *</label>
-            <select name="doc_type" required>
-              <option value="">— Select —</option>
-              {% for dt in doc_types %}
-              <option value="{{ dt.name }}">{{ dt.name }}</option>
+            <label>Select Existing Customer</label>
+            <select name="customer_id" id="customerSelect">
+              <option value="">— None —</option>
+              {% for c in customers %}
+              <option value="{{ c.id }}" {% if request.args.get('customer_id')==c.id|string %}selected{% endif %}>
+                {{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}
+              </option>
               {% endfor %}
             </select>
           </div>
-          <div class="form-group">
-            <label>Belongs To *</label>
-            <select name="belongs_to" required>
-              <option value="">— Select —</option>
-              <option value="Company">Company</option>
-              <option value="Individual">Individual</option>
-              <option value="Staff">Staff</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Owner Name *</label>
-            <input type="text" name="owner_name" placeholder="Name on document" required>
-          </div>
-        </div>
 
-        <div class="form-row-3">
-          <div class="form-group">
-            <label>Expiry Date</label>
-            <input type="date" name="expiry_date">
-          </div>
-          <div class="form-group">
-            <label>Attach File (PDF/Image/Word)</label>
-            <input type="file" name="document_file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="padding:6px;">
-          </div>
-          <div class="form-group">
-            <label>Notes</label>
-            <input type="text" name="notes" placeholder="Any additional info">
-          </div>
-        </div>
+          <button type="button" onclick="toggleNew(this)" style="background:white;border:1.5px solid var(--primary);color:var(--primary);padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;margin-bottom:12px;">+ Or create new customer</button>
 
-        <hr class="divider">
-        <div class="section-label">Link to Customer (optional)</div>
-
-        <div class="form-group">
-          <label>Select Existing Customer</label>
-          <select name="customer_id" id="customerSelect">
-            <option value="">— None / New customer below —</option>
-            {% for c in customers %}
-            <option value="{{ c.id }}" {% if request.args.get("customer_id") == c.id|string %}selected{% endif %}>{{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <button type="button" class="toggle-new" onclick="toggleNew()">+ Or create new customer</button>
-
-        <div id="new-customer-fields">
-          <div style="font-size:11px;color:#888;margin-bottom:10px;font-weight:600;text-transform:uppercase;">New Customer Details</div>
-          <div class="form-row-2">
-            <div class="form-group"><label>Name</label><input type="text" name="new_customer_name" placeholder="Full name"></div>
-            <div class="form-group"><label>Company</label><input type="text" name="new_customer_company" placeholder="Company name"></div>
-          </div>
-          <div class="form-row-3">
-            <div class="form-group"><label>Phone</label><input type="text" name="new_customer_phone" placeholder="+971 50..."></div>
-            <div class="form-group"><label>Email</label><input type="email" name="new_customer_email" placeholder="email@example.com"></div>
-            <div class="form-group"><label>Source</label>
-              <select name="new_customer_source">
-                <option value="">— Select —</option>
-                {% for s in sources %}
-                <option value="{{ s.name }}">{{ s.name }}</option>
-                {% endfor %}
-              </select>
+          <div id="new-customer-fields" style="display:none;background:var(--bg);border-radius:var(--radius-md);padding:14px;border:1px solid var(--border);">
+            <div class="section-label" style="margin-bottom:10px;">New Customer Details</div>
+            <div class="form-row-2">
+              <div class="form-group"><label>Name</label><input type="text" name="new_customer_name" placeholder="Full name"></div>
+              <div class="form-group"><label>Company</label><input type="text" name="new_customer_company" placeholder="Company name"></div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group"><label>Phone</label><input type="text" name="new_customer_phone" placeholder="+971 50..."></div>
+              <div class="form-group"><label>Email</label><input type="email" name="new_customer_email"></div>
+              <div class="form-group"><label>Source</label>
+                <select name="new_customer_source">
+                  <option value="">— Select —</option>
+                  {% for s in sources %}<option value="{{ s.name }}">{{ s.name }}</option>{% endfor %}
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn-submit">Save Document</button>
-          <a href="/documents" class="btn-cancel">Cancel</a>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Document</button>
+            <a href="/documents" class="btn-cancel">Cancel</a>
+          </div>
         </div>
       </div>
     </form>
   </div>
-
   <script>
-    function toggleNew() {
+    function toggleNew(btn) {
       const el = document.getElementById('new-customer-fields');
-      const visible = el.classList.toggle('visible');
-      if (visible) document.getElementById('customerSelect').value = '';
-      event.target.textContent = visible ? '— Hide new customer form' : '+ Or create new customer';
+      const visible = el.style.display === 'block';
+      el.style.display = visible ? 'none' : 'block';
+      btn.textContent = visible ? '+ Or create new customer' : '— Hide new customer form';
+      if (!visible) document.getElementById('customerSelect').value = '';
     }
   </script>
 </body>

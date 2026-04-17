@@ -4,46 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Tasks</title>
-    <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
-  </div>
   {{ nav('jobs') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
+
     <div class="page-header">
-      <h2>Tasks <span style="font-size:14px;color:#888;font-weight:400;">({{ jobs|length }} total)</span></h2>
+      <h2>Tasks <span class="page-subtitle">({{ jobs|length }} shown)</span></h2>
       <div style="display:flex;gap:8px;align-items:center;">
         {% if session.role in ['admin', 'operations'] %}
-        <button id="bulkDeleteBtn" class="btn-bulk-delete" style="display:none;" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
+        <button id="bulkDeleteBtn" class="btn-bulk-delete" style="display:none;" onclick="confirmBulkDelete()">🗑 Delete (<span id="selectedCount">0</span>)</button>
         {% endif %}
         <a href="/jobs/add" class="btn-add">+ Add Task</a>
       </div>
     </div>
 
-    <div class="summary-row">
-      <div class="summary-card"><div class="label">Total</div><div class="value">{{ jobs|length }}</div></div>
-      <div class="summary-card red"><div class="label">Overdue</div><div class="value">{{ overdue|length }}</div></div>
-      <div class="summary-card"><div class="label">Processing</div><div class="value">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div></div>
-      <div class="summary-card"><div class="label">Pending Auth</div><div class="value">{{ jobs|selectattr('status','eq','Pending Authority')|list|length }}</div></div>
-      <div class="summary-card green"><div class="label">Done</div><div class="value">{{ jobs|selectattr('status','eq','Done')|list|length }}</div></div>
+    <!-- Summary Cards -->
+    <div class="cards-5" style="margin-bottom:12px;">
+      <div class="stat-card"><div class="label">Total</div><div class="value">{{ jobs|length }}</div></div>
+      <div class="stat-card red"><div class="label">Overdue</div><div class="value">{{ overdue|length }}</div></div>
+      <div class="stat-card amber"><div class="label">Processing</div><div class="value">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div></div>
+      <div class="stat-card purple"><div class="label">Pending Close</div><div class="value">{{ jobs|selectattr('status','eq','Pending Finance Close')|list|length }}</div></div>
+      <div class="stat-card green"><div class="label">Done</div><div class="value">{{ jobs|selectattr('status','eq','Done')|list|length }}</div></div>
     </div>
 
+    <!-- Filters -->
     <form method="get" class="filters">
+      <div class="filter-group">
+        <label>From Date</label>
+        <input type="date" name="from_date" value="{{ request.args.get('from_date','') }}">
+      </div>
+      <div class="filter-group">
+        <label>To Date</label>
+        <input type="date" name="to_date" value="{{ request.args.get('to_date','') }}">
+      </div>
       <div class="filter-group">
         <label>Status</label>
         <select name="status">
           <option value="">All Statuses</option>
-          <option value="Pending Finance Approval" {% if status_filter == "Pending Finance Approval" %}selected{% endif %}>Pending Finance Approval</option>
-          <option value="Pending Finance Close" {% if status_filter == "Pending Finance Close" %}selected{% endif %}>Pending Finance Close</option>
-          <option value="Closed" {% if status_filter == "Closed" %}selected{% endif %}>Closed</option>
+          <option value="Pending Finance Approval" {% if status_filter=="Pending Finance Approval" %}selected{% endif %}>Pending Finance Approval</option>
+          <option value="Pending Finance Close" {% if status_filter=="Pending Finance Close" %}selected{% endif %}>Pending Finance Close</option>
+          <option value="Closed" {% if status_filter=="Closed" %}selected{% endif %}>Closed</option>
           {% for s in statuses %}
-          <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+          <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s }}</option>
           {% endfor %}
         </select>
       </div>
@@ -51,64 +61,90 @@
         <label>Priority</label>
         <select name="priority">
           <option value="">All Priorities</option>
-          <option value="High" {% if priority_filter=='High' %}selected{% endif %}>High</option>
-          <option value="Medium" {% if priority_filter=='Medium' %}selected{% endif %}>Medium</option>
-          <option value="Low" {% if priority_filter=='Low' %}selected{% endif %}>Low</option>
+          <option value="High" {% if priority_filter=="High" %}selected{% endif %}>High</option>
+          <option value="Medium" {% if priority_filter=="Medium" %}selected{% endif %}>Medium</option>
+          <option value="Low" {% if priority_filter=="Low" %}selected{% endif %}>Low</option>
         </select>
       </div>
+      {% if session.role in ['admin','finance'] %}
+      <div class="filter-group">
+        <label>Assigned To</label>
+        <select name="assigned_to">
+          <option value="">All Staff</option>
+          {% for u in users %}
+          <option value="{{ u.id }}" {% if request.args.get('assigned_to')==u.id|string %}selected{% endif %}>{{ u.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
       <button type="submit" class="btn-filter">Filter</button>
       <a href="/jobs" class="btn-reset">Reset</a>
     </form>
 
+    <!-- Task Table -->
     <form method="post" action="/jobs/bulk-delete" id="bulkForm">
     <div class="card">
       <table>
         <thead>
-          <tr><th>Customer</th><th>Service Type</th><th>Assigned To</th><th>Due Date</th><th>Priority</th><th>Status</th><th>Invoiced</th><th>Received</th><th>Actions</th></tr>
+          <tr>
+            <th style="width:30px;"><input type="checkbox" id="selectAll" onclick="toggleAll()"></th>
+            <th>Customer</th>
+            <th>Service Type</th>
+            <th>Assigned To</th>
+            <th>Due Date</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody>
           {% for job in jobs %}
-          <tr class="{% if job.due_date and job.due_date < now and job.status != 'Done' %}overdue{% endif %}" onclick="toggleRow(this, event)">
-            <td onclick="event.stopPropagation()"><input type="checkbox" name="job_ids" value="{{ job.id }}" class="job-checkbox" onchange="updateCount()"></td>
-            <td><strong>{{ job.customer.name }}</strong><br><span style="color:#888;font-size:11px;">{{ job.customer.company or '' }}</span></td>
+          {% set is_overdue = job.due_date and job.due_date < now and job.status not in ['Done','Closed','Pending Finance Close'] %}
+          <tr {% if is_overdue %}class="overdue"{% endif %} onclick="toggleRow(this,event)">
+            <td onclick="event.stopPropagation()">
+              <input type="checkbox" name="job_ids" value="{{ job.id }}" class="job-checkbox" onchange="updateCount()">
+            </td>
+            <td>
+              <div style="font-weight:600;color:var(--text-primary);">{{ job.customer.name }}</div>
+              {% if job.customer.company %}<div style="font-size:11px;color:var(--text-muted);">{{ job.customer.company }}</div>{% endif %}
+            </td>
             <td>{{ job.job_type }}</td>
             <td>{{ job.assignee.name if job.assignee else '—' }}</td>
-            <td>
+            <td style="white-space:nowrap;">
               {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
-              {% if job.due_date and job.due_date < now and job.status != 'Done' %}
-              <br><span style="color:#c0392b;font-size:11px;font-weight:600;">⚠ Overdue</span>
-              {% endif %}
+              {% if is_overdue %}<span class="overdue-tag">Late</span>{% endif %}
             </td>
             <td><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></td>
             <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></td>
-            <td>
-              <div style="display:flex;gap:5px;">
+            <td onclick="event.stopPropagation()">
+              <div style="display:flex;gap:5px;flex-wrap:nowrap;">
                 <a href="/jobs/{{ job.id }}" class="btn-sm">View</a>
-                {% if session.role == 'admin' or job.status not in ['Done','Closed','Pending Finance Close'] %}<a href="/jobs/{{ job.id }}/edit" class="btn-sm">Edit</a>{% endif %}
-                {% if session.role in ['admin', 'operations'] %}
-                <a href="/jobs/{{ job.id }}/delete" class="btn-sm" style="border-color:#c0392b;color:#c0392b;" onclick="return confirm('Delete this task?')">Del</a>
+                {% if session.role == 'admin' or (job.status not in ['Done','Closed','Pending Finance Close'] and job.assigned_to == session.user_id) %}
+                <a href="/jobs/{{ job.id }}/edit" class="btn-sm">Edit</a>
+                {% endif %}
+                {% if session.role in ['admin','operations'] %}
+                <a href="/jobs/{{ job.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Delete this task?')">Del</a>
                 {% endif %}
               </div>
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="9" class="empty">No jobs found.</td></tr>
+          <tr><td colspan="8" class="empty">No tasks found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    </form>
   </div>
+
   <script>
     function toggleAll() {
       const checked = document.getElementById('selectAll').checked;
-      document.querySelectorAll('.job-checkbox').forEach(cb => {
-        cb.checked = checked;
-        cb.closest('tr').classList.toggle('selected', checked);
-      });
+      document.querySelectorAll('.job-checkbox').forEach(cb => { cb.checked = checked; cb.closest('tr').classList.toggle('selected', checked); });
       updateCount();
     }
     function toggleRow(row, e) {
-      if (e.target.type === 'checkbox' || e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+      if (['checkbox','a','button'].includes(e.target.tagName.toLowerCase())) return;
       const cb = row.querySelector('.job-checkbox');
       if (cb) { cb.checked = !cb.checked; row.classList.toggle('selected', cb.checked); updateCount(); }
     }
@@ -119,9 +155,7 @@
     }
     function confirmBulkDelete() {
       const count = document.querySelectorAll('.job-checkbox:checked').length;
-      if (confirm(`Delete ${count} selected task(s)? This cannot be undone.`)) {
-        document.getElementById('bulkForm').submit();
-      }
+      if (confirm(`Delete ${count} task(s)?`)) document.getElementById('bulkForm').submit();
     }
   </script>
 </body>
