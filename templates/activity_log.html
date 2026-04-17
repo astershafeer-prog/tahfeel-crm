@@ -323,6 +323,62 @@
     </div>
     {% endif %}
     {% endif %}
+
+    <!-- Admin: Manage Activity Types -->
+    {% if session.role == 'admin' %}
+    <div class="card" style="margin-top:20px;">
+      <div class="card-header">
+        <h2>⚙ Manage Activity Types</h2>
+        <span style="font-size:11px;color:var(--text-muted);">Add, edit or remove tracked activities and their daily targets</span>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/admin/activity-type/add" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="filter-group">
+            <label>Activity Name *</label>
+            <input type="text" name="label" placeholder="e.g. Cold Email Campaign" required style="padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;min-width:260px;">
+          </div>
+          <div class="filter-group">
+            <label>Daily Target</label>
+            <input type="number" name="daily_target" value="5" min="0.1" step="0.1" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;width:80px;">
+          </div>
+          <button type="submit" class="btn-primary">+ Add Activity</button>
+        </form>
+        <hr class="divider">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">#</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Activity Name</th>
+            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Daily Target</th>
+            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Actions</th>
+          </tr></thead>
+          <tbody>
+            {% for at in activity_types %}
+            <tr style="border-bottom:1px solid var(--border-light);">
+              <td style="padding:9px 12px;color:var(--text-muted);">{{ loop.index }}</td>
+              <td style="padding:9px 12px;font-weight:500;" id="at-label-{{ at.id }}">{{ at.label }}</td>
+              <td style="padding:9px 12px;text-align:center;font-weight:600;color:var(--primary);" id="at-target-{{ at.id }}">{{ at.daily_target|int if at.daily_target == (at.daily_target|int) else at.daily_target }}</td>
+              <td style="padding:9px 12px;text-align:center;">
+                <div id="at-actions-{{ at.id }}" style="display:flex;gap:6px;justify-content:center;">
+                  <button onclick="editActivity({{ at.id }}, '{{ at.label|replace("'","\'") }}', {{ at.daily_target }})" class="btn-sm">Edit</button>
+                  <a href="/admin/activity-type/{{ at.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove activity? Historical data will be preserved.')">Delete</a>
+                </div>
+                <form id="at-form-{{ at.id }}" method="post" action="/admin/activity-type/{{ at.id }}/edit" style="display:none;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">
+                  <input type="text" name="label" id="at-input-label-{{ at.id }}" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:220px;">
+                  <input type="number" name="daily_target" id="at-input-target-{{ at.id }}" step="0.1" min="0.1" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:65px;">
+                  <button type="submit" style="background:var(--success);color:white;padding:5px 12px;border-radius:5px;border:none;font-size:12px;cursor:pointer;">Save</button>
+                  <button type="button" onclick="cancelEdit({{ at.id }})" style="background:white;color:var(--text-secondary);padding:5px 10px;border-radius:5px;border:1px solid var(--border);font-size:12px;cursor:pointer;">Cancel</button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-light);">No activities yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
   </div>
 
   <script>
@@ -425,5 +481,4 @@
       document.getElementById('activityFields').style.pointerEvents = 'auto';
     }
   </script>
-</body>
-</html>
+

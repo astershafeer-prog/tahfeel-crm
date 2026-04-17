@@ -199,6 +199,15 @@ class ActivityLog(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     user = db.relationship('User', foreign_keys=[user_id])
 
+
+class ActivityType(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    field_key = db.Column(db.String(50), nullable=False, unique=True)
+    label = db.Column(db.String(150), nullable=False)
+    daily_target = db.Column(db.Float, default=1)
+    sort_order = db.Column(db.Integer, default=0)
+    active = db.Column(db.Boolean, default=True)
+
 class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
@@ -1349,7 +1358,8 @@ def close_job(job_id):
 
 # ── Daily Activity Log ────────────────────────────────────────────────────────
 
-ACTIVITIES = [
+# ACTIVITIES loaded from DB — see get_activities()
+ACTIVITY_DEFAULTS = [
     ('calls_existing',       'Calls to Existing/Potential Clients', 5),
     ('calls_cold',           'Cold Calling to Customer List',       5),
     ('dm_instagram',         'Instagram Direct Messages',           5),
@@ -1367,6 +1377,13 @@ ACTIVITIES = [
     ('networking_activities','Networking/Community Activities',     1),
     ('networking_events',    'Attended Networking Event',           1),
 ]
+
+def get_activities():
+    try:
+        types = ActivityType.query.filter_by(active=True).order_by(ActivityType.sort_order, ActivityType.id).all()
+        return [(t.field_key, t.label, t.daily_target) for t in types]
+    except:
+        return ACTIVITY_DEFAULTS
 
 @app.route('/activity')
 @login_required
@@ -1396,23 +1413,22 @@ def activity_log():
                 ActivityLog.log_date >= from_dt,
                 ActivityLog.log_date <= to_dt
             ).all()
-    except Exception:
-        # Run missing column migration inline
+    except Exception as e:
+        # Table may not exist yet — use empty data
+        logs = []
+        sales_users = [] if session['role'] == 'admin' else [User.query.get(session['user_id'])]
         try:
-            with db.engine.connect() as conn:
-                conn.execute(db.text('ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)'))
-                conn.commit()
-        except Exception:
+            if session['role'] == 'admin':
+                sales_users = User.query.filter(User.role == 'sales', User.active == True).all()
+        except:
             pass
-        flash('System updated. Please refresh.')
-        return redirect(url_for('dashboard'))
 
     # Build summary per user
     user_summaries = {}
     for u in sales_users:
         user_logs = [l for l in logs if l.user_id == u.id]
         summary = {}
-        for field, label, target in ACTIVITIES:
+        for field, label, target in get_activities():
             total = sum(getattr(l, field, 0) or 0 for l in user_logs)
             days = (to_dt - from_dt).days + 1
             weekly_target = target * 6  # 6 working days
@@ -1429,8 +1445,13 @@ def activity_log():
             log_date=now.date()
         ).first()
 
+    try:
+        activity_types = ActivityType.query.filter_by(active=True).order_by(ActivityType.sort_order, ActivityType.id).all()
+    except Exception:
+        activity_types = []
     return render_template('activity_log.html',
-                           activities=ACTIVITIES,
+                           activities=get_activities(),
+                           activity_types=activity_types,
                            user_summaries=user_summaries,
                            sales_users=sales_users,
                            today_log=today_log,
@@ -1456,7 +1477,7 @@ def save_activity():
         log = ActivityLog(user_id=user_id, log_date=log_date)
         db.session.add(log)
 
-    for field, label, target in ACTIVITIES:
+    for field, label, target in get_activities():
         val = request.form.get(field, '0').strip()
         try:
             setattr(log, field, int(val) if val else 0)
@@ -1479,7 +1500,7 @@ def edit_activity_log(log_id):
         flash('Access denied')
         return redirect(url_for('activity_log'))
     if request.method == 'POST':
-        for field, label, target in ACTIVITIES:
+        for field, label, target in get_activities():
             val = request.form.get(field, '0').strip()
             try: setattr(log, field, int(val) if val else 0)
             except: setattr(log, field, 0)
@@ -1502,6 +1523,63 @@ def delete_activity_log(log_id):
     db.session.delete(log)
     db.session.commit()
     flash('Activity log entry deleted')
+    return redirect(url_for('activity_log'))
+
+
+# ── Admin — Activity Types ────────────────────────────────────────────────────
+
+@app.route('/admin/activity-type/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_activity_type():
+    label = request.form.get('label', '').strip()
+    target = request.form.get('daily_target', '1').strip()
+    if not label:
+        flash('Activity name is required')
+        return redirect(url_for('activity_log'))
+    # Generate a safe field_key from label
+    import re as re_mod
+    field_key = re_mod.sub(r'[^a-z0-9]', '_', label.lower())[:40]
+    field_key = re_mod.sub(r'_+', '_', field_key).strip('_')
+    # Ensure unique
+    base_key = field_key
+    counter = 1
+    while ActivityType.query.filter_by(field_key=field_key).first():
+        field_key = f'{base_key}_{counter}'
+        counter += 1
+    try:
+        target_val = float(target)
+    except:
+        target_val = 1.0
+    max_order = db.session.query(db.func.max(ActivityType.sort_order)).scalar() or 0
+    at = ActivityType(field_key=field_key, label=label, daily_target=target_val, sort_order=max_order+1)
+    db.session.add(at)
+    db.session.commit()
+    flash(f'Activity "{label}" added')
+    return redirect(url_for('activity_log'))
+
+@app.route('/admin/activity-type/<int:type_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_activity_type(type_id):
+    at = ActivityType.query.get_or_404(type_id)
+    at.label = request.form.get('label', at.label).strip()
+    try:
+        at.daily_target = float(request.form.get('daily_target', at.daily_target))
+    except:
+        pass
+    db.session.commit()
+    flash(f'Activity updated')
+    return redirect(url_for('activity_log'))
+
+@app.route('/admin/activity-type/<int:type_id>/delete')
+@login_required
+@admin_required
+def admin_delete_activity_type(type_id):
+    at = ActivityType.query.get_or_404(type_id)
+    at.active = False  # Soft delete — preserve historical data
+    db.session.commit()
+    flash(f'Activity "{at.label}" removed')
     return redirect(url_for('activity_log'))
 
 # ── Admin — Job Types ─────────────────────────────────────────────────────────
@@ -1713,6 +1791,14 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
             'ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)',
+            '''CREATE TABLE IF NOT EXISTS activity_type (
+                id SERIAL PRIMARY KEY,
+                field_key VARCHAR(50) UNIQUE NOT NULL,
+                label VARCHAR(150) NOT NULL,
+                daily_target FLOAT DEFAULT 1,
+                sort_order INTEGER DEFAULT 0,
+                active BOOLEAN DEFAULT TRUE
+            )''',
             'UPDATE \"user\" SET role = \'sales\' WHERE role = \'staff\'',
 
         ]
@@ -1751,6 +1837,11 @@ def init_db():
                     db.session.add(ServiceType(name=jt))
                 db.session.commit()
                 print('Default job types created')
+            if ActivityType.query.count() == 0:
+                for i, (key, label, target) in enumerate(ACTIVITY_DEFAULTS):
+                    db.session.add(ActivityType(field_key=key, label=label, daily_target=target, sort_order=i))
+                db.session.commit()
+                print('Default activity types seeded')
             if DocType.query.count() == 0:
                 for dt in ['Trade License', 'Emirates ID', 'Passport', 'Visa', 'Medical Certificate', 'Insurance', 'Contract', 'NOC', 'Ejari', 'Other']:
                     db.session.add(DocType(name=dt))
