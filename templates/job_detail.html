@@ -4,117 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Task Detail</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; font-size: 13px; }
-    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .topbar h1 { font-size: 18px; font-weight: 700; }
-    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
-    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
-    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
-    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
-    .nav a.admin-link { color: #FAC775; }
-    .container { padding: 20px 24px; max-width: 960px; margin: 0 auto; }
-    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
-    .back { font-size: 13px; color: #555; text-decoration: none; display: inline-block; margin-bottom: 12px; }
-    .back:hover { color: #133E87; }
-    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 20px; margin-bottom: 12px; }
-    .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
-    .job-title { font-size: 19px; font-weight: 700; color: #133E87; }
-    .job-customer { font-size: 13px; color: #555; margin-top: 3px; }
-    .header-actions { display: flex; gap: 8px; }
-    .btn-edit { color: #133E87; padding: 6px 14px; border-radius: 8px; border: 1px solid #133E87; text-decoration: none; font-size: 12px; font-weight: 600; }
-    .btn-delete { color: #c0392b; padding: 6px 14px; border-radius: 8px; border: 1px solid #c0392b; background: none; font-size: 12px; font-weight: 600; cursor: pointer; }
-    .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-bottom: 14px; border-bottom: 0.5px solid #eee; margin-bottom: 12px; }
-    .detail-item label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; display: block; margin-bottom: 2px; }
-    .detail-item span { font-size: 13px; color: #333; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .b-pendingfinanceapproval { background: #FAEEDA; color: #633806; }
-    .b-assigned { background: #E6F1FB; color: #0C447C; }
-    .b-jobstarted { background: #EEEDFE; color: #3C3489; }
-    .b-processing { background: #FAEEDA; color: #633806; }
-    .b-pendingauthority { background: #F1EFE8; color: #5F5E5A; }
-    .b-onhold, .b-delayed { background: #FCEBEB; color: #791F1F; }
-    .b-finalstage { background: #EAF3DE; color: #3B6D11; }
-    .b-pendingfinanceclose { background: #EEEDFE; color: #3C3489; }
-    .b-closed { background: #133E87; color: white; }
-    .b-done { background: #EAF3DE; color: #27500A; }
-    .b-high { background: #FCEBEB; color: #791F1F; }
-    .b-medium { background: #FAEEDA; color: #633806; }
-    .b-low { background: #f0f0f0; color: #555; }
-    .fin-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-    .fin-card { background: #f8fbff; border: 0.5px solid #d0e4f7; border-radius: 8px; padding: 10px 12px; }
-    .fin-card .lbl { font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 2px; }
-    .fin-card .val { font-size: 13px; font-weight: 700; color: #133E87; }
-    .fin-card.amber { background: #fffbf0; border-color: #faeeda; }
-    .fin-card.amber .val { color: #854F0B; }
-    .fin-card.green { background: #f0f9f0; border-color: #c0ddb0; }
-    .fin-card.green .val { color: #27500A; }
-    .fin-card.red { background: #fff8f8; border-color: #f7c1c1; }
-    .fin-card.red .val { color: #A32D2D; }
-    .blocked-banner { background: #FAEEDA; border: 1px solid #FAC775; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: #633806; font-weight: 600; }
-    .finance-box { background: #f0f9f0; border: 1px solid #c0ddb0; border-radius: 10px; padding: 16px; }
-    .finance-box h3 { font-size: 13px; font-weight: 700; color: #27500A; margin-bottom: 12px; }
-    .finance-notes-box { background: #fffbf0; border: 1px solid #faeeda; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: #633806; white-space: pre-wrap; }
-    .update-box { background: #f8fbff; border: 1px solid #d0e4f7; border-radius: 10px; padding: 16px; }
-    .update-box h3 { font-size: 13px; font-weight: 700; color: #133E87; margin-bottom: 12px; }
-    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-size: 10px; font-weight: 600; color: #555; margin-bottom: 4px; text-transform: uppercase; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 11px; border: 1px solid #ddd; border-radius: 7px; font-size: 13px; outline: none; font-family: Arial, sans-serif; }
-    .form-group textarea { resize: vertical; min-height: 70px; }
-    .btn-approve { background: #27500A; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-submit { background: #133E87; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-pay { background: #854F0B; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .section-title { font-size: 13px; font-weight: 700; color: #133E87; margin-bottom: 10px; }
-    .timeline-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid #f0f0f0; }
-    .timeline-item:last-child { border-bottom: none; }
-    .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: #133E87; margin-top: 4px; flex-shrink: 0; }
-    .timeline-status { font-size: 11px; font-weight: 700; color: #133E87; margin-bottom: 2px; }
-    .timeline-remark { font-size: 13px; color: #333; margin-bottom: 2px; }
-    .timeline-meta { font-size: 11px; color: #888; }
-    .subtask-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 0.5px solid #f0f0f0; gap: 8px; }
-    .subtask-item:last-child { border-bottom: none; }
-    .subtask-title { font-size: 13px; font-weight: 600; color: #333; }
-    .subtask-meta { font-size: 11px; color: #888; margin-top: 2px; }
-    .subtask-actions { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
-    .btn-xs { padding: 3px 10px; border-radius: 5px; font-size: 11px; border: 1px solid #133E87; color: #133E87; background: none; cursor: pointer; text-decoration: none; white-space: nowrap; }
-    .btn-xs:hover { background: #133E87; color: white; }
-    .btn-xs-danger { padding: 3px 10px; border-radius: 5px; font-size: 11px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; }
-    .add-subtask-form { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-top: 10px; }
-    .add-subtask-form .form-row-3 { margin-bottom: 8px; }
-    .empty { padding: 16px; text-align: center; color: #aaa; font-size: 12px; }
-    .notes-box { background: #fffbf0; border: 1px solid #faeeda; border-radius: 7px; padding: 10px 12px; font-size: 13px; color: #444; margin-top: 8px; }
-    .subtask-done .subtask-title { text-decoration: line-through; color: #aaa; }
-  </style>
+    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo.jpg" type="image/jpeg">
 </head>
 <body>
-  <div class="topbar">
-    <h1>Tahfeel Business Solutions — CRM</h1>
-    <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
-      <span>{{ session.user_name }}{% if session.role == 'admin' %} (Admin){% elif session.role == 'finance' %} (Finance){% endif %}</span>
-      <a href="/logout">Logout</a>
-    </div>
+    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {{ topbar() }}
   </div>
-  <div class="nav">
-    <a href="/dashboard" >Dashboard</a>
-    <a href="/leads/add" >Add Lead</a>
-    {% if session.role in ['admin', 'sales', 'operations'] %}
-    <a href="/leads" >All Leads</a>
-    {% endif %}
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/leads/import" >Import Leads</a>
-    {% endif %}
-    <a href="/jobs" class='active'>Tasks</a>
-    <a href="/documents" >Documents</a>
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/activity" >Daily Log</a>
-    {% endif %}
-    {% if session.role == 'admin' %}
-    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
-    {% endif %}
-  </div>
+  {{ nav('jobs') }}
 
   <div class="container">
     {% with messages = get_flashed_messages() %}

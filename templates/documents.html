@@ -4,90 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Documents</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; font-size: 13px; }
-    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .topbar h1 { font-size: 18px; font-weight: 700; }
-    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
-    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
-    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
-    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
-    .nav a.admin-link { color: #FAC775; }
-    .container { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
-    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
-    .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .summary-row { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
-    .sum-card { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 12px 16px; text-decoration: none; display: block; }
-    .sum-card .lbl { font-size: 10px; color: #888; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; }
-    .sum-card .val { font-size: 22px; font-weight: 700; color: #133E87; }
-    .sum-card.red .val { color: #A32D2D; }
-    .sum-card.amber .val { color: #854F0B; }
-    .sum-card.gray .val { color: #555; }
-    .search-bar { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 10px 14px; margin-bottom: 10px; display: flex; gap: 8px; }
-    .search-bar input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 7px; font-size: 13px; outline: none; }
-    .search-bar input:focus { border-color: #133E87; }
-    .btn-search { background: #133E87; color: white; padding: 8px 18px; border-radius: 7px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-clear { background: white; color: #555; padding: 8px 12px; border-radius: 7px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
-    .filters { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 10px 14px; margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-    .filter-group { display: flex; flex-direction: column; gap: 3px; }
-    .filter-group label { font-size: 10px; color: #888; font-weight: 600; text-transform: uppercase; }
-    .filter-group select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; min-width: 130px; }
-    .btn-filter { background: #133E87; color: white; padding: 7px 16px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; }
-    .btn-reset { background: white; color: #555; padding: 7px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; text-decoration: none; }
-    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #f8f9fa; padding: 9px 14px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 11px; text-transform: uppercase; }
-    td { padding: 10px 14px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #fafbfc; }
-    tr.expiring td { background: #fff8f8; }
-    tr.expiring td:first-child { border-left: 3px solid #c0392b; }
-    tr.near-expiring td { background: #fffbf0; }
-    tr.near-expiring td:first-child { border-left: 3px solid #854F0B; }
-    tr.expired td { background: #fff0f0; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
-    .b-company { background: #E6F1FB; color: #0C447C; }
-    .b-individual { background: #EEEDFE; color: #3C3489; }
-    .b-staff { background: #EAF3DE; color: #27500A; }
-    .wa-btn { background: #25D366; color: white; padding: 3px 9px; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 600; }
-    .btn-del { padding: 3px 9px; border-radius: 6px; font-size: 11px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; }
-    .file-badge { background: #f0f4f8; color: #133E87; padding: 2px 8px; border-radius: 5px; font-size: 11px; }
-    .empty { padding: 30px; text-align: center; color: #aaa; font-size: 13px; }
-    .pagination { display: flex; gap: 6px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
-    .page-btn { padding: 6px 12px; border-radius: 7px; font-size: 12px; text-decoration: none; border: 1px solid #ddd; color: #333; background: white; }
-    .page-btn.active { background: #133E87; color: white; border-color: #133E87; font-weight: 700; }
-    .page-btn.disabled { color: #bbb; pointer-events: none; }
-  </style>
+    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo.jpg" type="image/jpeg">
 </head>
 <body>
-  <div class="topbar">
-    <h1>Tahfeel Business Solutions — CRM</h1>
-    <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
-      <span>{{ session.user_name }}</span>
-      <a href="/logout">Logout</a>
-    </div>
+    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {{ topbar() }}
   </div>
-  <div class="nav">
-    <a href="/dashboard" >Dashboard</a>
-    <a href="/leads/add" >Add Lead</a>
-    {% if session.role in ['admin', 'sales', 'operations'] %}
-    <a href="/leads" >All Leads</a>
-    {% endif %}
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/leads/import" >Import Leads</a>
-    {% endif %}
-    <a href="/jobs" >Tasks</a>
-    <a href="/documents" class='active'>Documents</a>
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/activity" >Daily Log</a>
-    {% endif %}
-    {% if session.role == 'admin' %}
-    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
-    {% endif %}
-  </div>
+  {{ nav('documents') }}
 
   <div class="container">
     {% with messages = get_flashed_messages() %}

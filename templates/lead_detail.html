@@ -4,84 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Lead Detail</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; }
-    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .topbar h1 { font-size: 18px; font-weight: 700; }
-    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
-    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
-    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
-    .nav a:hover { color: white; border-bottom-color: #DCDCBF; }
-    .nav a.admin-link { color: #FAC775; }
-    .nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
-    .nav a.danger { color: #FAC775; }
-    .nav a.danger:hover { color: #FFE0A0; }
-    .container { padding: 24px; max-width: 1000px; margin: 0 auto; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .card { background: white; border-radius: 10px; border: 0.5px solid #ddd; margin-bottom: 20px; }
-    .card-header { padding: 14px 20px; border-bottom: 0.5px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-    .card-header h2 { font-size: 14px; color: #133E87; font-weight: 700; }
-    .card-body { padding: 20px; }
-    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid #f5f5f5; font-size: 13px; }
-    .info-row:last-child { border-bottom: none; }
-    .info-row .lbl { color: #888; min-width: 130px; }
-    .info-row .val { color: #333; font-weight: 500; text-align: right; }
-    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .badge-new { background: #E6F1FB; color: #0C447C; }
-    .badge-converted { background: #EAF3DE; color: #27500A; }
-    .badge-lost { background: #FCEBEB; color: #791F1F; }
-    .badge-potential { background: #FAEEDA; color: #633806; }
-    .badge-called { background: #EEEDFE; color: #3C3489; }
-    label { display: block; font-size: 12px; color: #555; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.3px; }
-    input, select, textarea { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: Arial, sans-serif; outline: none; background: white; }
-    input:focus, select:focus, textarea:focus { border-color: #133E87; }
-    textarea { resize: vertical; min-height: 80px; }
-    .form-group { margin-bottom: 14px; }
-    .btn-primary { background: #133E87; color: white; padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
-    .btn-primary:hover { background: #1E5AB8; }
-    .btn-edit { display: inline-block; background: #1D6F42; color: white; padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; margin-bottom: 12px; }
-    .btn-edit:hover { background: #155a34; }
-    .lost-fields { display: none; background: #fff5f5; border: 1px solid #f5c6c6; border-radius: 8px; padding: 14px; margin-top: 10px; }
-    .potential-field { display: none; background: #f0f8ff; border: 1px solid #b5d4f4; border-radius: 8px; padding: 14px; margin-top: 10px; }
-    .timeline { padding: 0; }
-    .timeline-item { padding: 14px 20px; border-bottom: 0.5px solid #f0f0f0; font-size: 13px; }
-    .timeline-item:last-child { border-bottom: none; }
-    .timeline-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .timeline-stage { font-weight: 700; color: #133E87; font-size: 13px; }
-    .timeline-meta { font-size: 11px; color: #aaa; }
-    .timeline-remark { color: #444; line-height: 1.5; }
-    .timeline-followup { margin-top: 6px; font-size: 12px; color: #854F0B; background: #FAEEDA; padding: 3px 10px; border-radius: 4px; display: inline-block; }
-    .wa-link { display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 3px 10px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600; margin-left: 8px; }
-    .wa-link:hover { background: #1da851; }
-    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
-    .empty-timeline { padding: 24px; text-align: center; color: #aaa; font-size: 13px; }
-    .req { color: #c0392b; }
-  </style>
+    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo.jpg" type="image/jpeg">
 </head>
 <body>
-  <div class="topbar">
-    <h1>Tahfeel Business Solutions — CRM</h1>
-    <a href="/logout">Logout</a>
-  </div>
-  <div class="nav">
-    <a href="/dashboard" >Dashboard</a>
-    <a href="/leads/add" class='active'>Add Lead</a>
-    {% if session.role in ['admin', 'sales', 'operations'] %}
-    <a href="/leads" >All Leads</a>
-    {% endif %}
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/leads/import" >Import Leads</a>
-    {% endif %}
-    <a href="/jobs" >Tasks</a>
-    <a href="/documents" >Documents</a>
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/activity" >Daily Log</a>
-    {% endif %}
-    {% if session.role == 'admin' %}
-    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
-    {% endif %}
-  </div>
+    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {{ topbar() }}
+  {{ nav('add_lead') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}

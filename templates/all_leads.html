@@ -4,102 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — All Leads</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; }
-    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .topbar h1 { font-size: 18px; font-weight: 700; }
-    .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
-    .topbar a { color: #DCDCBF; text-decoration: none; }
-    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
-    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
-    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
-    .nav a.admin-link { color: #FAC775; }
-    .nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
-    .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
-    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
-    .header-btns { display: flex; gap: 8px; }
-    .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .btn-export { background: #1D6F42; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .btn-bulk-delete { background: #c0392b; color: white; padding: 9px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: none; }
-    .btn-bulk-delete.visible { display: inline-block; }
-    .search-bar { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 12px 16px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; }
-    .search-bar input { flex: 1; padding: 9px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-    .search-bar input:focus { border-color: #133E87; }
-    .btn-search { background: #133E87; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-clear { background: white; color: #555; padding: 9px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
-    .filters { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-    .filter-group { display: flex; flex-direction: column; gap: 4px; }
-    .filter-group label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-    .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: white; outline: none; min-width: 140px; }
-    .btn-filter { background: #133E87; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-reset { background: white; color: #555; padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
-    .custom-dates { display: none; gap: 8px; }
-    .custom-dates.visible { display: flex; }
-    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; }
-    td { padding: 11px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #fafbfc; }
-    tr.selected td { background: #EAF3DE; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .badge-new { background: #E6F1FB; color: #0C447C; }
-    .badge-converted { background: #EAF3DE; color: #27500A; }
-    .badge-lost { background: #FCEBEB; color: #791F1F; }
-    .badge-potential { background: #FAEEDA; color: #633806; }
-    .badge-called { background: #EEEDFE; color: #3C3489; }
-    .actions { display: flex; gap: 6px; align-items: center; }
-    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; }
-    .btn-sm:hover { background: #133E87; color: white; }
-    .btn-delete { padding: 5px 12px; border-radius: 6px; font-size: 12px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; white-space: nowrap; }
-    .btn-delete:hover { background: #c0392b; color: white; }
-    .empty { padding: 40px; text-align: center; color: #aaa; font-size: 13px; }
-    input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #133E87; }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; }
-    .modal-overlay.active { display: flex; }
-    .modal { background: white; border-radius: 12px; padding: 28px; max-width: 400px; width: 90%; }
-    .modal h3 { font-size: 16px; color: #133E87; margin-bottom: 10px; }
-    .modal p { font-size: 13px; color: #555; margin-bottom: 20px; }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-    .btn-cancel-modal { padding: 8px 18px; border-radius: 6px; font-size: 13px; border: 1px solid #ddd; color: #555; background: white; cursor: pointer; }
-    .btn-confirm-delete { padding: 8px 18px; border-radius: 6px; font-size: 13px; background: #c0392b; color: white; border: none; cursor: pointer; font-weight: 600; text-decoration: none; }
-    .search-highlight { background: #fff3cd; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #633806; }
-    .pagination { display: flex; gap: 6px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
-    .page-btn { padding: 7px 13px; border-radius: 8px; font-size: 13px; text-decoration: none; border: 1px solid #ddd; color: #333; background: white; }
-    .page-btn:hover { border-color: #133E87; color: #133E87; }
-    .page-btn.active { background: #133E87; color: white; border-color: #133E87; font-weight: 700; }
-    .page-btn.disabled { color: #bbb; cursor: default; pointer-events: none; }
-  </style>
+    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo.jpg" type="image/jpeg">
 </head>
 <body>
-  <div class="topbar">
-    <h1>Tahfeel Business Solutions — CRM</h1>
-    <div class="right">
-      <span>{{ session.user_name }} (Admin)</span>
-      <a href="/logout">Logout</a>
-    </div>
+    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {{ topbar() }}
   </div>
-  <div class="nav">
-    <a href="/dashboard" >Dashboard</a>
-    <a href="/leads/add" >Add Lead</a>
-    {% if session.role in ['admin', 'sales', 'operations'] %}
-    <a href="/leads" class='active'>All Leads</a>
-    {% endif %}
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/leads/import" >Import Leads</a>
-    {% endif %}
-    <a href="/jobs" >Tasks</a>
-    <a href="/documents" >Documents</a>
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/activity" >Daily Log</a>
-    {% endif %}
-    {% if session.role == 'admin' %}
-    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
-    {% endif %}
-  </div>
+  {{ nav('leads') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}

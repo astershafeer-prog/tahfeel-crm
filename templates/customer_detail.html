@@ -4,82 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Customer</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; }
-    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .topbar h1 { font-size: 18px; font-weight: 700; }
-    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
-    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
-    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
-    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
-    .nav a.admin-link { color: #FAC775; }
-    .container { padding: 24px; max-width: 1000px; margin: 0 auto; }
-    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
-    .profile-card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 24px; margin-bottom: 16px; }
-    .profile-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-    .profile-name { font-size: 20px; font-weight: 700; color: #133E87; }
-    .profile-company { font-size: 14px; color: #888; margin-top: 2px; }
-    .btn-add { background: #133E87; color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .detail-item label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; display: block; margin-bottom: 3px; }
-    .detail-item span { font-size: 13px; color: #333; }
-    .revenue-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
-    .rev-card { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 14px 18px; }
-    .rev-card .label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
-    .rev-card .value { font-size: 20px; font-weight: 700; color: #133E87; }
-    .rev-card.green .value { color: #27500A; }
-    .rev-card.amber .value { color: #854F0B; }
-    .section-title { font-size: 15px; font-weight: 700; color: #133E87; margin-bottom: 12px; }
-    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; }
-    td { padding: 11px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #fafbfc; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .b-assigned { background: #E6F1FB; color: #0C447C; }
-    .b-started { background: #EEEDFE; color: #3C3489; }
-    .b-processing { background: #FAEEDA; color: #633806; }
-    .b-pending { background: #F1EFE8; color: #5F5E5A; }
-    .b-onhold { background: #FCEBEB; color: #791F1F; }
-    .b-delayed { background: #FCEBEB; color: #791F1F; }
-    .b-final { background: #EAF3DE; color: #3B6D11; }
-    .b-done { background: #EAF3DE; color: #27500A; }
-    .b-high { background: #FCEBEB; color: #791F1F; }
-    .b-medium { background: #FAEEDA; color: #633806; }
-    .b-low { background: #f0f0f0; color: #555; }
-    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; }
-    .btn-sm:hover { background: #133E87; color: white; }
-    .empty { padding: 30px; text-align: center; color: #aaa; font-size: 13px; }
-  </style>
+    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo.jpg" type="image/jpeg">
 </head>
 <body>
-  <div class="topbar">
-    <h1>Tahfeel Business Solutions — CRM</h1>
-    <div style="display:flex;gap:16px;align-items:center;font-size:13px;">
-      <span>{{ session.user_name }} (Admin)</span>
-      <a href="/logout">Logout</a>
-    </div>
+    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {{ topbar() }}
   </div>
-  <div class="nav">
-    <a href="/dashboard" >Dashboard</a>
-    <a href="/leads/add" >Add Lead</a>
-    {% if session.role in ['admin', 'sales', 'operations'] %}
-    <a href="/leads" >All Leads</a>
-    {% endif %}
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/leads/import" >Import Leads</a>
-    {% endif %}
-    <a href="/jobs" class='active'>Tasks</a>
-    <a href="/documents" >Documents</a>
-    {% if session.role in ['admin', 'sales'] %}
-    <a href="/activity" >Daily Log</a>
-    {% endif %}
-    {% if session.role == 'admin' %}
-    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
-    {% endif %}
-  </div>
+  {{ nav('jobs') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}

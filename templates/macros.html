@@ -1,0 +1,54 @@
+{% macro topbar() %}
+<div class="topbar">
+  <div class="topbar-brand">
+    <img src="/static/img/logo.jpg" alt="Tahfeel" class="topbar-logo">
+    <span class="topbar-title">Business Solutions CRM</span>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-user">
+      <div class="topbar-avatar">{{ session.user_name[0]|upper if session.user_name else 'U' }}</div>
+      <span>{{ session.user_name }}</span>
+      {% if session.role == 'admin' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:10px;color:rgba(255,255,255,.8);">Admin</span>
+      {% elif session.role == 'finance' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:10px;color:rgba(255,255,255,.8);">Finance</span>
+      {% elif session.role == 'operations' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:10px;color:rgba(255,255,255,.8);">Operations</span>
+      {% elif session.role == 'sales' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:10px;color:rgba(255,255,255,.8);">Sales</span>
+      {% endif %}
+    </div>
+    <a href="/logout" class="topbar-logout">Logout</a>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro nav(active='') %}
+<div class="nav">
+  <a href="/dashboard" {% if active=='dashboard' %}class="active"{% endif %}>📊 Dashboard</a>
+  <a href="/leads/add" {% if active=='add_lead' %}class="active"{% endif %}>+ Add Lead</a>
+  {% if session.role in ['admin', 'sales', 'operations'] %}
+  <a href="/leads" {% if active=='leads' %}class="active"{% endif %}>All Leads</a>
+  {% endif %}
+  {% if session.role in ['admin', 'sales'] %}
+  <a href="/leads/import" {% if active=='import_leads' %}class="active"{% endif %}>Import</a>
+  {% endif %}
+  <a href="/jobs" {% if active=='jobs' %}class="active"{% endif %}>Tasks</a>
+  <a href="/documents" {% if active=='documents' %}class="active"{% endif %}>Documents</a>
+  {% if session.role in ['admin', 'sales'] %}
+  <a href="/activity" {% if active=='activity' %}class="active"{% endif %}>Daily Log</a>
+  {% endif %}
+  {% if session.role == 'admin' %}
+  <a href="/admin" class="admin-link {% if active=='admin' %}active{% endif %}">⚙ Admin</a>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro welcome(now) %}
+<div class="welcome-banner">
+  <div class="welcome-text">
+    <h3>{% set hour = now.hour %}{% if hour < 12 %}Good morning{% elif hour < 17 %}Good afternoon{% else %}Good evening{% endif %}, {{ session.user_name.split()[0] }} 👋</h3>
+    <p class="welcome-date">{{ now.strftime('%A, %d %B %Y') }}</p>
+  </div>
+  <div style="text-align:right;z-index:1;">
+    <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.5px;">Your Role</div>
+    <div style="font-size:16px;font-weight:700;color:white;margin-top:2px;">{{ session.role|capitalize }}</div>
+  </div>
+</div>
+{% endmacro %}
