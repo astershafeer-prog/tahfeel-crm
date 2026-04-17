@@ -138,10 +138,21 @@
         {% for update in lead.updates %}
         <div class="timeline-item">
           <div class="timeline-top">
-            <span class="timeline-stage">{{ update.stage }}</span>
+            <span class="timeline-stage">
+              {% set stage_lower = update.stage|lower %}
+              {% if 'whatsapp' in stage_lower or 'whatsup' in stage_lower %}💬
+              {% elif 'mail' in stage_lower or 'email' in stage_lower %}📧
+              {% elif 'call' in stage_lower %}📞
+              {% elif 'converted' in stage_lower %}✅
+              {% elif 'lost' in stage_lower %}❌
+              {% elif 'meeting' in stage_lower %}🤝
+              {% elif 'quotation' in stage_lower %}📄
+              {% else %}📝{% endif %}
+              {{ update.stage }}
+            </span>
             <span class="timeline-meta">{{ update.staff_name }} · {{ update.created_at.strftime('%d %b %Y') }}</span>
           </div>
-          <div class="timeline-remark">{{ update.remark }}</div>
+          <div class="timeline-remark" style="font-size:14px;">{{ update.remark }}</div>
           {% if update.followup_date %}
           <div class="timeline-followup">Follow-up: {{ update.followup_date.strftime('%d %b %Y') }}</div>
           {% endif %}

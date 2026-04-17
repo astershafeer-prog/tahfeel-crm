@@ -940,7 +940,6 @@ def admin_toggle_staff(user_id):
 
 @app.route('/customers')
 @login_required
-@admin_required
 def customers():
     customer_list = Customer.query.order_by(Customer.name).all()
     return render_template('customers.html', customers=customer_list)
