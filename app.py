@@ -1448,7 +1448,18 @@ def documents():
     customer_filter = request.args.get('customer_id', '')
     expiry_filter = request.args.get('expiry', '')
 
-    doc_list = Document.query.order_by(Document.expiry_date).all()
+    try:
+        doc_list = Document.query.order_by(Document.expiry_date).all()
+    except Exception:
+        # Run missing column migrations inline
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text('ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)'))
+                conn.commit()
+        except Exception:
+            pass
+        flash('System updated. Please refresh.')
+        return redirect(url_for('dashboard'))
 
     # Summary counts (all docs)
     total_docs = len(doc_list)
@@ -1603,30 +1614,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
             'UPDATE \"user\" SET role = \'sales\' WHERE role = \'staff\'',
-            '''CREATE TABLE IF NOT EXISTS activity_log (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES "user"(id),
-                log_date DATE NOT NULL,
-                calls_existing INTEGER DEFAULT 0,
-                calls_cold INTEGER DEFAULT 0,
-                dm_instagram INTEGER DEFAULT 0,
-                dm_facebook INTEGER DEFAULT 0,
-                dm_linkedin INTEGER DEFAULT 0,
-                posts_social INTEGER DEFAULT 0,
-                videos_instagram INTEGER DEFAULT 0,
-                linkedin_writing INTEGER DEFAULT 0,
-                whatsapp_prospecting INTEGER DEFAULT 0,
-                community_active INTEGER DEFAULT 0,
-                google_reviews INTEGER DEFAULT 0,
-                real_estate_relations INTEGER DEFAULT 0,
-                content_marketing INTEGER DEFAULT 0,
-                referral_building INTEGER DEFAULT 0,
-                networking_activities INTEGER DEFAULT 0,
-                networking_events INTEGER DEFAULT 0,
-                notes TEXT,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            )''',
+
         ]
         for sql in migrations:
             try:
