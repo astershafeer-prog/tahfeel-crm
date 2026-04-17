@@ -155,5 +155,44 @@
       </div>
     </div>
   </div>
+  <script>
+    // Personalized dashboard quote
+    const dqName = "{{ session.user_name }}".toLowerCase();
+    const dqAll = {
+      "saada": [
+        { text: "Saada, resilience is not about never falling — it's about getting up every single time. You've done it before. Do it again today.", tag: "Keep going 💪" },
+        { text: "Saada, your sensitivity is your superpower. You understand people better than most. Use that gift today.", tag: "Own your strength 🌟" },
+        { text: "Saada, Dubai saw something special in you when you arrived. Every call you make today proves them right.", tag: "You belong here ✨" },
+        { text: "Saada, hard work and heart together are unstoppable. You have both.", tag: "Unstoppable 💫" },
+        { text: "Saada, you understand people deeply — that is your greatest sales tool.", tag: "People's person 🤝" },
+      ],
+      "anfal": [
+        { text: "Anfal, when the customer is frustrated, you are the calm. That is not just a skill — that is a gift.", tag: "Calm under pressure 🌊" },
+        { text: "Anfal, your product knowledge turns conversations into conversions.", tag: "Expert 📚" },
+        { text: "Anfal, the trust you have built with authorities took patience and professionalism. That reputation opens doors.", tag: "Trust builder 🏛️" },
+        { text: "Anfal, your calm energy in a room changes the atmosphere. Bring that today.", tag: "Powerful presence 💪" },
+        { text: "Anfal, you have built relationships that bring clients back. That is the mark of a true professional.", tag: "Trusted advisor 🌟" },
+      ],
+      "aslam": [
+        { text: "Aslam, that smile of yours is not just friendly — it is a door opener. Today, open as many doors as you can.", tag: "Smile = Success 😊" },
+        { text: "Aslam, new chapter, same dedication. Tahfeel is lucky to have you.", tag: "New chapter 📖" },
+        { text: "Aslam, your passion for sales shows in every interaction. Customers feel it. That is what makes them say yes.", tag: "Born for sales 🎯" },
+        { text: "Aslam, hard work plus a great attitude is a formula that never fails.", tag: "Formula for success ✨" },
+        { text: "Aslam, your smile tells people they are welcome, heard, and valued. That is half the sale right there.", tag: "First impressions matter 🌟" },
+      ],
+    };
+    const dqDefault = [
+      { text: "Every call you make today is a step closer to your goal.", tag: "Keep going 💪" },
+      { text: "Your best day at work is still ahead of you. Make today count.", tag: "Best is yet to come 🌟" },
+      { text: "Small consistent actions lead to extraordinary results.", tag: "Consistency wins 🎯" },
+    ];
+    let dq = dqDefault;
+    for (const [k, v] of Object.entries(dqAll)) { if (dqName.includes(k)) { dq = v; break; } }
+    const dqEl = document.getElementById('dashQuote');
+    if (dqEl) {
+      const q = dq[new Date().getDay() % dq.length];
+      dqEl.innerHTML = `<div style="font-size:13px;color:white;font-style:italic;line-height:1.5;">"${q.text}"</div><div style="margin-top:6px;"><span style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.85);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">${q.tag}</span></div>`;
+    }
+  </script>
 </body>
 </html>

@@ -321,27 +321,56 @@
   </div>
 
   <script>
-    // Motivational quotes
-    const quotes = [
-      { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-      { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
-      { text: "The harder you work for something, the greater you'll feel when you achieve it.", author: "Anonymous" },
-      { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
-      { text: "Every day is a new opportunity to reach your goals.", author: "Unknown" },
-      { text: "Your limitation—it's only your imagination.", author: "Unknown" },
-      { text: "Push yourself, because no one else is going to do it for you.", author: "Unknown" },
-      { text: "Great things never come from comfort zones.", author: "Unknown" },
-      { text: "Dream it. Wish it. Do it.", author: "Unknown" },
-      { text: "Success doesn't just find you. You have to go out and get it.", author: "Unknown" },
-      { text: "The key to success is to focus on goals, not obstacles.", author: "Unknown" },
-      { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
-      { text: "Opportunities don't happen, you create them.", author: "Chris Grosser" },
-      { text: "Don't stop when you're tired. Stop when you're done.", author: "Unknown" },
-      { text: "Wake up with determination. Go to bed with satisfaction.", author: "Unknown" },
+    // Personalized quotes per staff member
+    const userName = "{{ session.user_name }}".toLowerCase();
+    const allQuotes = {
+      "saada": [
+        { text: "Saada, you moved to a new country, started a new career, and kept going — that takes a strength most people never find. Today is proof of that.", tag: "Keep going 💪" },
+        { text: "Saada, a psychologist knows better than anyone — emotions are signals, not obstacles. Your sensitivity is your superpower.", tag: "Own your strength 🌟" },
+        { text: "Saada, resilience is not about never falling. It's about getting up every single time. You've done it before. Do it again today.", tag: "Rise up 🔥" },
+        { text: "Saada, Dubai saw something special in you when you arrived. Every call you make today proves them right.", tag: "You belong here ✨" },
+        { text: "Saada, hard work and heart together are unstoppable. You have both. Let them work for you today.", tag: "Unstoppable 💫" },
+        { text: "Saada, some days feel heavier than others. On those days, your determination carries you further than talent alone ever could.", tag: "Determined 🎯" },
+        { text: "Saada, you understand people deeply — that is your greatest sales tool. Use it today.", tag: "People's person 🤝" },
+      ],
+      "anfal": [
+        { text: "Anfal, when the customer is frustrated, you are the calm. That is not just a skill — that is a gift very few people have.", tag: "Calm under pressure 🌊" },
+        { text: "Anfal, your product knowledge turns conversations into conversions. You know the answer before the question is even asked.", tag: "Expert 📚" },
+        { text: "Anfal, the trust you have built with authorities took patience and professionalism. That reputation opens doors others cannot.", tag: "Trust builder 🏛️" },
+        { text: "Anfal, experience is not just time served — it is lessons learned and wisdom applied. You have both.", tag: "Experienced 🎓" },
+        { text: "Anfal, the way you handle an angry customer with grace says everything about your character. That is rare.", tag: "Grace under fire 🔥" },
+        { text: "Anfal, you have built relationships that bring clients back. That is the mark of a true professional.", tag: "Trusted advisor 🌟" },
+        { text: "Anfal, your calm energy in a room changes the atmosphere. Bring that today — it's more powerful than any pitch.", tag: "Powerful presence 💪" },
+      ],
+      "aslam": [
+        { text: "Aslam, that smile of yours is not just friendly — it is a door opener. Today, open as many doors as you can.", tag: "Smile = Success 😊" },
+        { text: "Aslam, passion and experience together are a rare combination. You walked in with both. Use them today.", tag: "Passionate 🔥" },
+        { text: "Aslam, new chapter, same dedication. Tahfeel is lucky to have someone who brings energy and experience on day one.", tag: "New chapter 📖" },
+        { text: "Aslam, your passion for sales shows in every interaction. Customers feel it. That is what makes them say yes.", tag: "Born for sales 🎯" },
+        { text: "Aslam, hard work plus a great attitude is a formula that never fails. You have both in abundance.", tag: "Formula for success ✨" },
+        { text: "Aslam, your smile tells people they are welcome, heard, and valued. That is half the sale right there.", tag: "First impressions matter 🌟" },
+        { text: "Aslam, every great salesperson started somewhere new. Your experience means you're ahead of the curve already.", tag: "Ahead of the curve 🚀" },
+      ],
+    };
+
+    // Default quotes for unlisted users
+    const defaultQuotes = [
+      { text: "Every call you make today is a step closer to your goal. Keep dialling.", tag: "Keep going 💪" },
+      { text: "Your best day at work is still ahead of you. Make today count.", tag: "Best is yet to come 🌟" },
+      { text: "Small consistent actions lead to extraordinary results.", tag: "Consistency wins 🎯" },
+      { text: "The effort you put in today becomes the success you celebrate tomorrow.", tag: "Tomorrow's success 🔥" },
+      { text: "Every customer you help is a life made a little easier. That matters.", tag: "Make a difference ✨" },
     ];
-    const q = quotes[new Date().getDay() % quotes.length];
+
+    // Find matching quotes
+    let quotes = defaultQuotes;
+    for (const [key, val] of Object.entries(allQuotes)) {
+      if (userName.includes(key)) { quotes = val; break; }
+    }
+    const dayIndex = new Date().getDay();
+    const q = quotes[dayIndex % quotes.length];
     document.getElementById('quoteCard').innerHTML =
-      `<div class="quote-text">"${q.text}"</div><div class="quote-author">— ${q.author}</div>`;
+      `<div class="quote-text">"${q.text}"</div><div style="margin-top:8px;"><span style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">${q.tag}</span></div>`;
 
     // Staff tabs (admin)
     function showTab(id, btn) {
