@@ -1353,28 +1353,37 @@ def activity_log():
         flash('Access denied')
         return redirect(url_for('dashboard'))
     now = datetime.now()
-    # Date range — default current week
     week_start = (now - timedelta(days=now.weekday())).date()
     from_date = request.args.get('from', week_start.strftime('%Y-%m-%d'))
     to_date = request.args.get('to', now.date().strftime('%Y-%m-%d'))
-    view = request.args.get('view', 'week')  # week / month / all
+    view = request.args.get('view', 'week')
 
     from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
     to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
 
-    if session['role'] == 'admin':
-        # Admin sees all sales staff
-        sales_users = User.query.filter(User.role == 'sales', User.active == True).all()
-        logs = ActivityLog.query.filter(
-            ActivityLog.log_date >= from_dt,
-            ActivityLog.log_date <= to_dt
-        ).all()
-    else:
-        sales_users = [User.query.get(session['user_id'])]
-        logs = ActivityLog.query.filter_by(user_id=session['user_id']).filter(
-            ActivityLog.log_date >= from_dt,
-            ActivityLog.log_date <= to_dt
-        ).all()
+    try:
+        if session['role'] == 'admin':
+            sales_users = User.query.filter(User.role == 'sales', User.active == True).all()
+            logs = ActivityLog.query.filter(
+                ActivityLog.log_date >= from_dt,
+                ActivityLog.log_date <= to_dt
+            ).all()
+        else:
+            sales_users = [User.query.get(session['user_id'])]
+            logs = ActivityLog.query.filter_by(user_id=session['user_id']).filter(
+                ActivityLog.log_date >= from_dt,
+                ActivityLog.log_date <= to_dt
+            ).all()
+    except Exception:
+        # Run missing column migration inline
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text('ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)'))
+                conn.commit()
+        except Exception:
+            pass
+        flash('System updated. Please refresh.')
+        return redirect(url_for('dashboard'))
 
     # Build summary per user
     user_summaries = {}
