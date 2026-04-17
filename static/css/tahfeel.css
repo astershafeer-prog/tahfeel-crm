@@ -932,24 +932,23 @@ tr.selected td { background: var(--info-bg) !important; }
 
 /* ── Lead Detail Info Rows ──────────────────────────────── */
 .info-row {
-  display: flex;
-  gap: 10px;
-  padding: 5px 0;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+  padding: 7px 0;
   border-bottom: 1px solid var(--border-light);
   font-size: 13px;
-  align-items: baseline;
+  align-items: center;
 }
 .info-row:last-child { border-bottom: none; }
-.info-row .lbl {
-  font-size: 10px;
-  font-weight: 700;
+.info-row > .lbl {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: .4px;
-  min-width: 110px;
-  flex-shrink: 0;
+  letter-spacing: .3px;
 }
-.info-row .val {
+.info-row > .val {
   color: var(--text-primary);
   font-weight: 500;
 }
