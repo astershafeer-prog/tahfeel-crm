@@ -1634,6 +1634,23 @@ def admin_add_jobtype():
             flash('Job type already exists')
     return redirect(url_for('admin_panel'))
 
+
+@app.route('/admin/jobtype/<int:jobtype_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_jobtype(jobtype_id):
+    jt = ServiceType.query.get_or_404(jobtype_id)
+    name = request.form.get('name', '').strip()
+    if name:
+        jt.name = name
+    try:
+        jt.default_days = int(request.form.get('default_days', jt.default_days or 1))
+    except:
+        pass
+    db.session.commit()
+    flash(f'Service type updated')
+    return redirect(url_for('admin_panel') + '#service-types')
+
 @app.route('/admin/jobtype/<int:jobtype_id>/delete')
 @login_required
 @admin_required
