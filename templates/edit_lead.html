@@ -42,16 +42,19 @@
   <div class="nav">
     <a href="/dashboard" >Dashboard</a>
     <a href="/leads/add" class='active'>Add Lead</a>
+    {% if session.role in ['admin', 'sales', 'operations'] %}
+    <a href="/leads" >All Leads</a>
+    {% endif %}
     {% if session.role in ['admin', 'sales'] %}
-    <a href="/leads" >All Leads</a>
     <a href="/leads/import" >Import Leads</a>
-    {% elif session.role == 'operations' %}
-    <a href="/leads" >All Leads</a>
     {% endif %}
     <a href="/jobs" >Tasks</a>
     <a href="/documents" >Documents</a>
+    {% if session.role in ['admin', 'sales'] %}
+    <a href="/activity" >Daily Log</a>
+    {% endif %}
     {% if session.role == 'admin' %}
-    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
     {% endif %}
   </div>
   <div class="container">

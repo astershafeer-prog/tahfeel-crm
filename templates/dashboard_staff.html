@@ -72,11 +72,19 @@
   <div class="nav">
     <a href="/dashboard" class='active'>Dashboard</a>
     <a href="/leads/add" >Add Lead</a>
+    {% if session.role in ['admin', 'sales', 'operations'] %}
     <a href="/leads" >All Leads</a>
+    {% endif %}
+    {% if session.role in ['admin', 'sales'] %}
+    <a href="/leads/import" >Import Leads</a>
+    {% endif %}
     <a href="/jobs" >Tasks</a>
     <a href="/documents" >Documents</a>
-    {% if session.role in ['sales', 'admin'] %}
-    <a href="/activity">Daily Log</a>
+    {% if session.role in ['admin', 'sales'] %}
+    <a href="/activity" >Daily Log</a>
+    {% endif %}
+    {% if session.role == 'admin' %}
+    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
     {% endif %}
   </div>
   <div class="container">

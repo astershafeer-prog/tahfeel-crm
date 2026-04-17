@@ -85,12 +85,21 @@
   </div>
   <div class="nav">
     <a href="/dashboard" class='active'>Dashboard</a>
-    <a href="/leads" >All Leads</a>
     <a href="/leads/add" >Add Lead</a>
+    {% if session.role in ['admin', 'sales', 'operations'] %}
+    <a href="/leads" >All Leads</a>
+    {% endif %}
+    {% if session.role in ['admin', 'sales'] %}
     <a href="/leads/import" >Import Leads</a>
+    {% endif %}
     <a href="/jobs" >Tasks</a>
     <a href="/documents" >Documents</a>
+    {% if session.role in ['admin', 'sales'] %}
+    <a href="/activity" >Daily Log</a>
+    {% endif %}
+    {% if session.role == 'admin' %}
     <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
+    {% endif %}
   </div>
 
   <div class="container">
@@ -154,6 +163,13 @@
       <a href="/documents" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="lbl">Total Documents</div><div class="val">{{ total_docs }}</div></div></a>
       <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="lbl">Expiring ≤30 Days</div><div class="val">{{ docs_30 }}</div></div></a>
       <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="lbl">Expiring 31–60 Days</div><div class="val">{{ docs_60 }}</div></div></a>
+    </div>
+    <div style="background:white;border:0.5px solid #ddd;border-radius:10px;padding:12px 16px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;">Sales Activity</div>
+        <div style="font-size:13px;font-weight:600;color:#133E87;margin-top:2px;">View daily activity log for all sales staff</div>
+      </div>
+      <a href="/activity" style="background:#133E87;color:white;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">Daily Log →</a>
     </div>
     <div class="section-label" style="margin-top:14px;">Staff Workload</div>
     <div class="card">
