@@ -894,3 +894,38 @@ tr.selected td { background: var(--info-bg) !important; }
   gap: 10px;
 }
 .bulk-bar.visible { display: flex; }
+
+/* ── Admin Panel List Items ─────────────────────────────── */
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+}
+.list-item:last-child { border-bottom: none; }
+.card-body .form-row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 12px; }
+.card-body .form-row .form-group { flex: 1; margin: 0; }
+.empty { padding: 20px; text-align: center; color: var(--text-light); font-size: 12px; }
+.divider { border: none; border-top: 1px solid var(--border-light); margin: 14px 0; }
+
+/* ── Fin Row ────────────────────────────────────────────── */
+.fin-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+@media (max-width: 600px) { .fin-row { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── Dashboard Filter Bar ───────────────────────────────── */
+.filter-bar {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+}
+.custom-dates { display: none; gap: 10px; }
+.custom-dates.visible { display: flex; }

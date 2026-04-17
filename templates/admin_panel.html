@@ -28,7 +28,7 @@
       </div>
       <div class="card-body">
         <form method="POST" action="/admin/staff/add">
-          <div class="form-row">
+          <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;">
             <div class="form-group">
               <label>Full Name</label>
               <input type="text" name="name" required placeholder="Staff name">
@@ -88,7 +88,7 @@
             <tr id="edit-row-{{ user.id }}" style="display:none; background:#f0f4f8;">
               <td colspan="5">
                 <form method="POST" action="/admin/staff/{{ user.id }}/edit">
-                  <div class="form-row">
+                  <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;">
                     <div class="form-group">
                       <label>Name</label>
                       <input type="text" name="name" value="{{ user.name }}" required>
@@ -131,7 +131,7 @@
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/service/add">
-            <div class="form-row">
+            <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;">
               <div class="form-group">
                 <label>Service Name</label>
                 <input type="text" name="name" required placeholder="e.g. Trade License">
@@ -142,7 +142,7 @@
           <hr class="divider">
           {% if services %}
             {% for service in services %}
-            <div class="list-item">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
               <span>{{ service.name }}</span>
               <a href="/admin/service/{{ service.id }}/delete" class="btn-sm btn-danger"
                  onclick="return confirm('Remove {{ service.name }}?')">Remove</a>
@@ -161,7 +161,7 @@
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/source/add">
-            <div class="form-row">
+            <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;">
               <div class="form-group">
                 <label>Source Name</label>
                 <input type="text" name="name" required placeholder="e.g. WhatsApp">
@@ -172,7 +172,7 @@
           <hr class="divider">
           {% if sources %}
             {% for source in sources %}
-            <div class="list-item">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
               <span>{{ source.name }}</span>
               <a href="/admin/source/{{ source.id }}/delete" class="btn-sm btn-danger"
                  onclick="return confirm('Remove {{ source.name }}?')">Remove</a>
@@ -191,9 +191,9 @@
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/jobtype/add">
-            <div class="form-row">
+            <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;">
               <div class="form-group">
-                <label>Job Type Name</label>
+                <label>Service Type Name</label>
                 <input type="text" name="name" required placeholder="e.g. Trade License">
               </div>
               <button type="submit" class="btn-primary">Add</button>
@@ -202,7 +202,7 @@
           <hr class="divider">
           {% if job_types %}
             {% for jt in job_types %}
-            <div class="list-item">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
               <span>{{ jt.name }}</span>
               <a href="/admin/jobtype/{{ jt.id }}/delete" class="btn-sm btn-danger"
                  onclick="return confirm('Remove {{ jt.name }}?')">Remove</a>
@@ -221,7 +221,7 @@
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/doctype/add">
-            <div class="form-row">
+            <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;">
               <div class="form-group">
                 <label>Document Type Name</label>
                 <input type="text" name="name" required placeholder="e.g. Emirates ID">
@@ -232,7 +232,7 @@
           <hr class="divider">
           {% if doc_types %}
             {% for dt in doc_types %}
-            <div class="list-item">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
               <span>{{ dt.name }}</span>
               <a href="/admin/doctype/{{ dt.id }}/delete" class="btn-sm btn-danger"
                  onclick="return confirm('Remove {{ dt.name }}?')">Remove</a>

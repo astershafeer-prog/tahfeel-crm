@@ -1156,6 +1156,13 @@ def job_detail(job_id):
             job.testimonial = request.form.get('testimonial') or None
             job.final_remarks = request.form.get('final_remarks') or None
             job.future_work_notes = request.form.get('future_work_notes') or None
+            # Also log completion details to timeline
+            completion_note = f'Task completed. Rating: {job.customer_rating}/5.' if job.customer_rating else 'Task completed.'
+            if job.google_review: completion_note += f' Google review: {job.google_review}.'
+            if job.testimonial: completion_note += f' Testimonial: {job.testimonial}.'
+            if job.final_remarks: completion_note += f' Remarks: {job.final_remarks}'
+            update_completion = JobUpdate(job_id=job.id, status=new_status, remark=completion_note, staff_name=session['user_name'])
+            db.session.add(update_completion)
         update = JobUpdate(job_id=job.id, status=new_status,
                            remark=remark, staff_name=session['user_name'])
         db.session.add(update)

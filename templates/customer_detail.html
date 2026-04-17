@@ -4,62 +4,88 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Customer</title>
-    <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
   {{ nav('jobs') }}
-  <div class="container">
+  <div class="container" style="max-width:960px;">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    <div class="profile-card">
-      <div class="profile-header">
-        <div>
-          <div class="profile-name">{{ customer.name }}</div>
-          <div class="profile-company">{{ customer.company or '' }}</div>
+    <a href="javascript:history.back()" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back</a>
+
+    <!-- Customer Header Card -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div style="font-size:20px;font-weight:700;color:var(--text-primary);letter-spacing:-.3px;">{{ customer.name }}</div>
+            {% if customer.company %}<div style="font-size:13px;color:var(--text-muted);margin-top:2px;">{{ customer.company }}</div>{% endif %}
+          </div>
+          <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Task</a>
         </div>
-        <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Task</a>
+
+        <div class="form-row-3">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Phone</div>
+            <div style="font-size:13px;">
+              {% if customer.phone %}
+                {{ customer.phone }}
+                <a href="https://wa.me/{{ customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="margin-left:8px;background:#25D366;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;text-decoration:none;">WhatsApp</a>
+              {% else %}—{% endif %}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Email</div>
+            <div style="font-size:13px;">{{ customer.email or '—' }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Source</div>
+            <div style="font-size:13px;">{{ customer.source or '—' }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Address</div>
+            <div style="font-size:13px;">{{ customer.address or '—' }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Customer Since</div>
+            <div style="font-size:13px;">{{ customer.created_at.strftime('%d %b %Y') }}</div>
+          </div>
+          {% if customer.lead_id %}
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Original Lead</div>
+            <a href="/leads/{{ customer.lead_id }}" style="font-size:13px;color:var(--primary);">View Lead →</a>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if customer.notes %}
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light);">
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Notes</div>
+          <div style="font-size:13px;color:var(--text-primary);">{{ customer.notes }}</div>
+        </div>
+        {% endif %}
       </div>
-      <div class="details-grid">
-        <div class="detail-item"><label>Phone</label><span>{{ customer.phone or '—' }}</span></div>
-        <div class="detail-item"><label>Email</label><span>{{ customer.email or '—' }}</span></div>
-        <div class="detail-item"><label>Source</label><span>{{ customer.source or '—' }}</span></div>
-        <div class="detail-item"><label>Address</label><span>{{ customer.address or '—' }}</span></div>
-        <div class="detail-item"><label>Customer since</label><span>{{ customer.created_at.strftime('%d %b %Y') }}</span></div>
-        {% if customer.lead_id %}<div class="detail-item"><label>From lead</label><span><a href="/leads/{{ customer.lead_id }}" style="color:#133E87;">View original lead</a></span></div>{% endif %}
-      </div>
-      {% if customer.notes %}
-      <div style="margin-top:14px;padding-top:14px;border-top:0.5px solid #eee;">
-        <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Notes</div>
-        <div style="font-size:13px;color:#444;">{{ customer.notes }}</div>
-      </div>
-      {% endif %}
     </div>
 
-    <div class="revenue-row">
-      <div class="rev-card">
-        <div class="label">Total Invoiced</div>
-        <div class="value">AED {{ '{:,.0f}'.format(total_invoiced) }}</div>
-      </div>
-      <div class="rev-card amber">
-        <div class="label">Total Received</div>
-        <div class="value">AED {{ '{:,.0f}'.format(total_received) }}</div>
-      </div>
-      <div class="rev-card green">
-        <div class="label">Pending</div>
-        <div class="value">AED {{ '{:,.0f}'.format(total_invoiced - total_received) }}</div>
-      </div>
+    <!-- Financial Summary -->
+    <div class="cards-3" style="margin-bottom:12px;">
+      <div class="stat-card"><div class="label">Total Invoiced</div><div class="val-amount">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>
+      <div class="stat-card amber"><div class="label">Total Received</div><div class="val-amount">AED {{ '{:,.0f}'.format(total_received) }}</div></div>
+      <div class="stat-card red"><div class="label">Pending</div><div class="val-amount">AED {{ '{:,.0f}'.format(total_invoiced - total_received) }}</div></div>
     </div>
 
-    <div class="section-title">Tasks ({{ jobs|length }})</div>
-    <div class="card">
+    <!-- Tasks -->
+    <div class="section-label">Tasks ({{ jobs|length }})</div>
+    <div class="card" style="margin-bottom:12px;">
+      {% if jobs %}
       <table>
         <thead>
-          <tr><th>Service Type</th><th>Assigned To</th><th>Due Date</th><th>Priority</th><th>Status</th><th>Amount Received</th><th>Actions</th></tr>
+          <tr><th>Service Type</th><th>Assigned To</th><th>Due Date</th><th>Priority</th><th>Status</th><th>Invoiced</th><th>Received</th><th></th></tr>
         </thead>
         <tbody>
           {% for job in jobs %}
@@ -68,48 +94,55 @@
             <td>{{ job.assignee.name if job.assignee else '—' }}</td>
             <td>{{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}</td>
             <td><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></td>
-            <td><span class="badge b-{{ job.status|lower|replace(' ', '') }}">{{ job.status }}</span></td>
-            <td>AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</td>
+            <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></td>
+            <td style="font-family:var(--font-mono);font-size:12px;">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</td>
+            <td style="font-family:var(--font-mono);font-size:12px;">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</td>
             <td><a href="/jobs/{{ job.id }}" class="btn-sm">View</a></td>
           </tr>
-          {% else %}
-          <tr><td colspan="7" class="empty">No jobs yet for this customer.</td></tr>
           {% endfor %}
         </tbody>
       </table>
+      {% else %}
+      <div class="empty">No tasks yet. <a href="/jobs/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add first task →</a></div>
+      {% endif %}
     </div>
 
-    <div class="section-title" style="margin-top:16px;">Documents</div>
+    <!-- Documents -->
+    <div class="section-label">Documents ({{ documents|length }})</div>
     <div class="card">
+      {% if documents %}
       <table>
         <thead>
           <tr><th>Document Type</th><th>Owner Name</th><th>Belongs To</th><th>Expiry Date</th><th>File</th></tr>
         </thead>
         <tbody>
-          {% set cust_docs = customer.id|string %}
-          {% if customer.jobs %}
-            {% set has_docs = namespace(found=false) %}
-          {% endif %}
           {% for doc in documents %}
           {% set days = ((doc.expiry_date - now).days) if doc.expiry_date else 999 %}
           <tr {% if doc.expiry_date and doc.expiry_date < now %}style="background:#fff0f0;"{% elif doc.expiry_date and days <= 30 %}style="background:#fff8f8;"{% endif %}>
             <td><strong>{{ doc.doc_type }}</strong></td>
             <td>{{ doc.owner_name }}</td>
-            <td>{{ doc.belongs_to }}</td>
+            <td><span class="badge b-{{ doc.belongs_to|lower }}">{{ doc.belongs_to }}</span></td>
             <td>
               {% if doc.expiry_date %}
                 {{ doc.expiry_date.strftime('%d %b %Y') }}
-                {% if doc.expiry_date < now %}<span style="color:#c0392b;font-size:10px;font-weight:600;"> EXPIRED</span>
-                {% elif days <= 30 %}<span style="color:#c0392b;font-size:10px;font-weight:600;"> ⚠ {{ days }}d</span>{% endif %}
+                {% if doc.expiry_date < now %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> EXPIRED</span>
+                {% elif days <= 30 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> ⚠ {{ days }}d</span>{% endif %}
               {% else %}—{% endif %}
             </td>
-            <td>{% if doc.file_name %}<span style="background:#f0f4f8;color:#133E87;padding:2px 8px;border-radius:5px;font-size:11px;">📎 {{ doc.file_name[:25] }}</span>{% else %}—{% endif %}</td>
+            <td>
+              {% if doc.file_name %}
+                <span style="background:var(--info-bg);color:var(--info);padding:2px 8px;border-radius:5px;font-size:11px;">📎 {{ doc.file_name[:25] }}</span>
+              {% else %}
+                <span style="color:var(--text-light);font-size:12px;">No file</span>
+              {% endif %}
+            </td>
           </tr>
-          {% else %}
-          <tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa;font-size:12px;">No documents for this customer. <a href="/documents/add?customer_id={{ customer.id }}" style="color:#133E87;">Add one →</a></td></tr>
           {% endfor %}
         </tbody>
       </table>
+      {% else %}
+      <div class="empty">No documents yet. <a href="/documents/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add document →</a></div>
+      {% endif %}
     </div>
   </div>
 </body>

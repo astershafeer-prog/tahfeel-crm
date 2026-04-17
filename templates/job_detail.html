@@ -174,7 +174,7 @@
     {% endif %}
 
     <!-- Update form — staff/admin only, not finance, not if pending -->
-    {% if job.status in ['Done', 'Pending Finance Close', 'Closed'] and session.role not in ['finance'] %}
+    {% if job.status in ['Done', 'Pending Finance Close', 'Closed'] and session.role not in ['finance'] and not job.final_remarks %}
     <div class="card">
       <div style="background:#f0f9f0;border:1px solid #c0ddb0;border-radius:8px;padding:14px;">
         <div style="font-size:12px;font-weight:700;color:#27500A;margin-bottom:10px;">Update Customer Feedback</div>
