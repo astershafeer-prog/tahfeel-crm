@@ -1114,13 +1114,47 @@ def add_job():
             )
             db.session.add(subtask)
         db.session.commit()
-        flash('Task created successfully')
-        action = request.form.get('action', 'save')
-        if action == 'save_and_add':
-            # Redirect back to add task with same customer pre-selected
-            return redirect(url_for('add_job') + f'?customer_id={job.customer_id}')
+        db.session.flush()
+
+        # Handle additional tasks for same customer
+        extra_types = request.form.getlist('extra_job_type[]')
+        extra_assigned = request.form.getlist('extra_assigned_to[]')
+        extra_due = request.form.getlist('extra_due_date[]')
+        extra_priority = request.form.getlist('extra_priority[]')
+        extra_amount = request.form.getlist('extra_amount[]')
+        extra_persons = request.form.getlist('extra_persons[]')
+        extra_notes = request.form.getlist('extra_notes[]')
+
+        for i, jt in enumerate(extra_types):
+            if not jt: continue
+            try: ea = int(extra_assigned[i]) if i < len(extra_assigned) and extra_assigned[i] else None
+            except: ea = None
+            try: ed = datetime.strptime(extra_due[i], '%Y-%m-%d') if i < len(extra_due) and extra_due[i] else datetime.now() + timedelta(days=1)
+            except: ed = datetime.now() + timedelta(days=1)
+            try: eamt = float(extra_amount[i]) if i < len(extra_amount) and extra_amount[i] else 0
+            except: eamt = 0
+            try: ep = int(extra_persons[i]) if i < len(extra_persons) and extra_persons[i] else 1
+            except: ep = 1
+            extra_job = Job(
+                customer_id=job.customer_id,
+                job_type=jt,
+                assigned_to=ea,
+                due_date=ed,
+                priority=extra_priority[i] if i < len(extra_priority) else 'Medium',
+                amount_invoiced=eamt,
+                num_persons=ep,
+                internal_notes=extra_notes[i] if i < len(extra_notes) else None,
+                status='Pending Finance Approval',
+                created_by=session['user_id']
+            )
+            db.session.add(extra_job)
+
+        db.session.commit()
+        count = 1 + len([t for t in extra_types if t])
+        flash(f'{count} task(s) created successfully')
         return redirect(url_for('jobs'))
-    return render_template('add_job.html', customers=customers, job_types=job_types, users=users)
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow)
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
 @login_required
