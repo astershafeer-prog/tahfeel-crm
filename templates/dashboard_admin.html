@@ -75,16 +75,15 @@
       <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">≤30 Days</div><div class="value">{{ docs_30 }}</div></div></a>
       <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">31–60 Days</div><div class="value">{{ docs_60 }}</div></div></a>
       <a href="/documents?expiry=90" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;border-top-color:#4A5568;"><div class="label">61–90 Days</div><div class="value" style="color:#4A5568;">{{ docs_90 }}</div></div></a>
-    </div></a>
-      <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="lbl">Expiring ≤30 Days</div><div class="val">{{ docs_30 }}</div></div></a>
-      <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="lbl">Expiring 31–60 Days</div><div class="val">{{ docs_60 }}</div></div></a>
     </div>
-    <div style="background:white;border:0.5px solid #ddd;border-radius:10px;padding:12px 16px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;">Sales Activity</div>
-        <div style="font-size:13px;font-weight:600;color:#133E87;margin-top:2px;">View daily activity log for all sales staff</div>
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;">
+        <div>
+          <div class="section-label" style="margin:0 0 3px;">Sales Activity</div>
+          <div style="font-size:13px;color:var(--text-secondary);">View daily activity log for all sales staff</div>
+        </div>
+        <a href="/activity" class="btn-add">Daily Log →</a>
       </div>
-      <a href="/activity" style="background:#133E87;color:white;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">Daily Log →</a>
     </div>
     <div class="section-label" style="margin-top:14px;">Staff Workload</div>
     <div class="card">
