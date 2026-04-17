@@ -1431,8 +1431,8 @@ def activity_log():
         for field, label, target in get_activities():
             total = sum(getattr(l, field, 0) or 0 for l in user_logs)
             days = (to_dt - from_dt).days + 1
-            weekly_target = target * 6  # 6 working days
-            period_target = round(target * days)
+            weeks = max(1, days / 6)  # 6-day UAE working week (Sat–Thu)
+            period_target = round(target * weeks)
             pct = round((total / period_target * 100) if period_target > 0 else 0)
             summary[field] = {'total': total, 'target': period_target, 'pct': pct}
         user_summaries[u.id] = {'user': u, 'summary': summary, 'logs': user_logs}
