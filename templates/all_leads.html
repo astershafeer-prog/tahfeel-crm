@@ -58,11 +58,11 @@
             <option value="custom" {% if request.args.get('date') == 'custom' %}selected{% endif %}>Custom Range</option>
           </select>
         </div>
-        <div class="filter-group custom-dates {% if request.args.get('date') == 'custom' %}visible{% endif %}" id="customDates">
+        <div class="filter-group" id="customDates" style="display:{% if request.args.get('date')=='custom' %}flex{% else %}none{% endif %};">
           <label>From</label>
           <input type="date" name="from" value="{{ request.args.get('from', '') }}">
         </div>
-        <div class="filter-group custom-dates {% if request.args.get('date') == 'custom' %}visible{% endif %}" id="customDatesTo">
+        <div class="filter-group" id="customDatesTo" style="display:{% if request.args.get('date')=='custom' %}flex{% else %}none{% endif %};">
           <label>To</label>
           <input type="date" name="to" value="{{ request.args.get('to', '') }}">
         </div>
@@ -214,8 +214,8 @@
   <script>
     function toggleCustomDates(val) {
       const show = val === 'custom';
-      document.getElementById('customDates').classList.toggle('visible', show);
-      document.getElementById('customDatesTo').classList.toggle('visible', show);
+      document.getElementById('customDates').style.display = show ? 'flex' : 'none';
+      document.getElementById('customDatesTo').style.display = show ? 'flex' : 'none';
     }
     function toggleAll(source) {
       document.querySelectorAll('.row-check').forEach(c => {

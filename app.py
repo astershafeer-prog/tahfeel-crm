@@ -260,7 +260,10 @@ def apply_lead_filters(leads, args, now):
         else:
             leads = [l for l in leads if l.status == status_filter]
     if staff_filter:
-        leads = [l for l in leads if l.assigned_to == int(staff_filter)]
+        try:
+            sf = int(staff_filter)
+            leads = [l for l in leads if l.assigned_to == sf]
+        except: pass
     return leads
 
 @app.route('/')
@@ -1095,6 +1098,10 @@ def add_job():
             db.session.add(subtask)
         db.session.commit()
         flash('Task created successfully')
+        action = request.form.get('action', 'save')
+        if action == 'save_and_add':
+            # Redirect back to add task with same customer pre-selected
+            return redirect(url_for('add_job') + f'?customer_id={job.customer_id}')
         return redirect(url_for('jobs'))
     return render_template('add_job.html', customers=customers, job_types=job_types, users=users)
 

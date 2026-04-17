@@ -62,8 +62,8 @@
     <div class="section-label">Jobs</div>
     <div class="cards-4">
       <a href="/jobs" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="lbl">Active Tasks</div><div class="val">{{ active_jobs|length }}</div></div></a>
-      <div class="stat-card red"><div class="lbl">Overdue Tasks</div><div class="val">{{ overdue_jobs|length }}</div></div>
-      <div class="stat-card amber"><div class="lbl">Processing</div><div class="val">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div></div>
+      <a href="/jobs?status=Overdue" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="lbl">Overdue Tasks</div><div class="val">{{ overdue_jobs|length }}</div></div></a>
+      <a href="/jobs?status=Processing" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="lbl">Processing</div><div class="val">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div></div></a>
       <a href="/jobs?status=Done" style="text-decoration:none;"><div class="stat-card green" style="cursor:pointer;"><div class="lbl">Done</div><div class="val">{{ done_jobs|length }}</div></div></a>
     </div>
 
