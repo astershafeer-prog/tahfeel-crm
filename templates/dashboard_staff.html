@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — My Dashboard</title>
     <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
     {%- from 'macros.html' import topbar, nav, welcome -%}
@@ -53,7 +53,7 @@
       <div class="followup-item">
         <div>
           <strong>{{ f.lead.name }}</strong>
-          <span style="color:#888;font-size:12px;margin-left:8px;">{{ f.remark[:60] }}{% if f.remark|length > 60 %}...{% endif %}</span>
+          <span style="color:var(--text-muted);font-size:12px;margin-left:8px;">{{ f.remark[:60] }}{% if f.remark|length > 60 %}...{% endif %}</span>
         </div>
         <a href="/leads/{{ f.lead_id }}" class="btn-sm">Open</a>
       </div>
@@ -69,22 +69,22 @@
     </div>
 
     {% if session.role == 'sales' %}
-    <div style="background:white;border:0.5px solid #ddd;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="background:white;border:0.5px solid #ddd;border-radius:var(--radius-md);padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
       <div>
-        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;">Daily Activity Log</div>
-        <div style="font-size:13px;font-weight:600;color:#133E87;margin-top:2px;">Log today's activities to track your performance</div>
+        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Daily Activity Log</div>
+        <div style="font-size:13px;font-weight:600;color:var(--primary);margin-top:2px;">Log today's activities to track your performance</div>
       </div>
-      <a href="/activity" style="background:#133E87;color:white;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">Open Log →</a>
+      <a href="/activity" style="background:var(--primary);color:white;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">Open Log →</a>
     </div>
     {% endif %}
     {% if pending_approval_jobs %}
-    <div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:10px;padding:12px 16px;margin-bottom:12px;">
+    <div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius-md);padding:12px 16px;margin-bottom:12px;">
       <div style="font-size:12px;font-weight:700;color:#633806;margin-bottom:8px;">⏳ Pending Finance Approval ({{ pending_approval_jobs|length }})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr>
-          <th style="text-align:left;padding:4px 8px;color:#888;font-size:10px;text-transform:uppercase;">Customer</th>
-          <th style="text-align:left;padding:4px 8px;color:#888;font-size:10px;text-transform:uppercase;">Service Type</th>
-          <th style="text-align:left;padding:4px 8px;color:#888;font-size:10px;text-transform:uppercase;">Created</th>
+          <th style="text-align:left;padding:4px 8px;color:var(--text-muted);font-size:10px;text-transform:uppercase;">Customer</th>
+          <th style="text-align:left;padding:4px 8px;color:var(--text-muted);font-size:10px;text-transform:uppercase;">Service Type</th>
+          <th style="text-align:left;padding:4px 8px;color:var(--text-muted);font-size:10px;text-transform:uppercase;">Created</th>
           <th style="text-align:left;padding:4px 8px;"></th>
         </tr></thead>
         <tbody>
@@ -92,8 +92,8 @@
           <tr>
             <td style="padding:5px 8px;font-weight:600;">{{ job.customer.name }}</td>
             <td style="padding:5px 8px;">{{ job.job_type }}</td>
-            <td style="padding:5px 8px;color:#888;">{{ job.created_at.strftime('%d %b') }}</td>
-            <td style="padding:5px 8px;"><a href="/jobs/{{ job.id }}" style="background:#133E87;color:white;padding:3px 10px;border-radius:5px;text-decoration:none;font-size:11px;font-weight:600;">View</a></td>
+            <td style="padding:5px 8px;color:var(--text-muted);">{{ job.created_at.strftime('%d %b') }}</td>
+            <td style="padding:5px 8px;"><a href="/jobs/{{ job.id }}" style="background:var(--primary);color:white;padding:3px 10px;border-radius:5px;text-decoration:none;font-size:11px;font-weight:600;">View</a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -106,7 +106,7 @@
       <div class="card">
         <div class="card-header">
           <h2>Overdue Leads</h2>
-          <a href="/leads" style="font-size:12px;color:#133E87;text-decoration:none;">View all →</a>
+          <a href="/leads" style="font-size:12px;color:var(--primary);text-decoration:none;">View all →</a>
         </div>
         {% set overdue_leads = leads|selectattr('due_date')|selectattr('status','ne','Converted')|selectattr('status','ne','Lost')|list %}
         {% set overdue_leads = overdue_leads|selectattr('due_date')|list %}
@@ -133,7 +133,7 @@
       <div class="card">
         <div class="card-header">
           <h2>High Priority Tasks</h2>
-          <a href="/jobs" style="font-size:12px;color:#133E87;text-decoration:none;">View all →</a>
+          <a href="/jobs" style="font-size:12px;color:var(--primary);text-decoration:none;">View all →</a>
         </div>
         {% set high_jobs = my_jobs|selectattr('priority','eq','High')|selectattr('status','ne','Done')|list %}
         {% if high_jobs %}

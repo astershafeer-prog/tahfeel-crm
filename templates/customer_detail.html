@@ -35,7 +35,7 @@
             <div style="font-size:13px;">
               {% if customer.phone %}
                 {{ customer.phone }}
-                <a href="https://wa.me/{{ customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="margin-left:8px;background:#25D366;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;text-decoration:none;">WhatsApp</a>
+                <a href="https://wa.me/{{ customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="margin-left:8px;background:#25D366;color:white;padding:2px 8px;border-radius:var(--radius-md);font-size:11px;font-weight:600;text-decoration:none;">WhatsApp</a>
               {% else %}—{% endif %}
             </div>
           </div>

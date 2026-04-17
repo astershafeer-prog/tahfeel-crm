@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Finance Dashboard</title>
     <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
     {%- from 'macros.html' import topbar, nav, welcome -%}
@@ -66,7 +66,7 @@
           <tr>
             <td>
               <strong>{{ job.customer.name }}</strong>
-              {% if job.customer.company %}<br><span style="font-size:11px;color:#888;">{{ job.customer.company }}</span>{% endif %}
+              {% if job.customer.company %}<br><span style="font-size:11px;color:var(--text-muted);">{{ job.customer.company }}</span>{% endif %}
             </td>
             <td>{{ job.job_type }}</td>
             <td>{{ job.assignee.name if job.assignee else '—' }}</td>

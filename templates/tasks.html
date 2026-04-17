@@ -7,7 +7,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f0f4f8; }
-    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar { background: var(--primary); color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
     .topbar h1 { font-size: 18px; font-weight: 700; }
     .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
     .topbar a { color: #DCDCBF; text-decoration: none; }
@@ -19,18 +19,18 @@
     .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
     .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
-    .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .page-header h2 { font-size: 18px; font-weight: 700; color: var(--primary); }
+    .btn-add { background: var(--primary); color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
     .filters { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
     .filter-group { display: flex; flex-direction: column; gap: 4px; }
-    .filter-group label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .filter-group label { font-size: 11px; color:var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
     .filter-group select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: white; outline: none; min-width: 140px; }
-    .btn-filter { background: #133E87; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-filter { background: var(--primary); color: white; padding: 8px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
     .btn-reset { background: white; color: #555; padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
     .summary-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
     .summary-card { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 14px 20px; flex: 1; min-width: 130px; }
-    .summary-card .label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
-    .summary-card .value { font-size: 22px; font-weight: 700; color: #133E87; }
+    .summary-card .label { font-size: 11px; color:var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .summary-card .value { font-size: 22px; font-weight: 700; color: var(--primary); }
     .summary-card.red .value { color: #c0392b; }
     .summary-card.green .value { color: #27500A; }
     .summary-card.orange .value { color: #b35c00; }
@@ -50,13 +50,13 @@
     .overdue-row td { background: #fff8f8; }
     .overdue-row td:first-child { border-left: 3px solid #c0392b; }
     .actions { display: flex; gap: 6px; align-items: center; }
-    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; }
-    .btn-sm:hover { background: #133E87; color: white; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid var(--primary); color: var(--primary); white-space: nowrap; }
+    .btn-sm:hover { background: var(--primary); color: white; }
     .btn-delete { padding: 5px 12px; border-radius: 6px; font-size: 12px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; white-space: nowrap; }
     .btn-delete:hover { background: #c0392b; color: white; }
     .status-form select { padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; cursor: pointer; }
     .empty { padding: 40px; text-align: center; color: #aaa; font-size: 13px; }
-    .lead-link { color: #133E87; text-decoration: none; font-size: 12px; }
+    .lead-link { color: var(--primary); text-decoration: none; font-size: 12px; }
     .lead-link:hover { text-decoration: underline; }
   </style>
 </head>
@@ -83,7 +83,7 @@
     {% endwith %}
 
     <div class="page-header">
-      <h2>Tasks <span style="font-size:14px;color:#888;font-weight:400;">({{ tasks|length }} total)</span></h2>
+      <h2>Tasks <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ tasks|length }} total)</span></h2>
       <a href="/tasks/add" class="btn-add">+ Add Task</a>
     </div>
 
@@ -162,7 +162,7 @@
           <tr class="{% if task.due_date and task.due_date < now and task.status != 'Done' %}overdue-row{% endif %}">
             <td>
               <strong>{{ task.title }}</strong>
-              {% if task.description %}<br><span style="color:#888;font-size:12px;">{{ task.description[:80] }}{% if task.description|length > 80 %}…{% endif %}</span>{% endif %}
+              {% if task.description %}<br><span style="color:var(--text-muted);font-size:12px;">{{ task.description[:80] }}{% if task.description|length > 80 %}…{% endif %}</span>{% endif %}
               {% if task.due_date and task.due_date < now and task.status != 'Done' %}
               <br><span style="color:#c0392b;font-size:11px;font-weight:600;">⚠ Overdue</span>
               {% endif %}
@@ -187,7 +187,7 @@
               {% else %}—{% endif %}
             </td>
             <td>
-              <div class="actions">
+              <div class="form-actions">
                 <a href="/tasks/{{ task.id }}/edit" class="btn-sm">Edit</a>
                 {% if session.role == 'admin' %}
                 <button class="btn-delete" onclick="if(confirm('Delete this task?')) window.location='/tasks/{{ task.id }}/delete'">Delete</button>

@@ -4,114 +4,164 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Task Detail</title>
-    <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
   {{ nav('jobs') }}
-
-  <div class="container">
+  <div class="container" style="max-width:860px;">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <a href="/jobs" style="color:#555;text-decoration:none;font-size:13px;">← Back to Tasks</a>
-      <a href="/customers/{{ job.customer_id }}" style="color:#133E87;text-decoration:none;font-size:12px;">View Customer →</a>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <a href="/jobs" style="color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to Tasks</a>
+      <a href="/customers/{{ job.customer_id }}" style="color:var(--primary);text-decoration:none;font-size:13px;font-weight:600;">View Customer →</a>
     </div>
 
-    <div class="card">
-      <div class="job-header">
+    <!-- Task Header Card -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header">
         <div>
-          <div class="job-title">{{ job.job_type }}</div>
-          <div class="job-customer">
-            <a href="/customers/{{ job.customer_id }}" style="color:#133E87;text-decoration:none;">{{ job.customer.name }}</a>
+          <div style="font-size:18px;font-weight:700;color:var(--text-primary);letter-spacing:-.3px;">{{ job.job_type }}</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">
+            <a href="/customers/{{ job.customer_id }}" style="color:var(--primary);text-decoration:none;font-weight:600;">{{ job.customer.name }}</a>
             {% if job.customer.company %} — {{ job.customer.company }}{% endif %}
           </div>
         </div>
-        <div class="header-actions">
-          {% if session.role in ['admin', 'staff'] %}
-          <a href="/jobs/{{ job.id }}/edit" class="btn-edit">Edit</a>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
+          {% if session.role == 'admin' or (job.status not in ['Done','Closed','Pending Finance Close'] and job.assigned_to == session.user_id) %}
+          <a href="/jobs/{{ job.id }}/edit" class="btn-sm">✏ Edit</a>
           {% endif %}
           {% if session.role == 'admin' %}
-          <button class="btn-delete" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'">Delete</button>
+          <button class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'">Delete</button>
           {% endif %}
         </div>
       </div>
+      <div class="card-body">
 
-      <div class="details-grid">
-        <div class="detail-item"><label>Status</label><span><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></span></div>
-        <div class="detail-item"><label>Priority</label><span><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></span></div>
-        <div class="detail-item"><label>Assigned To</label><span>{{ job.assignee.name if job.assignee else '—' }}</span></div>
-        <div class="detail-item"><label>Due Date</label>
-          <span>{{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
-          {% if job.due_date and job.due_date < now and job.status not in ['Done','Pending Finance Approval'] %}
-          <span style="color:#c0392b;font-size:11px;font-weight:600;"> ⚠ Overdue</span>{% endif %}</span>
+        <!-- Task Info Grid -->
+        <div class="form-row-2" style="gap:12px;margin-bottom:14px;">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Assigned To</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text-primary);">{{ job.assignee.name if job.assignee else '—' }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Priority</div>
+            <div><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Due Date</div>
+            <div style="font-size:14px;color:var(--text-primary);">
+              {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
+              {% if job.due_date and job.due_date < now and job.status not in ['Done','Closed','Pending Finance Approval'] %}
+              <span style="color:var(--danger);font-size:11px;font-weight:700;"> ⚠ Overdue</span>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">No. of Persons</div>
+            <div style="font-size:14px;color:var(--text-primary);">{{ job.num_persons or 1 }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Customer Phone</div>
+            <div style="font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+              {{ job.customer.phone or '—' }}
+              {% if job.customer.phone %}
+              <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Created</div>
+            <div style="font-size:14px;color:var(--text-primary);">
+              {{ job.created_at.strftime('%d %b %Y') }}
+              <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">Finance: {% if job.finance_approved_at %}✓ {{ job.finance_approved_at.strftime('%d %b') }}{% else %}Pending{% endif %}</span>
+            </div>
+          </div>
         </div>
-        <div class="detail-item"><label>No. of Persons</label><span>{{ job.num_persons or 1 }}</span></div>
-        <div class="detail-item"><label>Customer Phone</label>
-          <span>{{ job.customer.phone or '—' }}
-          {% if job.customer.phone %}
-          <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="margin-left:5px;font-size:11px;color:#25D366;font-weight:600;">WA</a>
-          {% endif %}</span>
+
+        <!-- Financial Summary -->
+        <div class="fin-row">
+          <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</div></div>
+          <div class="fin-card amber"><div class="lbl">Received</div><div class="val">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div></div>
+          <div class="fin-card red"><div class="lbl">Pending</div><div class="val">AED {{ '{:,.0f}'.format((job.amount_invoiced or 0)-(job.amount_received or 0)) }}</div></div>
+          <div class="fin-card {% if job.finance_approved_at %}green{% endif %}"><div class="lbl">Finance</div><div class="val" style="font-size:11px;">{% if job.finance_approved_at %}✓ Approved{% else %}Awaiting{% endif %}</div></div>
         </div>
-        <div class="detail-item"><label>Created</label><span>{{ job.created_at.strftime('%d %b %Y') }}</span></div>
-        <div class="detail-item"><label>Finance</label>
-          <span>{% if job.finance_approved_at %}✓ {{ job.finance_approved_at.strftime('%d %b') }}{% else %}Pending{% endif %}</span>
-        </div>
-      </div>
 
-      <div class="fin-row">
-        <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</div></div>
-        <div class="fin-card amber"><div class="lbl">Received</div><div class="val">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div></div>
-        <div class="fin-card red"><div class="lbl">Pending</div><div class="val">AED {{ '{:,.0f}'.format((job.amount_invoiced or 0)-(job.amount_received or 0)) }}</div></div>
-        <div class="fin-card green"><div class="lbl">Status</div><div class="val" style="font-size:11px;">{% if job.finance_approved_at %}✓ Approved{% else %}Awaiting Finance{% endif %}</div></div>
-      </div>
-
-
-      {% if job.status == 'Done' and job.final_remarks %}
-      <div style="background:#f0f9f0;border:1px solid #c0ddb0;border-radius:8px;padding:12px 14px;margin-top:10px;">
-        <div style="font-size:10px;font-weight:600;color:#27500A;text-transform:uppercase;margin-bottom:8px;">Completion Summary</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px;font-size:12px;">
-          {% if job.customer_rating %}<div><span style="color:#888;font-size:10px;display:block;">Rating</span>{{ '⭐' * job.customer_rating }}</div>{% endif %}
-          {% if job.google_review %}<div><span style="color:#888;font-size:10px;display:block;">Google Review</span>{{ job.google_review }}</div>{% endif %}
-          {% if job.testimonial %}<div><span style="color:#888;font-size:10px;display:block;">Testimonial</span>{{ job.testimonial }}</div>{% endif %}
-        </div>
-        {% if job.final_remarks %}<div style="font-size:12px;color:#333;margin-bottom:4px;"><strong>Final:</strong> {{ job.final_remarks }}</div>{% endif %}
-        {% if job.future_work_notes %}<div style="font-size:12px;color:#555;"><strong>Future work:</strong> {{ job.future_work_notes }}</div>{% endif %}
-      </div>
-      {% endif %}
-      {% if job.finance_notes %}
-      <div class="notes-box"><strong style="font-size:10px;text-transform:uppercase;color:#888;">Finance Notes</strong><br>{{ job.finance_notes }}</div>
-      {% endif %}
-      {% if job.internal_notes %}
-      <div class="notes-box" style="margin-top:6px;"><strong style="font-size:10px;text-transform:uppercase;color:#888;">Internal Notes</strong><br>{{ job.internal_notes }}</div>
-      {% endif %}
-    </div>
-
-    <!-- Finance section -->
-    {% if session.role in ['finance', 'admin', 'operations'] %}
-
-    <!-- Finance CLOSE form — shown when Pending Finance Close -->
-    {% if job.status == 'Pending Finance Close' %}
-    <div class="card">
-      <div class="finance-box" style="background:#f0f0ff;border-color:#9090e0;">
-        <h3 style="color:#3C3489;">✓ Finance Close — Final Step</h3>
-        <div style="font-size:12px;color:#555;margin-bottom:12px;">
-          Staff has completed the work. Please verify payment and close this task.
-        </div>
-        {% if job.final_remarks %}
-        <div style="background:white;border-radius:6px;padding:10px;margin-bottom:12px;font-size:12px;color:#333;">
-          <strong style="font-size:10px;text-transform:uppercase;color:#888;">Staff Final Remarks:</strong><br>{{ job.final_remarks }}
+        <!-- Completion Summary -->
+        {% if job.status in ['Done','Pending Finance Close','Closed'] and job.final_remarks %}
+        <div style="background:var(--success-bg);border:1px solid #b8ddb0;border-radius:var(--radius-md);padding:14px 16px;margin-top:12px;">
+          <div style="font-size:10px;font-weight:700;color:var(--success);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;">Completion Summary</div>
+          <div class="form-row-2" style="gap:10px;margin-bottom:8px;">
+            {% if job.customer_rating %}<div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">Rating</div><div>{{ '⭐' * job.customer_rating }}</div></div>{% endif %}
+            {% if job.google_review %}<div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">Google Review</div><div style="font-size:13px;font-weight:600;">{{ job.google_review }}</div></div>{% endif %}
+            {% if job.testimonial %}<div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">Testimonial</div><div style="font-size:13px;font-weight:600;">{{ job.testimonial }}</div></div>{% endif %}
+          </div>
+          {% if job.final_remarks %}<div style="font-size:13px;margin-bottom:4px;"><strong style="color:var(--text-muted);font-size:10px;text-transform:uppercase;">Final: </strong>{{ job.final_remarks }}</div>{% endif %}
+          {% if job.future_work_notes %}<div style="font-size:13px;color:var(--text-secondary);"><strong style="color:var(--text-muted);font-size:10px;text-transform:uppercase;">Future Work: </strong>{{ job.future_work_notes }}</div>{% endif %}
         </div>
         {% endif %}
-        {% if job.customer_rating %}
-        <div style="font-size:12px;color:#555;margin-bottom:10px;">
-          Customer Rating: {{ '⭐' * job.customer_rating }}
-          {% if job.google_review %} · Google Review: {{ job.google_review }}{% endif %}
-          {% if job.testimonial %} · Testimonial: {{ job.testimonial }}{% endif %}
+
+        <!-- Notes -->
+        {% if job.finance_notes %}
+        <div style="background:#FFF8F0;border:1px solid #F0D9B8;border-radius:var(--radius-md);padding:12px 14px;margin-top:10px;">
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Finance Notes</div>
+          <div style="font-size:13px;">{{ job.finance_notes }}</div>
+        </div>
+        {% endif %}
+        {% if job.internal_notes %}
+        <div style="background:#FFF8F0;border:1px solid #F0D9B8;border-radius:var(--radius-md);padding:12px 14px;margin-top:8px;">
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Internal Notes</div>
+          <div style="font-size:13px;">{{ job.internal_notes }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Closed banner -->
+    {% if job.status == 'Closed' %}
+    <div style="background:var(--primary);color:white;border-radius:var(--radius-md);padding:12px 18px;margin-bottom:12px;font-size:13px;font-weight:600;">
+      ✓ This task is CLOSED — no further updates. Closed on {{ job.completed_at.strftime('%d %b %Y') if job.completed_at else '' }}.
+    </div>
+    {% endif %}
+
+    <!-- Awaiting finance banner -->
+    {% if job.status == 'Pending Finance Approval' and session.role not in ['finance','admin'] %}
+    <div style="background:var(--warning-bg);border:1px solid #F0C070;border-radius:var(--radius-md);padding:12px 18px;margin-bottom:12px;font-size:13px;color:var(--warning);font-weight:600;">
+      ⏳ Awaiting finance approval. You can view but not update this task yet.
+    </div>
+    {% endif %}
+
+    <!-- Finance: Approval form -->
+    {% if session.role in ['finance','admin'] and job.status == 'Pending Finance Approval' %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2 style="color:var(--success);">✓ Finance Approval</h2></div>
+      <div class="card-body">
+        <form method="post" action="/jobs/{{ job.id }}/approve">
+          <div class="form-row-2">
+            <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" placeholder="0"></div>
+            <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01" placeholder="0"></div>
+          </div>
+          <div class="form-group"><label>Finance Notes (optional)</label><textarea name="finance_notes" placeholder="Any comments or conditions...">{{ job.finance_notes or '' }}</textarea></div>
+          <button type="submit" class="btn-primary" style="background:var(--success);">Approve & Start Task</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Finance: Close form -->
+    {% if session.role in ['finance','admin'] and job.status == 'Pending Finance Close' %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2 style="color:var(--primary);">✓ Finance Close — Final Step</h2></div>
+      <div class="card-body">
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">Staff has completed the work. Verify payment and close this task.</div>
+        {% if job.final_remarks %}
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px;font-size:13px;">
+          <strong style="font-size:10px;text-transform:uppercase;color:var(--text-muted);">Staff Final Remarks:</strong><br>{{ job.final_remarks }}
         </div>
         {% endif %}
         <form method="post" action="/jobs/{{ job.id }}/close">
@@ -122,67 +172,43 @@
           <div class="form-group"><label>Finance Closing Notes (optional)</label><textarea name="finance_notes" placeholder="Any final notes..."></textarea></div>
           {% set balance = (job.amount_invoiced or 0) - (job.amount_received or 0) %}
           {% if balance > 0 %}
-          <div style="background:#fff8f8;border:1px solid #f7c1c1;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#791F1F;font-weight:600;">
+          <div style="background:var(--danger-bg);border:1px solid #F7C1C1;border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--danger);font-weight:600;">
             ⚠ Outstanding balance: AED {{ '{:,.0f}'.format(balance) }} — confirm before closing
           </div>
           {% endif %}
-          <button type="submit" class="btn-approve" style="background:#3C3489;">Close Task (Final)</button>
+          <button type="submit" class="btn-primary">Close Task (Final)</button>
         </form>
       </div>
     </div>
     {% endif %}
-    <div class="card">
-      {% if job.status == 'Pending Finance Approval' %}
-      <div class="finance-box">
-        <h3>✓ Finance Approval</h3>
-        {% if session.role in ['finance', 'admin'] %}
-        <form method="post" action="/jobs/{{ job.id }}/approve">
+
+    <!-- Finance: Update payment -->
+    {% if session.role in ['finance','admin'] and job.status not in ['Pending Finance Approval','Pending Finance Close','Closed'] %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2>Update Payment</h2></div>
+      <div class="card-body">
+        <form method="post" action="/jobs/{{ job.id }}/payment">
           <div class="form-row-2">
-            <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" placeholder="0"></div>
-            <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01" placeholder="0"></div>
+            <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
+            <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
           </div>
-          <div class="form-group"><label>Finance Notes (optional)</label><textarea name="finance_notes" placeholder="Any comments, conditions..."></textarea></div>
-          <button type="submit" class="btn-approve">Approve & Start Task</button>
+          <div class="form-group"><label>Finance Notes (optional)</label><textarea name="finance_notes" placeholder="Payment notes...">{{ job.finance_notes or '' }}</textarea></div>
+          <button type="submit" class="btn-primary">Update Payment</button>
         </form>
-        {% else %}
-        <div style="font-size:12px;color:#888;padding:8px;">Awaiting finance approval.</div>
-        {% endif %}
       </div>
-      {% else %}
-      <div style="font-size:13px;font-weight:700;color:#133E87;margin-bottom:10px;">Update Payment</div>
-      <form method="post" action="/jobs/{{ job.id }}/payment">
-        <div class="form-row-2">
-          <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
-          <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
-        </div>
-        <div class="form-group"><label>Finance Notes (optional)</label><textarea name="finance_notes" placeholder="Payment notes..."></textarea></div>
-        <button type="submit" class="btn-pay">Update Payment</button>
-      </form>
-      {% endif %}
     </div>
     {% endif %}
 
-    {% if job.status == 'Closed' %}
-    <div style="background:#133E87;color:white;border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;font-weight:600;">
-      ✓ This task is CLOSED. No further updates. Closed on {{ job.completed_at.strftime('%d %b %Y') if job.completed_at else '' }}.
-    </div>
-    {% endif %}
-
-    <!-- Blocked banner for staff -->
-    {% if job.status == 'Pending Finance Approval' and session.role == 'staff' %}
-    <div class="blocked-banner">⏳ Awaiting finance approval. You can view but not update this task yet.</div>
-    {% endif %}
-
-    <!-- Update form — staff/admin only, not finance, not if pending -->
-    {% if job.status in ['Done', 'Pending Finance Close', 'Closed'] and session.role not in ['finance'] and not job.final_remarks %}
-    <div class="card">
-      <div style="background:#f0f9f0;border:1px solid #c0ddb0;border-radius:8px;padding:14px;">
-        <div style="font-size:12px;font-weight:700;color:#27500A;margin-bottom:10px;">Update Customer Feedback</div>
+    <!-- Feedback update form -->
+    {% if job.status in ['Done','Pending Finance Close','Closed'] and session.role not in ['finance'] and not job.final_remarks %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2>Update Customer Feedback</h2></div>
+      <div class="card-body">
         <form method="post">
           <input type="hidden" name="remark" value="Feedback updated">
           <input type="hidden" name="status" value="{{ job.status }}">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-            <div class="form-group" style="margin:0;">
+          <div class="form-row-2" style="margin-bottom:12px;">
+            <div class="form-group">
               <label>Customer Rating</label>
               <select name="customer_rating">
                 <option value="">— Optional —</option>
@@ -193,7 +219,7 @@
                 <option value="1" {% if job.customer_rating==1 %}selected{% endif %}>⭐ Poor</option>
               </select>
             </div>
-            <div class="form-group" style="margin:0;">
+            <div class="form-group">
               <label>Google Review</label>
               <select name="google_review">
                 <option value="">— Optional —</option>
@@ -202,7 +228,7 @@
                 <option value="Not Applicable" {% if job.google_review=='Not Applicable' %}selected{% endif %}>Not Applicable</option>
               </select>
             </div>
-            <div class="form-group" style="margin:0;">
+            <div class="form-group">
               <label>Testimonial</label>
               <select name="testimonial">
                 <option value="">— Optional —</option>
@@ -211,32 +237,38 @@
               </select>
             </div>
           </div>
-          <button type="submit" class="btn-submit" style="margin-top:10px;font-size:12px;padding:7px 16px;">Update Feedback</button>
+          <button type="submit" class="btn-primary" style="font-size:12px;padding:8px 18px;">Update Feedback</button>
         </form>
       </div>
     </div>
     {% endif %}
 
-    {% if session.role in ['admin', 'staff', 'sales', 'operations'] and job.status != 'Pending Finance Approval' %}
-    <div class="card">
-      <div class="update-box">
-        <h3>Add Update</h3>
+    <!-- Status Update form -->
+    {% if session.role in ['admin','sales','operations'] and job.status not in ['Pending Finance Approval','Closed'] %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2>Add Update</h2></div>
+      <div class="card-body">
         <form method="post">
-          <div class="form-group">
-            <label>Status *</label>
-            <select name="status" id="statusSelect" onchange="toggleCompletion()">
-              {% for s in statuses %}
-              <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
-              {% endfor %}
-            </select>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Status *</label>
+              <select name="status" id="statusSelect" onchange="toggleCompletion()">
+                {% for s in statuses %}
+                <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Remark * (required)</label>
+              <textarea name="remark" placeholder="Describe what happened, next steps..." required></textarea>
+            </div>
           </div>
-          <div class="form-group"><label>Remark * (required)</label><textarea name="remark" placeholder="Describe what happened, next steps..." required></textarea></div>
 
-          <!-- Completion fields — shown when Done selected -->
-          <div id="completionFields" style="display:none;background:#f0f9f0;border:1px solid #c0ddb0;border-radius:8px;padding:14px;margin-top:10px;">
-            <div style="font-size:11px;font-weight:700;color:#27500A;text-transform:uppercase;margin-bottom:10px;">Task Completion</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
-              <div class="form-group" style="margin:0;">
+          <!-- Completion fields -->
+          <div id="completionFields" style="display:none;background:var(--success-bg);border:1px solid #b8ddb0;border-radius:var(--radius-md);padding:14px;margin-top:10px;">
+            <div class="section-label" style="color:var(--success);margin-bottom:10px;">Task Completion Details</div>
+            <div class="form-row-2" style="margin-bottom:10px;">
+              <div class="form-group">
                 <label>Customer Rating</label>
                 <select name="customer_rating">
                   <option value="">— Optional —</option>
@@ -247,7 +279,7 @@
                   <option value="1">⭐ Poor</option>
                 </select>
               </div>
-              <div class="form-group" style="margin:0;">
+              <div class="form-group">
                 <label>Google Review</label>
                 <select name="google_review">
                   <option value="">— Optional —</option>
@@ -256,7 +288,7 @@
                   <option value="Not Applicable">Not Applicable</option>
                 </select>
               </div>
-              <div class="form-group" style="margin:0;">
+              <div class="form-group">
                 <label>Testimonial</label>
                 <select name="testimonial">
                   <option value="">— Optional —</option>
@@ -265,46 +297,54 @@
                 </select>
               </div>
             </div>
-            <div class="form-group" style="margin-bottom:8px;">
+            <div class="form-group">
               <label>Final Remarks</label>
               <textarea name="final_remarks" placeholder="Summary of outcome..." style="min-height:60px;"></textarea>
             </div>
-            <div class="form-group" style="margin:0;">
+            <div class="form-group">
               <label>Future Work Notes</label>
               <textarea name="future_work_notes" placeholder="Services this client may need next..." style="min-height:50px;"></textarea>
             </div>
           </div>
 
-          <button type="submit" class="btn-submit" style="margin-top:10px;">Save Update</button>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Update</button>
+          </div>
         </form>
-        <script>
-          function toggleCompletion() {
-            const status = document.getElementById('statusSelect').value;
-            document.getElementById('completionFields').style.display = status === 'Done' ? 'block' : 'none';
-          }
-          // Show on load if already Done
-          toggleCompletion();
-        </script>
       </div>
     </div>
     {% endif %}
 
     <!-- Timeline -->
     <div class="card">
-      <div class="section-title">Timeline ({{ job.updates|length }})</div>
-      {% for u in job.updates %}
-      <div class="timeline-item">
-        <div class="timeline-dot"></div>
-        <div>
-          <div class="timeline-status">{{ u.status }}</div>
-          <div class="timeline-remark">{{ u.remark }}</div>
-          <div class="timeline-meta">{{ u.staff_name }} · {{ u.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+      <div class="card-header"><h2>Timeline ({{ job.updates|length }})</h2></div>
+      <div class="card-body" style="padding:0;">
+        {% if job.updates %}
+        <div class="timeline">
+          {% for u in job.updates %}
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div>
+              <div class="timeline-status">{{ u.status }}</div>
+              <div class="timeline-remark">{{ u.remark }}</div>
+              <div class="timeline-meta">{{ u.staff_name }} · {{ u.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+            </div>
+          </div>
+          {% endfor %}
         </div>
+        {% else %}
+        <div class="empty" style="padding:24px;">No updates yet.</div>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="empty">No updates yet.</div>
-      {% endfor %}
     </div>
+
   </div>
+  <script>
+    function toggleCompletion() {
+      const status = document.getElementById('statusSelect').value;
+      document.getElementById('completionFields').style.display = status === 'Done' ? 'block' : 'none';
+    }
+    toggleCompletion();
+  </script>
 </body>
 </html>

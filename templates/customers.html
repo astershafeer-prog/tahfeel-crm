@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Customers</title>
     <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
     {%- from 'macros.html' import topbar, nav, welcome -%}
@@ -16,7 +16,7 @@
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
     <div class="page-header">
-      <h2>Customers <span style="font-size:14px;color:#888;font-weight:400;">({{ customers|length }} total)</span></h2>
+      <h2>Customers <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ customers|length }} total)</span></h2>
       <a href="/customers/add" class="btn-add">+ Add Customer</a>
     </div>
     <div class="card">

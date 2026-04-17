@@ -8,10 +8,10 @@
     <div class="topbar-user">
       <div class="topbar-avatar">{{ session.user_name[0]|upper if session.user_name else 'U' }}</div>
       <span>{{ session.user_name }}</span>
-      {% if session.role == 'admin' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:10px;color:rgba(255,255,255,.8);">Admin</span>
-      {% elif session.role == 'finance' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:10px;color:rgba(255,255,255,.8);">Finance</span>
-      {% elif session.role == 'operations' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:10px;color:rgba(255,255,255,.8);">Operations</span>
-      {% elif session.role == 'sales' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:10px;color:rgba(255,255,255,.8);">Sales</span>
+      {% if session.role == 'admin' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:var(--radius-md);color:rgba(255,255,255,.8);">Admin</span>
+      {% elif session.role == 'finance' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:var(--radius-md);color:rgba(255,255,255,.8);">Finance</span>
+      {% elif session.role == 'operations' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:var(--radius-md);color:rgba(255,255,255,.8);">Operations</span>
+      {% elif session.role == 'sales' %}<span style="font-size:10px;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:var(--radius-md);color:rgba(255,255,255,.8);">Sales</span>
       {% endif %}
     </div>
     <a href="/logout" class="topbar-logout">Logout</a>

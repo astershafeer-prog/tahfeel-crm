@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Add Task</title>
     <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
     {%- from 'macros.html' import topbar, nav, welcome -%}
@@ -30,7 +30,7 @@
               <option value="{{ c.id }}" {% if request.args.get('customer_id') == c.id|string %}selected{% endif %}>{{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}</option>
               {% endfor %}
             </select>
-            <a href="/customers/add" style="background:white;border:1px solid #133E87;color:#133E87;padding:9px 14px;border-radius:8px;font-size:12px;text-decoration:none;white-space:nowrap;font-weight:600;">+ New Customer</a>
+            <a href="/customers/add" style="background:white;border:1px solid var(--primary);color:var(--primary);padding:9px 14px;border-radius:8px;font-size:12px;text-decoration:none;white-space:nowrap;font-weight:600;">+ New Customer</a>
           </div>
         </div>
 

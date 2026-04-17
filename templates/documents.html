@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Documents</title>
     <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
     {%- from 'macros.html' import topbar, nav, welcome -%}
@@ -96,7 +96,7 @@
             <td><strong>{{ doc.doc_type }}</strong></td>
             <td>{{ doc.owner_name }}</td>
             <td><span class="badge b-{{ doc.belongs_to|lower }}">{{ doc.belongs_to }}</span></td>
-            <td>{% if doc.customer %}<a href="/customers/{{ doc.customer_id }}" style="color:#133E87;text-decoration:none;">{{ doc.customer.name }}</a>{% else %}—{% endif %}</td>
+            <td>{% if doc.customer %}<a href="/customers/{{ doc.customer_id }}" style="color:var(--primary);text-decoration:none;">{{ doc.customer.name }}</a>{% else %}—{% endif %}</td>
             <td>
               {% if doc.expiry_date %}
                 {{ doc.expiry_date.strftime('%d %b %Y') }}

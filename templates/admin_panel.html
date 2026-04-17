@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Admin Panel</title>
     <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
     {%- from 'macros.html' import topbar, nav, welcome -%}
@@ -75,7 +75,7 @@
                 {% if user.role == 'admin' %}
                   <span class="protected">Protected</span>
                 {% else %}
-                <div class="actions">
+                <div class="form-actions">
                   <button class="btn-sm" onclick="toggleEdit({{ user.id }})">Edit</button>
                   <a href="/admin/staff/{{ user.id }}/toggle" class="btn-sm btn-warning">
                     {{ 'Deactivate' if user.active else 'Activate' }}

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — All Leads</title>
     <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_transparent.png" type="image/png">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
     {%- from 'macros.html' import topbar, nav, welcome -%}
@@ -21,7 +21,7 @@
     {% endwith %}
 
     <div class="page-header">
-      <h2>All Leads <span style="font-size:14px;color:#888;font-weight:400;">({{ total }} total{% if is_default %} — today{% elif request.args.get('date') == 'today' %} — today{% endif %})</span></h2>
+      <h2>All Leads <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ total }} total{% if is_default %} — today{% elif request.args.get('date') == 'today' %} — today{% endif %})</span></h2>
       <div class="header-btns">
         <button class="btn-bulk-delete" id="bulkDeleteBtn" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
         <a href="/leads/export" class="btn-export">⬇ Export Excel</a>
@@ -142,7 +142,7 @@
                     {% endif %}
                   </td>
                   <td>
-                    <div class="actions">
+                    <div class="form-actions">
                       <a href="/leads/{{ lead.id }}" class="btn-sm">View</a>
                       <button type="button" class="btn-delete" onclick="confirmDelete({{ lead.id }}, '{{ lead.name }}')">Delete</button>
                     </div>
