@@ -929,3 +929,27 @@ tr.selected td { background: var(--info-bg) !important; }
 }
 .custom-dates { display: none; gap: 10px; }
 .custom-dates.visible { display: flex; }
+
+/* ── Lead Detail Info Rows ──────────────────────────────── */
+.info-row {
+  display: flex;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+  align-items: baseline;
+}
+.info-row:last-child { border-bottom: none; }
+.info-row .lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  min-width: 110px;
+  flex-shrink: 0;
+}
+.info-row .val {
+  color: var(--text-primary);
+  font-weight: 500;
+}
