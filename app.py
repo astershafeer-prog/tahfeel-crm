@@ -371,7 +371,7 @@ def dashboard():
         lost = [l for l in leads if l.status == 'Lost']
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
 
-        users = User.query.filter_by(active=True, role='staff').all()
+        users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'staff'])).all()
         staff_stats = []
         for u in users:
             u_leads = [l for l in leads if l.assigned_to == u.id]
@@ -418,7 +418,8 @@ def dashboard():
     lost = [l for l in leads if l.status == 'Lost']
     pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
     try:
-        my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status != 'Done').order_by(Job.due_date).all()
+        my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status.notin_(['Done','Closed'])).order_by(Job.due_date).all()
+        pending_approval_jobs = [j for j in my_jobs if j.status == 'Pending Finance Approval']
         overdue_jobs = [j for j in my_jobs if j.due_date and j.due_date < now and j.status != 'Pending Finance Approval']
         active_jobs = [j for j in my_jobs if j.status != 'Pending Finance Approval']
         total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
@@ -450,6 +451,7 @@ def dashboard():
                            total_pending=total_pending,
                            completed_value=completed_value,
                            docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
+                           pending_approval_jobs=pending_approval_jobs,
                            followups=followups, now=now)
 
 @app.route('/leads')
@@ -1101,16 +1103,28 @@ def job_detail(job_id):
         flash('Access denied')
         return redirect(url_for('jobs'))
     if request.method == 'POST':
-        # Block all updates on Closed tasks
+        # Closed — no updates at all except admin
         if job.status == 'Closed' and role != 'admin':
             flash('This task is closed. No further updates allowed.')
             return redirect(url_for('job_detail', job_id=job_id))
-        # Block staff from updating if pending finance approval
-        if job.status == 'Pending Finance Approval' and role == 'staff':
+        # Done/Pending Finance Close — only allow saving rating/review/testimonial
+        if job.status in ['Done', 'Pending Finance Close'] and role not in ['admin', 'finance']:
+            # Allow only completion field updates (no status change, no remark required)
+            rating = request.form.get('customer_rating')
+            if rating:
+                try: job.customer_rating = int(rating)
+                except: pass
+            job.google_review = request.form.get('google_review') or job.google_review
+            job.testimonial = request.form.get('testimonial') or job.testimonial
+            db.session.commit()
+            flash('Updated successfully.')
+            return redirect(url_for('job_detail', job_id=job_id))
+        # Block sales/staff from updating if pending finance approval
+        if job.status == 'Pending Finance Approval' and role in ['staff', 'sales']:
             flash('This task is pending finance approval. You cannot update it yet.')
             return redirect(url_for('job_detail', job_id=job_id))
-        # Block staff from updating if pending finance close
-        if job.status == 'Pending Finance Close' and role == 'staff':
+        # Block sales/staff from updating if pending finance close
+        if job.status == 'Pending Finance Close' and role in ['staff', 'sales']:
             flash('Work is complete. Awaiting finance to close this task.')
             return redirect(url_for('job_detail', job_id=job_id))
         remark = request.form.get('remark', '').strip()
@@ -1152,8 +1166,12 @@ def job_detail(job_id):
 @login_required
 def edit_job(job_id):
     job = Job.query.get_or_404(job_id)
+    # Only admin can edit Done/Closed tasks
+    if job.status in ['Done', 'Closed', 'Pending Finance Close'] and session['role'] != 'admin':
+        flash('This task is completed and cannot be edited.')
+        return redirect(url_for('job_detail', job_id=job_id))
     # Staff can only edit tasks assigned to them
-    if session['role'] == 'staff' and job.assigned_to != session['user_id']:
+    if session['role'] in ['sales', 'staff'] and job.assigned_to != session['user_id']:
         flash('Access denied')
         return redirect(url_for('jobs'))
     customers = Customer.query.order_by(Customer.name).all()

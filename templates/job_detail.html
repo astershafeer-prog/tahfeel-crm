@@ -121,7 +121,10 @@
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    <a href="/jobs" class="back">← Back to Tasks</a>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <a href="/jobs" style="color:#555;text-decoration:none;font-size:13px;">← Back to Tasks</a>
+      <a href="/customers/{{ job.customer_id }}" style="color:#133E87;text-decoration:none;font-size:12px;">View Customer →</a>
+    </div>
 
     <div class="card">
       <div class="job-header">
@@ -275,7 +278,50 @@
     {% endif %}
 
     <!-- Update form — staff/admin only, not finance, not if pending -->
-    {% if session.role in ['admin', 'staff'] and job.status != 'Pending Finance Approval' %}
+    {% if job.status in ['Done', 'Pending Finance Close', 'Closed'] and session.role not in ['finance'] %}
+    <div class="card">
+      <div style="background:#f0f9f0;border:1px solid #c0ddb0;border-radius:8px;padding:14px;">
+        <div style="font-size:12px;font-weight:700;color:#27500A;margin-bottom:10px;">Update Customer Feedback</div>
+        <form method="post">
+          <input type="hidden" name="remark" value="Feedback updated">
+          <input type="hidden" name="status" value="{{ job.status }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div class="form-group" style="margin:0;">
+              <label>Customer Rating</label>
+              <select name="customer_rating">
+                <option value="">— Optional —</option>
+                <option value="5" {% if job.customer_rating==5 %}selected{% endif %}>⭐⭐⭐⭐⭐ Excellent</option>
+                <option value="4" {% if job.customer_rating==4 %}selected{% endif %}>⭐⭐⭐⭐ Good</option>
+                <option value="3" {% if job.customer_rating==3 %}selected{% endif %}>⭐⭐⭐ Average</option>
+                <option value="2" {% if job.customer_rating==2 %}selected{% endif %}>⭐⭐ Below Average</option>
+                <option value="1" {% if job.customer_rating==1 %}selected{% endif %}>⭐ Poor</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label>Google Review</label>
+              <select name="google_review">
+                <option value="">— Optional —</option>
+                <option value="Received" {% if job.google_review=='Received' %}selected{% endif %}>✓ Received</option>
+                <option value="Requested" {% if job.google_review=='Requested' %}selected{% endif %}>Requested</option>
+                <option value="Not Applicable" {% if job.google_review=='Not Applicable' %}selected{% endif %}>Not Applicable</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label>Testimonial</label>
+              <select name="testimonial">
+                <option value="">— Optional —</option>
+                <option value="Collected" {% if job.testimonial=='Collected' %}selected{% endif %}>✓ Collected</option>
+                <option value="Not Collected" {% if job.testimonial=='Not Collected' %}selected{% endif %}>Not Collected</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn-submit" style="margin-top:10px;font-size:12px;padding:7px 16px;">Update Feedback</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if session.role in ['admin', 'staff', 'sales', 'operations'] and job.status != 'Pending Finance Approval' %}
     <div class="card">
       <div class="update-box">
         <h3>Add Update</h3>

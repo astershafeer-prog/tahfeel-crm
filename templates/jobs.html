@@ -110,13 +110,6 @@
       <div class="summary-card green"><div class="label">Done</div><div class="value">{{ jobs|selectattr('status','eq','Done')|list|length }}</div></div>
     </div>
 
-    <div class="summary-row" style="grid-template-columns:repeat(4,1fr);">
-      <div class="summary-card"><div class="label">Total Invoiced</div><div class="value" style="font-size:15px;">AED {{ '{:,.0f}'.format(jobs_invoiced) }}</div></div>
-      <div class="summary-card" style="border-top:3px solid #854F0B;"><div class="label">Total Received</div><div class="value" style="font-size:15px;color:#854F0B;">AED {{ '{:,.0f}'.format(jobs_received) }}</div></div>
-      <div class="summary-card red"><div class="label">Pending Payment</div><div class="value" style="font-size:15px;">AED {{ '{:,.0f}'.format(jobs_pending) }}</div></div>
-      <div class="summary-card green"><div class="label">Completed Value</div><div class="value" style="font-size:15px;">AED {{ '{:,.0f}'.format(jobs_completed) }}</div></div>
-    </div>
-
     <form method="get" class="filters">
       <div class="filter-group">
         <label>Status</label>
@@ -164,12 +157,10 @@
             </td>
             <td><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></td>
             <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></td>
-            <td>AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</td>
-            <td>AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</td>
             <td>
               <div style="display:flex;gap:5px;">
                 <a href="/jobs/{{ job.id }}" class="btn-sm">View</a>
-                <a href="/jobs/{{ job.id }}/edit" class="btn-sm">Edit</a>
+                {% if session.role == 'admin' or job.status not in ['Done','Closed','Pending Finance Close'] %}<a href="/jobs/{{ job.id }}/edit" class="btn-sm">Edit</a>{% endif %}
                 {% if session.role in ['admin', 'operations'] %}
                 <a href="/jobs/{{ job.id }}/delete" class="btn-sm" style="border-color:#c0392b;color:#c0392b;" onclick="return confirm('Delete this task?')">Del</a>
                 {% endif %}
