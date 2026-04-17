@@ -92,7 +92,7 @@
               <thead>
                 <tr>
                   <th>Activity</th>
-                  <th class="num" style="width:90px;">Daily Target</th>
+                  <th class="num" style="width:110px;">Wk Target</th>
                   <th class="num" style="width:80px;">Count</th>
                 </tr>
               </thead>
@@ -100,7 +100,7 @@
                 {% for field, label, target in activities %}
                 <tr>
                   <td>{{ label }}</td>
-                  <td class="num"><span style="color:var(--text-muted);">{{ target }}/day</span></td>
+                  <td class="num"><span style="color:var(--text-muted);font-size:11px;font-weight:600;">{{ target }}/wk</span></td>
                   <td class="num">
                     <input type="number" name="{{ field }}" min="0" max="999" class="act-input"
                       value="{{ today_log|attr(field) if today_log else '' }}" placeholder="0">
@@ -129,7 +129,7 @@
       <div class="card-header"><h2>📊 My Summary — {{ from_date }} to {{ to_date }}</h2></div>
       <div class="card-body" style="padding:0;">
         <table class="activity-table">
-          <thead><tr><th>Activity</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achievement</th></tr></thead>
+          <thead><tr><th>Activity</th><th class="num">Wk Target</th><th class="num">Actual</th><th class="num">Achievement</th></tr></thead>
           <tbody>
             {% for field, label, target in activities %}
             {% set s = data.summary[field] %}
@@ -201,7 +201,7 @@
             <thead>
               <tr>
                 <th>Activity</th>
-                <th class="num">Target/day</th>
+                <th class="num">Weekly Target</th>
                 {% for u in sales_users %}<th class="num">{{ u.name }}</th>{% endfor %}
               </tr>
             </thead>
@@ -268,7 +268,7 @@
         <!-- Summary Table -->
         <div class="card-body" style="padding:0;">
           <table class="activity-table">
-            <thead><tr><th>Activity</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achievement</th></tr></thead>
+            <thead><tr><th>Activity</th><th class="num">Wk Target</th><th class="num">Actual</th><th class="num">Achievement</th></tr></thead>
             <tbody>
               {% for field, label, target in activities %}
               {% set s = user_summaries[u.id].summary[field] %}
@@ -338,8 +338,8 @@
             <input type="text" name="label" placeholder="e.g. Cold Email Campaign" required style="padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;min-width:260px;">
           </div>
           <div class="filter-group">
-            <label>Daily Target</label>
-            <input type="number" name="daily_target" value="5" min="0.1" step="0.1" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;width:80px;">
+            <label>Weekly Target</label>
+            <input type="number" name="weekly_target" value="5" min="0.1" step="0.1" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;width:80px;">
           </div>
           <button type="submit" class="btn-primary">+ Add Activity</button>
         </form>
@@ -348,7 +348,7 @@
           <thead><tr>
             <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">#</th>
             <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Activity Name</th>
-            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Daily Target</th>
+            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Weekly Target</th>
             <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Actions</th>
           </tr></thead>
           <tbody>
@@ -356,15 +356,15 @@
             <tr style="border-bottom:1px solid var(--border-light);">
               <td style="padding:9px 12px;color:var(--text-muted);">{{ loop.index }}</td>
               <td style="padding:9px 12px;font-weight:500;" id="at-label-{{ at.id }}">{{ at.label }}</td>
-              <td style="padding:9px 12px;text-align:center;font-weight:600;color:var(--primary);" id="at-target-{{ at.id }}">{{ at.daily_target|int if at.daily_target == (at.daily_target|int) else at.daily_target }}</td>
+              <td style="padding:9px 12px;text-align:center;font-weight:600;color:var(--primary);" id="at-target-{{ at.id }}">{{ at.weekly_target|int if at.weekly_target == (at.weekly_target|int) else at.weekly_target }}</td>
               <td style="padding:9px 12px;text-align:center;">
                 <div id="at-actions-{{ at.id }}" style="display:flex;gap:6px;justify-content:center;">
-                  <button onclick="editActivity({{ at.id }}, '{{ at.label|replace("'","\'") }}', {{ at.daily_target }})" class="btn-sm">Edit</button>
+                  <button onclick="editActivity({{ at.id }}, '{{ at.label|replace("'","\'") }}', {{ at.weekly_target }})" class="btn-sm">Edit</button>
                   <a href="/admin/activity-type/{{ at.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove activity? Historical data will be preserved.')">Delete</a>
                 </div>
                 <form id="at-form-{{ at.id }}" method="post" action="/admin/activity-type/{{ at.id }}/edit" style="display:none;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">
                   <input type="text" name="label" id="at-input-label-{{ at.id }}" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:220px;">
-                  <input type="number" name="daily_target" id="at-input-target-{{ at.id }}" step="0.1" min="0.1" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:65px;">
+                  <input type="number" name="weekly_target" id="at-input-target-{{ at.id }}" step="0.1" min="0.1" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:65px;">
                   <button type="submit" style="background:var(--success);color:white;padding:5px 12px;border-radius:5px;border:none;font-size:12px;cursor:pointer;">Save</button>
                   <button type="button" onclick="cancelEdit({{ at.id }})" style="background:white;color:var(--text-secondary);padding:5px 10px;border-radius:5px;border:1px solid var(--border);font-size:12px;cursor:pointer;">Cancel</button>
                 </form>
@@ -479,6 +479,19 @@
       document.getElementById('offDayInput').value = '';
       document.getElementById('activityFields').style.opacity = '1';
       document.getElementById('activityFields').style.pointerEvents = 'auto';
+    }
+
+    // Activity type inline edit — admin only
+    function editActivity(id, label, target) {
+      document.getElementById('at-actions-' + id).style.display = 'none';
+      const form = document.getElementById('at-form-' + id);
+      form.style.display = 'flex';
+      document.getElementById('at-input-label-' + id).value = label;
+      document.getElementById('at-input-target-' + id).value = target;
+    }
+    function cancelEdit(id) {
+      document.getElementById('at-form-' + id).style.display = 'none';
+      document.getElementById('at-actions-' + id).style.display = 'flex';
     }
   </script>
 

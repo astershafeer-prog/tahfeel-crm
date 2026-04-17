@@ -204,7 +204,7 @@ class ActivityType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     field_key = db.Column(db.String(50), nullable=False, unique=True)
     label = db.Column(db.String(150), nullable=False)
-    daily_target = db.Column(db.Float, default=1)
+    weekly_target = db.Column(db.Float, default=5)
     sort_order = db.Column(db.Integer, default=0)
     active = db.Column(db.Boolean, default=True)
 
@@ -1360,17 +1360,17 @@ def close_job(job_id):
 
 # ACTIVITIES loaded from DB — see get_activities()
 ACTIVITY_DEFAULTS = [
-    ('calls_existing',       'Calls to Existing/Potential Clients', 5),
-    ('calls_cold',           'Cold Calling to Customer List',       5),
-    ('dm_instagram',         'Instagram Direct Messages',           5),
-    ('dm_facebook',          'Facebook Messages',                   5),
-    ('dm_linkedin',          'LinkedIn Messages',                   5),
+    ('calls_existing',       'Calls to Existing/Potential Clients', 30),
+    ('calls_cold',           'Cold Calling to Customer List',       30),
+    ('dm_instagram',         'Instagram Direct Messages',           30),
+    ('dm_facebook',          'Facebook Messages',                   30),
+    ('dm_linkedin',          'LinkedIn Messages',                   30),
     ('posts_social',         'Social Media Posts (IG/FB/LinkedIn)', 2),
     ('videos_instagram',     'Instagram Video (Cross-post)',        1),
     ('linkedin_writing',     'LinkedIn Writing/Articles',           1),
-    ('whatsapp_prospecting', 'WhatsApp Prospecting',               5),
+    ('whatsapp_prospecting', 'WhatsApp Prospecting',               30),
     ('community_active',     'Active in Communities',               2),
-    ('google_reviews',       'Google Review Collection',            1),
+    ('google_reviews',       'Google Review Collection',            6),
     ('real_estate_relations','Real Estate Agent Relationships',     2),
     ('content_marketing',    'Content for Marketing',               2),
     ('referral_building',    'Referral Building',                   2),
@@ -1381,7 +1381,7 @@ ACTIVITY_DEFAULTS = [
 def get_activities():
     try:
         types = ActivityType.query.filter_by(active=True).order_by(ActivityType.sort_order, ActivityType.id).all()
-        return [(t.field_key, t.label, t.daily_target) for t in types]
+        return [(t.field_key, t.label, t.weekly_target) for t in types]
     except:
         return ACTIVITY_DEFAULTS
 
@@ -1552,7 +1552,7 @@ def admin_add_activity_type():
     except:
         target_val = 1.0
     max_order = db.session.query(db.func.max(ActivityType.sort_order)).scalar() or 0
-    at = ActivityType(field_key=field_key, label=label, daily_target=target_val, sort_order=max_order+1)
+    at = ActivityType(field_key=field_key, label=label, weekly_target=target_val, sort_order=max_order+1)
     db.session.add(at)
     db.session.commit()
     flash(f'Activity "{label}" added')
@@ -1565,7 +1565,7 @@ def admin_edit_activity_type(type_id):
     at = ActivityType.query.get_or_404(type_id)
     at.label = request.form.get('label', at.label).strip()
     try:
-        at.daily_target = float(request.form.get('daily_target', at.daily_target))
+        at.weekly_target = float(request.form.get('weekly_target', at.weekly_target))
     except:
         pass
     db.session.commit()
@@ -1795,10 +1795,11 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 field_key VARCHAR(50) UNIQUE NOT NULL,
                 label VARCHAR(150) NOT NULL,
-                daily_target FLOAT DEFAULT 1,
+                weekly_target FLOAT DEFAULT 5,
                 sort_order INTEGER DEFAULT 0,
                 active BOOLEAN DEFAULT TRUE
             )''',
+            'ALTER TABLE activity_type ADD COLUMN IF NOT EXISTS weekly_target FLOAT DEFAULT 5',
             'UPDATE \"user\" SET role = \'sales\' WHERE role = \'staff\'',
 
         ]
@@ -1839,7 +1840,7 @@ def init_db():
                 print('Default job types created')
             if ActivityType.query.count() == 0:
                 for i, (key, label, target) in enumerate(ACTIVITY_DEFAULTS):
-                    db.session.add(ActivityType(field_key=key, label=label, daily_target=target, sort_order=i))
+                    db.session.add(ActivityType(field_key=key, label=label, weekly_target=target, sort_order=i))
                 db.session.commit()
                 print('Default activity types seeded')
             if DocType.query.count() == 0:
