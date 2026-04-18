@@ -56,8 +56,8 @@
                 {% for user in users %}<option value="{{ user.id }}">{{ user.name }}</option>{% endfor %}
               </select>
             </div>
-            <div class="form-group"><label>Lead Date</label><input type="date" name="lead_date" value="{{ now.strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}"></div>
-            <div class="form-group"><label>Due Date</label><input type="date" name="due_date" min="{{ now.strftime('%Y-%m-%d') }}"></div>
+            <div class="form-group"><label>Lead Date</label><input type="date" name="lead_date" id="lead_date" value="{{ now.strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}"></div>
+            <div class="form-group"><label>Due Date *</label><input type="date" name="due_date" id="due_date" required></div>
           </div>
           <div class="form-group">
             <label>Lead Type</label>
@@ -77,3 +77,18 @@
   </div>
 </body>
 </html>
+<script>
+  function setDueDate() {
+    const leadDate = document.getElementById('lead_date').value;
+    if (leadDate) {
+      const next = new Date(leadDate);
+      next.setDate(next.getDate() + 1);
+      const yyyy = next.getFullYear();
+      const mm = String(next.getMonth() + 1).padStart(2, '0');
+      const dd = String(next.getDate()).padStart(2, '0');
+      document.getElementById('due_date').value = `${yyyy}-${mm}-${dd}`;
+    }
+  }
+  setDueDate();
+  document.getElementById('lead_date').addEventListener('change', setDueDate);
+</script>
