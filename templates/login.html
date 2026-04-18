@@ -26,15 +26,15 @@
       text-align:center;
     }
     .logo-box {
-      width:56px; height:56px;
+      width:72px; height:72px;
       background:#1A3B8B;
-      border-radius:12px;
+      border-radius:14px;
       display:flex;
       align-items:center;
       justify-content:center;
       margin:0 auto 16px;
     }
-    .logo-box img { height:32px; }
+    .logo-box img { height:48px; width:auto; object-fit:contain; }
     .brand {
       font-size:11px;
       font-weight:600;
@@ -111,7 +111,7 @@
 <body>
   <div class="card">
     <div class="logo-box">
-      <img src="/static/img/logo_white.png" alt="Tahfeel">
+      <img src="/static/img/logo_white.png" alt="Tahfeel" onerror="this.parentElement.innerHTML='<span style=\"color:white;font-size:28px;font-weight:700;\">T</span>'">
     </div>
     <div class="brand">Tahfeel Business Solutions</div>
     <div class="welcome">Welcome back</div>
