@@ -1323,14 +1323,42 @@ def jobs():
     now = datetime.now()
     role = session['role']
     try:
-        # All roles see all tasks
-        job_list = Job.query.order_by(Job.created_at.desc()).all()
+        # All roles see all tasks — sorted by due date ascending
+        job_list = Job.query.order_by(Job.due_date.asc()).all()
         status_filter = request.args.get('status', '')
         priority_filter = request.args.get('priority', '')
+        assigned_filter = request.args.get('assigned_to', '') or request.args.get('staff', '')
+        date_filter = request.args.get('date', '')
+        from_date = request.args.get('from_date', '')
+        to_date = request.args.get('to_date', '')
+
         if status_filter:
             job_list = [j for j in job_list if j.status == status_filter]
         if priority_filter:
             job_list = [j for j in job_list if j.priority == priority_filter]
+        if assigned_filter:
+            try:
+                job_list = [j for j in job_list if j.assigned_to == int(assigned_filter)]
+            except: pass
+        # Due date filters
+        if date_filter == 'today':
+            job_list = [j for j in job_list if j.due_date and j.due_date.date() == now.date()]
+        elif date_filter == 'week':
+            week_end = now + timedelta(days=7)
+            job_list = [j for j in job_list if j.due_date and now.date() <= j.due_date.date() <= week_end.date()]
+        elif date_filter == 'month':
+            job_list = [j for j in job_list if j.due_date and j.due_date.month == now.month and j.due_date.year == now.year]
+        elif date_filter == 'custom':
+            if from_date:
+                try:
+                    fd = datetime.strptime(from_date, '%Y-%m-%d').date()
+                    job_list = [j for j in job_list if j.due_date and j.due_date.date() >= fd]
+                except: pass
+            if to_date:
+                try:
+                    td = datetime.strptime(to_date, '%Y-%m-%d').date()
+                    job_list = [j for j in job_list if j.due_date and j.due_date.date() <= td]
+                except: pass
         overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
         users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
         jobs_invoiced = sum((j.amount_invoiced or 0) for j in job_list)
@@ -1361,6 +1389,7 @@ def jobs():
     return render_template('jobs.html', jobs=job_list, now=now, overdue=overdue,
                            statuses=JOB_STATUSES, users=users,
                            status_filter=status_filter, priority_filter=priority_filter,
+                           assigned_filter=assigned_filter, date_filter=date_filter,
                            jobs_invoiced=jobs_invoiced, jobs_received=jobs_received,
                            jobs_pending=jobs_pending, jobs_completed=jobs_completed)
 

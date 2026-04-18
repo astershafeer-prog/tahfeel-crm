@@ -40,13 +40,23 @@
     </div>
 
     <!-- Filters -->
-    <form method="get" class="filters">
+    <form method="get" class="filters" id="jobFilters">
       <div class="filter-group">
-        <label>Due Date From</label>
+        <label>Due Date</label>
+        <select name="date" onchange="toggleCustom(this.value)">
+          <option value="">All</option>
+          <option value="today" {% if request.args.get('date')=='today' %}selected{% endif %}>Today</option>
+          <option value="week" {% if request.args.get('date')=='week' %}selected{% endif %}>This Week</option>
+          <option value="month" {% if request.args.get('date')=='month' %}selected{% endif %}>This Month</option>
+          <option value="custom" {% if request.args.get('date')=='custom' %}selected{% endif %}>Custom Range</option>
+        </select>
+      </div>
+      <div class="filter-group" id="customFrom" style="display:{% if request.args.get('date')=='custom' %}block{% else %}none{% endif %};">
+        <label>From</label>
         <input type="date" name="from_date" value="{{ request.args.get('from_date','') }}">
       </div>
-      <div class="filter-group">
-        <label>Due Date To</label>
+      <div class="filter-group" id="customTo" style="display:{% if request.args.get('date')=='custom' %}block{% else %}none{% endif %};">
+        <label>To</label>
         <input type="date" name="to_date" value="{{ request.args.get('to_date','') }}">
       </div>
       <div class="filter-group">
@@ -160,6 +170,13 @@
     function confirmBulkDelete() {
       const count = document.querySelectorAll('.job-checkbox:checked').length;
       if (confirm(`Delete ${count} task(s)?`)) document.getElementById('bulkForm').submit();
+    }
+  </script>
+  <script>
+    function toggleCustom(val) {
+      const show = val === 'custom';
+      document.getElementById('customFrom').style.display = show ? 'block' : 'none';
+      document.getElementById('customTo').style.display = show ? 'block' : 'none';
     }
   </script>
 </body>
