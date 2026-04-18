@@ -836,7 +836,7 @@ tr.selected td { background: var(--info-bg) !important; }
 
 /* ── Delete Modal ──────────────────────────────────────── */
 .modal-overlay {
-  display: none;
+  display: none !important;
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.45);
@@ -844,7 +844,7 @@ tr.selected td { background: var(--info-bg) !important; }
   align-items: center;
   justify-content: center;
 }
-.modal-overlay.active { display: flex; }
+.modal-overlay.active { display: flex !important; }
 .modal-box {
   background: white;
   border-radius: var(--radius-lg);

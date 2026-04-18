@@ -293,11 +293,15 @@ def apply_lead_filters(leads, args, now):
         from_date = args.get('from')
         to_date = args.get('to')
         if from_date:
-            from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
-            leads = [l for l in leads if l.created_at and l.created_at.date() >= from_dt]
+            try:
+                from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
+                leads = [l for l in leads if l.created_at and l.created_at.date() >= from_dt]
+            except: pass
         if to_date:
-            to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
-            leads = [l for l in leads if l.created_at and l.created_at.date() <= to_dt]
+            try:
+                to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
+                leads = [l for l in leads if l.created_at and l.created_at.date() <= to_dt]
+            except: pass
     if status_filter:
         if status_filter == 'Overdue':
             leads = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
@@ -624,7 +628,8 @@ def add_lead():
         db.session.commit()
         flash('Lead added successfully')
         return redirect(url_for('all_leads'))
-    return render_template('add_lead.html', users=users, services=services, sources=sources, now=now)
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    return render_template('add_lead.html', users=users, services=services, sources=sources, now=now, tomorrow=tomorrow)
 
 @app.route('/leads/<int:lead_id>', methods=['GET', 'POST'])
 @login_required

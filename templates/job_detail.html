@@ -33,10 +33,10 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
-          {% if session.role == 'admin' or (job.status not in ['Done','Closed','Pending Finance Close'] and job.assigned_to == session.user_id) %}
+          {% if job.status != 'Closed' and (session.role == 'admin' or (job.status not in ['Done','Pending Finance Close'] and job.assigned_to == session.user_id)) %}
           <a href="/jobs/{{ job.id }}/edit" class="btn-sm">✏ Edit</a>
           {% endif %}
-          {% if session.role == 'admin' %}
+          {% if session.role == 'admin' and job.status != 'Closed' %}
           <button class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'">Delete</button>
           {% endif %}
         </div>
