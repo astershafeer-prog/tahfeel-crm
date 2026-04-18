@@ -23,6 +23,7 @@
         <button id="bulkDeleteBtn" class="btn-bulk-delete" style="display:none;" onclick="confirmBulkDelete()">🗑 Delete (<span id="selectedCount">0</span>)</button>
         {% endif %}
         {% if session.role in ['admin','operations'] %}
+      <a href="/jobs/export" class="btn-sm" style="background:var(--success-bg);border-color:var(--success);color:var(--success);">⬇ Export</a>
       {% if session.role in ['admin','operations'] %}
       <a href="/jobs/add" class="btn-add">+ Add Task</a>
       {% endif %}

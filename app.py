@@ -1393,6 +1393,44 @@ def jobs():
                            jobs_invoiced=jobs_invoiced, jobs_received=jobs_received,
                            jobs_pending=jobs_pending, jobs_completed=jobs_completed)
 
+
+@app.route('/jobs/export')
+@login_required
+def export_jobs():
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Tasks'
+    headers = ['ID','Customer','Company','Service Type','Assigned To','Status','Priority','Due Date','Invoiced (AED)','Received (AED)','Pending (AED)','Created']
+    for i, h in enumerate(headers, 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    jobs = Job.query.order_by(Job.due_date.asc()).all()
+    for j in jobs:
+        ws.append([
+            j.id,
+            j.customer.name if j.customer else '',
+            j.customer.company if j.customer and j.customer.company else '',
+            j.job_type or '',
+            j.assignee.name if j.assignee else '',
+            j.status or '',
+            j.priority or '',
+            j.due_date.strftime('%d/%m/%Y') if j.due_date else '',
+            j.amount_invoiced or 0,
+            j.amount_received or 0,
+            (j.amount_invoiced or 0) - (j.amount_received or 0),
+            j.created_at.strftime('%d/%m/%Y') if j.created_at else '',
+        ])
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = max(len(str(col[0].value or '')), 12)
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    return send_file(buf, download_name='tahfeel_tasks.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 @app.route('/jobs/add', methods=['GET', 'POST'])
 @login_required
 def add_job():
