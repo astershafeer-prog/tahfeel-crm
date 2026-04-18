@@ -1417,7 +1417,7 @@ ACTIVITY_DEFAULTS = [
 def get_activities():
     try:
         types = ActivityType.query.filter_by(active=True).order_by(ActivityType.sort_order, ActivityType.id).all()
-        return [(t.field_key, t.label, t.weekly_target) for t in types]
+        return [(t.field_key, t.label, getattr(t, 'weekly_target', 5) or 5) for t in types]
     except:
         return ACTIVITY_DEFAULTS
 
@@ -1900,6 +1900,13 @@ def init_db():
             try:
                 with db.engine.connect() as conn:
                     conn.execute(db.text('ALTER TABLE job_type ADD COLUMN default_days INTEGER DEFAULT 1'))
+                    conn.commit()
+            except Exception:
+                pass  # Column already exists
+            # Ensure weekly_target column exists on activity_type
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text('ALTER TABLE activity_type ADD COLUMN weekly_target FLOAT DEFAULT 5'))
                     conn.commit()
             except Exception:
                 pass  # Column already exists
