@@ -49,7 +49,7 @@
       {% endif %}
       <div class="filters">
         <div class="filter-group">
-          <label>Date Range</label>
+          <label>Created Date</label>
           <select name="date" id="dateFilter" onchange="toggleCustomDates(this.value)">
             <option value="">All time</option>
             <option value="today" {% if request.args.get('date') == 'today' %}selected{% endif %}>Today</option>
@@ -112,7 +112,7 @@
                 <th>Company</th>
                 <th>Service</th>
                 <th>Assigned To</th>
-                <th>Due Date</th>
+                <th>Created</th><th>Due Date</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
