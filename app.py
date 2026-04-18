@@ -1350,6 +1350,9 @@ def jobs():
 @app.route('/jobs/add', methods=['GET', 'POST'])
 @login_required
 def add_job():
+    if session.get('role') not in ['admin', 'operations']:
+        flash('Access denied — only Operations can add tasks')
+        return redirect(url_for('jobs'))
     customers = Customer.query.order_by(Customer.name).all()
     job_types = ServiceType.query.order_by(ServiceType.name).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
@@ -1449,13 +1452,18 @@ def job_detail(job_id):
     job = Job.query.get_or_404(job_id)
     now = datetime.now()
     role = session['role']
-    # Finance/sales/operations can see their own jobs; admin all
-    if role in ['staff', 'sales'] and job.assigned_to != session['user_id']:
+    # Sales and operations can view all tasks (not just assigned ones)
+    # Only restrict if somehow a non-authorised role gets here
+    if role not in ['admin', 'sales', 'operations', 'finance', 'staff']:
         flash('Access denied')
         return redirect(url_for('jobs'))
     if request.method == 'POST':
-        # Closed — no updates at all except admin
-        if job.status == 'Closed' and role != 'admin':
+        # Sales cannot update tasks at all
+        if role == 'sales':
+            flash('Sales cannot update task status. Contact Operations.')
+            return redirect(url_for('job_detail', job_id=job_id))
+        # Closed — no updates except admin/finance
+        if job.status == 'Closed' and role not in ['admin', 'finance']:
             flash('This task is closed. No further updates allowed.')
             return redirect(url_for('job_detail', job_id=job_id))
         # Done/Pending Finance Close — only allow saving rating/review/testimonial
@@ -1524,9 +1532,11 @@ def job_detail(job_id):
 @login_required
 def edit_job(job_id):
     job = Job.query.get_or_404(job_id)
-    # Only admin can edit Done/Closed tasks
-    if job.status in ['Done', 'Closed', 'Pending Finance Close'] and session['role'] != 'admin':
-        flash('This task is completed and cannot be edited.')
+    if session.get('role') not in ['admin', 'operations']:
+        flash('Access denied — only Operations can edit tasks')
+        return redirect(url_for('job_detail', job_id=job_id))
+    if job.status == 'Closed' and session['role'] != 'admin':
+        flash('Closed tasks cannot be edited.')
         return redirect(url_for('job_detail', job_id=job_id))
     # Staff can only edit tasks assigned to them
     if session['role'] in ['sales', 'staff'] and job.assigned_to != session['user_id']:

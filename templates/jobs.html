@@ -22,7 +22,11 @@
         {% if session.role in ['admin', 'operations'] %}
         <button id="bulkDeleteBtn" class="btn-bulk-delete" style="display:none;" onclick="confirmBulkDelete()">🗑 Delete (<span id="selectedCount">0</span>)</button>
         {% endif %}
-        <a href="/jobs/add" class="btn-add">+ Add Task</a>
+        {% if session.role in ['admin','operations'] %}
+      {% if session.role in ['admin','operations'] %}
+      <a href="/jobs/add" class="btn-add">+ Add Task</a>
+      {% endif %}
+      {% endif %}
       </div>
     </div>
 
