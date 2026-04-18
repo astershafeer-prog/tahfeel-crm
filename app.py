@@ -1925,18 +1925,19 @@ def init_db():
                     db.session.add(Source(name=s))
                 db.session.commit()
                 print('Default sources created')
-            # Safe migration for default_days on job_type
-            try:
-                with db.engine.connect() as _c:
-                    _c.execute(db.text('ALTER TABLE job_type ADD COLUMN default_days INTEGER DEFAULT 1'))
-                    _c.commit()
-            except Exception:
-                pass  # Column already exists
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(ServiceType(name=jt))
                 db.session.commit()
                 print('Default job types created')
+            # Safe migration for default_days on job_type (runs every startup, safe to repeat)
+            try:
+                with db.engine.connect() as _c:
+                    _c.execute(db.text('ALTER TABLE job_type ADD COLUMN default_days INTEGER DEFAULT 1'))
+                    _c.commit()
+                    print('Added default_days column to job_type')
+            except Exception:
+                pass  # Column already exists — OK
             if ActivityType.query.count() == 0:
                 for i, (key, label, target) in enumerate(ACTIVITY_DEFAULTS):
                     db.session.add(ActivityType(field_key=key, label=label, weekly_target=target, sort_order=i))

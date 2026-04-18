@@ -232,7 +232,10 @@
             {% for jt in job_types %}
             <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
               <div id="jt-view-{{ jt.id }}" style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-size:13px;font-weight:500;">{{ jt.name }}</span>
+                <div>
+                  <span style="font-size:13px;font-weight:500;">{{ jt.name }}</span>
+                  <span style="font-size:11px;color:var(--text-muted);margin-left:8px;background:var(--bg);padding:2px 8px;border-radius:10px;">{{ jt.default_days or 1 }} day(s) default</span>
+                </div>
                 <div style="display:flex;gap:6px;">
                   <button onclick="jtEdit({{ jt.id }})" class="btn-sm">Edit</button>
                   <a href="/admin/jobtype/{{ jt.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove {{ jt.name }}?')">Remove</a>
