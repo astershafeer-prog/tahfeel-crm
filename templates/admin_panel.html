@@ -130,12 +130,13 @@
           <input type="text" oninput="filterList(this,'sv-view')" placeholder="Filter services..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if services %}
             {% for service in services %}
-            <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
-              <div id="sv-view-{{ service.id }}" style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
+              <div id="sv-view-{{ service.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
+                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
                 <span style="font-size:13px;">{{ service.name }}</span>
                 <div style="display:flex;gap:5px;">
-                  <button onclick="svEdit({{ service.id }})" class="btn-sm">Edit</button>
-                  <a href="/admin/service/{{ service.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove {{ service.name }}?')">Remove</a>
+                  <button onclick="svEdit({{ service.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
+                  <a href="/admin/service/{{ service.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ service.name }}?')" title="Remove">🗑</a>
                 </div>
               </div>
               <form id="sv-form-{{ service.id }}" method="POST" action="/admin/service/{{ service.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
@@ -169,12 +170,13 @@
           <input type="text" oninput="filterList(this,'so-view')" placeholder="Filter sources..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if sources %}
             {% for source in sources %}
-            <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
-              <div id="so-view-{{ source.id }}" style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
+              <div id="so-view-{{ source.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
+                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
                 <span style="font-size:13px;">{{ source.name }}</span>
                 <div style="display:flex;gap:5px;">
-                  <button onclick="soEdit({{ source.id }})" class="btn-sm">Edit</button>
-                  <a href="/admin/source/{{ source.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove {{ source.name }}?')">Remove</a>
+                  <button onclick="soEdit({{ source.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
+                  <a href="/admin/source/{{ source.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ source.name }}?')" title="Remove">🗑</a>
                 </div>
               </div>
               <form id="so-form-{{ source.id }}" method="POST" action="/admin/source/{{ source.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
@@ -211,15 +213,16 @@
           <input type="text" oninput="filterList(this,'jt-view')" placeholder="Filter service types..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if job_types %}
             {% for jt in job_types %}
-            <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
-              <div id="jt-view-{{ jt.id }}" style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
+              <div id="jt-view-{{ jt.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
+                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
                 <div>
                   <span style="font-size:13px;">{{ jt.name }}</span>
                   <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">{{ jt.default_days or 1 }}d</span>
                 </div>
                 <div style="display:flex;gap:5px;">
-                  <button onclick="jtEdit({{ jt.id }})" class="btn-sm">Edit</button>
-                  <a href="/admin/jobtype/{{ jt.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove {{ jt.name }}?')">Remove</a>
+                  <button onclick="jtEdit({{ jt.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
+                  <a href="/admin/jobtype/{{ jt.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ jt.name }}?')" title="Remove">🗑</a>
                 </div>
               </div>
               <form id="jt-form-{{ jt.id }}" method="POST" action="/admin/jobtype/{{ jt.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -254,12 +257,13 @@
           <input type="text" oninput="filterList(this,'dt-view')" placeholder="Filter document types..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if doc_types %}
             {% for dt in doc_types %}
-            <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
-              <div id="dt-view-{{ dt.id }}" style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
+              <div id="dt-view-{{ dt.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
+                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
                 <span style="font-size:13px;">{{ dt.name }}</span>
                 <div style="display:flex;gap:5px;">
-                  <button onclick="dtEdit({{ dt.id }})" class="btn-sm">Edit</button>
-                  <a href="/admin/doctype/{{ dt.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove {{ dt.name }}?')">Remove</a>
+                  <button onclick="dtEdit({{ dt.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
+                  <a href="/admin/doctype/{{ dt.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ dt.name }}?')" title="Remove">🗑</a>
                 </div>
               </div>
               <form id="dt-form-{{ dt.id }}" method="POST" action="/admin/doctype/{{ dt.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
