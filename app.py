@@ -1,4 +1,5 @@
 # v18
+import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 import cloudinary
