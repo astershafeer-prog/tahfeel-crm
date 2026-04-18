@@ -527,14 +527,12 @@ def all_leads():
     search = request.args.get('search', '').strip().lower()
     is_default = not any(request.args.get(k) for k in ['date', 'status', 'staff', 'search', 'from', 'to'])
 
-    if is_default:
-        leads = [l for l in leads if l.created_at and l.created_at.date() == now.date()]
-    else:
-        if search:
-            leads = [l for l in leads if
-                     search in (l.name or '').lower() or
-                     search in (l.phone or '').lower() or
-                     search in (l.company or '').lower()]
+    if search:
+        leads = [l for l in leads if
+                 search in (l.name or '').lower() or
+                 search in (l.phone or '').lower() or
+                 search in (l.company or '').lower()]
+    if not is_default:
         leads = apply_lead_filters(leads, request.args, now)
 
     # Pagination

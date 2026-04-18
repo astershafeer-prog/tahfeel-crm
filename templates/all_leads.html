@@ -52,7 +52,7 @@
           <label>Date Range</label>
           <select name="date" id="dateFilter" onchange="toggleCustomDates(this.value)">
             <option value="">All time</option>
-            <option value="today" {% if request.args.get('date') == 'today' or is_default %}selected{% endif %}>Today</option>
+            <option value="today" {% if request.args.get('date') == 'today' %}selected{% endif %}>Today</option>
             <option value="week" {% if request.args.get('date') == 'week' %}selected{% endif %}>This Week</option>
             <option value="month" {% if request.args.get('date') == 'month' %}selected{% endif %}>This Month</option>
             <option value="custom" {% if request.args.get('date') == 'custom' %}selected{% endif %}>Custom Range</option>
@@ -189,7 +189,7 @@
 
   </div>
 
-  <div class="modal-overlay" id="deleteModal" style="display:none;">
+  <div class="modal-overlay" id="deleteModal">
     <div class="modal">
       <h3>Delete Lead</h3>
       <p id="deleteModalText">Are you sure?</p>
@@ -200,7 +200,7 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="bulkModal" style="display:none;">
+  <div class="modal-overlay" id="bulkModal">
     <div class="modal">
       <h3>Delete Selected Leads</h3>
       <p id="bulkModalText">Are you sure?</p>
