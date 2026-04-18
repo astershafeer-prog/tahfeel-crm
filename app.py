@@ -330,7 +330,8 @@ def login():
             session['role'] = user.role
             return redirect(url_for('dashboard'))
         flash('Invalid email or password')
-    return render_template('login.html')
+        return render_template('login.html', email=email)
+    return render_template('login.html', email='')
 
 @app.route('/logout')
 def logout():
