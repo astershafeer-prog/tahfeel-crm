@@ -1112,6 +1112,7 @@ def export_customers():
 @login_required
 def customer_import_template():
     import io
+    from flask import send_file
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment
     wb = Workbook()
