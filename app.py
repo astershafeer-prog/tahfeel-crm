@@ -1155,7 +1155,7 @@ def add_job():
         return redirect(url_for('jobs'))
     tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
     import json
-    service_days = {jt.name: (getattr(jt, 'default_days', None) or 1) for jt in job_types}
+    service_days = {jt.name: (jt.default_days or 1) for jt in job_types}
     return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days=json.dumps(service_days))
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
@@ -1653,12 +1653,8 @@ def admin_edit_jobtype(item_id):
     name = request.form.get('name', '').strip()
     if name:
         item.name = name
-    try:
-        item.default_days = int(request.form.get('default_days', 1))
-    except:
-        pass
-    db.session.commit()
-    flash('Service type updated')
+        db.session.commit()
+        flash('Service type updated')
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/doctype/<int:item_id>/edit', methods=['POST'])
@@ -1882,7 +1878,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
             'ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)',
-
+            'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS default_days INTEGER DEFAULT 1',
             '''CREATE TABLE IF NOT EXISTS activity_type (
                 id SERIAL PRIMARY KEY,
                 field_key VARCHAR(50) UNIQUE NOT NULL,
@@ -1930,14 +1926,6 @@ def init_db():
                     db.session.add(ServiceType(name=jt))
                 db.session.commit()
                 print('Default job types created')
-            # Safe migration for default_days on job_type (runs every startup, safe to repeat)
-            try:
-                with db.engine.connect() as _c:
-                    _c.execute(db.text('ALTER TABLE job_type ADD COLUMN default_days INTEGER DEFAULT 1'))
-                    _c.commit()
-                    print('Added default_days column to job_type')
-            except Exception:
-                pass  # Column already exists — OK
             if ActivityType.query.count() == 0:
                 for i, (key, label, target) in enumerate(ACTIVITY_DEFAULTS):
                     db.session.add(ActivityType(field_key=key, label=label, weekly_target=target, sort_order=i))
