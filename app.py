@@ -101,12 +101,17 @@ class Customer(db.Model):
     name = db.Column(db.String(100), nullable=False)
     company = db.Column(db.String(100))
     phone = db.Column(db.String(20))
+    phone2 = db.Column(db.String(20))
     email = db.Column(db.String(100))
     address = db.Column(db.String(200))
     source = db.Column(db.String(50))
+    nationality = db.Column(db.String(50))
+    customer_type = db.Column(db.String(20), default='Individual')
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     lead_id = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=True)
+    rep = db.relationship('User', foreign_keys=[assigned_to])
     lead = db.relationship('Lead', foreign_keys=[lead_id])
     jobs = db.relationship('Job', backref='customer', lazy=True, order_by='Job.created_at.desc()')
 
@@ -964,13 +969,20 @@ def admin_toggle_staff(user_id):
 @login_required
 def customers():
     search = request.args.get('search', '').strip().lower()
-    customer_list = Customer.query.order_by(Customer.name).all()
+    from sqlalchemy import func
+    customer_list = Customer.query.order_by(Customer.created_at.desc()).all()
     if search:
         customer_list = [c for c in customer_list if
             search in (c.name or '').lower() or
             search in (c.company or '').lower() or
             search in (c.phone or '').lower()]
-    return render_template('customers.html', customers=customer_list)
+    page = int(request.args.get('page', 1))
+    per_page = 25
+    total = len(customer_list)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    paginated = customer_list[(page-1)*per_page : page*per_page]
+    return render_template('customers.html', customers=paginated, page=page, total_pages=total_pages, total=total, search=request.args.get('search',''))
 
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required
@@ -983,6 +995,7 @@ def add_customer():
             lead = Lead.query.get(int(lead_id))
             customer = Customer(
                 name=lead.name, company=lead.company, phone=lead.phone,
+                phone2=getattr(lead, 'phone2', None),
                 email=lead.email, address=lead.address, source=lead.source,
                 notes=request.form.get('notes'), lead_id=int(lead_id)
             )
@@ -1001,7 +1014,8 @@ def add_customer():
         flash('Customer added successfully')
         # Redirect to add_job with this customer pre-selected, or jobs list
         return redirect(url_for('add_job') + f'?customer_id={customer.id}')
-    return render_template('add_customer.html', converted_leads=converted_leads, sources=sources)
+    users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations','admin'])).all()
+    return render_template('add_customer.html', converted_leads=converted_leads, sources=sources, users=users)
 
 @app.route('/customers/<int:customer_id>')
 @login_required
@@ -1022,18 +1036,26 @@ def customer_detail(customer_id):
 def edit_customer(customer_id):
     customer = Customer.query.get_or_404(customer_id)
     sources = Source.query.order_by(Source.name).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations','admin'])).all()
     if request.method == 'POST':
         customer.name = request.form.get('name', '').strip() or customer.name
         customer.company = request.form.get('company', '').strip()
         customer.phone = request.form.get('phone', '').strip()
+        customer.phone2 = request.form.get('phone2', '').strip() or None
         customer.email = request.form.get('email', '').strip()
         customer.address = request.form.get('address', '').strip()
         customer.source = request.form.get('source', '').strip()
+        customer.nationality = request.form.get('nationality', '').strip() or None
+        customer.customer_type = request.form.get('customer_type', 'Individual')
+        try:
+            customer.assigned_to = int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None
+        except:
+            pass
         customer.notes = request.form.get('notes', '').strip()
         db.session.commit()
         flash('Customer updated successfully')
         return redirect(url_for('customer_detail', customer_id=customer_id))
-    return render_template('edit_customer.html', customer=customer, sources=sources)
+    return render_template('edit_customer.html', customer=customer, sources=sources, users=users)
 
 @app.route('/customers/<int:customer_id>/delete')
 @login_required
@@ -1049,6 +1071,79 @@ def delete_customer(customer_id):
     db.session.commit()
     flash('Customer deleted')
     return redirect(url_for('customers'))
+
+
+@app.route('/customers/export')
+@login_required
+def export_customers():
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Customers'
+    headers = ['ID','Name','Company','Phone','Phone 2','Email','Address','Source','Nationality','Type','Primary Rep','Notes','Created','Tasks','Total Invoiced','Total Received']
+    for i, h in enumerate(headers, 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    customers = Customer.query.order_by(Customer.created_at.desc()).all()
+    for r, c in enumerate(customers, 2):
+        tasks = len(c.jobs)
+        invoiced = sum(j.amount_invoiced or 0 for j in c.jobs)
+        received = sum(j.amount_received or 0 for j in c.jobs)
+        rep_name = c.rep.name if hasattr(c, 'rep') and c.rep else ''
+        ws.append([c.id, c.name, c.company or '', c.phone or '', c.phone2 or '',
+                   c.email or '', c.address or '', c.source or '',
+                   c.nationality or '', c.customer_type or 'Individual',
+                   rep_name, c.notes or '',
+                   c.created_at.strftime('%d/%m/%Y') if c.created_at else '',
+                   tasks, invoiced, received])
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = max(len(str(col[0].value or '')), 12)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, download_name='tahfeel_customers.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/customers/import', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def import_customers():
+    sources = Source.query.order_by(Source.name).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations','admin'])).all()
+    if request.method == 'POST':
+        f = request.files.get('file')
+        if not f or not f.filename.endswith('.xlsx'):
+            flash('Please upload an .xlsx file')
+            return redirect(url_for('import_customers'))
+        from openpyxl import load_workbook
+        wb = load_workbook(f)
+        ws = wb.active
+        imported = skipped = 0
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row[0]: continue
+            name = str(row[0]).strip()
+            if not name: continue
+            phone = str(row[1]).strip() if row[1] else ''
+            company = str(row[2]).strip() if row[2] else ''
+            phone2 = str(row[3]).strip() if len(row) > 3 and row[3] else ''
+            email = str(row[4]).strip() if len(row) > 4 and row[4] else ''
+            address = str(row[5]).strip() if len(row) > 5 and row[5] else ''
+            source = str(row[6]).strip() if len(row) > 6 and row[6] else ''
+            nationality = str(row[7]).strip() if len(row) > 7 and row[7] else ''
+            ctype = str(row[8]).strip() if len(row) > 8 and row[8] else 'Individual'
+            notes = str(row[9]).strip() if len(row) > 9 and row[9] else ''
+            c = Customer(name=name, phone=phone, company=company, phone2=phone2 or None,
+                        email=email, address=address, source=source,
+                        nationality=nationality or None, customer_type=ctype, notes=notes)
+            db.session.add(c)
+            imported += 1
+        db.session.commit()
+        flash(f'Import complete: {imported} customers added')
+        return redirect(url_for('customers'))
+    return render_template('import_customers.html', sources=sources, users=users)
 
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 

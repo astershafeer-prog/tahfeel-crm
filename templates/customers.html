@@ -17,15 +17,21 @@
     {% endwith %}
 
     <div class="page-header">
-      <h2>Customers <span class="page-subtitle">({{ customers|length }} total)</span></h2>
-      <a href="/customers/add" class="btn-add">+ Add Customer</a>
+      <h2>Customers <span class="page-subtitle">({{ total }} total)</span></h2>
+      <div style="display:flex;gap:8px;">
+        <a href="/customers/export" class="btn-sm" style="background:var(--success-bg);border-color:var(--success);color:var(--success);">⬇ Export</a>
+        <a href="/customers/import" class="btn-sm">📥 Import</a>
+        <a href="/customers/add" class="btn-add">+ Add Customer</a>
+      </div>
     </div>
 
     <!-- Search -->
-    <form method="get" style="margin-bottom:12px;display:flex;gap:8px;">
-      <input type="text" name="search" value="{{ request.args.get('search','') }}" placeholder="Search by name, company or phone..." style="flex:1;padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;">
+    <form method="get" class="filters" style="margin-bottom:12px;">
+      <div class="filter-group" style="flex:1;">
+        <input type="text" name="search" value="{{ search }}" placeholder="Search by name, company, phone or email..." style="width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;">
+      </div>
       <button type="submit" class="btn-filter">Search</button>
-      {% if request.args.get('search') %}<a href="/customers" class="btn-reset">Clear</a>{% endif %}
+      {% if search %}<a href="/customers" class="btn-reset">Clear</a>{% endif %}
     </form>
 
     <div class="card">
@@ -35,9 +41,10 @@
             <th>Name</th>
             <th>Company</th>
             <th>Phone</th>
-            <th>Source</th>
+            <th>Type</th>
+            <th>Nationality</th>
+            <th>Rep</th>
             <th style="text-align:center;">Tasks</th>
-            <th style="text-align:center;">Docs</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -51,19 +58,17 @@
             <td>{{ c.company or '—' }}</td>
             <td>
               {% if c.phone %}
-              {{ c.phone }}
+              <span style="font-size:13px;">{{ c.phone }}</span>
               <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600;text-decoration:none;margin-left:4px;">WA</a>
               {% else %}—{% endif %}
             </td>
-            <td>{{ c.source or '—' }}</td>
+            <td><span class="badge b-{{ (c.customer_type or 'individual')|lower }}">{{ c.customer_type or 'Individual' }}</span></td>
+            <td>{{ c.nationality or '—' }}</td>
+            <td>{{ c.rep.name if c.rep else '—' }}</td>
             <td style="text-align:center;">
               {% if c.jobs|length > 0 %}
               <span style="background:var(--info-bg);color:var(--primary);padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;">{{ c.jobs|length }}</span>
               {% else %}<span style="color:var(--text-light);">0</span>{% endif %}
-            </td>
-            <td style="text-align:center;">
-              {% set doc_count = c.documents|length if c.documents is defined else 0 %}
-              <a href="/documents?customer_id={{ c.id }}" style="background:var(--success-bg);color:var(--success);padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;text-decoration:none;">📄 {{ c.documents|length if c.documents is defined else 0 }}</a>
             </td>
             <td>
               <div style="display:flex;gap:5px;">
@@ -76,11 +81,29 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="7" class="empty">No customers yet.</td></tr>
+          <tr><td colspan="8" class="empty">No customers found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+      {% if page > 1 %}<a href="?page={{ page-1 }}&search={{ search }}" class="page-btn">← Prev</a>{% endif %}
+      {% for p in range(1, total_pages+1) %}
+        {% if p == page %}
+          <span class="page-btn active">{{ p }}</span>
+        {% elif p == 1 or p == total_pages or (p >= page-2 and p <= page+2) %}
+          <a href="?page={{ p }}&search={{ search }}" class="page-btn">{{ p }}</a>
+        {% elif p == page-3 or p == page+3 %}
+          <span style="padding:0 4px;color:var(--text-muted);">…</span>
+        {% endif %}
+      {% endfor %}
+      {% if page < total_pages %}<a href="?page={{ page+1 }}&search={{ search }}" class="page-btn">Next →</a>{% endif %}
+    </div>
+    {% endif %}
+
   </div>
 </body>
 </html>
