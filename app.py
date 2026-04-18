@@ -1155,7 +1155,7 @@ def add_job():
         return redirect(url_for('jobs'))
     tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
     import json
-    service_days = {jt.name: (getattr(jt, 'default_days', 1) or 1) for jt in job_types}
+    service_days = {jt.name: (jt.default_days or 1) for jt in job_types}
     return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days=json.dumps(service_days))
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
@@ -1417,7 +1417,7 @@ ACTIVITY_DEFAULTS = [
 def get_activities():
     try:
         types = ActivityType.query.filter_by(active=True).order_by(ActivityType.sort_order, ActivityType.id).all()
-        return [(t.field_key, t.label, getattr(t, 'weekly_target', 5) or 5) for t in types]
+        return [(t.field_key, t.label, t.weekly_target) for t in types]
     except:
         return ACTIVITY_DEFAULTS
 
@@ -1627,38 +1627,12 @@ def admin_add_jobtype():
     name = request.form.get('name', '').strip()
     if name:
         if not ServiceType.query.filter_by(name=name).first():
-            try:
-                default_days = int(request.form.get('default_days', 1))
-            except:
-                default_days = 1
-            jt_new = ServiceType(name=name)
-            try:
-                jt_new.default_days = default_days
-            except Exception:
-                pass
-            db.session.add(jt_new)
+            db.session.add(ServiceType(name=name))
             db.session.commit()
-            flash(f'Service type "{name}" added')
+            flash(f'Job type "{name}" added')
         else:
-            flash('Service type already exists')
-    return redirect(url_for('admin_panel') + '#service-types')
-
-
-@app.route('/admin/jobtype/<int:jobtype_id>/edit', methods=['POST'])
-@login_required
-@admin_required
-def admin_edit_jobtype(jobtype_id):
-    jt = ServiceType.query.get_or_404(jobtype_id)
-    name = request.form.get('name', '').strip()
-    if name:
-        jt.name = name
-    try:
-        jt.default_days = int(request.form.get('default_days', getattr(jt, 'default_days', 1) or 1))
-    except:
-        pass
-    db.session.commit()
-    flash(f'Service type updated')
-    return redirect(url_for('admin_panel') + '#service-types')
+            flash('Job type already exists')
+    return redirect(url_for('admin_panel'))
 
 @app.route('/admin/jobtype/<int:jobtype_id>/delete')
 @login_required
@@ -1853,7 +1827,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
             'ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)',
-            
+            'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS default_days INTEGER DEFAULT 1',
             '''CREATE TABLE IF NOT EXISTS activity_type (
                 id SERIAL PRIMARY KEY,
                 field_key VARCHAR(50) UNIQUE NOT NULL,
@@ -1901,20 +1875,6 @@ def init_db():
                     db.session.add(ServiceType(name=jt))
                 db.session.commit()
                 print('Default job types created')
-            # Ensure default_days column exists on job_type
-            try:
-                with db.engine.connect() as conn:
-                    conn.execute(db.text('ALTER TABLE job_type ADD COLUMN default_days INTEGER DEFAULT 1'))
-                    conn.commit()
-            except Exception:
-                pass  # Column already exists
-            # Ensure weekly_target column exists on activity_type
-            try:
-                with db.engine.connect() as conn:
-                    conn.execute(db.text('ALTER TABLE activity_type ADD COLUMN weekly_target FLOAT DEFAULT 5'))
-                    conn.commit()
-            except Exception:
-                pass  # Column already exists
             if ActivityType.query.count() == 0:
                 for i, (key, label, target) in enumerate(ACTIVITY_DEFAULTS):
                     db.session.add(ActivityType(field_key=key, label=label, weekly_target=target, sort_order=i))

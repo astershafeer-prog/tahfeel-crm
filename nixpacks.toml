@@ -5,4 +5,4 @@ cmd = "gunicorn app:app -b 0.0.0.0:$PORT"
 nixPkgs = ["python39"]
 
 [variables]
-BUILD_ID = "force16"
+BUILD_ID = "force15"

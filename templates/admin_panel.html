@@ -185,7 +185,7 @@
       </div>
 
       <!-- Job Types -->
-      <div class="card" id="service-types" style="grid-column: 1 / -1; max-width: 50%;">
+      <div class="card" style="grid-column: 1 / -1; max-width: 50%;">
         <div class="card-header">
           <h2>💼 Service Types</h2>
         </div>
@@ -206,33 +206,14 @@
           <hr class="divider">
           {% if job_types %}
             {% for jt in job_types %}
-            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
-              <div id="jt-view-{{ jt.id }}" style="display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                  <span style="font-size:13px;font-weight:500;">{{ jt.name }}</span>
-                  <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">{{ jt.default_days if jt.default_days is defined else 1 }} day(s)</span>
-                </div>
-                <div style="display:flex;gap:6px;">
-                  <button onclick="jtEdit({{ jt.id }})" class="btn-sm">Edit</button>
-                  <a href="/admin/jobtype/{{ jt.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove {{ jt.name }}?')">Remove</a>
-                </div>
-              </div>
-              <form id="jt-form-{{ jt.id }}" method="POST" action="/admin/jobtype/{{ jt.id }}/edit" style="display:none;margin-top:8px;display:none;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-                <div class="form-group" style="margin:0;flex:2;min-width:160px;">
-                  <label>Name</label>
-                  <input type="text" name="name" value="{{ jt.name }}" required style="padding:6px 10px;font-size:12px;">
-                </div>
-                <div class="form-group" style="margin:0;width:100px;">
-                  <label>Default Days</label>
-                  <input type="number" name="default_days" value="{{ jt.default_days if jt.default_days is not none else 1 }}" min="1" max="365" style="padding:6px 8px;font-size:12px;">
-                </div>
-                <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">Save</button>
-                <button type="button" onclick="jtCancel({{ jt.id }})" class="btn-cancel" style="font-size:12px;padding:7px 12px;">Cancel</button>
-              </form>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
+              <span>{{ jt.name }}</span>
+              <a href="/admin/jobtype/{{ jt.id }}/delete" class="btn-sm btn-danger"
+                 onclick="return confirm('Remove {{ jt.name }}?')">Remove</a>
             </div>
             {% endfor %}
           {% else %}
-            <div class="empty">No service types yet.</div>
+            <div class="empty">No job types yet.</div>
           {% endif %}
         </div>
       </div>
@@ -273,14 +254,6 @@
     function toggleEdit(userId) {
       const row = document.getElementById('edit-row-' + userId);
       row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-    }
-    function jtEdit(id) {
-      document.getElementById('jt-view-' + id).style.display = 'none';
-      document.getElementById('jt-form-' + id).style.display = 'flex';
-    }
-    function jtCancel(id) {
-      document.getElementById('jt-view-' + id).style.display = 'flex';
-      document.getElementById('jt-form-' + id).style.display = 'none';
     }
   </script>
 </body>
