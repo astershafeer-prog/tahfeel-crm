@@ -7,106 +7,53 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { display:flex; min-height:100vh; font-family:'DM Sans',system-ui,sans-serif; }
-
-    /* Left panel */
-    .left {
-      width:55%;
-      background:#0F2660;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      padding:48px;
-      position:relative;
-      overflow:hidden;
-    }
-    .left::before {
-      content:'';
-      position:absolute;
-      width:400px; height:400px;
-      border-radius:50%;
-      background:rgba(255,255,255,0.04);
-      top:-100px; right:-100px;
-    }
-    .left::after {
-      content:'';
-      position:absolute;
-      width:300px; height:300px;
-      border-radius:50%;
-      background:rgba(255,255,255,0.03);
-      bottom:-80px; left:-60px;
-    }
-    .logo-area { display:flex; align-items:center; gap:12px; }
-    .logo-area img { height:36px; }
-    .logo-area span { color:white; font-size:18px; font-weight:600; letter-spacing:0.3px; }
-
-    .hero { position:relative; z-index:1; }
-    .hero h1 {
-      color:white;
-      font-size:36px;
-      font-weight:700;
-      line-height:1.2;
-      margin-bottom:16px;
-    }
-    .hero h1 span { color:#7BA7F7; }
-    .hero p { color:rgba(255,255,255,0.6); font-size:15px; line-height:1.6; max-width:420px; }
-
-    .features { display:grid; grid-template-columns:1fr 1fr; gap:12px; position:relative; z-index:1; }
-    .feat {
-      background:rgba(255,255,255,0.06);
-      border:1px solid rgba(255,255,255,0.1);
-      border-radius:12px;
-      padding:16px;
-    }
-    .feat-icon { font-size:20px; margin-bottom:8px; }
-    .feat-title { color:white; font-size:13px; font-weight:600; margin-bottom:4px; }
-    .feat-desc { color:rgba(255,255,255,0.5); font-size:11px; line-height:1.5; }
-
-    .left-footer { color:rgba(255,255,255,0.35); font-size:12px; position:relative; z-index:1; }
-
-    /* Right panel */
-    .right {
-      width:45%;
-      background:#F8FAFC;
+    body {
+      min-height:100vh;
+      background:#F1F5F9;
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:48px;
+      font-family:'DM Sans',system-ui,sans-serif;
+      padding:20px;
     }
-    .form-box { width:100%; max-width:380px; }
-    .form-box h2 { font-size:26px; font-weight:700; color:#1A2333; margin-bottom:6px; }
-    .form-box p { color:#64748B; font-size:14px; margin-bottom:36px; }
-
-    label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px; }
-    .input-wrap { position:relative; margin-bottom:20px; }
-    .input-wrap input {
-      width:100%;
-      padding:12px 16px;
-      border:1.5px solid #E2E8F0;
-      border-radius:10px;
-      font-size:14px;
-      color:#1A2333;
+    .card {
       background:white;
-      outline:none;
-      transition:border-color .2s;
-    }
-    .input-wrap input:focus { border-color:#1A3B8B; }
-
-    .btn-login {
+      border-radius:16px;
+      padding:48px 44px;
       width:100%;
-      padding:13px;
-      background:#1A3B8B;
-      color:white;
-      border:none;
-      border-radius:10px;
-      font-size:15px;
-      font-weight:600;
-      cursor:pointer;
-      transition:background .2s;
-      margin-top:8px;
+      max-width:400px;
+      border:1px solid #E8EEF4;
+      text-align:center;
     }
-    .btn-login:hover { background:#0F2660; }
-
+    .logo-box {
+      width:56px; height:56px;
+      background:#1A3B8B;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin:0 auto 16px;
+    }
+    .logo-box img { height:32px; }
+    .brand {
+      font-size:11px;
+      font-weight:600;
+      color:#94A3B8;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      margin-bottom:8px;
+    }
+    .welcome {
+      font-size:24px;
+      font-weight:700;
+      color:#1A2333;
+      margin-bottom:4px;
+    }
+    .sub {
+      font-size:13px;
+      color:#94A3B8;
+      margin-bottom:32px;
+    }
     .flash-msg {
       background:#FEF2F2;
       border:1px solid #FECACA;
@@ -115,83 +62,80 @@
       border-radius:8px;
       font-size:13px;
       margin-bottom:20px;
+      text-align:left;
     }
-
-    @media (max-width: 768px) {
-      .left { display:none; }
-      .right { width:100%; }
+    .field { text-align:left; margin-bottom:16px; }
+    .field label {
+      display:block;
+      font-size:11px;
+      font-weight:600;
+      color:#64748B;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+      margin-bottom:6px;
+    }
+    .field input {
+      width:100%;
+      height:42px;
+      background:#F8FAFC;
+      border:1.5px solid #E2E8F0;
+      border-radius:8px;
+      padding:0 14px;
+      font-size:14px;
+      color:#1A2333;
+      outline:none;
+      transition:border-color .2s;
+    }
+    .field input:focus { border-color:#1A3B8B; background:white; }
+    .btn-login {
+      width:100%;
+      height:44px;
+      background:#1A3B8B;
+      color:white;
+      border:none;
+      border-radius:8px;
+      font-size:15px;
+      font-weight:600;
+      cursor:pointer;
+      margin-top:8px;
+      transition:background .2s;
+    }
+    .btn-login:hover { background:#0F2660; }
+    .footer {
+      font-size:11px;
+      color:#CBD5E1;
+      margin-top:32px;
     }
   </style>
 </head>
 <body>
-
-  <!-- Left Panel -->
-  <div class="left">
-    <div class="logo-area">
+  <div class="card">
+    <div class="logo-box">
       <img src="/static/img/logo_white.png" alt="Tahfeel">
-      <span>Tahfeel Business Solutions</span>
     </div>
+    <div class="brand">Tahfeel Business Solutions</div>
+    <div class="welcome">Welcome back</div>
+    <div class="sub">Sign in to your CRM</div>
 
-    <div class="hero">
-      <h1>Manage your business<br><span>smarter, faster,</span><br>all in one place.</h1>
-      <p>Track leads, manage tasks, monitor documents and grow your team — all from one powerful CRM built for Tahfeel.</p>
-    </div>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}
+        <div class="flash-msg">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
 
-    <div class="features">
-      <div class="feat">
-        <div class="feat-icon">📊</div>
-        <div class="feat-title">Lead Pipeline</div>
-        <div class="feat-desc">Track every lead from enquiry to conversion</div>
+    <form method="post">
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" name="email" value="{{ email or '' }}" placeholder="your@tahfeel.ae" required autofocus>
       </div>
-      <div class="feat">
-        <div class="feat-icon">✅</div>
-        <div class="feat-title">Task Management</div>
-        <div class="feat-desc">Assign, track and close tasks efficiently</div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="••••••••" required>
       </div>
-      <div class="feat">
-        <div class="feat-icon">📄</div>
-        <div class="feat-title">Document Tracking</div>
-        <div class="feat-desc">Never miss an expiry date again</div>
-      </div>
-      <div class="feat">
-        <div class="feat-icon">👥</div>
-        <div class="feat-title">Team Performance</div>
-        <div class="feat-desc">Monitor staff activity and results</div>
-      </div>
-    </div>
+      <button type="submit" class="btn-login">Sign In →</button>
+    </form>
 
-    <div class="left-footer">© 2026 Tahfeel Business Solutions. Dubai, UAE.</div>
+    <div class="footer">© 2026 Tahfeel Business Solutions · Dubai, UAE</div>
   </div>
-
-  <!-- Right Panel -->
-  <div class="right">
-    <div class="form-box">
-      <h2>Welcome back</h2>
-      <p>Sign in to access your dashboard</p>
-
-      {% with messages = get_flashed_messages() %}
-        {% if messages %}{% for msg in messages %}
-          <div class="flash-msg">{{ msg }}</div>
-        {% endfor %}{% endif %}
-      {% endwith %}
-
-      <form method="post">
-        <div>
-          <label>Email Address</label>
-          <div class="input-wrap">
-            <input type="email" name="email" value="{{ email or '' }}" placeholder="your@tahfeel.ae" required autofocus>
-          </div>
-        </div>
-        <div>
-          <label>Password</label>
-          <div class="input-wrap">
-            <input type="password" name="password" placeholder="••••••••" required>
-          </div>
-        </div>
-        <button type="submit" class="btn-login">Sign In →</button>
-      </form>
-    </div>
-  </div>
-
 </body>
 </html>
