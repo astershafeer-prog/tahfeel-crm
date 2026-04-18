@@ -1,6 +1,32 @@
 # v18
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
+import cloudinary
+import cloudinary.uploader
+
+# Cloudinary config — credentials set via Railway environment variables
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+    api_key=os.environ.get('CLOUDINARY_API_KEY', ''),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET', ''),
+    secure=True
+)
+
+def upload_to_cloudinary(file, folder='tahfeel-documents'):
+    """Upload file to Cloudinary. Returns (url, public_id) or (None, None) on failure."""
+    try:
+        if not file or not file.filename: return None, None
+        result = cloudinary.uploader.upload(
+            file,
+            folder=folder,
+            resource_type='auto',  # handles PDF, images, Word docs
+            use_filename=True,
+            unique_filename=True
+        )
+        return result.get('secure_url'), result.get('public_id')
+    except Exception as e:
+        print(f'Cloudinary upload error: {e}')
+        return None, None
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from functools import wraps
@@ -2045,10 +2071,12 @@ def add_document():
             customer_id = new_cust.id
         # Handle file upload (dummy — store filename only for now)
         file_name = None
+        file_url = None
         if 'document_file' in request.files:
             f = request.files['document_file']
             if f and f.filename:
-                file_name = f.filename  # TODO: upload to Cloudinary
+                file_name = f.filename
+                file_url, _ = upload_to_cloudinary(f)  # TODO: upload to Cloudinary
         doc = Document(
             doc_type=request.form['doc_type'],
             belongs_to=request.form['belongs_to'],
@@ -2129,6 +2157,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
+            'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_url TEXT',
             'ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)',
             'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS default_days INTEGER DEFAULT 1',
             '''CREATE TABLE IF NOT EXISTS activity_type (
