@@ -2097,16 +2097,55 @@ def add_document():
             expiry_date=expiry_dt,
             notes=request.form.get('notes'),
             file_name=file_name,
+            file_url=file_url,
             uploaded_by=session['user_id'],
+            added_by=session['user_name'],
         )
         db.session.add(doc)
         db.session.commit()
         # Option A: redirect back to add form with customer pre-selected + success message
         customer_id_param = f'?customer_id={customer_id}&added=1' if customer_id else '?added=1'
         flash('Document saved successfully!')
-        return redirect(url_for('add_document') + customer_id_param)
+        if request.form.get('add_another'):
+            return redirect(url_for('add_document') + customer_id_param)
+        elif customer_id:
+            return redirect(url_for('customer_detail', customer_id=int(customer_id)))
+        return redirect(url_for('documents'))
     return render_template('add_document.html', customers=customers,
                            doc_types=doc_types, sources=sources)
+
+
+@app.route('/documents/<int:doc_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_document(doc_id):
+    doc = Document.query.get_or_404(doc_id)
+    doc_types = DocType.query.order_by(DocType.name).all()
+    customers = Customer.query.order_by(Customer.name).all()
+    if request.method == 'POST':
+        doc.doc_type = request.form.get('doc_type', doc.doc_type)
+        doc.belongs_to = request.form.get('belongs_to', doc.belongs_to)
+        doc.owner_name = request.form.get('owner_name', doc.owner_name)
+        try:
+            cid = request.form.get('customer_id')
+            doc.customer_id = int(cid) if cid else None
+        except: pass
+        try:
+            ed = request.form.get('expiry_date')
+            doc.expiry_date = datetime.strptime(ed, '%Y-%m-%d') if ed else None
+        except: pass
+        doc.notes = request.form.get('notes', doc.notes)
+        # Handle new file upload
+        if 'document_file' in request.files:
+            f = request.files['document_file']
+            if f and f.filename:
+                doc.file_name = f.filename
+                url, _ = upload_to_cloudinary(f)
+                if url:
+                    doc.file_url = url
+        db.session.commit()
+        flash('Document updated')
+        return redirect(url_for('documents'))
+    return render_template('edit_document.html', doc=doc, doc_types=doc_types, customers=customers)
 
 @app.route('/documents/<int:doc_id>/delete')
 @login_required
