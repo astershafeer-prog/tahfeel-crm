@@ -118,7 +118,7 @@
                 {% endif %}
                 <a href="/documents/{{ doc.id }}/edit" class="btn-sm">Edit</a>
                 {% if session.role == 'admin' %}
-                <a href="/documents/{{ doc.id }}/delete" class="btn-del" onclick="return confirm('Remove this document?')">Del</a>
+                <a href="/documents/{{ doc.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove this document?')">Del</a>
                 {% endif %}
               </div>
             </td>
