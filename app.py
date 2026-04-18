@@ -199,6 +199,8 @@ class Document(db.Model):
     expiry_date = db.Column(db.DateTime, nullable=True)
     notes = db.Column(db.Text)
     file_name = db.Column(db.String(255), nullable=True)
+    file_url = db.Column(db.Text, nullable=True)
+    added_by = db.Column(db.String(100), nullable=True)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.now)
     uploader = db.relationship('User', foreign_keys=[uploaded_by])
