@@ -1001,21 +1001,51 @@ def add_customer():
             )
         else:
             customer = Customer(
-                name=request.form['name'],
-                company=request.form.get('company'),
-                phone=request.form.get('phone'),
-                email=request.form.get('email'),
-                address=request.form.get('address'),
-                source=request.form.get('source'),
-                notes=request.form.get('notes')
+                name=request.form.get('name', '').strip(),
+                company=request.form.get('company', '').strip() or None,
+                phone=request.form.get('phone', '').strip(),
+                phone2=request.form.get('phone2', '').strip() or None,
+                email=request.form.get('email', '').strip() or None,
+                address=request.form.get('address', '').strip() or None,
+                source=request.form.get('source', '').strip() or None,
+                nationality=request.form.get('nationality', '').strip() or None,
+                customer_type=request.form.get('customer_type', 'Individual'),
+                assigned_to=int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None,
+                notes=request.form.get('notes', '').strip() or None
             )
         db.session.add(customer)
+        db.session.flush()  # get customer.id before commit
+
+        # Save inline documents
+        doc_types_inline = request.form.getlist('doc_type[]')
+        doc_owners = request.form.getlist('doc_owner[]')
+        doc_expiries = request.form.getlist('doc_expiry[]')
+        doc_notes_list = request.form.getlist('doc_notes[]')
+
+        for i, dt in enumerate(doc_types_inline):
+            if not dt: continue
+            expiry = None
+            try:
+                if i < len(doc_expiries) and doc_expiries[i]:
+                    expiry = datetime.strptime(doc_expiries[i], '%Y-%m-%d')
+            except: pass
+            doc = Document(
+                customer_id=customer.id,
+                doc_type=dt,
+                owner_name=doc_owners[i] if i < len(doc_owners) else customer.name,
+                belongs_to='Individual',
+                expiry_date=expiry,
+                notes=doc_notes_list[i] if i < len(doc_notes_list) else None,
+                added_by=session['user_name']
+            )
+            db.session.add(doc)
+
         db.session.commit()
         flash('Customer added successfully')
-        # Redirect to add_job with this customer pre-selected, or jobs list
-        return redirect(url_for('add_job') + f'?customer_id={customer.id}')
+        return redirect(url_for('customer_detail', customer_id=customer.id))
     users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations','admin'])).all()
-    return render_template('add_customer.html', converted_leads=converted_leads, sources=sources, users=users)
+    doc_types = DocType.query.order_by(DocType.name).all()
+    return render_template('add_customer.html', converted_leads=converted_leads, sources=sources, users=users, doc_types=doc_types)
 
 @app.route('/customers/<int:customer_id>')
 @login_required
