@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — My Dashboard</title>
-    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
   {{ nav('dashboard') }}
   <div class="container">
@@ -18,12 +18,10 @@
       {% endfor %}{% endif %}
     {% endwith %}
 
-{% if overdue %}
-    <div class="overdue-alert">
-      ⚠️ <strong>{{ overdue|length }} overdue lead{{ 's' if overdue|length > 1 else '' }}</strong> — need immediate attention!
-    </div>
-    {% endif %}
+    <!-- Quote -->
+    <div id="dashQuote" style="background:var(--primary);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:14px;min-height:48px;"></div>
 
+    <!-- Leads Cards -->
     <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:10px;">
       <a href="/leads" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">My Leads</div><div class="value">{{ leads|length }}</div></div></a>
       <a href="/leads?status=Pending" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">Pending</div><div class="value">{{ pending|length }}</div></div></a>
@@ -31,61 +29,83 @@
       <a href="/leads?status=Converted" style="text-decoration:none;"><div class="stat-card green" style="cursor:pointer;"><div class="label">Converted</div><div class="value">{{ converted|length }}</div></div></a>
       <a href="/leads?status=Lost" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">Lost</div><div class="value">{{ lost|length }}</div></div></a>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+
+    <!-- Tasks Cards -->
+    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:10px;">
       <a href="/jobs" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">My Tasks</div><div class="value">{{ my_jobs|length }}</div></div></a>
       <a href="/jobs?status=Assigned" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">Pending</div><div class="value">{{ my_jobs|selectattr('status','ne','Done')|list|length }}</div></div></a>
       <a href="/jobs?status=Overdue" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">Overdue</div><div class="value">{{ overdue_jobs|length }}</div></div></a>
       <a href="/jobs?status=On+Hold" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">On Hold</div><div class="value">{{ my_jobs|selectattr('status','eq','On Hold')|list|length }}</div></div></a>
       <a href="/jobs?status=Done" style="text-decoration:none;"><div class="stat-card green" style="cursor:pointer;"><div class="label">Done</div><div class="value">{{ my_jobs|selectattr('status','eq','Done')|list|length }}</div></div></a>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+
+    <!-- Financial Cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:10px;">
       <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>
       <div class="fin-card amber"><div class="lbl">Received</div><div class="val">AED {{ '{:,.0f}'.format(total_received) }}</div></div>
       <div class="fin-card red"><div class="lbl">Pending Payment</div><div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div></div>
       <div class="fin-card green"><div class="lbl">Completed</div><div class="val">AED {{ '{:,.0f}'.format(completed_value) }}</div></div>
     </div>
 
-    <!-- Follow-ups -->
-    {% if followups %}
-    <div class="card">
-      <div class="card-header"><h2>⏰ Follow-ups due today</h2></div>
-      {% for f in followups %}
-      <div class="followup-item">
-        <div>
-          <strong>{{ f.lead.name }}</strong>
-          <span style="color:var(--text-muted);font-size:12px;margin-left:8px;">{{ f.remark[:60] }}{% if f.remark|length > 60 %}...{% endif %}</span>
-        </div>
-        <a href="/leads/{{ f.lead_id }}" class="btn-sm">Open</a>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <div class="cards-4" style="margin-bottom:14px;">
+    <!-- Docs Cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px;">
       <a href="/documents" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">Total Docs</div><div class="value">{{ total_docs }}</div></div></a>
       <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">≤30 Days</div><div class="value">{{ docs_30 }}</div></div></a>
       <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">31–60 Days</div><div class="value">{{ docs_60 }}</div></div></a>
       <a href="/documents?expiry=90" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;border-top-color:#4A5568;"><div class="label">61–90 Days</div><div class="value" style="color:#4A5568;">{{ docs_90 }}</div></div></a>
     </div>
 
-    {% if session.role == 'sales' %}
-    <div style="background:white;border:0.5px solid #ddd;border-radius:var(--radius-md);padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Daily Activity Log</div>
-        <div style="font-size:13px;font-weight:600;color:var(--primary);margin-top:2px;">Log today's activities to track your performance</div>
+    <!-- Follow-ups + Daily Log side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+
+      <!-- Follow-ups -->
+      <div class="card">
+        <div class="card-header">
+          <h2>⏰ Follow-ups Due Today</h2>
+          {% if followups|length > 5 %}
+          <a href="/leads?filter=followup" style="font-size:12px;color:var(--primary);text-decoration:none;">+{{ followups|length - 5 }} more →</a>
+          {% endif %}
+        </div>
+        {% if followups %}
+        <div class="card-body" style="padding:0;">
+          {% for f in followups[:5] %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border-light);">
+            <div>
+              <div style="font-size:13px;font-weight:600;">{{ f.lead.name }}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">{{ f.remark[:50] if f.remark else '—' }}{% if f.remark and f.remark|length > 50 %}...{% endif %}</div>
+            </div>
+            <a href="/leads/{{ f.lead_id }}" class="btn-sm">Open</a>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty">No follow-ups due today.</div>
+        {% endif %}
       </div>
-      <a href="/activity" style="background:var(--primary);color:white;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">Open Log →</a>
+
+      <!-- Daily Activity Log -->
+      {% if session.role == 'sales' %}
+      <div class="card">
+        <div class="card-header"><h2>📋 Daily Activity Log</h2></div>
+        <div class="card-body" style="display:flex;flex-direction:column;justify-content:center;align-items:center;padding:28px 16px;text-align:center;">
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Log today's activities to track your performance and hit your weekly targets.</div>
+          <a href="/activity" class="btn-add">Open Log →</a>
+        </div>
+      </div>
+      {% endif %}
+
     </div>
-    {% endif %}
+
+    <!-- Pending Finance Approval -->
     {% if pending_approval_jobs %}
-    <div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius-md);padding:12px 16px;margin-bottom:12px;">
+    <div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;">
       <div style="font-size:12px;font-weight:700;color:#633806;margin-bottom:8px;">⏳ Pending Finance Approval ({{ pending_approval_jobs|length }})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr>
           <th style="text-align:left;padding:4px 8px;color:var(--text-muted);font-size:10px;text-transform:uppercase;">Customer</th>
-          <th style="text-align:left;padding:4px 8px;color:var(--text-muted);font-size:10px;text-transform:uppercase;">Service Type</th>
+          <th style="text-align:left;padding:4px 8px;color:var(--text-muted);font-size:10px;text-transform:uppercase;">Service</th>
           <th style="text-align:left;padding:4px 8px;color:var(--text-muted);font-size:10px;text-transform:uppercase;">Created</th>
-          <th style="text-align:left;padding:4px 8px;"></th>
+          <th></th>
         </tr></thead>
         <tbody>
           {% for job in pending_approval_jobs %}
@@ -101,15 +121,13 @@
     </div>
     {% endif %}
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;">
-      <!-- Overdue Leads -->
+    <!-- Overdue Leads + High Priority Tasks -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div class="card">
         <div class="card-header">
           <h2>Overdue Leads</h2>
           <a href="/leads" style="font-size:12px;color:var(--primary);text-decoration:none;">View all →</a>
         </div>
-        {% set overdue_leads = leads|selectattr('due_date')|selectattr('status','ne','Converted')|selectattr('status','ne','Lost')|list %}
-        {% set overdue_leads = overdue_leads|selectattr('due_date')|list %}
         {% if overdue %}
         <table>
           <thead><tr><th>Name</th><th>Service</th><th>Due</th><th></th></tr></thead>
@@ -129,7 +147,6 @@
         {% endif %}
       </div>
 
-      <!-- High Priority Tasks -->
       <div class="card">
         <div class="card-header">
           <h2>High Priority Tasks</h2>
@@ -155,9 +172,9 @@
         {% endif %}
       </div>
     </div>
+
   </div>
   <script>
-    // Personalized dashboard quote
     const dqName = "{{ session.user_name }}".toLowerCase();
     const dqAll = {
       "saada": [
@@ -174,7 +191,6 @@
         { text: "Anfal, your calm energy in a room changes the atmosphere. Bring that today.", tag: "Powerful presence 💪" },
         { text: "Anfal, you have built relationships that bring clients back. That is the mark of a true professional.", tag: "Trusted advisor 🌟" },
       ],
-
       "razy": [
         { text: "Razy, your energy walks into the room before you do. Give every customer that full spark today.", tag: "Energetic 🔥" },
         { text: "Razy, your vibrant personality is your brand. Clients remember you — and they come back because of you.", tag: "Unforgettable 💫" },
