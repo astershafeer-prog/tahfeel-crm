@@ -1155,7 +1155,7 @@ def add_job():
         return redirect(url_for('jobs'))
     tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
     import json
-    service_days = {jt.name: (jt.default_days or 1) for jt in job_types}
+    service_days = {jt.name: (getattr(jt, 'default_days', 1) or 1) for jt in job_types}
     return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days=json.dumps(service_days))
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
@@ -1631,7 +1631,12 @@ def admin_add_jobtype():
                 default_days = int(request.form.get('default_days', 1))
             except:
                 default_days = 1
-            db.session.add(ServiceType(name=name, default_days=default_days))
+            jt_new = ServiceType(name=name)
+            try:
+                jt_new.default_days = default_days
+            except Exception:
+                pass
+            db.session.add(jt_new)
             db.session.commit()
             flash(f'Service type "{name}" added')
         else:
@@ -1648,7 +1653,7 @@ def admin_edit_jobtype(jobtype_id):
     if name:
         jt.name = name
     try:
-        jt.default_days = int(request.form.get('default_days', jt.default_days or 1))
+        jt.default_days = int(request.form.get('default_days', getattr(jt, 'default_days', 1) or 1))
     except:
         pass
     db.session.commit()
