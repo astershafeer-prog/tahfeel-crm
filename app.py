@@ -1155,7 +1155,7 @@ def add_job():
         return redirect(url_for('jobs'))
     tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
     import json
-    service_days = {jt.name: (jt.default_days or 1) for jt in job_types}
+    service_days = {jt.name: (getattr(jt, 'default_days', None) or 1) for jt in job_types}
     return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days=json.dumps(service_days))
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
@@ -1653,8 +1653,12 @@ def admin_edit_jobtype(item_id):
     name = request.form.get('name', '').strip()
     if name:
         item.name = name
-        db.session.commit()
-        flash('Service type updated')
+    try:
+        item.default_days = int(request.form.get('default_days', 1))
+    except:
+        pass
+    db.session.commit()
+    flash('Service type updated')
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/doctype/<int:item_id>/edit', methods=['POST'])
@@ -1678,9 +1682,15 @@ def admin_add_jobtype():
     name = request.form.get('name', '').strip()
     if name:
         if not ServiceType.query.filter_by(name=name).first():
-            db.session.add(ServiceType(name=name))
+            try:
+                days = int(request.form.get('default_days', 1))
+            except:
+                days = 1
+            new_jt = ServiceType(name=name)
+            new_jt.default_days = days
+            db.session.add(new_jt)
             db.session.commit()
-            flash(f'Job type "{name}" added')
+            flash(f'Service type "{name}" added')
         else:
             flash('Job type already exists')
     return redirect(url_for('admin_panel'))
