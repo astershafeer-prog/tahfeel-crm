@@ -1121,6 +1121,15 @@ def edit_customer(customer_id):
                 if i < len(doc_expiries) and doc_expiries[i]:
                     expiry = datetime.strptime(doc_expiries[i], '%Y-%m-%d')
             except: pass
+            # Handle file upload for this doc
+            doc_file_key = f'doc_file_{i+1}'
+            file_name = None
+            file_url = None
+            if doc_file_key in request.files:
+                f = request.files[doc_file_key]
+                if f and f.filename:
+                    file_name = f.filename
+                    file_url, _ = upload_to_cloudinary(f)
             doc = Document(
                 customer_id=customer_id,
                 doc_type=dt,
@@ -1128,6 +1137,8 @@ def edit_customer(customer_id):
                 belongs_to='Individual',
                 expiry_date=expiry,
                 notes=doc_notes_list[i] if i < len(doc_notes_list) else None,
+                file_name=file_name,
+                file_url=file_url,
                 added_by=session['user_name']
             )
             db.session.add(doc)
