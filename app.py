@@ -1107,6 +1107,37 @@ def export_customers():
     return send_file(buf, download_name='tahfeel_customers.xlsx', as_attachment=True,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+
+@app.route('/customers/template')
+@login_required
+def customer_import_template():
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Customers'
+    headers = ['Name *', 'Phone *', 'Company', 'Phone 2', 'Email', 'Address', 'Source', 'Nationality', 'Type (Individual/Company/Investor)', 'Notes']
+    for i, h in enumerate(headers, 1):
+        cell = ws.cell(1, i, h)
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = PatternFill('solid', fgColor='1A3B8B')
+        cell.alignment = Alignment(horizontal='center')
+        ws.column_dimensions[cell.column_letter].width = max(len(h) + 4, 16)
+    # Sample rows
+    samples = [
+        ['Ahmed Al Mansoori', '+971501234567', 'Al Mansoori Trading LLC', '+971551234567', 'ahmed@example.com', 'Dubai, UAE', 'Referral', 'Emirati', 'Company', 'VIP client'],
+        ['Priya Sharma', '+971507654321', '', '', 'priya@gmail.com', 'Sharjah, UAE', 'WhatsApp', 'Indian', 'Individual', ''],
+        ['XYZ Investments', '+971509876543', 'XYZ Investments LLC', '', '', 'Abu Dhabi, UAE', 'Website', 'British', 'Investor', 'Interested in golden visa'],
+    ]
+    for row in samples:
+        ws.append(row)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, download_name='customer_import_template.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 @app.route('/customers/import', methods=['GET', 'POST'])
 @login_required
 @admin_required
