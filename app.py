@@ -365,11 +365,20 @@ def dashboard():
             total_docs = len(all_docs)
         except:
             docs_30 = docs_60 = docs_90 = total_docs = 0
+        all_active_jobs = Job.query.filter(Job.status.notin_(['Closed'])).all()
+        tasks_active = len([j for j in all_active_jobs if j.status not in ['Pending Finance Approval','Pending Finance Close','Closed']])
+        tasks_overdue = len([j for j in all_active_jobs if j.due_date and j.due_date < now and j.status not in ['Closed','Done']])
+        tasks_processing = len([j for j in all_active_jobs if j.status == 'Processing'])
+        tasks_pending_approval = len(pending_approval)
         return render_template('dashboard_finance.html',
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
                                pending_close=pending_close,
+                               tasks_active=tasks_active,
+                               tasks_overdue=tasks_overdue,
+                               tasks_processing=tasks_processing,
+                               tasks_pending_approval=tasks_pending_approval,
                                total_invoiced=total_invoiced,
                                total_received=total_received,
                                total_pending=total_pending,

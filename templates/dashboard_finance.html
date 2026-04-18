@@ -18,6 +18,13 @@
     {% endwith %}
     {{ welcome(now) }}
 
+    <div class="section-label">Tasks Summary</div>
+    <div class="cards-4" style="margin-bottom:14px;">
+      <a href="/jobs" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">Active Tasks</div><div class="value">{{ tasks_active }}</div></div></a>
+      <a href="/jobs?status=Overdue" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">Overdue</div><div class="value">{{ tasks_overdue }}</div></div></a>
+      <a href="/jobs?status=Processing" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">Processing</div><div class="value">{{ tasks_processing }}</div></div></a>
+      <a href="/jobs?status=Pending+Finance+Approval" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;border-top-color:#1A3B8B;"><div class="label">Pending Approval</div><div class="value" style="color:#1A3B8B;">{{ tasks_pending_approval }}</div></div></a>
+    </div>
     <div class="section-label">Financial Summary — Active Tasks</div>
     <div class="cards-4">
       <div class="fin-card">
