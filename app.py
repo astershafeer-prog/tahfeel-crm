@@ -711,7 +711,15 @@ def import_leads():
                 if not phone:
                     errors.append(f'Row {i}: Phone is required — skipped')
                     continue
-                created_dt = datetime.strptime(lead_date_str, '%Y-%m-%d') if lead_date_str else datetime.now()
+                try:
+                    if isinstance(lead_date_str, datetime):
+                        created_dt = lead_date_str
+                    elif lead_date_str:
+                        created_dt = datetime.strptime(str(lead_date_str).split(' ')[0].split('T')[0], '%Y-%m-%d')
+                    else:
+                        created_dt = datetime.now()
+                except:
+                    created_dt = datetime.now()
                 lead = Lead(
                     name=str(name), company=str(company) if company else None,
                     phone=str(phone), email=str(email) if email else None,
