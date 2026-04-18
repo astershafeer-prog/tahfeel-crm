@@ -24,6 +24,7 @@
       <h2>All Leads <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ total }} total{% if is_default %} — today{% elif request.args.get('date') == 'today' %} — today{% endif %})</span></h2>
       <div class="header-btns">
         <button class="btn-bulk-delete" id="bulkDeleteBtn" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
+        <a href="/leads/import" class="btn-sm" style="border-color:var(--primary);color:var(--primary);">📥 Import</a>
         <a href="/leads/export" class="btn-export">⬇ Export Excel</a>
         <a href="/leads/add" class="btn-add">+ Add Lead</a>
       </div>
