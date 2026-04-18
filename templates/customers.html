@@ -71,9 +71,10 @@
               {% else %}<span style="color:var(--text-light);">0</span>{% endif %}
             </td>
             <td>
-              <div style="display:flex;gap:5px;">
+              <div style="display:flex;gap:5px;flex-wrap:wrap;">
                 <a href="/customers/{{ c.id }}" class="btn-sm">View</a>
                 <a href="/customers/{{ c.id }}/edit" class="btn-sm">Edit</a>
+                <a href="/documents?customer_id={{ c.id }}" class="btn-sm" style="border-color:var(--success);color:var(--success);">📄 Docs</a>
                 {% if session.role == 'admin' %}
                 <a href="/customers/{{ c.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Delete {{ c.name }}?')">Del</a>
                 {% endif %}

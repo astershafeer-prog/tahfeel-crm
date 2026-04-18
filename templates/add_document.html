@@ -86,12 +86,19 @@
           <div id="new-customer-fields" style="display:none;background:var(--bg);border-radius:var(--radius-md);padding:14px;border:1px solid var(--border);">
             <div class="section-label" style="margin-bottom:10px;">New Customer Details</div>
             <div class="form-row-2">
-              <div class="form-group"><label>Name</label><input type="text" name="new_customer_name" placeholder="Full name"></div>
+              <div class="form-group"><label>Full Name *</label><input type="text" name="new_customer_name" placeholder="Full name" required></div>
               <div class="form-group"><label>Company</label><input type="text" name="new_customer_company" placeholder="Company name"></div>
-            </div>
-            <div class="form-row-3">
-              <div class="form-group"><label>Phone</label><input type="text" name="new_customer_phone" placeholder="+971 50..." required></div>
-              <div class="form-group"><label>Email</label><input type="email" name="new_customer_email"></div>
+              <div class="form-group"><label>Phone *</label><input type="text" name="new_customer_phone" placeholder="+971 50..." required></div>
+              <div class="form-group"><label>Phone 2</label><input type="text" name="new_customer_phone2" placeholder="+971 50..."></div>
+              <div class="form-group"><label>Email</label><input type="email" name="new_customer_email" placeholder="email@example.com"></div>
+              <div class="form-group"><label>Nationality</label><input type="text" name="new_customer_nationality" placeholder="e.g. Indian"></div>
+              <div class="form-group"><label>Customer Type</label>
+                <select name="new_customer_type">
+                  <option value="Individual">Individual</option>
+                  <option value="Company">Company</option>
+                  <option value="Investor">Investor</option>
+                </select>
+              </div>
               <div class="form-group"><label>Source</label>
                 <select name="new_customer_source">
                   <option value="">— Select —</option>

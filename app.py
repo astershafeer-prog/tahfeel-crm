@@ -1118,21 +1118,41 @@ def customer_import_template():
     wb = Workbook()
     ws = wb.active
     ws.title = 'Customers'
-    headers = ['Name *', 'Phone *', 'Company', 'Phone 2', 'Email', 'Address', 'Source', 'Nationality', 'Type (Individual/Company/Investor)', 'Notes']
+    from openpyxl.worksheet.datavalidation import DataValidation
+    headers = ['Name *', 'Phone *', 'Company', 'Phone 2', 'Email', 'Address', 'Source', 'Nationality', 'Type', 'Notes']
     for i, h in enumerate(headers, 1):
         cell = ws.cell(1, i, h)
         cell.font = Font(bold=True, color='FFFFFF')
         cell.fill = PatternFill('solid', fgColor='1A3B8B')
         cell.alignment = Alignment(horizontal='center')
-        ws.column_dimensions[cell.column_letter].width = max(len(h) + 4, 16)
+        ws.column_dimensions[cell.column_letter].width = max(len(h) + 4, 18)
     # Sample rows
     samples = [
         ['Ahmed Al Mansoori', '+971501234567', 'Al Mansoori Trading LLC', '+971551234567', 'ahmed@example.com', 'Dubai, UAE', 'Referral', 'Emirati', 'Company', 'VIP client'],
         ['Priya Sharma', '+971507654321', '', '', 'priya@gmail.com', 'Sharjah, UAE', 'WhatsApp', 'Indian', 'Individual', ''],
-        ['XYZ Investments', '+971509876543', 'XYZ Investments LLC', '', '', 'Abu Dhabi, UAE', 'Website', 'British', 'Investor', 'Interested in golden visa'],
+        ['XYZ Investments', '+971509876543', 'XYZ Investments LLC', '', '', 'Abu Dhabi, UAE', 'Website', 'British', 'Investor', 'Golden visa interested'],
     ]
     for row in samples:
         ws.append(row)
+    # Reference sheet for dropdowns
+    ref = wb.create_sheet('Reference')
+    ref.sheet_state = 'hidden'
+    sources = Source.query.order_by(Source.name).all()
+    src_names = [s.name for s in sources] or ['Referral', 'WhatsApp', 'Website', 'Walk-in', 'Social Media', 'Other']
+    for i, s in enumerate(src_names, 1):
+        ref.cell(i, 1, s)
+    types = ['Individual', 'Company', 'Investor']
+    for i, t in enumerate(types, 1):
+        ref.cell(i, 2, t)
+    # Source dropdown — column G (7)
+    src_range = f'Reference!$A$1:$A${len(src_names)}'
+    dv_src = DataValidation(type='list', formula1=src_range, allow_blank=True, showDropDown=False)
+    ws.add_data_validation(dv_src)
+    dv_src.add('G2:G1000')
+    # Type dropdown — column I (9)
+    dv_type = DataValidation(type='list', formula1='Reference!$B$1:$B$3', allow_blank=True, showDropDown=False)
+    ws.add_data_validation(dv_type)
+    dv_type.add('I2:I1000')
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
