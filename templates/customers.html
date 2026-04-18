@@ -59,7 +59,7 @@
             <td>
               {% if c.phone %}
               <span style="font-size:13px;">{{ c.phone }}</span>
-              <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600;text-decoration:none;margin-left:4px;">WA</a>
+              <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
               {% else %}—{% endif %}
             </td>
             <td><span class="badge b-{{ (c.customer_type or 'individual')|lower }}">{{ c.customer_type or 'Individual' }}</span></td>
