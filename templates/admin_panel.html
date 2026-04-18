@@ -127,6 +127,7 @@
             </div>
           </form>
           <hr class="divider">
+          <input type="text" oninput="filterList(this,'sv-view')" placeholder="Filter services..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if services %}
             {% for service in services %}
             <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
@@ -165,6 +166,7 @@
             </div>
           </form>
           <hr class="divider">
+          <input type="text" oninput="filterList(this,'so-view')" placeholder="Filter sources..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if sources %}
             {% for source in sources %}
             <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
@@ -206,6 +208,7 @@
             </div>
           </form>
           <hr class="divider">
+          <input type="text" oninput="filterList(this,'jt-view')" placeholder="Filter service types..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if job_types %}
             {% for jt in job_types %}
             <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
@@ -248,6 +251,7 @@
             </div>
           </form>
           <hr class="divider">
+          <input type="text" oninput="filterList(this,'dt-view')" placeholder="Filter document types..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if doc_types %}
             {% for dt in doc_types %}
             <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
@@ -274,6 +278,15 @@
     </div>
   </div>
 
+  <script>
+    function filterList(input, prefix) {
+      const q = input.value.toLowerCase();
+      document.querySelectorAll('[id^="'+prefix+'-"]').forEach(el => {
+        const text = el.textContent.toLowerCase();
+        el.closest('div[style*="padding:7px"]').style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+  </script>
   <script>
     function toggleEdit(id) {
       const row = document.getElementById('edit-row-' + id);

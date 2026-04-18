@@ -50,7 +50,7 @@
           <div class="form-row-2">
             <div class="form-group">
               <label>Service Type *</label>
-              <select name="job_type" required>
+              <select name="job_type" required id="edit-service-type">
                 {% for jt in job_types %}
                 <option value="{{ jt.name }}" {% if job.job_type == jt.name %}selected{% endif %}>{{ jt.name }}</option>
                 {% endfor %}
@@ -116,5 +116,7 @@
       </div>
     </form>
   </div>
+  <script src="/static/js/searchable_select.js"></script>
+  <script>makeSearchable('edit-service-type', 'Search service type...');</script>
 </body>
 </html>

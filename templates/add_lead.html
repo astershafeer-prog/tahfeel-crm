@@ -37,7 +37,7 @@
           <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Lead Details</div>
           <div class="form-row-2">
             <div class="form-group"><label>Service Enquired *</label>
-              <select name="service" required>
+              <select name="service" required id="lead-service">
                 <option value="">— Select service —</option>
                 {% for s in services %}<option value="{{ s.name }}">{{ s.name }}</option>{% endfor %}
               </select>
@@ -75,6 +75,8 @@
       </div>
     </div>
   </div>
+  <script src="/static/js/searchable_select.js"></script>
+  <script>makeSearchable('lead-service', 'Search service...');</script>
 </body>
 </html>
 <script>
