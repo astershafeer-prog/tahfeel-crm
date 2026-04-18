@@ -444,7 +444,7 @@ tr.overdue-row td { background: #FFF8F8; }
   cursor: pointer;
   transition: var(--transition);
 }
-.btn-sm:hover { background: var(--primary); color: white; }
+.btn-sm:hover { background: var(--info-bg); color: var(--primary); }
 .btn-approve {
   background: var(--success);
   color: white;
