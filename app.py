@@ -1618,6 +1618,57 @@ def admin_delete_activity_type(type_id):
     flash(f'Activity "{at.label}" removed')
     return redirect(url_for('activity_log'))
 
+
+# ── Admin Edit Routes ─────────────────────────────────────────────────────────
+
+@app.route('/admin/service/<int:item_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_service(item_id):
+    item = Service.query.get_or_404(item_id)
+    name = request.form.get('name', '').strip()
+    if name:
+        item.name = name
+        db.session.commit()
+        flash('Service updated')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/source/<int:item_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_source(item_id):
+    item = Source.query.get_or_404(item_id)
+    name = request.form.get('name', '').strip()
+    if name:
+        item.name = name
+        db.session.commit()
+        flash('Source updated')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/jobtype/<int:item_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_jobtype(item_id):
+    item = ServiceType.query.get_or_404(item_id)
+    name = request.form.get('name', '').strip()
+    if name:
+        item.name = name
+        db.session.commit()
+        flash('Service type updated')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/doctype/<int:item_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_doctype(item_id):
+    item = DocType.query.get_or_404(item_id)
+    name = request.form.get('name', '').strip()
+    if name:
+        item.name = name
+        db.session.commit()
+        flash('Document type updated')
+    return redirect(url_for('admin_panel'))
+
 # ── Admin — Job Types ─────────────────────────────────────────────────────────
 
 @app.route('/admin/jobtype/add', methods=['POST'])

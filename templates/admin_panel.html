@@ -127,7 +127,7 @@
       <!-- Services -->
       <div class="card">
         <div class="card-header">
-          <h2>🔧 Services</h2>
+          <h2>🔧 Services <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--info-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Leads</span></h2>
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/service/add">
@@ -142,10 +142,22 @@
           <hr class="divider">
           {% if services %}
             {% for service in services %}
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
-              <span>{{ service.name }}</span>
-              <a href="/admin/service/{{ service.id }}/delete" class="btn-sm btn-danger"
-                 onclick="return confirm('Remove {{ service.name }}?')">Remove</a>
+            <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
+              <div id="sv-view-{{ service.id }}" style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:13px;font-weight:500;">{{ service.name }}</span>
+                <div style="display:flex;gap:6px;">
+                  <button onclick="svEdit({{ service.id }})" class="btn-sm">Edit</button>
+                  <a href="/admin/service/{{ service.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove {{ service.name }}?')">Remove</a>
+                </div>
+              </div>
+              <form id="sv-form-{{ service.id }}" method="POST" action="/admin/service/{{ service.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:flex-end;">
+                <div class="form-group" style="margin:0;flex:1;">
+                  <label>Name</label>
+                  <input type="text" name="name" value="{{ service.name }}" required style="padding:6px 10px;font-size:12px;">
+                </div>
+                <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">Save</button>
+                <button type="button" onclick="svCancel({{ service.id }})" class="btn-cancel" style="font-size:12px;padding:7px 12px;">Cancel</button>
+              </form>
             </div>
             {% endfor %}
           {% else %}
@@ -157,7 +169,7 @@
       <!-- Sources -->
       <div class="card">
         <div class="card-header">
-          <h2>📋 Lead Sources</h2>
+          <h2>📋 Lead Sources <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--info-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Leads</span></h2>
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/source/add">
@@ -172,10 +184,22 @@
           <hr class="divider">
           {% if sources %}
             {% for source in sources %}
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
-              <span>{{ source.name }}</span>
-              <a href="/admin/source/{{ source.id }}/delete" class="btn-sm btn-danger"
-                 onclick="return confirm('Remove {{ source.name }}?')">Remove</a>
+            <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
+              <div id="so-view-{{ source.id }}" style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:13px;font-weight:500;">{{ source.name }}</span>
+                <div style="display:flex;gap:6px;">
+                  <button onclick="soEdit({{ source.id }})" class="btn-sm">Edit</button>
+                  <a href="/admin/source/{{ source.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove {{ source.name }}?')">Remove</a>
+                </div>
+              </div>
+              <form id="so-form-{{ source.id }}" method="POST" action="/admin/source/{{ source.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:flex-end;">
+                <div class="form-group" style="margin:0;flex:1;">
+                  <label>Name</label>
+                  <input type="text" name="name" value="{{ source.name }}" required style="padding:6px 10px;font-size:12px;">
+                </div>
+                <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">Save</button>
+                <button type="button" onclick="soCancel({{ source.id }})" class="btn-cancel" style="font-size:12px;padding:7px 12px;">Cancel</button>
+              </form>
             </div>
             {% endfor %}
           {% else %}
@@ -187,7 +211,7 @@
       <!-- Job Types -->
       <div class="card" style="grid-column: 1 / -1; max-width: 50%;">
         <div class="card-header">
-          <h2>💼 Service Types</h2>
+          <h2>💼 Service Types <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:#EEF4FF;padding:2px 8px;border-radius:10px;margin-left:6px;">Tasks</span></h2>
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/jobtype/add">
@@ -206,10 +230,22 @@
           <hr class="divider">
           {% if job_types %}
             {% for jt in job_types %}
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
-              <span>{{ jt.name }}</span>
-              <a href="/admin/jobtype/{{ jt.id }}/delete" class="btn-sm btn-danger"
-                 onclick="return confirm('Remove {{ jt.name }}?')">Remove</a>
+            <div style="padding:7px 0;border-bottom:1px solid var(--border-light);">
+              <div id="jt-view-{{ jt.id }}" style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:13px;font-weight:500;">{{ jt.name }}</span>
+                <div style="display:flex;gap:6px;">
+                  <button onclick="jtEdit({{ jt.id }})" class="btn-sm">Edit</button>
+                  <a href="/admin/jobtype/{{ jt.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove {{ jt.name }}?')">Remove</a>
+                </div>
+              </div>
+              <form id="jt-form-{{ jt.id }}" method="POST" action="/admin/jobtype/{{ jt.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:flex-end;">
+                <div class="form-group" style="margin:0;flex:1;">
+                  <label>Name</label>
+                  <input type="text" name="name" value="{{ jt.name }}" required style="padding:6px 10px;font-size:12px;">
+                </div>
+                <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">Save</button>
+                <button type="button" onclick="jtCancel({{ jt.id }})" class="btn-cancel" style="font-size:12px;padding:7px 12px;">Cancel</button>
+              </form>
             </div>
             {% endfor %}
           {% else %}
@@ -221,7 +257,7 @@
       <!-- Document Types -->
       <div class="card" style="grid-column: 1 / -1; max-width: 50%;">
         <div class="card-header">
-          <h2>📄 Document Types</h2>
+          <h2>📄 Document Types <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--success-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Documents</span></h2>
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/doctype/add">
@@ -255,6 +291,15 @@
       const row = document.getElementById('edit-row-' + userId);
       row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
     }
+    // Service Types (Tasks)
+    function jtEdit(id) { document.getElementById('jt-view-'+id).style.display='none'; document.getElementById('jt-form-'+id).style.display='flex'; }
+    function jtCancel(id) { document.getElementById('jt-view-'+id).style.display='flex'; document.getElementById('jt-form-'+id).style.display='none'; }
+    // Services (Leads)
+    function svEdit(id) { document.getElementById('sv-view-'+id).style.display='none'; document.getElementById('sv-form-'+id).style.display='flex'; }
+    function svCancel(id) { document.getElementById('sv-view-'+id).style.display='flex'; document.getElementById('sv-form-'+id).style.display='none'; }
+    // Sources (Leads)
+    function soEdit(id) { document.getElementById('so-view-'+id).style.display='none'; document.getElementById('so-form-'+id).style.display='flex'; }
+    function soCancel(id) { document.getElementById('so-view-'+id).style.display='flex'; document.getElementById('so-form-'+id).style.display='none'; }
   </script>
 </body>
 </html>
