@@ -94,6 +94,7 @@ class ServiceType(db.Model):
     __tablename__ = 'job_type'  # keep same DB table name
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
+    default_days = db.Column(db.Integer, default=1)
 
 class Customer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
