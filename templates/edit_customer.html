@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Edit Customer</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('customers') }}
+  <div class="container" style="max-width:780px;">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <a href="javascript:history.back()" style="display:inline-block;margin-bottom:14px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back</a>
+
+    <form method="post">
+      <div class="card">
+        <div class="card-header">
+          <h2>Edit Customer</h2>
+          {% if customer.lead_id %}
+          <a href="/leads/{{ customer.lead_id }}" style="font-size:12px;color:var(--primary);text-decoration:none;">View Original Lead →</a>
+          {% endif %}
+        </div>
+        <div class="card-body">
+
+          <div class="section-label">Customer Information</div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Full Name *</label>
+              <input type="text" name="name" value="{{ customer.name }}" required placeholder="Full name">
+            </div>
+            <div class="form-group">
+              <label>Company</label>
+              <input type="text" name="company" value="{{ customer.company or '' }}" placeholder="Company name">
+            </div>
+            <div class="form-group">
+              <label>Phone *</label>
+              <input type="text" name="phone" value="{{ customer.phone or '' }}" placeholder="+971 50 000 0000" required>
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" name="email" value="{{ customer.email or '' }}" placeholder="email@example.com">
+            </div>
+            <div class="form-group">
+              <label>Address</label>
+              <input type="text" name="address" value="{{ customer.address or '' }}" placeholder="Dubai, UAE">
+            </div>
+            <div class="form-group">
+              <label>Source</label>
+              <select name="source">
+                <option value="">— Select source —</option>
+                {% for s in sources %}
+                <option value="{{ s.name }}" {% if customer.source == s.name %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label>Notes</label>
+              <textarea name="notes" rows="2" placeholder="Any notes about this customer...">{{ customer.notes or '' }}</textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="/customers/{{ customer.id }}" class="btn-cancel">Cancel</a>
+          </div>
+
+        </div>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

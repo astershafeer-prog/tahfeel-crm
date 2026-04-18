@@ -26,7 +26,14 @@
             <div style="font-size:20px;font-weight:700;color:var(--text-primary);letter-spacing:-.3px;">{{ customer.name }}</div>
             {% if customer.company %}<div style="font-size:13px;color:var(--text-muted);margin-top:2px;">{{ customer.company }}</div>{% endif %}
           </div>
-          <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Task</a>
+<div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Task</a>
+            <a href="/documents/add?customer_id={{ customer.id }}" class="btn-sm" style="background:white;border-color:var(--primary);color:var(--primary);">📄 Add Document</a>
+            <a href="/customers/{{ customer.id }}/edit" class="btn-sm">✏ Edit</a>
+            {% if session.role == 'admin' %}
+            <a href="/customers/{{ customer.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Delete {{ customer.name }}? This cannot be undone.')">🗑 Delete</a>
+            {% endif %}
+          </div>
         </div>
 
         <div class="form-row-3">

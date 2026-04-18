@@ -4,21 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Customers</title>
-    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
   {{ nav('customers') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
+
     <div class="page-header">
-      <h2>Customers <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ customers|length }} total)</span></h2>
+      <h2>Customers <span class="page-subtitle">({{ customers|length }} total)</span></h2>
       <a href="/customers/add" class="btn-add">+ Add Customer</a>
     </div>
+
+    <!-- Search -->
+    <form method="get" style="margin-bottom:12px;display:flex;gap:8px;">
+      <input type="text" name="search" value="{{ request.args.get('search','') }}" placeholder="Search by name, company or phone..." style="flex:1;padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;">
+      <button type="submit" class="btn-filter">Search</button>
+      {% if request.args.get('search') %}<a href="/customers" class="btn-reset">Clear</a>{% endif %}
+    </form>
+
     <div class="card">
       <table>
         <thead>
@@ -27,7 +36,8 @@
             <th>Company</th>
             <th>Phone</th>
             <th>Source</th>
-            <th>Jobs</th>
+            <th style="text-align:center;">Tasks</th>
+            <th style="text-align:center;">Docs</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -35,17 +45,38 @@
           {% for c in customers %}
           <tr>
             <td>
-              <strong>{{ c.name }}</strong>
-              {% if c.lead_id %}<span class="from-lead">from lead</span>{% endif %}
+              <a href="/customers/{{ c.id }}" style="font-weight:600;color:var(--primary);text-decoration:none;">{{ c.name }}</a>
+              {% if c.lead_id %}<span style="font-size:10px;background:var(--info-bg);color:var(--primary);padding:1px 6px;border-radius:8px;margin-left:4px;">from lead</span>{% endif %}
             </td>
             <td>{{ c.company or '—' }}</td>
-            <td>{{ c.phone or '—' }}</td>
+            <td>
+              {% if c.phone %}
+              {{ c.phone }}
+              <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600;text-decoration:none;margin-left:4px;">WA</a>
+              {% else %}—{% endif %}
+            </td>
             <td>{{ c.source or '—' }}</td>
-            <td>{{ c.jobs|length }}</td>
-            <td><a href="/customers/{{ c.id }}" class="btn-sm">View</a></td>
+            <td style="text-align:center;">
+              {% if c.jobs|length > 0 %}
+              <span style="background:var(--info-bg);color:var(--primary);padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;">{{ c.jobs|length }}</span>
+              {% else %}<span style="color:var(--text-light);">0</span>{% endif %}
+            </td>
+            <td style="text-align:center;">
+              {% set doc_count = c.documents|length if c.documents is defined else 0 %}
+              <a href="/documents?customer_id={{ c.id }}" style="background:var(--success-bg);color:var(--success);padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;text-decoration:none;">📄 {{ c.documents|length if c.documents is defined else 0 }}</a>
+            </td>
+            <td>
+              <div style="display:flex;gap:5px;">
+                <a href="/customers/{{ c.id }}" class="btn-sm">View</a>
+                <a href="/customers/{{ c.id }}/edit" class="btn-sm">Edit</a>
+                {% if session.role == 'admin' %}
+                <a href="/customers/{{ c.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Delete {{ c.name }}?')">Del</a>
+                {% endif %}
+              </div>
+            </td>
           </tr>
           {% else %}
-          <tr><td colspan="6" class="empty">No customers yet. Add one to get started.</td></tr>
+          <tr><td colspan="7" class="empty">No customers yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>

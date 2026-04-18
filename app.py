@@ -963,8 +963,13 @@ def admin_toggle_staff(user_id):
 @app.route('/customers')
 @login_required
 def customers():
-    # All roles can view customers
+    search = request.args.get('search', '').strip().lower()
     customer_list = Customer.query.order_by(Customer.name).all()
+    if search:
+        customer_list = [c for c in customer_list if
+            search in (c.name or '').lower() or
+            search in (c.company or '').lower() or
+            search in (c.phone or '').lower()]
     return render_template('customers.html', customers=customer_list)
 
 @app.route('/customers/add', methods=['GET', 'POST'])
@@ -1010,6 +1015,40 @@ def customer_detail(customer_id):
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
                            documents=docs, now=now,
                            total_invoiced=total_invoiced, total_received=total_received)
+
+
+@app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_customer(customer_id):
+    customer = Customer.query.get_or_404(customer_id)
+    sources = Source.query.order_by(Source.name).all()
+    if request.method == 'POST':
+        customer.name = request.form.get('name', '').strip() or customer.name
+        customer.company = request.form.get('company', '').strip()
+        customer.phone = request.form.get('phone', '').strip()
+        customer.email = request.form.get('email', '').strip()
+        customer.address = request.form.get('address', '').strip()
+        customer.source = request.form.get('source', '').strip()
+        customer.notes = request.form.get('notes', '').strip()
+        db.session.commit()
+        flash('Customer updated successfully')
+        return redirect(url_for('customer_detail', customer_id=customer_id))
+    return render_template('edit_customer.html', customer=customer, sources=sources)
+
+@app.route('/customers/<int:customer_id>/delete')
+@login_required
+@admin_required
+def delete_customer(customer_id):
+    customer = Customer.query.get_or_404(customer_id)
+    # Only delete if no jobs linked
+    if customer.jobs:
+        flash('Cannot delete customer with existing tasks. Remove tasks first.')
+        return redirect(url_for('customer_detail', customer_id=customer_id))
+    Document.query.filter_by(customer_id=customer_id).delete()
+    db.session.delete(customer)
+    db.session.commit()
+    flash('Customer deleted')
+    return redirect(url_for('customers'))
 
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 
