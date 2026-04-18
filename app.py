@@ -2243,6 +2243,9 @@ def edit_document(doc_id):
                     doc.file_url = url
         db.session.commit()
         flash('Document updated')
+        if request.form.get('add_another'):
+            cid = doc.customer_id
+            return redirect(url_for('add_document') + (f'?customer_id={cid}' if cid else ''))
         return redirect(url_for('documents'))
     return render_template('edit_document.html', doc=doc, doc_types=doc_types, customers=customers)
 
