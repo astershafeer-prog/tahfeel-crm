@@ -1082,10 +1082,35 @@ def edit_customer(customer_id):
         except:
             pass
         customer.notes = request.form.get('notes', '').strip()
+        # Save any inline documents added
+        doc_types_inline = request.form.getlist('doc_type[]')
+        doc_owners = request.form.getlist('doc_owner[]')
+        doc_expiries = request.form.getlist('doc_expiry[]')
+        doc_notes_list = request.form.getlist('doc_notes[]')
+        for i, dt in enumerate(doc_types_inline):
+            if not dt: continue
+            expiry = None
+            try:
+                if i < len(doc_expiries) and doc_expiries[i]:
+                    expiry = datetime.strptime(doc_expiries[i], '%Y-%m-%d')
+            except: pass
+            doc = Document(
+                customer_id=customer_id,
+                doc_type=dt,
+                owner_name=doc_owners[i] if i < len(doc_owners) and doc_owners[i] else customer.name,
+                belongs_to='Individual',
+                expiry_date=expiry,
+                notes=doc_notes_list[i] if i < len(doc_notes_list) else None,
+                added_by=session['user_name']
+            )
+            db.session.add(doc)
         db.session.commit()
         flash('Customer updated successfully')
         return redirect(url_for('customer_detail', customer_id=customer_id))
-    return render_template('edit_customer.html', customer=customer, sources=sources, users=users)
+    doc_types = DocType.query.order_by(DocType.name).all()
+    existing_docs = Document.query.filter_by(customer_id=customer_id).order_by(Document.expiry_date).all()
+    now = datetime.now()
+    return render_template('edit_customer.html', customer=customer, sources=sources, users=users, doc_types=doc_types, existing_docs=existing_docs, now=now)
 
 @app.route('/customers/<int:customer_id>/delete')
 @login_required
