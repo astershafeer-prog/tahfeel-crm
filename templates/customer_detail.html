@@ -47,6 +47,15 @@
             </div>
           </div>
           <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Phone 2</div>
+            <div style="font-size:13px;">
+              {% if customer.phone2 %}
+                {{ customer.phone2 }}
+                <a href="https://wa.me/{{ customer.phone2|replace(' ','')|replace('+','') }}" target="_blank" style="margin-left:8px;background:#25D366;color:white;padding:2px 8px;border-radius:var(--radius-md);font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+              {% else %}—{% endif %}
+            </div>
+          </div>
+          <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Email</div>
             <div style="font-size:13px;">{{ customer.email or '—' }}</div>
           </div>
@@ -57,6 +66,18 @@
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Address</div>
             <div style="font-size:13px;">{{ customer.address or '—' }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Nationality</div>
+            <div style="font-size:13px;">{{ customer.nationality or '—' }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Customer Type</div>
+            <div style="font-size:13px;"><span class="badge b-{{ (customer.customer_type or 'individual')|lower }}">{{ customer.customer_type or 'Individual' }}</span></div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Primary Rep</div>
+            <div style="font-size:13px;">{{ customer.rep.name if customer.rep else '—' }}</div>
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Customer Since</div>
