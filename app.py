@@ -2159,6 +2159,44 @@ def documents():
                            total=total, page=page, total_pages=total_pages,
                            now=now)
 
+
+@app.route('/documents/export')
+@login_required
+def export_documents():
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Documents'
+    headers = ['Customer','Company','Doc Type','Belongs To','Owner Name','Expiry Date','Days Until Expiry','Notes','Added By','Created']
+    for i, h in enumerate(headers, 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    docs = Document.query.order_by(Document.expiry_date).all()
+    now = datetime.now()
+    for d in docs:
+        days = (d.expiry_date - now).days if d.expiry_date else ''
+        ws.append([
+            d.customer.name if d.customer else '',
+            d.customer.company if d.customer and d.customer.company else '',
+            d.doc_type or '',
+            d.belongs_to or '',
+            d.owner_name or '',
+            d.expiry_date.strftime('%d/%m/%Y') if d.expiry_date else '',
+            days,
+            d.notes or '',
+            d.added_by or '',
+            d.created_at.strftime('%d/%m/%Y') if d.created_at else '',
+        ])
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = max(len(str(col[0].value or '')), 14)
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    return send_file(buf, download_name='tahfeel_documents.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 @app.route('/documents/add', methods=['GET', 'POST'])
 @login_required
 def add_document():
