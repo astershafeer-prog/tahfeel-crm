@@ -1632,7 +1632,7 @@ def admin_edit_service(item_id):
         item.name = name
         db.session.commit()
         flash('Service updated')
-    return redirect(url_for('admin_panel'))
+    return redirect(url_for('admin_panel') + '#services')
 
 @app.route('/admin/source/<int:item_id>/edit', methods=['POST'])
 @login_required
@@ -1644,7 +1644,7 @@ def admin_edit_source(item_id):
         item.name = name
         db.session.commit()
         flash('Source updated')
-    return redirect(url_for('admin_panel'))
+    return redirect(url_for('admin_panel') + '#sources')
 
 @app.route('/admin/jobtype/<int:item_id>/edit', methods=['POST'])
 @login_required
@@ -1660,7 +1660,7 @@ def admin_edit_jobtype(item_id):
         pass
     db.session.commit()
     flash('Service type updated')
-    return redirect(url_for('admin_panel'))
+    return redirect(url_for('admin_panel') + '#service-types')
 
 @app.route('/admin/doctype/<int:item_id>/edit', methods=['POST'])
 @login_required
@@ -1694,7 +1694,7 @@ def admin_add_jobtype():
             flash(f'Service type "{name}" added')
         else:
             flash('Job type already exists')
-    return redirect(url_for('admin_panel'))
+    return redirect(url_for('admin_panel') + '#service-types')
 
 @app.route('/admin/jobtype/<int:jobtype_id>/delete')
 @login_required

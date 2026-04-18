@@ -4,86 +4,116 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Edit Task</title>
-    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
   {{ nav('jobs') }}
-  <div class="container">
+  <div class="container" style="max-width:860px;">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
-    <a href="javascript:history.back()" style="display:inline-block;margin-bottom:12px;color:#555;text-decoration:none;font-size:13px;">← Back</a>
-    <div class="card">
-      <h2>Edit Task</h2>
-      <form method="post">
-        <div class="form-group">
-          <label>Customer *</label>
-          <select name="customer_id" required>
-            {% for c in customers %}
-            <option value="{{ c.id }}" {% if job.customer_id == c.id %}selected{% endif %}>{{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}</option>
-            {% endfor %}
-          </select>
+
+    <a href="javascript:history.back()" style="display:inline-block;margin-bottom:14px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back</a>
+
+    <form method="post">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Edit Task</h2>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+              {{ job.customer.name }}{% if job.customer.company %} — {{ job.customer.company }}{% endif %}
+            </div>
+          </div>
+          <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Service Type *</label>
-            <select name="job_type" required>
-              {% for jt in job_types %}
-              <option value="{{ jt.name }}" {% if job.job_type == jt.name %}selected{% endif %}>{{ jt.name }}</option>
+        <div class="card-body">
+
+          <!-- Customer -->
+          <div class="section-label">Customer</div>
+          <div class="form-group" style="margin-bottom:16px;">
+            <select name="customer_id" required>
+              {% for c in customers %}
+              <option value="{{ c.id }}" {% if job.customer_id == c.id %}selected{% endif %}>
+                {{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}
+              </option>
               {% endfor %}
             </select>
           </div>
-          <div class="form-group">
-            <label>Assigned To</label>
-            <select name="assigned_to">
-              <option value="">— Unassigned —</option>
-              {% for u in users %}
-              <option value="{{ u.id }}" {% if job.assigned_to == u.id %}selected{% endif %}>{{ u.name }}</option>
-              {% endfor %}
-            </select>
+
+          <hr class="divider">
+
+          <!-- Task Details -->
+          <div class="section-label">Task Details</div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Service Type *</label>
+              <select name="job_type" required>
+                {% for jt in job_types %}
+                <option value="{{ jt.name }}" {% if job.job_type == jt.name %}selected{% endif %}>{{ jt.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Assigned To</label>
+              <select name="assigned_to">
+                <option value="">— Unassigned —</option>
+                {% for u in users %}
+                <option value="{{ u.id }}" {% if job.assigned_to == u.id %}selected{% endif %}>{{ u.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Due Date</label>
+              <input type="date" name="due_date" value="{{ job.due_date.strftime('%Y-%m-%d') if job.due_date else '' }}">
+            </div>
+            <div class="form-group">
+              <label>Priority</label>
+              <select name="priority">
+                <option value="High" {% if job.priority=='High' %}selected{% endif %}>High</option>
+                <option value="Medium" {% if job.priority=='Medium' %}selected{% endif %}>Medium</option>
+                <option value="Low" {% if job.priority=='Low' %}selected{% endif %}>Low</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>No. of Persons</label>
+              <input type="number" name="num_persons" value="{{ job.num_persons or 1 }}" min="1" max="99">
+            </div>
           </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Due Date</label>
-            <input type="date" name="due_date" value="{{ job.due_date.strftime('%Y-%m-%d') if job.due_date else '' }}">
+
+          <hr class="divider">
+
+          <!-- Financial -->
+          <div class="section-label">Financial</div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Invoice Amount (AED)</label>
+              <input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label>Amount Received (AED)</label>
+              <input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01" placeholder="0">
+            </div>
           </div>
+
+          <hr class="divider">
+
+          <!-- Notes -->
+          <div class="section-label">Internal Notes</div>
           <div class="form-group">
-            <label>Priority</label>
-            <select name="priority">
-              <option value="High" {% if job.priority=='High' %}selected{% endif %}>High</option>
-              <option value="Medium" {% if job.priority=='Medium' %}selected{% endif %}>Medium</option>
-              <option value="Low" {% if job.priority=='Low' %}selected{% endif %}>Low</option>
-            </select>
+            <textarea name="internal_notes" rows="3" placeholder="Context, special instructions...">{{ job.internal_notes or '' }}</textarea>
           </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Invoice Amount (AED)</label>
-            <input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01">
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="/jobs/{{ job.id }}" class="btn-cancel">Cancel</a>
           </div>
-          <div class="form-group">
-            <label>Amount Received (AED)</label>
-            <input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01">
-          </div>
+
         </div>
-        <div class="form-group">
-          <label>Number of Persons</label>
-          <input type="number" name="num_persons" value="{{ job.num_persons or 1 }}" min="1" max="99">
-        </div>
-        <div class="form-group">
-          <label>Internal Notes</label>
-          <textarea name="internal_notes">{{ job.internal_notes or '' }}</textarea>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn-submit">Save Changes</button>
-          <a href="/jobs/{{ job.id }}" class="btn-cancel">Cancel</a>
-        </div>
-      </form>
-    </div>
+      </div>
+    </form>
   </div>
 </body>
 </html>
