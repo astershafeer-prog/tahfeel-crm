@@ -76,12 +76,15 @@
               {% else %}<span style="color:var(--text-light);">0</span>{% endif %}
             </td>
             <td>
-              <div style="display:flex;gap:5px;flex-wrap:wrap;">
-                <a href="/customers/{{ c.id }}" class="btn-sm">View</a>
-                <a href="/customers/{{ c.id }}/edit" class="btn-sm">Edit</a>
-                <a href="/documents?customer_id={{ c.id }}" class="btn-sm" style="border-color:var(--success);color:var(--success);">📄 Docs</a>
+              <div style="display:flex;gap:4px;align-items:center;">
+                {% if c.phone %}
+                <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+                {% endif %}
+                <a href="/customers/{{ c.id }}" class="ib" title="View">👁</a>
+                <a href="/customers/{{ c.id }}/edit" class="ib" title="Edit">✏</a>
+                <a href="/documents?customer_id={{ c.id }}" class="ib" title="Documents">📄</a>
                 {% if session.role == 'admin' %}
-                <a href="/customers/{{ c.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Delete {{ c.name }}?')">Del</a>
+                <a href="/customers/{{ c.id }}/delete" class="ib ib-del" onclick="return confirm('Delete {{ c.name }}?')" title="Delete">🗑</a>
                 {% endif %}
               </div>
             </td>
