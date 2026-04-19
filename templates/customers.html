@@ -69,7 +69,14 @@
             </td>
             <td><span class="badge b-{{ (c.customer_type or 'individual')|lower }}">{{ c.customer_type or 'Individual' }}</span></td>
             <td>{{ c.nationality or '—' }}</td>
-            <td>{{ c.rep.name if c.rep else '—' }}</td>
+            <td>
+              {% if c.rep %}
+              <div class="av-wrap">
+                <div class="av" style="background:#1A3B8B;">{{ c.rep.name[:2].upper() }}</div>
+                <span class="av-name">{{ c.rep.name.split()[0] }}</span>
+              </div>
+              {% else %}<span style="font-size:12px;color:#CBD5E1;">—</span>{% endif %}
+            </td>
             <td style="text-align:center;">
               {% if c.jobs|length > 0 %}
               <span style="background:var(--info-bg);color:var(--primary);padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;">{{ c.jobs|length }}</span>
