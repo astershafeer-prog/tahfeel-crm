@@ -1578,7 +1578,8 @@ def add_job():
         st_assigned_tos = request.form.getlist('st_assigned_to[]')
         st_due_dates = request.form.getlist('st_due_date[]')
         st_priorities = request.form.getlist('st_priority[]')
-        for i, title in enumerate(st_titles):
+        try:
+          for i, title in enumerate(st_titles):
             if not title.strip():
                 continue
             st_assigned = st_assigned_tos[i] if i < len(st_assigned_tos) and st_assigned_tos[i] else None
@@ -1593,8 +1594,10 @@ def add_job():
                 priority=st_priorities[i] if i < len(st_priorities) else 'Medium',
             )
             db.session.add(subtask)
-        db.session.commit()
-        db.session.flush()
+          db.session.commit()
+        except Exception as e:
+          db.session.rollback()
+          print(f'SubTask error: {e}')
 
         # Handle additional tasks for same customer
         extra_types = request.form.getlist('extra_job_type[]')

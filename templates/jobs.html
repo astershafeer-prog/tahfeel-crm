@@ -82,17 +82,15 @@
             </select>
           </div>
 
-          {% if session.role in ['admin','finance'] %}
           <div class="ff">
             <label>Assigned To</label>
             <select name="assigned_to">
               <option value="">All Staff</option>
               {% for u in users %}
-              <option value="{{ u.id }}" {% if request.args.get('assigned_to')==u.id|string %}selected{% endif %}>{{ u.name }}</option>
+              <option value="{{ u.id }}" {% if assigned_filter==u.id|string %}selected{% endif %}>{{ u.name }}</option>
               {% endfor %}
             </select>
           </div>
-          {% endif %}
           <div style="display:flex;gap:8px;align-items:flex-end;padding-top:18px;">
             <button type="submit" class="btn-primary" style="height:34px;padding:0 16px;">Apply</button>
             <a href="/jobs" class="btn-reset" style="height:34px;display:flex;align-items:center;padding:0 14px;">Reset</a>
