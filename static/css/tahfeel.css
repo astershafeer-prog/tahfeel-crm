@@ -299,7 +299,7 @@ input, select, textarea, button { font-family: var(--font); }
 .b-finalstage   { background: var(--success-bg); color: var(--success); }
 .b-done         { background: var(--success-bg); color: var(--success); }
 .b-pendingfinanceclose { background: var(--purple-bg); color: var(--purple); }
-.b-closed       { background: var(--primary); color: white; }
+.b-closed       { background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }
 .b-high         { background: var(--danger-bg); color: var(--danger); }
 .b-medium       { background: var(--warning-bg); color: var(--warning); }
 .b-low          { background: var(--border-light); color: var(--text-muted); }

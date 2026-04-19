@@ -74,7 +74,7 @@
           {% endfor %}
         </select>
       </div>
-      <div class="filter-group">
+      <div class="ff">
         <label>Priority</label>
         <select name="priority">
           <option value="">All Priorities</option>
@@ -84,7 +84,7 @@
         </select>
       </div>
       {% if session.role in ['admin','finance'] %}
-      <div class="filter-group">
+      <div class="ff">
         <label>Assigned To</label>
         <select name="assigned_to">
           <option value="">All Staff</option>
