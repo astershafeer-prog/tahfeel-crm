@@ -2550,10 +2550,10 @@ def my_desk():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add':
-            text = request.form.get('text','').strip()
+            text = request.form.get('text','').strip() or '📌'
             reminder_date = request.form.get('reminder_date','').strip()
             mention_user_id = request.form.get('mention_user_id','').strip()
-            if text:
+            if True:
                 rd = datetime.strptime(reminder_date, '%Y-%m-%d').date() if reminder_date else None
                 mid = int(mention_user_id) if mention_user_id else None
                 note = DeskNote(user_id=user_id, text=text, reminder_date=rd, mention_user_id=mid)

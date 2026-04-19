@@ -44,30 +44,55 @@
     </div>
 
     <!-- Quick Add -->
-    <div class="quick-add" style="margin-bottom:14px;">
-      <form method="post" style="display:flex;flex-direction:column;gap:10px;">
-        <input type="hidden" name="action" value="add">
-        <div class="ff">
-          <label>Note or Reminder</label>
-          <input type="text" name="text" class="qi" placeholder="What do you need to remember or do?" required autofocus>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+
+      <!-- Section 1: Personal Note / Reminder -->
+      <div class="quick-add">
+        <div style="font-size:12px;font-weight:700;color:#1A2333;margin-bottom:10px;">📌 Add Personal Note</div>
+        <form method="post" style="display:flex;flex-direction:column;gap:8px;">
+          <input type="hidden" name="action" value="add">
           <div class="ff">
-            <label>Remind me on</label>
-            <input type="date" name="reminder_date" class="qi" style="width:100%;" min="{{ now.strftime('%Y-%m-%d') }}">
+            <label>Note</label>
+            <input type="text" name="text" class="qi" placeholder="What do you need to remember or do?" required>
           </div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:flex-end;">
+            <div class="ff">
+              <label>Remind me on <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+              <input type="date" name="reminder_date" class="qi" style="width:100%;" min="{{ now.strftime('%Y-%m-%d') }}">
+            </div>
+            <button type="submit" class="btn-primary" style="height:36px;padding:0 16px;white-space:nowrap;">+ Add</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Section 2: Mention Colleague -->
+      <div class="quick-add">
+        <div style="font-size:12px;font-weight:700;color:#1A2333;margin-bottom:10px;">💬 Mention Colleague</div>
+        <form method="post" style="display:flex;flex-direction:column;gap:8px;">
+          <input type="hidden" name="action" value="add">
           <div class="ff">
-            <label>@ Mention colleague <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
-            <select name="mention_user_id" class="qi" style="width:100%;">
-              <option value="">— No mention —</option>
-              {% for u in all_users %}
-              <option value="{{ u.id }}">{{ u.name }}</option>
-              {% endfor %}
-            </select>
+            <label>Message <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+            <input type="text" name="text" value=" " class="qi" placeholder="e.g. Team meeting at 3pm, check customer docs...">
           </div>
-          <button type="submit" class="btn-primary" style="height:38px;padding:0 20px;white-space:nowrap;">+ Add Note</button>
-        </div>
-      </form>
+          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:flex-end;">
+            <div class="ff">
+              <label>Tag Staff</label>
+              <select name="mention_user_id" class="qi" style="width:100%;" required>
+                <option value="">— Select —</option>
+                {% for u in all_users %}
+                <option value="{{ u.id }}">{{ u.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="ff">
+              <label>Remind on <span style="color:#94A3B8;font-weight:400;">(opt)</span></label>
+              <input type="date" name="reminder_date" class="qi" style="width:100%;" min="{{ now.strftime('%Y-%m-%d') }}">
+            </div>
+            <button type="submit" class="btn-primary" style="height:36px;padding:0 16px;white-space:nowrap;">Send</button>
+          </div>
+        </form>
+      </div>
+
     </div>
 
 
