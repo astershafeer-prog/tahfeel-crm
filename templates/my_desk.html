@@ -72,36 +72,20 @@
 
 
     <!-- My Targets This Month -->
-    {% if lead_target > 0 or conv_target > 0 %}
+    {% if amount_target > 0 %}
+    {% set amt_pct = [(invoiced_actual / amount_target * 100)|int, 100]|min %}
     <div style="background:white;border-radius:10px;border:0.5px solid #E2E8F0;padding:16px 20px;margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:14px;">🎯 My Targets — {{ now.strftime('%B %Y') }}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        {% if lead_target > 0 %}
-        {% set lead_pct = [(lead_actual / lead_target * 100)|int, 100]|min %}
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:12px;font-weight:600;color:#475569;">Leads Added</span>
-            <span style="font-size:12px;font-weight:700;color:#1A2333;">{{ lead_actual }} / {{ lead_target }}</span>
-          </div>
-          <div style="height:8px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
-            <div style="width:{{ lead_pct }}%;height:100%;background:{% if lead_pct >= 100 %}#10B981{% elif lead_pct >= 60 %}#1A3B8B{% else %}#F59E0B{% endif %};border-radius:10px;transition:width .3s;"></div>
-          </div>
-          <div style="font-size:10px;color:#94A3B8;margin-top:3px;">{{ lead_pct }}% of target</div>
-        </div>
-        {% endif %}
-        {% if conv_target > 0 %}
-        {% set conv_pct = [(conv_actual / conv_target * 100)|int, 100]|min %}
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:12px;font-weight:600;color:#475569;">Conversions</span>
-            <span style="font-size:12px;font-weight:700;color:#1A2333;">{{ conv_actual }} / {{ conv_target }}</span>
-          </div>
-          <div style="height:8px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
-            <div style="width:{{ conv_pct }}%;height:100%;background:{% if conv_pct >= 100 %}#10B981{% elif conv_pct >= 60 %}#1A3B8B{% else %}#F59E0B{% endif %};border-radius:10px;transition:width .3s;"></div>
-          </div>
-          <div style="font-size:10px;color:#94A3B8;margin-top:3px;">{{ conv_pct }}% of target</div>
-        </div>
-        {% endif %}
+      <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:14px;">🎯 My Sales Target — {{ now.strftime('%B %Y') }}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:600;color:#475569;">Invoiced vs Target</span>
+        <span style="font-size:13px;font-weight:700;color:#1A2333;">AED {{ '{:,.0f}'.format(invoiced_actual) }} / AED {{ '{:,.0f}'.format(amount_target) }}</span>
+      </div>
+      <div style="height:10px;background:#F1F5F9;border-radius:10px;overflow:hidden;margin-bottom:6px;">
+        <div style="width:{{ amt_pct }}%;height:100%;background:{% if amt_pct>=100 %}#10B981{% elif amt_pct>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};border-radius:10px;transition:width .3s;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-size:11px;color:{% if amt_pct>=100 %}#10B981{% elif amt_pct>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};font-weight:700;">{{ amt_pct }}% achieved</span>
+        <span style="font-size:11px;color:#94A3B8;">Closed Value: AED {{ '{:,.0f}'.format(closed_actual) }}</span>
       </div>
     </div>
     {% endif %}

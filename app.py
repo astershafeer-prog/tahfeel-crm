@@ -454,20 +454,53 @@ def dashboard():
         lost = [l for l in leads if l.status == 'Lost']
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
 
-        users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'staff', 'admin'])).all()
+        users = User.query.filter_by(active=True).filter(User.role != 'admin').all()
+        # Workload filter — default this month
+        wl_filter = request.args.get('wl', 'month')
+        wl_from = request.args.get('wl_from', '')
+        wl_to = request.args.get('wl_to', '')
+        all_leads_db = Lead.query.all()
+        all_jobs_db = Job.query.all()
+        def in_period(dt, f):
+            if not dt: return False
+            d = dt.date() if hasattr(dt,'date') else dt
+            if f == 'today': return d == now.date()
+            if f == 'week':
+                ws = now.date() - timedelta(days=now.weekday())
+                return d >= ws
+            if f == 'month': return d.month == now.month and d.year == now.year
+            if f == 'custom' and wl_from and wl_to:
+                fd = datetime.strptime(wl_from,'%Y-%m-%d').date()
+                td = datetime.strptime(wl_to,'%Y-%m-%d').date()
+                return fd <= d <= td
+            return d.month == now.month and d.year == now.year
+        # Targets
+        staff_targets = {t.user_id: t for t in MonthlyTarget.query.filter_by(month=now.month, year=now.year).all()}
         staff_stats = []
         for u in users:
-            u_leads = [l for l in leads if l.assigned_to == u.id]
-            u_jobs = [j for j in jobs if j.assigned_to == u.id]
+            u_leads = [l for l in all_leads_db if l.assigned_to == u.id and in_period(l.created_at, wl_filter)]
+            u_jobs_all = [j for j in all_jobs_db if j.assigned_to == u.id]
+            u_jobs = [j for j in u_jobs_all if in_period(j.created_at, wl_filter)]
+            u_closed = [j for j in u_jobs_all if j.status == 'Closed']
+            u_invoiced = sum((j.amount_invoiced or 0) for j in u_jobs if j.status not in ['Pending Finance Approval'])
+            u_closed_val = sum((j.amount_received or 0) for j in u_closed)
+            t = staff_targets.get(u.id)
+            amount_target = t.amount_target if t else 0
             staff_stats.append({
                 'name': u.name,
+                'role': u.role,
                 'leads': len(u_leads),
-                'overdue_leads': len([l for l in u_leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]),
-                'active_jobs': len([j for j in u_jobs if j.status not in ['Done', 'Pending Finance Approval']]),
-                'overdue_jobs': len([j for j in u_jobs if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]),
+                'overdue_leads': len([l for l in u_leads if l.due_date and l.due_date < now and l.status not in ['Converted','Lost']]),
+                'conversions': len([l for l in u_leads if l.status == 'Converted']),
+                'lost': len([l for l in u_leads if l.status == 'Lost']),
+                'active_jobs': len([j for j in u_jobs_all if j.status not in ['Done','Closed','Pending Finance Approval']]),
+                'overdue_jobs': len([j for j in u_jobs_all if j.due_date and j.due_date < now and j.status not in ['Done','Closed','Pending Finance Approval']]),
+                'invoiced': u_invoiced,
+                'closed_val': u_closed_val,
+                'amount_target': amount_target,
+                'leads_this_month': len(u_leads),
             })
-
-        today_leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()][:10]
+        today_leads = [l for l in all_leads_db if l.created_at and l.created_at.date() == now.date()][:10]
 
         try:
             all_docs = Document.query.all()
@@ -477,24 +510,9 @@ def dashboard():
             total_docs = len(all_docs)
         except:
             docs_30 = docs_60 = docs_90 = total_docs = 0
-        # Monthly targets for staff workload section
-        now_month = now.month
-        now_year = now.year
-        staff_targets = {t.user_id: t for t in MonthlyTarget.query.filter_by(month=now_month, year=now_year).all()}
-        # Add achievement data to staff_stats
-        all_leads_this_month = Lead.query.filter(
-            db.extract('month', Lead.created_at) == now_month,
-            db.extract('year', Lead.created_at) == now_year
-        ).all()
-        for s in staff_stats:
-            u_id = next((u.id for u in User.query.filter_by(name=s['name']).all()), None)
-            t = staff_targets.get(u_id)
-            s['lead_target'] = t.lead_target if t else 0
-            s['conv_target'] = t.conversion_target if t else 0
-            s['conversions'] = len([l for l in all_leads_this_month if l.assigned_to == u_id and l.status == 'Converted']) if u_id else 0
-            s['leads_this_month'] = len([l for l in all_leads_this_month if l.assigned_to == u_id]) if u_id else 0
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
+                               wl_filter=wl_filter, wl_from=wl_from, wl_to=wl_to,
                                total=total, overdue_leads=overdue_leads,
                                converted=converted, lost=lost, pending=pending,
                                jobs=jobs, active_jobs=active_jobs,
@@ -2390,9 +2408,11 @@ def init_db():
                         month INTEGER NOT NULL,
                         year INTEGER NOT NULL,
                         lead_target INTEGER DEFAULT 0,
-                        conversion_target INTEGER DEFAULT 0
+                        conversion_target INTEGER DEFAULT 0,
+                        amount_target FLOAT DEFAULT 0
                     )
                 """))
+                conn.execute(db.text('ALTER TABLE monthly_target ADD COLUMN IF NOT EXISTS amount_target FLOAT DEFAULT 0'))
                 conn.commit()
         except Exception as e:
             print(f'monthly_target table: {e}')
@@ -2504,19 +2524,17 @@ def set_targets():
     now = datetime.now()
     month = int(request.args.get('month', now.month))
     year = int(request.args.get('year', now.year))
-    users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations'])).order_by(User.name).all()
+    users = User.query.filter_by(active=True).filter(User.role != 'admin').order_by(User.name).all()
     if request.method == 'POST':
         month = int(request.form.get('month', now.month))
         year = int(request.form.get('year', now.year))
         for u in users:
-            lead_t = int(request.form.get(f'lead_{u.id}', 0) or 0)
-            conv_t = int(request.form.get(f'conv_{u.id}', 0) or 0)
+            amount_t = float(request.form.get(f'amount_{u.id}', 0) or 0)
             t = MonthlyTarget.query.filter_by(user_id=u.id, month=month, year=year).first()
             if t:
-                t.lead_target = lead_t
-                t.conversion_target = conv_t
+                t.amount_target = amount_t
             else:
-                t = MonthlyTarget(user_id=u.id, month=month, year=year, lead_target=lead_t, conversion_target=conv_t)
+                t = MonthlyTarget(user_id=u.id, month=month, year=year, amount_target=amount_t)
                 db.session.add(t)
         db.session.commit()
         flash('Targets saved.')
@@ -2561,15 +2579,10 @@ def my_desk():
     all_users = User.query.filter_by(active=True).filter(User.id != user_id).order_by(User.name).all()
     # Monthly targets
     target = MonthlyTarget.query.filter_by(user_id=user_id, month=now.month, year=now.year).first()
-    my_leads = Lead.query.filter_by(assigned_to=user_id).filter(
-        db.extract('month', Lead.created_at) == now.month,
-        db.extract('year', Lead.created_at) == now.year
-    ).all()
-    my_conversions = [l for l in my_leads if l.status == 'Converted']
-    lead_actual = len(my_leads)
-    conv_actual = len(my_conversions)
-    lead_target = target.lead_target if target else 0
-    conv_target = target.conversion_target if target else 0
+    my_jobs_all = Job.query.filter_by(assigned_to=user_id).all()
+    invoiced_actual = sum((j.amount_invoiced or 0) for j in my_jobs_all if j.status not in ['Pending Finance Approval'])
+    closed_actual = sum((j.amount_received or 0) for j in my_jobs_all if j.status == 'Closed')
+    amount_target = target.amount_target if target else 0
 
     # Create table if not exists
     try:
@@ -2592,8 +2605,8 @@ def my_desk():
 
     return render_template('my_desk.html', my_notes=my_notes, mentions=mentions,
                            all_users=all_users, now=now,
-                           lead_actual=lead_actual, conv_actual=conv_actual,
-                           lead_target=lead_target, conv_target=conv_target)
+                           invoiced_actual=invoiced_actual, closed_actual=closed_actual,
+                           amount_target=amount_target)
 
 if __name__ == '__main__':
     init_db()

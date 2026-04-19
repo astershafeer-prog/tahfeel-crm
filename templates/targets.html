@@ -50,14 +50,13 @@
       <input type="hidden" name="month" value="{{ month }}">
       <input type="hidden" name="year" value="{{ year }}">
       <div class="card">
-        <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;padding:10px 16px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;padding:10px 16px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
           <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Staff Member</span>
-          <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Lead Target</span>
-          <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Conversion Target</span>
+          <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Sales Target (AED)</span>
         </div>
         {% for u in users %}
         {% set t = targets.get(u.id) %}
-        <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;padding:12px 16px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;padding:12px 16px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
           <div class="av-wrap">
             <div class="av" style="background:{% if loop.index%4==1 %}#1A3B8B{% elif loop.index%4==2 %}#10B981{% elif loop.index%4==3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ u.name[:2].upper() }}</div>
             <div>
@@ -65,10 +64,8 @@
               <div style="font-size:11px;color:#94A3B8;">{{ u.role|capitalize }}</div>
             </div>
           </div>
-          <input type="number" name="lead_{{ u.id }}" value="{{ t.lead_target if t else 0 }}" min="0"
-            style="width:100px;height:34px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 10px;font-size:13px;outline:none;">
-          <input type="number" name="conv_{{ u.id }}" value="{{ t.conversion_target if t else 0 }}" min="0"
-            style="width:100px;height:34px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 10px;font-size:13px;outline:none;">
+          <input type="number" name="amount_{{ u.id }}" value="{{ t.amount_target if t else 0 }}" min="0" step="100" placeholder="AED"
+            style="width:140px;height:34px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 10px;font-size:13px;outline:none;">
         </div>
         {% endfor %}
         <div style="padding:14px 16px;">
