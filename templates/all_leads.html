@@ -122,8 +122,10 @@
               {% for lead in leads %}
                 <tr id="row-{{ lead.id }}">
                   <td><input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="row-check" onchange="updateBulkBar()"></td>
-                  <td><strong>{{ lead.name }}</strong></td>
-                  <td>{{ lead.company or '—' }}</td>
+                  <td colspan="2">
+                    <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ lead.name }}</div>
+                    {% if lead.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ lead.company }}</div>{% endif %}
+                  </td>
                   <td>{{ lead.service or '—' }}</td>
                   <td>
                     {% if lead.assignee %}
