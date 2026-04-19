@@ -21,6 +21,7 @@
       <h2>Customers <span class="page-subtitle">({{ total }} total)</span></h2>
       <div style="display:flex;gap:8px;">
         <a href="/customers/export" class="btn-sm" style="background:var(--success-bg);border-color:var(--success);color:var(--success);">⬇ Export</a>
+        <a href="/customers?birthday=today" class="btn-sm" style="background:#FDF2F8;border-color:#FBCFE8;color:#9D174D;">🎂 Birthdays Today{% if birthdays_today %} <span style="background:#EC4899;color:white;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px;">{{ birthdays_today|length }}</span>{% endif %}</a>
         <a href="/customers/import" class="btn-sm">📥 Import</a>
         <a href="/customers/add" class="btn-add">+ Add Customer</a>
       </div>
