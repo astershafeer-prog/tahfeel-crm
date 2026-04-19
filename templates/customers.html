@@ -43,8 +43,7 @@
       <table>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Company</th>
+            <th colspan="2">Name / Company</th>
             <th>Phone</th>
             <th>Type</th>
             <th>Nationality</th>
@@ -56,11 +55,11 @@
         <tbody>
           {% for c in customers %}
           <tr>
-            <td>
-              <a href="/customers/{{ c.id }}" style="font-weight:600;color:var(--primary);text-decoration:none;">{{ c.name }}</a>
-              {% if c.lead_id %}<span style="font-size:10px;background:var(--info-bg);color:var(--primary);padding:1px 6px;border-radius:8px;margin-left:4px;">from lead</span>{% endif %}
+            <td colspan="2">
+              <a href="/customers/{{ c.id }}" style="font-size:13px;font-weight:600;color:#1A2333;text-decoration:none;">{{ c.name }}</a>
+              {% if c.lead_id %}<span style="font-size:10px;background:#EBF2FF;color:#1A3B8B;padding:1px 6px;border-radius:8px;margin-left:4px;">from lead</span>{% endif %}
+              {% if c.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ c.company }}</div>{% endif %}
             </td>
-            <td>{{ c.company or '—' }}</td>
             <td>
               {% if c.phone %}
               <span style="font-size:13px;">{{ c.phone }}</span>
