@@ -11,6 +11,18 @@
   {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
   {{ nav('customers') }}
+  {% if birthdays_today %}
+  <div style="background:linear-gradient(135deg,#FDF2F8,#FCE7F3);border-bottom:2px solid #FBCFE8;padding:9px 28px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">🎂</span>
+      <div>
+        <span style="font-size:13px;font-weight:700;color:#9D174D;">{{ birthdays_today|length }} customer{{ 's' if birthdays_today|length > 1 else '' }} celebrating birthday today</span>
+        <span style="font-size:12px;color:#BE185D;margin-left:8px;">— {% for c in birthdays_today %}{{ c.name }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+      </div>
+    </div>
+    <a href="/customers?birthday=today" style="font-size:12px;font-weight:600;color:#9D174D;text-decoration:none;background:white;padding:5px 14px;border-radius:20px;border:1px solid #FBCFE8;">View Only →</a>
+  </div>
+  {% endif %}
   <div class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
@@ -28,23 +40,6 @@
 
 
 
-
-    {% if birthday_filter == 'today' %}
-    <div style="background:#FDF2F8;border:1px solid #FBCFE8;border-left:5px solid #EC4899;border-radius:10px;padding:10px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:18px;">🎂</span>
-        <div>
-          {% if birthdays_today %}
-          <div style="font-size:13px;font-weight:700;color:#9D174D;">{{ birthdays_today|length }} customer{{ 's' if birthdays_today|length > 1 else '' }} celebrating birthday today</div>
-          <div style="font-size:11px;color:#BE185D;margin-top:2px;">{% for c in birthdays_today %}{{ c.name }}{% if not loop.last %}, {% endif %}{% endfor %}</div>
-          {% else %}
-          <div style="font-size:13px;font-weight:700;color:#9D174D;">No birthdays today</div>
-          {% endif %}
-        </div>
-      </div>
-      <a href="/customers" style="font-size:12px;color:#9D174D;font-weight:600;text-decoration:none;background:white;padding:4px 12px;border-radius:20px;border:1px solid #FBCFE8;">Clear ✕</a>
-    </div>
-    {% endif %}
 
     <div class="filter-card" style="border-top:4px solid #1A3B8B;">
       <div class="filter-card-head">
@@ -70,7 +65,7 @@
             <th>Type</th>
             <th>Rep</th>
             <th style="text-align:center;">Tasks</th>
-            <th>Actions</th>
+            <th style="text-align:center;">Actions</th>
           </tr>
         </thead>
         <tbody>
