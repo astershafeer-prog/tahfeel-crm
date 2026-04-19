@@ -29,7 +29,10 @@ def upload_to_cloudinary(file, folder='tahfeel-documents'):
         print(f'Cloudinary upload error: {e}')
         return None, None
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+DUBAI_TZ = timezone(timedelta(hours=4))
+def now_dubai():
+    return datetime.now(DUBAI_TZ).replace(tzinfo=None)
 from functools import wraps
 import os
 
@@ -71,7 +74,7 @@ class Lead(db.Model):
     representative = db.Column(db.String(100))
     lead_type = db.Column(db.String(20), default='New')
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))
-    due_date = db.Column(db.DateTime, default=lambda: datetime.now() + timedelta(days=1))
+    due_date = db.Column(db.DateTime, default=lambda: now_dubai() + timedelta(days=1))
     remarks = db.Column(db.Text)
     status = db.Column(db.String(50), default='New')
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -275,9 +278,7 @@ class DeskNote(db.Model):
 def inject_birthdays():
     try:
         if 'user_id' in session:
-            from datetime import timezone, timedelta
-            dubai_tz = timezone(timedelta(hours=4))
-            today = datetime.now(dubai_tz)
+            today = now_dubai()
             bdays = []
             try:
                 result = db.session.execute(db.text(
@@ -389,7 +390,7 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    now = datetime.now()
+    now = now_dubai()
     role = session['role']
 
     # ── Finance dashboard ────────────────────────────────────────────────────
@@ -623,7 +624,7 @@ def all_leads():
     if session['role'] == 'finance':
         flash('Access denied')
         return redirect(url_for('dashboard'))
-    now = datetime.now()
+    now = now_dubai()
     leads = Lead.query.order_by(Lead.due_date).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     search = request.args.get('search', '').strip().lower()
@@ -662,7 +663,7 @@ def export_leads():
     from openpyxl.styles import Font, PatternFill
     from flask import make_response
     import io
-    now = datetime.now()
+    now = now_dubai()
     leads = Lead.query.order_by(Lead.due_date).all()
     leads = apply_lead_filters(leads, request.args, now)
     wb = Workbook()
@@ -700,14 +701,14 @@ def export_leads():
 @app.route('/leads/add', methods=['GET', 'POST'])
 @login_required
 def add_lead():
-    now = datetime.now()
+    now = now_dubai()
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     services = Service.query.order_by(Service.name).all()
     sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
         due = request.form.get('due_date')
         lead_date = request.form.get('lead_date')
-        created_dt = datetime.strptime(lead_date, '%Y-%m-%d') if lead_date else datetime.now()
+        created_dt = datetime.strptime(lead_date, '%Y-%m-%d') if lead_date else now_dubai()
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else created_dt + timedelta(days=1)
         lead = Lead(
             name=request.form['name'],
@@ -729,13 +730,13 @@ def add_lead():
         db.session.commit()
         flash('Lead added successfully')
         return redirect(url_for('all_leads'))
-    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    tomorrow = (now_dubai() + timedelta(days=1)).strftime('%Y-%m-%d')
     return render_template('add_lead.html', users=users, services=services, sources=sources, now=now, tomorrow=tomorrow)
 
 @app.route('/leads/<int:lead_id>', methods=['GET', 'POST'])
 @login_required
 def lead_detail(lead_id):
-    now = datetime.now()
+    now = now_dubai()
     lead = Lead.query.get_or_404(lead_id)
     if request.method == 'POST':
         stage = request.form['stage']
@@ -809,9 +810,9 @@ def import_leads():
                     elif lead_date_str:
                         created_dt = datetime.strptime(str(lead_date_str).split(' ')[0].split('T')[0], '%Y-%m-%d')
                     else:
-                        created_dt = datetime.now()
+                        created_dt = now_dubai()
                 except:
-                    created_dt = datetime.now()
+                    created_dt = now_dubai()
                 lead = Lead(
                     name=str(name), company=str(company) if company else None,
                     phone=str(phone), email=str(email) if email else None,
@@ -914,7 +915,7 @@ def download_template():
 @app.route('/leads/<int:lead_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_lead(lead_id):
-    now = datetime.now()
+    now = now_dubai()
     lead = Lead.query.get_or_404(lead_id)
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     services = Service.query.order_by(Service.name).all()
@@ -1109,8 +1110,7 @@ def admin_toggle_staff(user_id):
 @app.route('/customers')
 @login_required
 def customers():
-    from datetime import timezone, timedelta as td2
-    now = datetime.now(timezone(td2(hours=4)))
+    now = now_dubai()
     search = request.args.get('search', '').strip().lower()
     birthday_filter = request.args.get('birthday', '')
     birthdays_today = []
@@ -1219,7 +1219,7 @@ def add_customer():
 @login_required
 def customer_detail(customer_id):
     customer = Customer.query.get_or_404(customer_id)
-    now = datetime.now()
+    now = now_dubai()
     jobs = Job.query.filter_by(customer_id=customer_id).order_by(Job.created_at.desc()).all()
     docs = Document.query.filter_by(customer_id=customer_id).order_by(Document.expiry_date).all()
     total_invoiced = sum(j.amount_invoiced or 0 for j in jobs)
@@ -1290,7 +1290,7 @@ def edit_customer(customer_id):
         return redirect(url_for('customer_detail', customer_id=customer_id))
     doc_types = DocType.query.order_by(DocType.name).all()
     existing_docs = Document.query.filter_by(customer_id=customer_id).order_by(Document.expiry_date).all()
-    now = datetime.now()
+    now = now_dubai()
     return render_template('edit_customer.html', customer=customer, sources=sources, users=users, doc_types=doc_types, existing_docs=existing_docs, now=now)
 
 @app.route('/customers/<int:customer_id>/delete')
@@ -1442,7 +1442,7 @@ JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES + ['Pending Finan
 @app.route('/jobs')
 @login_required
 def jobs():
-    now = datetime.now()
+    now = now_dubai()
     role = session['role']
     sort = request.args.get('sort', 'due')
     order = request.args.get('order', 'asc')
@@ -1607,7 +1607,7 @@ def add_job():
                 continue
             st_assigned = st_assigned_tos[i] if i < len(st_assigned_tos) and st_assigned_tos[i] else None
             st_due_str = st_due_dates[i] if i < len(st_due_dates) and st_due_dates[i] else None
-            st_due = datetime.strptime(st_due_str, '%Y-%m-%d') if st_due_str else datetime.now() + timedelta(days=1)
+            st_due = datetime.strptime(st_due_str, '%Y-%m-%d') if st_due_str else now_dubai() + timedelta(days=1)
             subtask = SubTask(
                 job_id=job.id,
                 title=title.strip(),
@@ -1635,8 +1635,8 @@ def add_job():
             if not jt: continue
             try: ea = int(extra_assigned[i]) if i < len(extra_assigned) and extra_assigned[i] else None
             except: ea = None
-            try: ed = datetime.strptime(extra_due[i], '%Y-%m-%d') if i < len(extra_due) and extra_due[i] else datetime.now() + timedelta(days=1)
-            except: ed = datetime.now() + timedelta(days=1)
+            try: ed = datetime.strptime(extra_due[i], '%Y-%m-%d') if i < len(extra_due) and extra_due[i] else now_dubai() + timedelta(days=1)
+            except: ed = now_dubai() + timedelta(days=1)
             try: eamt = float(extra_amount[i]) if i < len(extra_amount) and extra_amount[i] else 0
             except: eamt = 0
             try: ep = int(extra_persons[i]) if i < len(extra_persons) and extra_persons[i] else 1
@@ -1659,7 +1659,7 @@ def add_job():
         count = 1 + len([t for t in extra_types if t])
         flash(f'{count} task(s) created successfully')
         return redirect(url_for('jobs'))
-    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    tomorrow = (now_dubai() + timedelta(days=1)).strftime('%Y-%m-%d')
     import json
     service_days = {jt.name: (getattr(jt, 'default_days', None) or 1) for jt in job_types}
     return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days=json.dumps(service_days))
@@ -1668,7 +1668,7 @@ def add_job():
 @login_required
 def job_detail(job_id):
     job = Job.query.get_or_404(job_id)
-    now = datetime.now()
+    now = now_dubai()
     role = session['role']
     # Sales and operations can view all tasks (not just assigned ones)
     # Only restrict if somehow a non-authorised role gets here
@@ -1719,7 +1719,7 @@ def job_detail(job_id):
         # Save completion fields when marking Done or Pending Finance Close
         if new_status in ['Done', 'Pending Finance Close']:
             if not job.completed_at:
-                job.completed_at = datetime.now()
+                job.completed_at = now_dubai()
             rating = request.form.get('customer_rating')
             if rating:
                 try: job.customer_rating = int(rating)
@@ -1843,11 +1843,11 @@ def approve_job(job_id):
     # If task was Done, Finance is closing it; if Pending Finance Approval, Finance is approving it
     if job.status == 'Done':
         job.status = 'Closed'
-        job.completed_at = datetime.now()
+        job.completed_at = now_dubai()
     else:
         job.status = 'Assigned'
     job.finance_approved_by = session['user_id']
-    job.finance_approved_at = datetime.now()
+    job.finance_approved_at = now_dubai()
     notes = request.form.get('finance_notes', '').strip()
     if notes:
         job.finance_notes = notes  # save to job record
@@ -1948,7 +1948,7 @@ def activity_log():
     if session['role'] not in ['sales', 'admin']:
         flash('Access denied')
         return redirect(url_for('dashboard'))
-    now = datetime.now()
+    now = now_dubai()
     week_start = (now - timedelta(days=now.weekday())).date()
     from_date = request.args.get('from', week_start.strftime('%Y-%m-%d'))
     to_date = request.args.get('to', now.date().strftime('%Y-%m-%d'))
@@ -2021,7 +2021,7 @@ def save_activity():
     if session['role'] not in ['sales', 'admin']:
         flash('Access denied')
         return redirect(url_for('dashboard'))
-    log_date_str = request.form.get('log_date', datetime.now().date().strftime('%Y-%m-%d'))
+    log_date_str = request.form.get('log_date', now_dubai().date().strftime('%Y-%m-%d'))
     log_date = datetime.strptime(log_date_str, '%Y-%m-%d').date()
     # Admin can log for any user
     user_id = int(request.form.get('user_id_override') or session['user_id'])
@@ -2042,7 +2042,7 @@ def save_activity():
             setattr(log, field, 0)
     log.off_day = request.form.get('off_day', '') or None
     log.notes = request.form.get('notes', '')
-    log.updated_at = datetime.now()
+    log.updated_at = now_dubai()
     db.session.commit()
     flash(f'Activity log saved for {log_date.strftime("%d %b %Y")}')
     return redirect(url_for('activity_log'))
@@ -2063,7 +2063,7 @@ def edit_activity_log(log_id):
             except: setattr(log, field, 0)
         log.off_day = request.form.get('off_day', '') or None
         log.notes = request.form.get('notes', '')
-        log.updated_at = datetime.now()
+        log.updated_at = now_dubai()
         db.session.commit()
         flash(f'Activity log updated for {log.log_date.strftime("%d %b %Y")}')
         return redirect(url_for('activity_log'))
@@ -2231,7 +2231,7 @@ def admin_delete_jobtype(jobtype_id):
 @app.route('/documents')
 @login_required
 def documents():
-    now = datetime.now()
+    now = now_dubai()
     search = request.args.get('search', '').strip().lower()
     belongs_filter = request.args.get('belongs_to', '')
     doc_type_filter = request.args.get('doc_type', '')
@@ -2317,7 +2317,7 @@ def export_documents():
         ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
         ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
     docs = Document.query.order_by(Document.expiry_date).all()
-    now = datetime.now()
+    now = now_dubai()
     for d in docs:
         days = (d.expiry_date - now).days if d.expiry_date else ''
         ws.append([
@@ -2597,7 +2597,7 @@ def init_db():
 @login_required
 @admin_required
 def set_targets():
-    now = datetime.now()
+    now = now_dubai()
     month = int(request.args.get('month', now.month))
     year = int(request.args.get('year', now.year))
     if request.method == 'POST':
@@ -2635,7 +2635,7 @@ def set_targets():
 @app.route('/desk', methods=['GET','POST'])
 @login_required
 def my_desk():
-    now = datetime.now()
+    now = now_dubai()
     user_id = session['user_id']
     if request.method == 'POST':
         action = request.form.get('action')
@@ -2723,9 +2723,7 @@ def my_desk():
 @app.route('/check-birthdays')
 @login_required
 def check_birthdays():
-    from datetime import timezone, timedelta
-    dubai_tz = timezone(timedelta(hours=4))
-    today = datetime.now(dubai_tz)
+    today = now_dubai()
     try:
         result = db.session.execute(db.text("SELECT id, name, date_of_birth FROM customer WHERE date_of_birth IS NOT NULL")).fetchall()
         out = f"<b>Today (Dubai): {today.day}/{today.month}/{today.year}</b><br><br>Customers with DOB ({len(result)}):<br>"
