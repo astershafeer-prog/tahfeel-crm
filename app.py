@@ -251,6 +251,15 @@ class JobUpdate(db.Model):
     staff_name = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+class MonthlyTarget(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    month = db.Column(db.Integer, nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    lead_target = db.Column(db.Integer, default=0)
+    conversion_target = db.Column(db.Integer, default=0)
+    user = db.relationship('User', foreign_keys=[user_id])
+
 class DeskNote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -468,6 +477,22 @@ def dashboard():
             total_docs = len(all_docs)
         except:
             docs_30 = docs_60 = docs_90 = total_docs = 0
+        # Monthly targets for staff workload section
+        now_month = now.month
+        now_year = now.year
+        staff_targets = {t.user_id: t for t in MonthlyTarget.query.filter_by(month=now_month, year=now_year).all()}
+        # Add achievement data to staff_stats
+        all_leads_this_month = Lead.query.filter(
+            db.extract('month', Lead.created_at) == now_month,
+            db.extract('year', Lead.created_at) == now_year
+        ).all()
+        for s in staff_stats:
+            u_id = next((u.id for u in User.query.filter_by(name=s['name']).all()), None)
+            t = staff_targets.get(u_id)
+            s['lead_target'] = t.lead_target if t else 0
+            s['conv_target'] = t.conversion_target if t else 0
+            s['conversions'] = len([l for l in all_leads_this_month if l.assigned_to == u_id and l.status == 'Converted']) if u_id else 0
+            s['leads_this_month'] = len([l for l in all_leads_this_month if l.assigned_to == u_id]) if u_id else 0
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
                                total=total, overdue_leads=overdue_leads,
@@ -2355,6 +2380,22 @@ def admin_delete_doctype(doctype_id):
 def init_db():
     with app.app_context():
         db.create_all()
+        # Create monthly_target table if not exists
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text("""
+                    CREATE TABLE IF NOT EXISTS monthly_target (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER REFERENCES "user"(id),
+                        month INTEGER NOT NULL,
+                        year INTEGER NOT NULL,
+                        lead_target INTEGER DEFAULT 0,
+                        conversion_target INTEGER DEFAULT 0
+                    )
+                """))
+                conn.commit()
+        except Exception as e:
+            print(f'monthly_target table: {e}')
         # Create desk_note table if not exists
         try:
             with db.engine.connect() as conn:
@@ -2456,6 +2497,33 @@ def init_db():
             db.session.rollback()
             print(f'Init db error: {e}')
 
+@app.route('/admin/targets', methods=['GET','POST'])
+@login_required
+@admin_required
+def set_targets():
+    now = datetime.now()
+    month = int(request.args.get('month', now.month))
+    year = int(request.args.get('year', now.year))
+    users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations'])).order_by(User.name).all()
+    if request.method == 'POST':
+        month = int(request.form.get('month', now.month))
+        year = int(request.form.get('year', now.year))
+        for u in users:
+            lead_t = int(request.form.get(f'lead_{u.id}', 0) or 0)
+            conv_t = int(request.form.get(f'conv_{u.id}', 0) or 0)
+            t = MonthlyTarget.query.filter_by(user_id=u.id, month=month, year=year).first()
+            if t:
+                t.lead_target = lead_t
+                t.conversion_target = conv_t
+            else:
+                t = MonthlyTarget(user_id=u.id, month=month, year=year, lead_target=lead_t, conversion_target=conv_t)
+                db.session.add(t)
+        db.session.commit()
+        flash('Targets saved.')
+        return redirect(url_for('set_targets', month=month, year=year))
+    targets = {t.user_id: t for t in MonthlyTarget.query.filter_by(month=month, year=year).all()}
+    return render_template('targets.html', users=users, targets=targets, month=month, year=year, now=now)
+
 @app.route('/desk', methods=['GET','POST'])
 @login_required
 def my_desk():
@@ -2491,6 +2559,17 @@ def my_desk():
     my_notes = DeskNote.query.filter_by(user_id=user_id).order_by(DeskNote.is_done, DeskNote.reminder_date.asc().nullslast(), DeskNote.created_at.desc()).all()
     mentions = DeskNote.query.filter_by(mention_user_id=user_id, is_done=False).order_by(DeskNote.created_at.desc()).all()
     all_users = User.query.filter_by(active=True).filter(User.id != user_id).order_by(User.name).all()
+    # Monthly targets
+    target = MonthlyTarget.query.filter_by(user_id=user_id, month=now.month, year=now.year).first()
+    my_leads = Lead.query.filter_by(assigned_to=user_id).filter(
+        db.extract('month', Lead.created_at) == now.month,
+        db.extract('year', Lead.created_at) == now.year
+    ).all()
+    my_conversions = [l for l in my_leads if l.status == 'Converted']
+    lead_actual = len(my_leads)
+    conv_actual = len(my_conversions)
+    lead_target = target.lead_target if target else 0
+    conv_target = target.conversion_target if target else 0
 
     # Create table if not exists
     try:
@@ -2512,7 +2591,9 @@ def my_desk():
             conn.commit()
 
     return render_template('my_desk.html', my_notes=my_notes, mentions=mentions,
-                           all_users=all_users, now=now)
+                           all_users=all_users, now=now,
+                           lead_actual=lead_actual, conv_actual=conv_actual,
+                           lead_target=lead_target, conv_target=conv_target)
 
 if __name__ == '__main__':
     init_db()

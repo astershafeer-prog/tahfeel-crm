@@ -85,25 +85,58 @@
         <a href="/activity" class="btn-add">Daily Log →</a>
       </div>
     </div>
-    <div class="section-label" style="margin-top:14px;">Staff Workload</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;margin-bottom:8px;">
+      <div class="section-label" style="margin:0;">Staff Workload & Targets — {{ now.strftime('%B %Y') }}</div>
+      <a href="/admin/targets" style="font-size:12px;color:var(--primary);text-decoration:none;">🎯 Set Targets →</a>
+    </div>
     <div class="card">
-      <div style="display:grid;grid-template-columns:1.5fr 80px 100px 100px 100px;gap:10px;padding:8px 16px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
+      <div style="display:grid;grid-template-columns:1.4fr 1.2fr 1.2fr 80px 80px 80px;gap:10px;padding:8px 16px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
         <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Staff Member</span>
-        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Leads</span>
-        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue Leads</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Leads This Month</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Conversions</span>
         <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Active Tasks</span>
-        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue Tasks</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue Leads</span>
       </div>
       {% for s in staff_stats %}
-      <div style="display:grid;grid-template-columns:1.5fr 80px 100px 100px 100px;gap:10px;padding:11px 16px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
+      <div style="display:grid;grid-template-columns:1.4fr 1.2fr 1.2fr 80px 80px 80px;gap:10px;padding:12px 16px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
         <div class="av-wrap">
-          <div class="av" style="background:{% if loop.index % 4 == 1 %}#1A3B8B{% elif loop.index % 4 == 2 %}#10B981{% elif loop.index % 4 == 3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ s.name[:2].upper() }}</div>
+          <div class="av" style="background:{% if loop.index%4==1 %}#1A3B8B{% elif loop.index%4==2 %}#10B981{% elif loop.index%4==3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ s.name[:2].upper() }}</div>
           <span style="font-size:13px;font-weight:600;color:#1A2333;">{{ s.name }}</span>
         </div>
-        <span style="font-size:13px;color:#475569;">{{ s.leads }}</span>
-        <span>{% if s.overdue_leads > 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">{{ s.overdue_leads }}</span>{% else %}<span style="font-size:13px;color:#CBD5E1;">0</span>{% endif %}</span>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:12px;color:#475569;">{{ s.leads_this_month }}{% if s.lead_target > 0 %} / {{ s.lead_target }}{% endif %}</span>
+            {% if s.lead_target > 0 %}
+            {% set lp = [(s.leads_this_month / s.lead_target * 100)|int, 100]|min %}
+            <span style="font-size:10px;font-weight:600;color:{% if lp>=100 %}#10B981{% elif lp>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};">{{ lp }}%</span>
+            {% endif %}
+          </div>
+          {% if s.lead_target > 0 %}
+          {% set lp = [(s.leads_this_month / s.lead_target * 100)|int, 100]|min %}
+          <div style="height:5px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
+            <div style="width:{{ lp }}%;height:100%;background:{% if lp>=100 %}#10B981{% elif lp>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
+          </div>
+          {% endif %}
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:12px;color:#475569;">{{ s.conversions }}{% if s.conv_target > 0 %} / {{ s.conv_target }}{% endif %}</span>
+            {% if s.conv_target > 0 %}
+            {% set cp = [(s.conversions / s.conv_target * 100)|int, 100]|min %}
+            <span style="font-size:10px;font-weight:600;color:{% if cp>=100 %}#10B981{% elif cp>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};">{{ cp }}%</span>
+            {% endif %}
+          </div>
+          {% if s.conv_target > 0 %}
+          {% set cp = [(s.conversions / s.conv_target * 100)|int, 100]|min %}
+          <div style="height:5px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
+            <div style="width:{{ cp }}%;height:100%;background:{% if cp>=100 %}#10B981{% elif cp>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
+          </div>
+          {% endif %}
+        </div>
         <span style="font-size:13px;color:#475569;">{{ s.active_jobs }}</span>
         <span>{% if s.overdue_jobs > 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">{{ s.overdue_jobs }}</span>{% else %}<span style="font-size:13px;color:#CBD5E1;">0</span>{% endif %}</span>
+        <span>{% if s.overdue_leads > 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">{{ s.overdue_leads }}</span>{% else %}<span style="font-size:13px;color:#CBD5E1;">0</span>{% endif %}</span>
       </div>
       {% else %}
       <div class="empty">No staff found.</div>

@@ -13,6 +13,7 @@
   {{ nav('admin') }}
 
   <div class="container">
+    <div style="margin-bottom:14px;"><a href="/admin/targets" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;">🎯 Monthly Targets</a></div>
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}
         <div class="flash">{{ msg }}</div>
