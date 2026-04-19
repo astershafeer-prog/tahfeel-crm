@@ -70,7 +70,6 @@
             <th colspan="2">Name / Company</th>
             <th>Phone</th>
             <th>Type</th>
-            <th>Nationality</th>
             <th>Rep</th>
             <th style="text-align:center;">Tasks</th>
             <th>Actions</th>
@@ -91,7 +90,6 @@
               {% else %}—{% endif %}
             </td>
             <td><span title="{{ c.customer_type or 'Individual' }}" style="font-size:16px;">{% if c.customer_type == 'Company' %}🏢{% elif c.customer_type == 'Investor' %}💼{% else %}👤{% endif %}</span></td>
-            <td>{{ c.nationality or '—' }}</td>
             <td>
               {% if c.rep %}
               <div class="av-wrap">
