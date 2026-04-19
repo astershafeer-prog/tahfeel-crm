@@ -258,6 +258,7 @@ class MonthlyTarget(db.Model):
     year = db.Column(db.Integer, nullable=False)
     lead_target = db.Column(db.Integer, default=0)
     conversion_target = db.Column(db.Integer, default=0)
+    amount_target = db.Column(db.Float, default=0)
     user = db.relationship('User', foreign_keys=[user_id])
 
 class DeskNote(db.Model):
