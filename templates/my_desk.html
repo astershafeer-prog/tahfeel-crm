@@ -51,7 +51,7 @@
 
       <!-- Sales Target -->
       {% set amt_pct = [(invoiced_actual / amount_target * 100)|int, 100]|min if amount_target > 0 else 0 %}
-      <div style="background:white;border-radius:10px;border:0.5px solid #E2E8F0;padding:16px 20px;">
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;padding:16px 20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
         <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:14px;">🎯 My Sales — {{ now.strftime('%B %Y') }}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
           <div class="stat-box">
@@ -79,7 +79,7 @@
       </div>
 
       <!-- My Workload -->
-      <div style="background:white;border-radius:10px;border:0.5px solid #E2E8F0;padding:16px 20px;">
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;padding:16px 20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
         <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:14px;">📊 My Workload — This Month</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
           <div class="stat-box">
@@ -117,7 +117,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
 
       <!-- Personal Note -->
-      <div class="quick-add">
+      <div class="quick-add" style="border-top:5px solid #1A3B8B;">
         <div style="font-size:12px;font-weight:700;color:#1A2333;margin-bottom:10px;">📌 Add Personal Note</div>
         <form method="post" style="display:flex;flex-direction:column;gap:8px;">
           <input type="hidden" name="action" value="add">
@@ -136,7 +136,7 @@
       </div>
 
       <!-- Mention Colleague -->
-      <div class="quick-add">
+      <div class="quick-add" style="border-top:5px solid #8B5CF6;">
         <div style="font-size:12px;font-weight:700;color:#1A2333;margin-bottom:10px;">💬 Mention Colleague</div>
         <form method="post" style="display:flex;flex-direction:column;gap:8px;">
           <input type="hidden" name="action" value="add">
@@ -176,7 +176,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
 
       <!-- My Notes -->
-      <div class="note-card">
+      <div class="note-card" style="border-top:5px solid #1A3B8B;">
         <div class="section-head">
           <h2>📌 My Notes</h2>
           <span class="nbadge" style="background:#EBF2FF;color:#1A3B8B;">{{ my_notes|selectattr('is_done','eq',False)|list|length }} active</span>
@@ -215,7 +215,7 @@
       </div>
 
       <!-- Mentions from colleagues -->
-      <div class="note-card">
+      <div class="note-card" style="border-top:5px solid #8B5CF6;">
         <div class="section-head">
           <h2>💬 Mentioned by Colleagues</h2>
           <span class="nbadge" style="background:#F5F3FF;color:#6D28D9;">{{ mentions|length }}</span>

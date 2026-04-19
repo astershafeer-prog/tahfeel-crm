@@ -47,7 +47,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
 
       <!-- Leads Block -->
-      <div class="block">
+      <div class="block" style="border-top:5px solid #1A3B8B;">
         <div class="block-title">Leads <a href="/leads">View all →</a></div>
         <a href="/leads" style="text-decoration:none;">
           <div class="stat-row"><span class="stat-name" style="color:#1A3B8B;font-weight:500;">My Leads</span><span class="stat-val" style="color:#1A3B8B;">{{ leads|length }}</span></div>
@@ -67,7 +67,7 @@
       </div>
 
       <!-- Tasks Block -->
-      <div class="block">
+      <div class="block" style="border-top:5px solid #10B981;">
         <div class="block-title">Tasks <a href="/jobs">View all →</a></div>
         <a href="/jobs" style="text-decoration:none;">
           <div class="stat-row"><span class="stat-name" style="color:#1A3B8B;font-weight:500;">Active</span><span class="stat-val" style="color:#1A3B8B;">{{ my_jobs|length }}</span></div>
@@ -87,7 +87,7 @@
       </div>
 
       <!-- Finance Block -->
-      <div class="block">
+      <div class="block" style="border-top:5px solid #F59E0B;">
         <div class="block-title">Finance</div>
         <div class="stat-row"><span class="stat-name">Invoiced</span><span style="font-size:16px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(total_invoiced) }}</span></div>
         <div class="stat-row"><span class="stat-name">Received</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</span></div>

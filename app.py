@@ -1119,7 +1119,7 @@ def customers():
         birthdays_today = [c for c in bday_list if c.date_of_birth and c.date_of_birth.month == now.month and c.date_of_birth.day == now.day]
     except:
         birthdays_today = []
-    return render_template('customers.html', customers=paginated, page=page, total_pages=total_pages, total=total, search=request.args.get('search',''), birthdays_today=birthdays_today)
+    return render_template('customers.html', customers=paginated, page=page, total_pages=total_pages, total=total, search=request.args.get('search',''), birthdays_today=birthdays_today, now=now)
 
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required
