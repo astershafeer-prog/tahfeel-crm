@@ -2552,13 +2552,17 @@ def my_desk():
         if action == 'add':
             text = request.form.get('text','').strip() or '📌'
             reminder_date = request.form.get('reminder_date','').strip()
-            mention_user_id = request.form.get('mention_user_id','').strip()
-            if True:
-                rd = datetime.strptime(reminder_date, '%Y-%m-%d').date() if reminder_date else None
-                mid = int(mention_user_id) if mention_user_id else None
-                note = DeskNote(user_id=user_id, text=text, reminder_date=rd, mention_user_id=mid)
+            mention_user_ids = request.form.getlist('mention_user_ids')
+            rd = datetime.strptime(reminder_date, '%Y-%m-%d').date() if reminder_date else None
+            if mention_user_ids:
+                # Create one note per mentioned user
+                for mid in mention_user_ids:
+                    note = DeskNote(user_id=user_id, text=text, reminder_date=rd, mention_user_id=int(mid))
+                    db.session.add(note)
+            else:
+                note = DeskNote(user_id=user_id, text=text, reminder_date=rd, mention_user_id=None)
                 db.session.add(note)
-                db.session.commit()
+            db.session.commit()
         elif action == 'done':
             note_id = request.form.get('note_id')
             note = DeskNote.query.get(note_id)
