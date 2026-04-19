@@ -1223,3 +1223,60 @@ tbody tr.overdue-row:hover { background: #FEE2E2; }
 
 /* Section labels */
 .section-label { font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+/* ── Colored top borders on all cards ───────────────────────────────────── */
+
+/* Filter area wrapper */
+.filters { 
+  background:white; border-radius:12px; border:0.5px solid #E2E8F0;
+  border-top:5px solid #1A3B8B; padding:14px 18px; margin-bottom:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Search bar card */
+.search-bar-card {
+  background:white; border-radius:12px; border:0.5px solid #E2E8F0;
+  border-top:5px solid #1A3B8B; padding:12px 16px; margin-bottom:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05); display:flex; gap:8px; align-items:center;
+}
+
+/* Main data card on list pages */
+.card {
+  background:white; border-radius:12px; border:0.5px solid #E2E8F0;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05); overflow:hidden; margin-bottom:14px;
+}
+.card .card-header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 16px; border-bottom:0.5px solid #F1F5F9;
+  background:#FAFBFC;
+}
+.card .card-header h2 { font-size:14px; font-weight:700; color:#1A2333; }
+
+/* Lead card accent */
+.card-leads { border-top:5px solid #1A3B8B; }
+/* Task card accent */  
+.card-tasks { border-top:5px solid #10B981; }
+/* Finance card accent */
+.card-finance { border-top:5px solid #F59E0B; }
+/* Customer card accent */
+.card-customers { border-top:5px solid #8B5CF6; }
+/* Document card accent */
+.card-documents { border-top:5px solid #64748B; }
+
+/* Table header row */
+table thead tr { background:#F8FAFC; }
+table thead th { 
+  font-size:11px; font-weight:700; color:#64748B; 
+  text-transform:uppercase; letter-spacing:0.4px;
+  padding:10px 12px; border-bottom:1px solid #F1F5F9;
+}
+table tbody td { padding:10px 12px; font-size:13px; color:#1A2333; border-bottom:0.5px solid #F8FAFC; }
+table tbody tr:last-child td { border-bottom:none; }
+
+/* Overdue row */
+.overdue-row td { background:#FFF5F5; }
+.overdue-row:hover td { background:#FEE2E2 !important; }
+
+/* Page header */
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.page-header h2 { font-size:20px; font-weight:700; color:#1A2333; }

@@ -19,9 +19,8 @@
   </style>
 </head>
 <body>
-  {%- from 'macros.html' import topbar, nav, birthday_banner -%}
+  {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
-  {{ birthday_banner(birthdays_today, now) }}
   {{ nav('dashboard') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}

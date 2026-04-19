@@ -8,9 +8,8 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, birthday_banner, welcome -%}
+    {%- from 'macros.html' import topbar, nav, welcome -%}
   {{ topbar() }}
-  {{ birthday_banner(birthdays_today, now) }}
   {{ nav('leads') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -31,6 +30,7 @@
       </div>
     </div>
 
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;padding:14px 18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
     <form method="GET" action="/leads">
       <div class="search-bar">
         <input type="text" name="search" placeholder="Search by name, phone or company..." value="{{ search }}">
@@ -102,9 +102,10 @@
         </div>
       </div>
     </form>
+    </div>
 
     <form method="POST" action="/leads/bulk-delete" id="bulkForm">
-      <div class="card">
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
         {% if leads %}
           <table>
             <thead>
