@@ -485,7 +485,7 @@ def dashboard():
             u_invoiced = sum((j.amount_invoiced or 0) for j in u_jobs if j.status not in ['Pending Finance Approval'])
             u_closed_val = sum((j.amount_received or 0) for j in u_closed)
             t = staff_targets.get(u.id)
-            amount_target = t.amount_target if t else 0
+            amount_target = (t.amount_target or 0) if t else 0
             staff_stats.append({
                 'name': u.name,
                 'role': u.role,
@@ -2588,7 +2588,7 @@ def my_desk():
     my_jobs_all = Job.query.filter_by(assigned_to=user_id).all()
     invoiced_actual = sum((j.amount_invoiced or 0) for j in my_jobs_all if j.status not in ['Pending Finance Approval'])
     closed_actual = sum((j.amount_received or 0) for j in my_jobs_all if j.status == 'Closed')
-    amount_target = target.amount_target if target else 0
+    amount_target = (target.amount_target or 0) if target else 0
     # Workload this month
     my_leads_month = Lead.query.filter_by(assigned_to=user_id).filter(
         db.extract('month', Lead.created_at) == now.month,
