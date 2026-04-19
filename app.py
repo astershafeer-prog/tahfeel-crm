@@ -1102,22 +1102,34 @@ def customers():
     now = datetime.now()
     search = request.args.get('search', '').strip().lower()
     birthday_filter = request.args.get('birthday', '')
-    customer_list = Customer.query.order_by(Customer.created_at.desc()).all()
-    if search:
-        customer_list = [c for c in customer_list if
-            search in (c.name or '').lower() or
-            search in (c.company or '').lower() or
-            search in (c.phone or '').lower()]
-    if birthday_filter == 'today':
-        customer_list = [c for c in customer_list if c.date_of_birth and
-                         c.date_of_birth.month == now.month and
-                         c.date_of_birth.day == now.day]
+    birthdays_today = []
     try:
-        bday_list = Customer.query.filter(Customer.date_of_birth != None).all()
-        birthdays_today = [c for c in bday_list if c.date_of_birth and
-                           c.date_of_birth.month == now.month and c.date_of_birth.day == now.day]
-    except:
-        birthdays_today = []
+        # Ensure columns exist first
+        with db.engine.connect() as conn:
+            for col, typ in [('phone2','VARCHAR(20)'),('assigned_to','INTEGER'),('date_of_birth','DATE')]:
+                try:
+                    conn.execute(db.text(f'ALTER TABLE customer ADD COLUMN IF NOT EXISTS {col} {typ}'))
+                    conn.commit()
+                except: pass
+        customer_list = Customer.query.order_by(Customer.created_at.desc()).all()
+        if search:
+            customer_list = [c for c in customer_list if
+                search in (c.name or '').lower() or
+                search in (c.company or '').lower() or
+                search in (c.phone or '').lower()]
+        if birthday_filter == 'today':
+            customer_list = [c for c in customer_list if c.date_of_birth and
+                             c.date_of_birth.month == now.month and
+                             c.date_of_birth.day == now.day]
+        try:
+            bday_list = Customer.query.filter(Customer.date_of_birth != None).all()
+            birthdays_today = [c for c in bday_list if c.date_of_birth and
+                               c.date_of_birth.month == now.month and c.date_of_birth.day == now.day]
+        except:
+            birthdays_today = []
+    except Exception as e:
+        customer_list = []
+        flash(f'Error loading customers: {e}')
     page = int(request.args.get('page', 1))
     per_page = 25
     total = len(customer_list)
