@@ -126,8 +126,8 @@
       <div class="task-bar {{ bar_color }}"></div>
       <div class="task-bar-body">
         <div>
-          <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ job.customer.name }}</div>
-          <div style="font-size:11px;color:#94A3B8;margin-top:2px;">{{ job.job_type }}{% if job.customer.company %} · {{ job.customer.company }}{% endif %}</div>
+          <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ job.job_type }}</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:2px;">{{ job.customer.name }}{% if job.customer.company %} · {{ job.customer.company }}{% endif %}</div>
         </div>
         <div class="av-wrap">
           {% if job.assignee %}

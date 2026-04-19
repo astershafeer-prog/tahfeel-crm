@@ -53,7 +53,7 @@
           <label>Created Date</label>
           <select name="date" id="dateFilter" onchange="toggleCustomDates(this.value)">
             <option value="">All time</option>
-            <option value="today" {% if request.args.get('date') == 'today' %}selected{% endif %}>Today</option>
+            <option value="today" {% if request.args.get('date') == 'today' or is_default %}selected{% endif %}>Today</option>
             <option value="week" {% if request.args.get('date') == 'week' %}selected{% endif %}>This Week</option>
             <option value="month" {% if request.args.get('date') == 'month' %}selected{% endif %}>This Month</option>
             <option value="custom" {% if request.args.get('date') == 'custom' %}selected{% endif %}>Custom Range</option>
@@ -140,15 +140,21 @@
                   </td>
                   <td>
                     {% if lead.status == 'Converted' %}
-                      <span class="badge badge-converted">{{ lead.status }}</span>
+                      <span style="background:#DCFCE7;color:#15803D;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif lead.status == 'Lost' %}
-                      <span class="badge badge-lost">{{ lead.status }}</span>
+                      <span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif lead.status == 'Potential Lead' %}
-                      <span class="badge badge-potential">{{ lead.status }}</span>
-                    {% elif 'Called' in lead.status %}
-                      <span class="badge badge-called">{{ lead.status }}</span>
+                      <span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif 'Connected' in lead.status or 'Called' in lead.status %}
+                      <span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif 'WhatsApp' in lead.status %}
+                      <span style="background:#F0FDF4;color:#16A34A;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif 'Quotation' in lead.status %}
+                      <span style="background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif lead.status == 'New' %}
+                      <span style="background:#EBF2FF;color:#1A3B8B;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% else %}
-                      <span class="badge badge-new">{{ lead.status }}</span>
+                      <span style="background:#F1F5F9;color:#475569;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% endif %}
                   </td>
                   <td>

@@ -78,7 +78,7 @@
           <tr class="{% if doc.expiry_date and doc.expiry_date < now %}expired{% elif days <= 30 %}expiring{% elif days <= 60 %}near-expiring{% endif %}">
             <td><strong>{{ doc.doc_type }}</strong></td>
             <td>{{ doc.owner_name }}</td>
-            <td><span class="badge b-{{ doc.belongs_to|lower }}">{{ doc.belongs_to }}</span></td>
+            <td><span class="badge b-{{ doc.belongs_to|lower }}">{% if doc.belongs_to == 'Individual' %}👤 Individual{% elif doc.belongs_to == 'Company' %}🏢 Company{% elif doc.belongs_to == 'Staff' %}👔 Staff{% else %}{{ doc.belongs_to }}{% endif %}</span></td>
             <td>{% if doc.customer %}<a href="/customers/{{ doc.customer_id }}" style="color:var(--primary);text-decoration:none;">{{ doc.customer.name }}</a>{% else %}—{% endif %}</td>
             <td>
               {% if doc.expiry_date %}
