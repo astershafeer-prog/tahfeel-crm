@@ -349,6 +349,10 @@ def login():
             session['user_id'] = user.id
             session['user_name'] = user.name
             session['role'] = user.role
+            try:
+                session['unread_mentions'] = DeskNote.query.filter_by(mention_user_id=user.id, is_done=False).count()
+            except:
+                session['unread_mentions'] = 0
             return redirect(url_for('dashboard'))
         flash('Invalid email or password')
         return render_template('login.html', email=email)
@@ -2625,6 +2629,10 @@ def my_desk():
             """))
             conn.commit()
 
+    try:
+        session['unread_mentions'] = len(mentions)
+    except:
+        pass
     return render_template('my_desk.html', my_notes=my_notes, mentions=mentions,
                            all_users=all_users, now=now,
                            invoiced_actual=invoiced_actual, closed_actual=closed_actual,

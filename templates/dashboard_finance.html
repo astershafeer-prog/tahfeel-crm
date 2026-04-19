@@ -24,7 +24,7 @@
 
       <!-- Tasks Block -->
       <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);border-top:4px solid #10B981;">
-        <div style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Tasks <a href="/jobs" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>
+        <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Tasks <a href="/jobs" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>
         <a href="/jobs" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Active</span><span style="font-size:22px;font-weight:700;color:#1A3B8B;">{{ tasks_active }}</span></a>
         <a href="/jobs?status=Overdue" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Overdue</span><span style="font-size:22px;font-weight:700;color:#EF4444;">{{ tasks_overdue }}</span></a>
         <a href="/jobs?status=Processing" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Processing</span><span style="font-size:22px;font-weight:700;color:#F59E0B;">{{ tasks_processing }}</span></a>
@@ -33,7 +33,7 @@
 
       <!-- Finance Block -->
       <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);border-top:4px solid #F59E0B;">
-        <div style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Finance</div>
+        <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Finance</div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Invoiced</span><span style="font-size:16px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(total_invoiced) }}</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Received</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
@@ -47,7 +47,7 @@
 
     <!-- Documents Block -->
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:14px;">
-      <div style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Documents <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Documents <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
         <a href="/documents" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#1A3B8B;">{{ total_docs }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">Total</div></a>
         <a href="/documents?expiry=30" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#EF4444;">{{ docs_30 }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">≤30 Days</div></a>
