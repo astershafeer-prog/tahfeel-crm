@@ -2718,6 +2718,25 @@ def my_desk():
                            my_lost_count=my_lost_count, my_overdue_leads=my_overdue_leads,
                            my_active_tasks=my_active_tasks, my_overdue_tasks=my_overdue_tasks)
 
+@app.route('/check-birthdays')
+@login_required
+def check_birthdays():
+    if session.get('role') != 'admin':
+        return 'Admin only'
+    today = datetime.now()
+    try:
+        result = db.session.execute(db.text("SELECT id, name, date_of_birth FROM customer WHERE date_of_birth IS NOT NULL")).fetchall()
+        out = f"<b>Today: {today.day}/{today.month}/{today.year}</b><br><br>Customers with DOB ({len(result)}):<br>"
+        for r in result:
+            dob = r[2]
+            match = dob and dob.month == today.month and dob.day == today.day
+            out += f"- {r[1]}: {dob} {'✅ BIRTHDAY TODAY' if match else ''}<br>"
+        if not result:
+            out += "No customers have DOB set yet."
+        return out
+    except Exception as e:
+        return f'Error: {e}'
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
