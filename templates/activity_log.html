@@ -40,6 +40,7 @@
   {{ topbar() }}
   {{ nav('activity') }}
   <div class="container">
+    <div id="dashQuote" style="background:var(--primary);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:14px;min-height:48px;"></div>
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}

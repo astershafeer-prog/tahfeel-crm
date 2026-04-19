@@ -6,6 +6,17 @@
   <title>Tahfeel CRM — My Dashboard</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .block { background:white; border-radius:12px; border:0.5px solid #E2E8F0; padding:18px 20px; }
+    .block-title { font-size:11px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+    .block-title a { font-size:11px; color:#1A3B8B; text-decoration:none; font-weight:600; text-transform:none; letter-spacing:0; }
+    .stat-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:0.5px solid #F8FAFC; }
+    .stat-row:last-child { border-bottom:none; }
+    .stat-name { font-size:13px; color:#475569; }
+    .stat-val { font-size:22px; font-weight:700; }
+    .bar-track { height:6px; background:#F1F5F9; border-radius:10px; overflow:hidden; margin-top:4px; }
+    .bar-fill { height:100%; border-radius:10px; }
+  </style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
@@ -13,58 +24,110 @@
   {{ nav('dashboard') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
-      {% if messages %}{% for msg in messages %}
-        <div class="flash">{{ msg }}</div>
-      {% endfor %}{% endif %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    <!-- Quote -->
-    <div id="dashQuote" style="background:var(--primary);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:14px;min-height:48px;"></div>
-
-    <!-- Leads Cards -->
-    <div class="stats-5">
-      <a href="/leads" class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">My Leads</div><div class="cs-value">{{ leads|length }}</div><div class="cs-sub">Total assigned</div></div><div class="cs-icon cs-blue">◎</div></a>
-      <a href="/leads?status=Pending" class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Pending</div><div class="cs-value">{{ pending|length }}</div><div class="cs-sub">Awaiting action</div></div><div class="cs-icon cs-amber">⏳</div></a>
-      <a href="/leads?status=Overdue" class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Overdue</div><div class="cs-value">{{ overdue|length }}</div><div class="cs-sub">Past due date</div></div><div class="cs-icon cs-red">⚠</div></a>
-      <a href="/leads?status=Converted" class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Converted</div><div class="cs-value">{{ converted|length }}</div><div class="cs-sub">This month</div></div><div class="cs-icon cs-green">✓</div></a>
-      <a href="/leads?status=Lost" class="card-stat cs-grey"><div class="cs-left"><div class="cs-label">Lost</div><div class="cs-value">{{ lost|length }}</div><div class="cs-sub">This month</div></div><div class="cs-icon cs-grey">✕</div></a>
+    <!-- Page header -->
+    <div class="page-head" style="margin-bottom:14px;">
+      <div>
+        <div class="page-head-title">Dashboard</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Welcome back, {{ session.user_name.split()[0] }}</div>
+      </div>
     </div>
 
-    <!-- Tasks Cards -->
-    <div class="stats-5">
-      <a href="/jobs" class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">My Tasks</div><div class="cs-value">{{ my_jobs|length }}</div><div class="cs-sub">Total</div></div><div class="cs-icon cs-blue">✓</div></a>
-      <a href="/jobs?status=Assigned" class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Pending</div><div class="cs-value">{{ my_jobs|selectattr('status','ne','Done')|list|length }}</div><div class="cs-sub">In progress</div></div><div class="cs-icon cs-amber">⏳</div></a>
-      <a href="/jobs?status=Overdue" class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Overdue</div><div class="cs-value">{{ overdue_jobs|length }}</div><div class="cs-sub">Past due</div></div><div class="cs-icon cs-red">⚠</div></a>
-      <a href="/jobs?status=On+Hold" class="card-stat cs-grey"><div class="cs-left"><div class="cs-label">On Hold</div><div class="cs-value">{{ my_jobs|selectattr('status','eq','On Hold')|list|length }}</div><div class="cs-sub">Paused</div></div><div class="cs-icon cs-grey">⏸</div></a>
-      <a href="/jobs?status=Done" class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Done</div><div class="cs-value">{{ my_jobs|selectattr('status','eq','Done')|list|length }}</div><div class="cs-sub">Completed</div></div><div class="cs-icon cs-green">🏆</div></a>
+    <!-- 3 blocks: Leads | Tasks | Finance -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+
+      <!-- Leads Block -->
+      <div class="block">
+        <div class="block-title">Leads <a href="/leads">View all →</a></div>
+        <a href="/leads" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">My Leads</span><span class="stat-val" style="color:#1A3B8B;">{{ leads|length }}</span></div>
+        </a>
+        <a href="/leads?status=Converted" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">Converted</span><span class="stat-val" style="color:#10B981;">{{ converted|length }}</span></div>
+        </a>
+        <a href="/leads?status=Lost" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">Lost</span><span class="stat-val" style="color:#EF4444;">{{ lost|length }}</span></div>
+        </a>
+        <a href="/leads?status=Overdue" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">Overdue</span><span class="stat-val" style="color:#EF4444;">{{ overdue|length }}</span></div>
+        </a>
+        <a href="/leads?status=Pending" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">Pending</span><span class="stat-val" style="color:#F59E0B;">{{ pending|length }}</span></div>
+        </a>
+      </div>
+
+      <!-- Tasks Block -->
+      <div class="block">
+        <div class="block-title">Tasks <a href="/jobs">View all →</a></div>
+        <a href="/jobs" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">Active</span><span class="stat-val" style="color:#1A3B8B;">{{ my_jobs|length }}</span></div>
+        </a>
+        <a href="/jobs?status=Done" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">Done</span><span class="stat-val" style="color:#10B981;">{{ my_jobs|selectattr('status','eq','Done')|list|length }}</span></div>
+        </a>
+        <a href="/jobs?status=Overdue" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">Overdue</span><span class="stat-val" style="color:#EF4444;">{{ overdue_jobs|length }}</span></div>
+        </a>
+        <a href="/jobs?status=On+Hold" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">On Hold</span><span class="stat-val" style="color:#94A3B8;">{{ my_jobs|selectattr('status','eq','On Hold')|list|length }}</span></div>
+        </a>
+        <a href="/jobs?status=Assigned" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name">Pending</span><span class="stat-val" style="color:#F59E0B;">{{ my_jobs|selectattr('status','ne','Done')|list|length }}</span></div>
+        </a>
+      </div>
+
+      <!-- Finance Block -->
+      <div class="block">
+        <div class="block-title">Finance</div>
+        <div class="stat-row"><span class="stat-name">Invoiced</span><span style="font-size:16px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(total_invoiced) }}</span></div>
+        <div class="stat-row"><span class="stat-name">Received</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</span></div>
+        <div class="stat-row"><span class="stat-name">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
+        <div class="stat-row"><span class="stat-name">Closed Value</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(completed_value) }}</span></div>
+        {% if total_invoiced > 0 %}
+        <div style="margin-top:10px;">
+          {% set crate = [(total_received / total_invoiced * 100)|int, 100]|min %}
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:11px;color:#475569;">Collection Rate</span>
+            <span style="font-size:11px;font-weight:700;color:#1A3B8B;">{{ crate }}%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:{{ crate }}%;background:#1A3B8B;"></div></div>
+        </div>
+        {% endif %}
+      </div>
+
     </div>
 
-    <!-- Financial Cards -->
-    <div class="stats-4">
-      <div class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Invoiced</div><div class="cs-value" style="font-size:17px;">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div><div class="cs-icon cs-blue">📊</div></div>
-      <div class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Received</div><div class="cs-value" style="font-size:17px;">AED {{ '{:,.0f}'.format(total_received) }}</div></div><div class="cs-icon cs-green">✓</div></div>
-      <div class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Pending Payment</div><div class="cs-value" style="font-size:17px;">AED {{ '{:,.0f}'.format(total_pending) }}</div></div><div class="cs-icon cs-red">⚠</div></div>
-      <div class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Completed</div><div class="cs-value" style="font-size:17px;">AED {{ '{:,.0f}'.format(completed_value) }}</div></div><div class="cs-icon cs-amber">🏆</div></div>
+    <!-- Documents Block -->
+    <div class="block" style="margin-bottom:12px;">
+      <div class="block-title">Documents <a href="/documents">View all →</a></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
+        <a href="/documents" style="text-decoration:none;text-align:center;">
+          <div style="font-size:28px;font-weight:700;color:#1A3B8B;">{{ total_docs }}</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:3px;">Total</div>
+        </a>
+        <a href="/documents?expiry=30" style="text-decoration:none;text-align:center;">
+          <div style="font-size:28px;font-weight:700;color:#EF4444;">{{ docs_30 }}</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:3px;">≤30 Days</div>
+        </a>
+        <a href="/documents?expiry=60" style="text-decoration:none;text-align:center;">
+          <div style="font-size:28px;font-weight:700;color:#F59E0B;">{{ docs_60 }}</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:3px;">31–60 Days</div>
+        </a>
+        <a href="/documents?expiry=90" style="text-decoration:none;text-align:center;">
+          <div style="font-size:28px;font-weight:700;color:#475569;">{{ docs_90 }}</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:3px;">61–90 Days</div>
+        </a>
+      </div>
     </div>
 
-    <!-- Docs Cards -->
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px;">
-      <a href="/documents" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">Total Docs</div><div class="value">{{ total_docs }}</div></div></a>
-      <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">≤30 Days</div><div class="value">{{ docs_30 }}</div></div></a>
-      <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">31–60 Days</div><div class="value">{{ docs_60 }}</div></div></a>
-      <a href="/documents?expiry=90" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;border-top-color:#4A5568;"><div class="label">61–90 Days</div><div class="value" style="color:#4A5568;">{{ docs_90 }}</div></div></a>
-    </div>
-
-    <!-- Follow-ups + Daily Log side by side -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-
-      <!-- Follow-ups -->
+    <!-- Follow-ups + Daily Log -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
       <div class="card">
         <div class="card-header">
           <h2>⏰ Follow-ups Due Today</h2>
-          {% if followups|length > 5 %}
-          <a href="/leads?filter=followup" style="font-size:12px;color:var(--primary);text-decoration:none;">+{{ followups|length - 5 }} more →</a>
-          {% endif %}
+          {% if followups|length > 5 %}<a href="/leads?filter=followup" style="font-size:12px;color:var(--primary);text-decoration:none;">+{{ followups|length - 5 }} more →</a>{% endif %}
         </div>
         {% if followups %}
         <div class="card-body" style="padding:0;">
@@ -83,7 +146,6 @@
         {% endif %}
       </div>
 
-      <!-- Daily Activity Log -->
       {% if session.role == 'sales' %}
       <div class="card">
         <div class="card-header"><h2>📋 Daily Activity Log</h2></div>
@@ -93,12 +155,11 @@
         </div>
       </div>
       {% endif %}
-
     </div>
 
     <!-- Pending Finance Approval -->
     {% if pending_approval_jobs %}
-    <div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;">
+    <div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius-md);padding:12px 16px;margin-bottom:12px;">
       <div style="font-size:12px;font-weight:700;color:#633806;margin-bottom:8px;">⏳ Pending Finance Approval ({{ pending_approval_jobs|length }})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr>
@@ -122,7 +183,7 @@
     {% endif %}
 
     <!-- Overdue Leads + High Priority Tasks -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div class="card">
         <div class="card-header">
           <h2>Overdue Leads</h2>
@@ -174,57 +235,5 @@
     </div>
 
   </div>
-  <script>
-    const dqName = "{{ session.user_name }}".toLowerCase();
-    const dqAll = {
-      "saada": [
-        { text: "Saada, resilience is not about never falling — it's about getting up every single time. You've done it before. Do it again today.", tag: "Keep going 💪" },
-        { text: "Saada, your sensitivity is your superpower. You understand people better than most. Use that gift today.", tag: "Own your strength 🌟" },
-        { text: "Saada, Dubai saw something special in you when you arrived. Every call you make today proves them right.", tag: "You belong here ✨" },
-        { text: "Saada, hard work and heart together are unstoppable. You have both.", tag: "Unstoppable 💫" },
-        { text: "Saada, you understand people deeply — that is your greatest sales tool.", tag: "People's person 🤝" },
-      ],
-      "anfal": [
-        { text: "Anfal, when the customer is frustrated, you are the calm. That is not just a skill — that is a gift.", tag: "Calm under pressure 🌊" },
-        { text: "Anfal, your product knowledge turns conversations into conversions.", tag: "Expert 📚" },
-        { text: "Anfal, the trust you have built with authorities took patience and professionalism. That reputation opens doors.", tag: "Trust builder 🏛️" },
-        { text: "Anfal, your calm energy in a room changes the atmosphere. Bring that today.", tag: "Powerful presence 💪" },
-        { text: "Anfal, you have built relationships that bring clients back. That is the mark of a true professional.", tag: "Trusted advisor 🌟" },
-      ],
-      "razy": [
-        { text: "Razy, your energy walks into the room before you do. Give every customer that full spark today.", tag: "Energetic 🔥" },
-        { text: "Razy, your vibrant personality is your brand. Clients remember you — and they come back because of you.", tag: "Unforgettable 💫" },
-        { text: "Razy, enthusiasm is the fuel that drives deals. You have it naturally — let it shine.", tag: "Born for this 🎯" },
-        { text: "Razy, the way you connect with customers is a skill most people spend years trying to learn.", tag: "Natural connector 🤝" },
-        { text: "Razy, your energy today will become someone else's confidence in Tahfeel.", tag: "Make it happen 🚀" },
-      ],
-      "lukman": [
-        { text: "Lukman, from Tata Consultancy to Tahfeel — your experience is a foundation that few can match.", tag: "Experience counts 🏆" },
-        { text: "Lukman, as the face of Tahfeel, every interaction you have shapes how people see this company.", tag: "Official face 🏛️" },
-        { text: "Lukman, your product knowledge is your authority. When you speak, clients listen.", tag: "Knowledge is power 📚" },
-        { text: "Lukman, the team looks to you. Today, show them what excellence looks like.", tag: "Lead the way 💪" },
-        { text: "Lukman, you represent quality, trust and expertise — embody all three today.", tag: "Tahfeel's best ✨" },
-      ],
-      "aslam": [
-        { text: "Aslam, that smile of yours is not just friendly — it is a door opener. Today, open as many doors as you can.", tag: "Smile = Success 😊" },
-        { text: "Aslam, new chapter, same dedication. Tahfeel is lucky to have you.", tag: "New chapter 📖" },
-        { text: "Aslam, your passion for sales shows in every interaction. Customers feel it. That is what makes them say yes.", tag: "Born for sales 🎯" },
-        { text: "Aslam, hard work plus a great attitude is a formula that never fails.", tag: "Formula for success ✨" },
-        { text: "Aslam, your smile tells people they are welcome, heard, and valued. That is half the sale right there.", tag: "First impressions matter 🌟" },
-      ],
-    };
-    const dqDefault = [
-      { text: "Every call you make today is a step closer to your goal.", tag: "Keep going 💪" },
-      { text: "Your best day at work is still ahead of you. Make today count.", tag: "Best is yet to come 🌟" },
-      { text: "Small consistent actions lead to extraordinary results.", tag: "Consistency wins 🎯" },
-    ];
-    let dq = dqDefault;
-    for (const [k, v] of Object.entries(dqAll)) { if (dqName.includes(k)) { dq = v; break; } }
-    const dqEl = document.getElementById('dashQuote');
-    if (dqEl) {
-      const q = dq[new Date().getDay() % dq.length];
-      dqEl.innerHTML = `<div style="font-size:13px;color:white;font-style:italic;line-height:1.5;">"${q.text}"</div><div style="margin-top:6px;"><span style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.85);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">${q.tag}</span></div>`;
-    }
-  </script>
 </body>
 </html>
