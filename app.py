@@ -275,15 +275,14 @@ class DeskNote(db.Model):
 def inject_birthdays():
     try:
         if 'user_id' in session:
-            from datetime import datetime as dt
-            today = dt.now()
-            customers = Customer.query.filter(Customer.date_of_birth != None).all()
-            bdays = [c for c in customers if c.date_of_birth and 
-                     c.date_of_birth.month == today.month and 
+            today = datetime.now()
+            all_custs = Customer.query.all()
+            bdays = [c for c in all_custs if c.date_of_birth and
+                     c.date_of_birth.month == today.month and
                      c.date_of_birth.day == today.day]
             return {'birthdays_today': bdays}
-    except:
-        pass
+    except Exception as e:
+        print(f'Birthday context error: {e}')
     return {'birthdays_today': []}
 
 def login_required(f):
