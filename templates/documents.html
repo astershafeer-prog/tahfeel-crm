@@ -44,48 +44,28 @@
     </form>
 
     <!-- Filters -->
-    <form method="get" class="filters">
-      {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
-      <div class="filter-group">
-        <label>Belongs To</label>
-        <select name="belongs_to">
-          <option value="">All</option>
-          <option value="Company" {% if belongs_filter=='Company' %}selected{% endif %}>Company</option>
-          <option value="Individual" {% if belongs_filter=='Individual' %}selected{% endif %}>Individual</option>
-          <option value="Staff" {% if belongs_filter=='Staff' %}selected{% endif %}>Staff</option>
-        </select>
+    <div class="filter-card">
+      <div class="filter-card-head">
+        <div class="filter-card-title">⊟ Filters</div>
+        <a href="/documents" class="btn-reset" style="font-size:11px;">Reset</a>
       </div>
-      <div class="filter-group">
-        <label>Doc Type</label>
-        <select name="doc_type">
-          <option value="">All Types</option>
-          {% for dt in doc_types %}
-          <option value="{{ dt.name }}" {% if doc_type_filter==dt.name %}selected{% endif %}>{{ dt.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Customer</label>
-        <select name="customer_id">
-          <option value="">All Customers</option>
-          {% for c in customers %}
-          <option value="{{ c.id }}" {% if customer_filter==c.id|string %}selected{% endif %}>{{ c.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Expiry</label>
-        <select name="expiry">
-          <option value="">All</option>
-          <option value="30" {% if expiry_filter=='30' %}selected{% endif %}>≤30 days</option>
-          <option value="60" {% if expiry_filter=='60' %}selected{% endif %}>31–60 days</option>
-          <option value="90" {% if expiry_filter=='90' %}selected{% endif %}>61–90 days</option>
-          <option value="expired" {% if expiry_filter=='expired' %}selected{% endif %}>Expired</option>
-        </select>
-      </div>
-      <button type="submit" class="btn-filter">Filter</button>
-      <a href="/documents" class="btn-reset">Reset</a>
-    </form>
+      <form method="get" class="filter-grid-3">
+        <div class="ff"><label>Expiry</label>
+          <select name="expiry">
+            <option value="">All Documents</option>
+            <option value="30" {% if request.args.get('expiry')=='30' %}selected{% endif %}>≤30 Days</option>
+            <option value="60" {% if request.args.get('expiry')=='60' %}selected{% endif %}>31–60 Days</option>
+            <option value="90" {% if request.args.get('expiry')=='90' %}selected{% endif %}>61–90 Days</option>
+          </select>
+        </div>
+        <div class="ff"><label>Search</label>
+          <input type="text" name="search" value="{{ request.args.get('search','') }}" placeholder="Customer, doc type, owner...">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;">
+          <button type="submit" class="btn-primary" style="height:36px;padding:0 20px;">Apply</button>
+        </div>
+      </form>
+    </div>
 
     <div class="card">
       <table>

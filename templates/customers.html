@@ -25,14 +25,19 @@
       </div>
     </div>
 
-    <!-- Search -->
-    <form method="get" class="filters" style="margin-bottom:12px;">
-      <div class="filter-group" style="flex:1;">
-        <input type="text" name="search" value="{{ search }}" placeholder="Search by name, company, phone or email..." style="width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;">
+    <div class="filter-card">
+      <div class="filter-card-head">
+        <div class="filter-card-title">⊟ Filters</div>
+        {% if search %}<a href="/customers" class="btn-reset" style="font-size:11px;">Reset</a>{% endif %}
       </div>
-      <button type="submit" class="btn-filter">Search</button>
-      {% if search %}<a href="/customers" class="btn-reset">Clear</a>{% endif %}
-    </form>
+      <form method="get" style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:flex-end;">
+        <div class="ff">
+          <label>Search</label>
+          <input type="text" name="search" value="{{ search }}" placeholder="Name, company, phone or email...">
+        </div>
+        <button type="submit" class="btn-primary" style="height:36px;padding:0 20px;white-space:nowrap;">Search</button>
+      </form>
+    </div>
 
     <div class="card">
       <table>

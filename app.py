@@ -546,7 +546,10 @@ def all_leads():
                  search in (l.name or '').lower() or
                  search in (l.phone or '').lower() or
                  search in (l.company or '').lower()]
-    if not is_default:
+    if is_default:
+        # Default: show today's leads only
+        leads = [l for l in leads if l.created_at and l.created_at.date() == now.date()]
+    else:
         leads = apply_lead_filters(leads, request.args, now)
 
     # Pagination
