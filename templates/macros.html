@@ -20,21 +20,22 @@
 {% endmacro %}
 
 {% macro nav(active='') %}
-<div class="nav">
-  <a href="/dashboard" {% if active=='dashboard' %}class="active"{% endif %}>📊 Dashboard</a>
-  <a href="/leads/add" {% if active=='add_lead' %}class="active"{% endif %}>+ Add Lead</a>
+<div class="nav" style="background:#0F2660;">
+  <a href="/dashboard" {% if active=='dashboard' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">⊞ Dashboard</a>
   {% if session.role != 'finance' %}
-  <a href="/leads" {% if active=='leads' %}class="active"{% endif %}>All Leads</a>
+  <a href="/leads" {% if active=='leads' or active=='add_lead' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">◉ Leads</a>
   {% endif %}
-  <a href="/jobs" {% if active=='jobs' %}class="active"{% endif %}>Tasks</a>
-  <a href="/customers" {% if active=='customers' %}class="active"{% endif %}>Customers</a>
-  <a href="/documents" {% if active=='documents' %}class="active"{% endif %}>Documents</a>
+  <a href="/jobs" {% if active=='jobs' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">✓ Tasks</a>
+  <a href="/customers" {% if active=='customers' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">👤 Customers</a>
+  <a href="/documents" {% if active=='documents' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Documents</a>
   {% if session.role in ['admin', 'sales'] %}
-  <a href="/activity" {% if active=='activity' %}class="active"{% endif %}>Daily Log</a>
+  <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
   {% endif %}
   {% if session.role == 'admin' %}
-  <a href="/admin" class="admin-link {% if active=='admin' %}active{% endif %}">⚙ Admin</a>
+  <a href="/admin" class="admin-link {% if active=='admin' %}active{% endif %}" style="display:flex;align-items:center;gap:5px;">⚙ Admin</a>
   {% endif %}
+  <div style="flex:1;"></div>
+  <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;">{{ session.user_name[:2].upper() if session.user_name else 'U' }}</div>
 </div>
 {% endmacro %}
 

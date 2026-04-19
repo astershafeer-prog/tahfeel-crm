@@ -44,37 +44,37 @@
     </form>
 
     <div class="section-label">Financial Summary (Active Tasks)</div>
-    <div class="cards-4">
-      <div class="stat-card"><div class="lbl">Total Invoiced</div><div class="val" style="font-size:13px;font-family:var(--font-mono);">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>
-      <div class="stat-card amber"><div class="lbl">Total Received</div><div class="val" style="font-size:13px;font-family:var(--font-mono);">AED {{ '{:,.0f}'.format(total_received) }}</div></div>
-      <div class="stat-card red"><div class="lbl">Pending</div><div class="val" style="font-size:13px;font-family:var(--font-mono);">AED {{ '{:,.0f}'.format(total_pending) }}</div></div>
-      <div class="stat-card green"><div class="lbl">Completed Value</div><div class="val" style="font-size:13px;font-family:var(--font-mono);">AED {{ '{:,.0f}'.format(completed_value) }}</div></div>
+    <div class="stats-4">
+      <div class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Total Invoiced</div><div class="cs-value" style="font-size:18px;">AED {{ '{:,.0f}'.format(total_invoiced) }}</div><div class="cs-sub">All active tasks</div></div><div class="cs-icon cs-blue">📊</div></div>
+      <div class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Total Received</div><div class="cs-value" style="font-size:18px;">AED {{ '{:,.0f}'.format(total_received) }}</div><div class="cs-sub">Collected</div></div><div class="cs-icon cs-green">✓</div></div>
+      <div class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Pending Payment</div><div class="cs-value" style="font-size:18px;">AED {{ '{:,.0f}'.format(total_pending) }}</div><div class="cs-sub">Outstanding</div></div><div class="cs-icon cs-red">⚠</div></div>
+      <div class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Completed Value</div><div class="cs-value" style="font-size:18px;">AED {{ '{:,.0f}'.format(completed_value) }}</div><div class="cs-sub">Closed tasks</div></div><div class="cs-icon cs-amber">🏆</div></div>
     </div>
 
     <div class="section-label">Leads</div>
-    <div class="cards-4">
-      <a href="/leads" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="lbl">Total Leads</div><div class="val">{{ total }}</div></div></a>
-      <a href="/leads?status=Overdue" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="lbl">Overdue</div><div class="val">{{ overdue_leads|length }}</div></div></a>
-      <a href="/leads?status=Called - Connected" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="lbl">Pending</div><div class="val">{{ pending|length }}</div></div></a>
-      <a href="/leads?status=Converted" style="text-decoration:none;"><div class="stat-card green" style="cursor:pointer;"><div class="lbl">Converted</div><div class="val">{{ converted|length }}</div></div></a>
+    <div class="stats-4">
+      <a href="/leads" class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Total Leads</div><div class="cs-value">{{ total }}</div><div class="cs-sub">All time</div></div><div class="cs-icon cs-blue">◎</div></a>
+      <a href="/leads?status=Overdue" class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Overdue</div><div class="cs-value">{{ overdue_leads|length }}</div><div class="cs-sub">Past due date</div></div><div class="cs-icon cs-red">⚠</div></a>
+      <a href="/leads" class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Pending</div><div class="cs-value">{{ pending|length }}</div><div class="cs-sub">Awaiting action</div></div><div class="cs-icon cs-amber">⏳</div></a>
+      <a href="/leads?status=Converted" class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Converted</div><div class="cs-value">{{ converted|length }}</div><div class="cs-sub">This month</div></div><div class="cs-icon cs-green">✓</div></a>
     </div>
 
     <div class="section-label">Jobs</div>
-    <div class="cards-4">
-      <a href="/jobs" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="lbl">Active Tasks</div><div class="val">{{ active_jobs|length }}</div></div></a>
-      <a href="/jobs?status=Overdue" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="lbl">Overdue Tasks</div><div class="val">{{ overdue_jobs|length }}</div></div></a>
-      <a href="/jobs?status=Processing" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="lbl">Processing</div><div class="val">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div></div></a>
-      <a href="/jobs?status=Done" style="text-decoration:none;"><div class="stat-card green" style="cursor:pointer;"><div class="lbl">Done</div><div class="val">{{ done_jobs|length }}</div></div></a>
+    <div class="stats-4">
+      <a href="/jobs" class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Active Tasks</div><div class="cs-value">{{ active_jobs|length }}</div><div class="cs-sub">In progress</div></div><div class="cs-icon cs-blue">✓</div></a>
+      <a href="/jobs?status=Overdue" class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Overdue Tasks</div><div class="cs-value">{{ overdue_jobs|length }}</div><div class="cs-sub">Needs attention</div></div><div class="cs-icon cs-red">⚠</div></a>
+      <a href="/jobs?status=Processing" class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Processing</div><div class="cs-value">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div><div class="cs-sub">With authority</div></div><div class="cs-icon cs-amber">⚙</div></a>
+      <a href="/jobs?status=Done" class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Done</div><div class="cs-value">{{ done_jobs|length }}</div><div class="cs-sub">This month</div></div><div class="cs-icon cs-green">🏆</div></a>
     </div>
 
     <div class="divider"></div>
 
     <div class="section-label">Documents</div>
-    <div class="cards-4" style="margin-bottom:14px;">
-      <a href="/documents" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">Total Docs</div><div class="value">{{ total_docs }}</div></div></a>
-      <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">≤30 Days</div><div class="value">{{ docs_30 }}</div></div></a>
-      <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">31–60 Days</div><div class="value">{{ docs_60 }}</div></div></a>
-      <a href="/documents?expiry=90" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;border-top-color:#4A5568;"><div class="label">61–90 Days</div><div class="value" style="color:#4A5568;">{{ docs_90 }}</div></div></a>
+    <div class="stats-4" style="margin-bottom:14px;">
+      <a href="/documents" class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Total Docs</div><div class="cs-value">{{ total_docs }}</div><div class="cs-sub">All documents</div></div><div class="cs-icon cs-blue">📄</div></a>
+      <a href="/documents?expiry=30" class="card-stat cs-red"><div class="cs-left"><div class="cs-label">≤30 Days</div><div class="cs-value">{{ docs_30 }}</div><div class="cs-sub">Expiring soon</div></div><div class="cs-icon cs-red">⚠</div></a>
+      <a href="/documents?expiry=60" class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">31–60 Days</div><div class="cs-value">{{ docs_60 }}</div><div class="cs-sub">Expiring next month</div></div><div class="cs-icon cs-amber">⏳</div></a>
+      <a href="/documents?expiry=90" class="card-stat cs-grey"><div class="cs-left"><div class="cs-label">61–90 Days</div><div class="cs-value">{{ docs_90 }}</div><div class="cs-sub">Plan ahead</div></div><div class="cs-icon cs-grey">📋</div></a>
     </div>
     <div class="card" style="margin-bottom:14px;">
       <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;">
