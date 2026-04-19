@@ -276,10 +276,11 @@ def inject_birthdays():
     try:
         if 'user_id' in session:
             today = datetime.now()
-            all_custs = Customer.query.all()
-            bdays = [c for c in all_custs if c.date_of_birth and
-                     c.date_of_birth.month == today.month and
-                     c.date_of_birth.day == today.day]
+            from sqlalchemy import text as sqlt
+            result = db.session.execute(sqlt(
+                "SELECT id, name, phone FROM customer WHERE date_of_birth IS NOT NULL AND EXTRACT(MONTH FROM date_of_birth)=:m AND EXTRACT(DAY FROM date_of_birth)=:d"
+            ), {'m': today.month, 'd': today.day})
+            bdays = [{'id': r[0], 'name': r[1], 'phone': r[2]} for r in result]
             return {'birthdays_today': bdays}
     except Exception as e:
         print(f'Birthday context error: {e}')

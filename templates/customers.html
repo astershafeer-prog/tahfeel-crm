@@ -17,7 +17,7 @@
       <span style="font-size:18px;">🎂</span>
       <div>
         <span style="font-size:13px;font-weight:700;color:#9D174D;">{{ birthdays_today|length }} customer{{ 's' if birthdays_today|length > 1 else '' }} celebrating birthday today</span>
-        <span style="font-size:12px;color:#BE185D;margin-left:8px;">— {% for c in birthdays_today %}{{ c.name }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+        <span style="font-size:12px;color:#BE185D;margin-left:8px;">— {% for c in birthdays_today %}{{ c.name if c.name is string else c['name'] }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
       </div>
     </div>
     <a href="/customers?birthday=today" style="font-size:12px;font-weight:600;color:#9D174D;text-decoration:none;background:white;padding:5px 14px;border-radius:20px;border:1px solid #FBCFE8;">View Only →</a>
