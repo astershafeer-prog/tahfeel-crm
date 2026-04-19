@@ -22,29 +22,29 @@
     <div id="dashQuote" style="background:var(--primary);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:14px;min-height:48px;"></div>
 
     <!-- Leads Cards -->
-    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:10px;">
-      <a href="/leads" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">My Leads</div><div class="value">{{ leads|length }}</div></div></a>
-      <a href="/leads?status=Pending" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">Pending</div><div class="value">{{ pending|length }}</div></div></a>
-      <a href="/leads?status=Overdue" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">Overdue</div><div class="value">{{ overdue|length }}</div></div></a>
-      <a href="/leads?status=Converted" style="text-decoration:none;"><div class="stat-card green" style="cursor:pointer;"><div class="label">Converted</div><div class="value">{{ converted|length }}</div></div></a>
-      <a href="/leads?status=Lost" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">Lost</div><div class="value">{{ lost|length }}</div></div></a>
+    <div class="stats-5">
+      <a href="/leads" class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">My Leads</div><div class="cs-value">{{ leads|length }}</div><div class="cs-sub">Total assigned</div></div><div class="cs-icon cs-blue">◎</div></a>
+      <a href="/leads?status=Pending" class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Pending</div><div class="cs-value">{{ pending|length }}</div><div class="cs-sub">Awaiting action</div></div><div class="cs-icon cs-amber">⏳</div></a>
+      <a href="/leads?status=Overdue" class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Overdue</div><div class="cs-value">{{ overdue|length }}</div><div class="cs-sub">Past due date</div></div><div class="cs-icon cs-red">⚠</div></a>
+      <a href="/leads?status=Converted" class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Converted</div><div class="cs-value">{{ converted|length }}</div><div class="cs-sub">This month</div></div><div class="cs-icon cs-green">✓</div></a>
+      <a href="/leads?status=Lost" class="card-stat cs-grey"><div class="cs-left"><div class="cs-label">Lost</div><div class="cs-value">{{ lost|length }}</div><div class="cs-sub">This month</div></div><div class="cs-icon cs-grey">✕</div></a>
     </div>
 
     <!-- Tasks Cards -->
-    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:10px;">
-      <a href="/jobs" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">My Tasks</div><div class="value">{{ my_jobs|length }}</div></div></a>
-      <a href="/jobs?status=Assigned" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">Pending</div><div class="value">{{ my_jobs|selectattr('status','ne','Done')|list|length }}</div></div></a>
-      <a href="/jobs?status=Overdue" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">Overdue</div><div class="value">{{ overdue_jobs|length }}</div></div></a>
-      <a href="/jobs?status=On+Hold" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">On Hold</div><div class="value">{{ my_jobs|selectattr('status','eq','On Hold')|list|length }}</div></div></a>
-      <a href="/jobs?status=Done" style="text-decoration:none;"><div class="stat-card green" style="cursor:pointer;"><div class="label">Done</div><div class="value">{{ my_jobs|selectattr('status','eq','Done')|list|length }}</div></div></a>
+    <div class="stats-5">
+      <a href="/jobs" class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">My Tasks</div><div class="cs-value">{{ my_jobs|length }}</div><div class="cs-sub">Total</div></div><div class="cs-icon cs-blue">✓</div></a>
+      <a href="/jobs?status=Assigned" class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Pending</div><div class="cs-value">{{ my_jobs|selectattr('status','ne','Done')|list|length }}</div><div class="cs-sub">In progress</div></div><div class="cs-icon cs-amber">⏳</div></a>
+      <a href="/jobs?status=Overdue" class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Overdue</div><div class="cs-value">{{ overdue_jobs|length }}</div><div class="cs-sub">Past due</div></div><div class="cs-icon cs-red">⚠</div></a>
+      <a href="/jobs?status=On+Hold" class="card-stat cs-grey"><div class="cs-left"><div class="cs-label">On Hold</div><div class="cs-value">{{ my_jobs|selectattr('status','eq','On Hold')|list|length }}</div><div class="cs-sub">Paused</div></div><div class="cs-icon cs-grey">⏸</div></a>
+      <a href="/jobs?status=Done" class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Done</div><div class="cs-value">{{ my_jobs|selectattr('status','eq','Done')|list|length }}</div><div class="cs-sub">Completed</div></div><div class="cs-icon cs-green">🏆</div></a>
     </div>
 
     <!-- Financial Cards -->
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:10px;">
-      <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>
-      <div class="fin-card amber"><div class="lbl">Received</div><div class="val">AED {{ '{:,.0f}'.format(total_received) }}</div></div>
-      <div class="fin-card red"><div class="lbl">Pending Payment</div><div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div></div>
-      <div class="fin-card green"><div class="lbl">Completed</div><div class="val">AED {{ '{:,.0f}'.format(completed_value) }}</div></div>
+    <div class="stats-4">
+      <div class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Invoiced</div><div class="cs-value" style="font-size:17px;">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div><div class="cs-icon cs-blue">📊</div></div>
+      <div class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Received</div><div class="cs-value" style="font-size:17px;">AED {{ '{:,.0f}'.format(total_received) }}</div></div><div class="cs-icon cs-green">✓</div></div>
+      <div class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Pending Payment</div><div class="cs-value" style="font-size:17px;">AED {{ '{:,.0f}'.format(total_pending) }}</div></div><div class="cs-icon cs-red">⚠</div></div>
+      <div class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Completed</div><div class="cs-value" style="font-size:17px;">AED {{ '{:,.0f}'.format(completed_value) }}</div></div><div class="cs-icon cs-amber">🏆</div></div>
     </div>
 
     <!-- Docs Cards -->

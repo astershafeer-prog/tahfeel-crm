@@ -1725,7 +1725,7 @@ def approve_job(job_id):
     db.session.add(update)
     db.session.commit()
     flash('Task approved and assigned to staff.')
-    return redirect(url_for('dashboard'))
+    return redirect(request.referrer or url_for('dashboard'))
 
 @app.route('/jobs/<int:job_id>/payment', methods=['POST'])
 @login_required

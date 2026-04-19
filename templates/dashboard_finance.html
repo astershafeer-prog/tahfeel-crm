@@ -4,118 +4,111 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Finance Dashboard</title>
-    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {%- from 'macros.html' import topbar, nav, welcome -%}
   {{ topbar() }}
   {{ nav('dashboard') }}
-
   <div class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
     {{ welcome(now) }}
 
-    <div class="section-label">Tasks Summary</div>
-    <div class="cards-4" style="margin-bottom:14px;">
-      <a href="/jobs" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">Active Tasks</div><div class="value">{{ tasks_active }}</div></div></a>
-      <a href="/jobs?status=Overdue" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">Overdue</div><div class="value">{{ tasks_overdue }}</div></div></a>
-      <a href="/jobs?status=Processing" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">Processing</div><div class="value">{{ tasks_processing }}</div></div></a>
-      <a href="/jobs?status=Pending+Finance+Approval" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;border-top-color:#1A3B8B;"><div class="label">Pending Approval</div><div class="value" style="color:#1A3B8B;">{{ tasks_pending_approval }}</div></div></a>
-    </div>
-    <div class="section-label">Financial Summary — Active Tasks</div>
-    <div class="cards-4">
-      <div class="fin-card">
-        <div class="lbl">Total Invoiced</div>
-        <div class="val">AED {{ '{:,.0f}'.format(total_invoiced) }}</div>
-        <div class="sub">All active tasks</div>
-      </div>
-      <div class="fin-card amber">
-        <div class="lbl">Total Received</div>
-        <div class="val">AED {{ '{:,.0f}'.format(total_received) }}</div>
-        <div class="sub">Payments in hand</div>
-      </div>
-      <div class="fin-card red">
-        <div class="lbl">Pending</div>
-        <div class="val">AED {{ '{:,.0f}'.format(total_pending) }}</div>
-        <div class="sub">Invoiced minus received</div>
-      </div>
-      <div class="fin-card green">
-        <div class="lbl">Completed Value</div>
-        <div class="val">AED {{ '{:,.0f}'.format(completed_value) }}</div>
-        <div class="sub">Done tasks — sales value</div>
-      </div>
+    <!-- Tasks Summary -->
+    <div class="stats-4" style="margin-bottom:10px;">
+      <a href="/jobs" class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Active Tasks</div><div class="cs-value">{{ tasks_active }}</div><div class="cs-sub">In progress</div></div><div class="cs-icon cs-blue">✓</div></a>
+      <a href="/jobs?status=Overdue" class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Overdue</div><div class="cs-value">{{ tasks_overdue }}</div><div class="cs-sub">Past due date</div></div><div class="cs-icon cs-red">⚠</div></a>
+      <a href="/jobs?status=Processing" class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Processing</div><div class="cs-value">{{ tasks_processing }}</div><div class="cs-sub">With authority</div></div><div class="cs-icon cs-amber">⚙</div></a>
+      <a href="/jobs?status=Pending+Finance+Approval" class="card-stat cs-purple"><div class="cs-left"><div class="cs-label">Pending Approval</div><div class="cs-value">{{ tasks_pending_approval }}</div><div class="cs-sub">Awaiting finance</div></div><div class="cs-icon cs-purple">💰</div></a>
     </div>
 
-    <div class="section-label">Documents</div>
-    <div class="cards-4" style="margin-bottom:14px;">
-      <a href="/documents" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;"><div class="label">Total Docs</div><div class="value">{{ total_docs }}</div></div></a>
-      <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="label">≤30 Days</div><div class="value">{{ docs_30 }}</div></div></a>
-      <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="label">31–60 Days</div><div class="value">{{ docs_60 }}</div></div></a>
-      <a href="/documents?expiry=90" style="text-decoration:none;"><div class="stat-card" style="cursor:pointer;border-top-color:#4A5568;"><div class="label">61–90 Days</div><div class="value" style="color:#4A5568;">{{ docs_90 }}</div></div></a>
-    </div></a>
-      <a href="/documents?expiry=30" style="text-decoration:none;"><div class="stat-card red" style="cursor:pointer;"><div class="lbl">Expiring ≤30 Days</div><div class="val">{{ docs_30 }}</div></div></a>
-      <a href="/documents?expiry=60" style="text-decoration:none;"><div class="stat-card amber" style="cursor:pointer;"><div class="lbl">Expiring 31–60 Days</div><div class="val">{{ docs_60 }}</div></div></a>
-    </div>
-    <div class="section-label" style="margin-top:18px;">
-      Pending Finance Approval
-      {% if pending_approval %}<span class="pending-badge">{{ pending_approval|length }} waiting</span>{% endif %}
-    </div>
-    <div class="card">
-      <table>
-        <thead>
-          <tr><th>Customer</th><th>Task Type</th><th>Assigned To</th><th>Invoice Amt</th><th>Approve</th></tr>
-        </thead>
-        <tbody>
-          {% for job in pending_approval %}
-          <tr>
-            <td>
-              <strong>{{ job.customer.name }}</strong>
-              {% if job.customer.company %}<br><span style="font-size:11px;color:var(--text-muted);">{{ job.customer.company }}</span>{% endif %}
-            </td>
-            <td>{{ job.job_type }}</td>
-            <td>{{ job.assignee.name if job.assignee else '—' }}</td>
-            <td>AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</td>
-            <td>
-              <form method="post" action="/jobs/{{ job.id }}/approve" class="approve-form">
-                <input type="number" name="amount_invoiced" placeholder="Invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01">
-                <input type="number" name="amount_received" placeholder="Received" min="0" step="0.01">
-                <button type="submit" class="btn-approve">✓ Approve</button>
-              </form>
-            </td>
-          </tr>
-          {% else %}
-          <tr><td colspan="5" class="empty">No tasks pending approval.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <!-- Financial Summary -->
+    <div class="stats-4" style="margin-bottom:10px;">
+      <div class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Total Invoiced</div><div class="cs-value" style="font-size:18px;">AED {{ '{:,.0f}'.format(total_invoiced) }}</div><div class="cs-sub">All active tasks</div></div><div class="cs-icon cs-blue">📊</div></div>
+      <div class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Total Received</div><div class="cs-value" style="font-size:18px;">AED {{ '{:,.0f}'.format(total_received) }}</div><div class="cs-sub">Collected</div></div><div class="cs-icon cs-green">✓</div></div>
+      <div class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Pending Payment</div><div class="cs-value" style="font-size:18px;">AED {{ '{:,.0f}'.format(total_pending) }}</div><div class="cs-sub">Outstanding</div></div><div class="cs-icon cs-red">⚠</div></div>
+      <div class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Completed Value</div><div class="cs-value" style="font-size:18px;">AED {{ '{:,.0f}'.format(completed_value) }}</div><div class="cs-sub">Closed tasks</div></div><div class="cs-icon cs-amber">🏆</div></div>
     </div>
 
-    <div class="section-label">All Active Tasks</div>
-    <div class="card">
-      <table>
-        <thead>
-          <tr><th>Customer</th><th>Task Type</th><th>Status</th><th>Invoiced</th><th>Received</th><th>Pending</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          {% for job in all_jobs %}
-          <tr>
-            <td><strong>{{ job.customer.name }}</strong></td>
-            <td>{{ job.job_type }}</td>
-            <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></td>
-            <td>AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</td>
-            <td>AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</td>
-            <td>AED {{ '{:,.0f}'.format((job.amount_invoiced or 0) - (job.amount_received or 0)) }}</td>
-            <td><a href="/jobs/{{ job.id }}" class="btn-view">View</a></td>
-          </tr>
-          {% else %}
-          <tr><td colspan="7" class="empty">No active tasks.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <!-- Documents -->
+    <div class="stats-4" style="margin-bottom:14px;">
+      <a href="/documents" class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Total Docs</div><div class="cs-value">{{ total_docs }}</div><div class="cs-sub">All documents</div></div><div class="cs-icon cs-blue">📄</div></a>
+      <a href="/documents?expiry=30" class="card-stat cs-red"><div class="cs-left"><div class="cs-label">≤30 Days</div><div class="cs-value">{{ docs_30 }}</div><div class="cs-sub">Expiring soon</div></div><div class="cs-icon cs-red">⚠</div></a>
+      <a href="/documents?expiry=60" class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">31–60 Days</div><div class="cs-value">{{ docs_60 }}</div><div class="cs-sub">Next month</div></div><div class="cs-icon cs-amber">⏳</div></a>
+      <a href="/documents?expiry=90" class="card-stat cs-grey"><div class="cs-left"><div class="cs-label">61–90 Days</div><div class="cs-value">{{ docs_90 }}</div><div class="cs-sub">Plan ahead</div></div><div class="cs-icon cs-grey">📋</div></a>
     </div>
+
+    <!-- Pending Finance Approval -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-header">
+        <h2>⏳ Pending Finance Approval
+          {% if pending_approval %}<span style="background:#FEF3C7;color:#B45309;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:8px;">{{ pending_approval|length }} waiting</span>{% endif %}
+        </h2>
+      </div>
+      {% if pending_approval %}
+      {% for job in pending_approval %}
+      <div style="padding:12px 16px;border-bottom:1px solid #F8FAFC;display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr auto;gap:12px;align-items:center;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ job.customer.name }}</div>
+          {% if job.customer.company %}<div style="font-size:11px;color:#94A3B8;">{{ job.customer.company }}</div>{% endif %}
+        </div>
+        <div style="font-size:13px;color:#475569;">{{ job.job_type }}</div>
+        <div class="av-wrap">
+          {% if job.assignee %}
+          <div class="av">{{ job.assignee.name[:2].upper() }}</div>
+          <span class="av-name">{{ job.assignee.name.split()[0] }}</span>
+          {% else %}<span style="font-size:12px;color:#CBD5E1;">—</span>{% endif %}
+        </div>
+        <form method="post" action="/jobs/{{ job.id }}/approve" style="display:flex;gap:6px;align-items:center;">
+          <input type="number" name="amount_invoiced" placeholder="Invoiced AED" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" style="width:110px;height:32px;border:1.5px solid #E2E8F0;border-radius:7px;padding:0 8px;font-size:12px;outline:none;">
+          <input type="number" name="amount_received" placeholder="Received AED" min="0" step="0.01" style="width:110px;height:32px;border:1.5px solid #E2E8F0;border-radius:7px;padding:0 8px;font-size:12px;outline:none;">
+          <button type="submit" style="height:32px;padding:0 14px;background:#10B981;color:white;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">✓ Approve</button>
+        </form>
+        <a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty">No tasks pending approval.</div>
+      {% endif %}
+    </div>
+
+    <!-- All Active Tasks -->
+    <div class="card">
+      <div class="card-header">
+        <h2>All Active Tasks</h2>
+        <a href="/jobs" style="font-size:12px;color:var(--primary);text-decoration:none;">View all →</a>
+      </div>
+      {% for job in all_jobs %}
+      {% set is_overdue = job.due_date and job.due_date < now and job.status not in ['Done','Closed','Pending Finance Close'] %}
+      {% if job.status == 'Closed' %}{% set bar = 'bar-grey' %}
+      {% elif job.status in ['Done','Pending Finance Close'] %}{% set bar = 'bar-green' %}
+      {% elif is_overdue %}{% set bar = 'bar-red' %}
+      {% elif job.status == 'Processing' %}{% set bar = 'bar-amber' %}
+      {% elif job.status in ['On Hold','Delayed'] %}{% set bar = 'bar-purple' %}
+      {% else %}{% set bar = 'bar-blue' %}{% endif %}
+      <div style="display:grid;grid-template-columns:4px 1.2fr 1fr 100px 110px 110px 110px auto;gap:10px;align-items:center;padding:10px 0;border-bottom:0.5px solid #F8FAFC;">
+        <div style="height:100%;background:{% if bar=='bar-red' %}#EF4444{% elif bar=='bar-green' %}#10B981{% elif bar=='bar-amber' %}#F59E0B{% elif bar=='bar-purple' %}#8B5CF6{% elif bar=='bar-grey' %}#94A3B8{% else %}#1A3B8B{% endif %};border-radius:2px;min-height:40px;"></div>
+        <div style="padding-left:10px;">
+          <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ job.customer.name }}</div>
+          <div style="font-size:11px;color:#94A3B8;">{{ job.job_type }}</div>
+        </div>
+        <div class="av-wrap">
+          {% if job.assignee %}<div class="av">{{ job.assignee.name[:2].upper() }}</div><span class="av-name">{{ job.assignee.name.split()[0] }}</span>{% else %}<span style="font-size:12px;color:#CBD5E1;">—</span>{% endif %}
+        </div>
+        <span class="badge b-{{ job.status|lower|replace(' ','') }}" style="font-size:10px;">{{ job.status }}</span>
+        <div style="font-size:12px;color:#475569;">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</div>
+        <div style="font-size:12px;color:#10B981;">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div>
+        <div style="font-size:12px;color:{% if (job.amount_invoiced or 0) - (job.amount_received or 0) > 0 %}#EF4444{% else %}#94A3B8{% endif %};">AED {{ '{:,.0f}'.format((job.amount_invoiced or 0) - (job.amount_received or 0)) }}</div>
+        <a href="/jobs/{{ job.id }}" class="ib" title="View" style="margin-right:10px;">👁</a>
+      </div>
+      {% else %}
+      <div class="empty">No active tasks.</div>
+      {% endfor %}
+    </div>
+
   </div>
 </body>
 </html>
