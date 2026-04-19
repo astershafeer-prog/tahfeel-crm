@@ -276,14 +276,22 @@ def inject_birthdays():
     try:
         if 'user_id' in session:
             today = datetime.now()
-            from sqlalchemy import text as sqlt
-            result = db.session.execute(sqlt(
-                "SELECT id, name, phone FROM customer WHERE date_of_birth IS NOT NULL AND EXTRACT(MONTH FROM date_of_birth)=:m AND EXTRACT(DAY FROM date_of_birth)=:d"
-            ), {'m': today.month, 'd': today.day})
-            bdays = [{'id': r[0], 'name': r[1], 'phone': r[2]} for r in result]
+            bdays = []
+            try:
+                result = db.session.execute(db.text(
+                    "SELECT id, name, phone FROM customer WHERE date_of_birth IS NOT NULL AND EXTRACT(MONTH FROM date_of_birth)=:m AND EXTRACT(DAY FROM date_of_birth)=:d"
+                ), {'m': today.month, 'd': today.day}).fetchall()
+                bdays = [{'id': r[0], 'name': r[1], 'phone': r[2]} for r in result]
+            except:
+                # Fallback: load all and filter in Python
+                try:
+                    all_c = db.session.execute(db.text("SELECT id, name, phone, date_of_birth FROM customer WHERE date_of_birth IS NOT NULL")).fetchall()
+                    bdays = [{'id':r[0],'name':r[1],'phone':r[2]} for r in all_c if r[3] and r[3].month==today.month and r[3].day==today.day]
+                except:
+                    pass
             return {'birthdays_today': bdays}
     except Exception as e:
-        print(f'Birthday context error: {e}')
+        print(f'Birthday error: {e}')
     return {'birthdays_today': []}
 
 def login_required(f):
