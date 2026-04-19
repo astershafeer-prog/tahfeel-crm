@@ -2721,8 +2721,6 @@ def my_desk():
 @app.route('/check-birthdays')
 @login_required
 def check_birthdays():
-    if session.get('role') != 'admin':
-        return 'Admin only'
     today = datetime.now()
     try:
         result = db.session.execute(db.text("SELECT id, name, date_of_birth FROM customer WHERE date_of_birth IS NOT NULL")).fetchall()
