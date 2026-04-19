@@ -1165,3 +1165,61 @@ tr.selected td { background: var(--info-bg) !important; }
   transition: border-color .2s;
 }
 .ff select:focus, .ff input:focus { border-color: #1A3B8B; background: white; }
+
+/* ── Global color enhancements ───────────────────────────────────────────── */
+
+/* Filter cards - consistent styling */
+.filter-card {
+  background: white;
+  border-radius: 12px;
+  border: 0.5px solid #E2E8F0;
+  border-top: 4px solid #1A3B8B;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Stat summary cards on list pages */
+.sum-card {
+  background: white;
+  border-radius: 10px;
+  border: 0.5px solid #E2E8F0;
+  padding: 12px 16px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  transition: transform .15s, box-shadow .15s;
+}
+.sum-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.sum-card .lbl { font-size: 10px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+.sum-card .val { font-size: 26px; font-weight: 700; color: #1A3B8B; }
+.sum-card.red .val { color: #EF4444; }
+.sum-card.red { border-top: 4px solid #EF4444; }
+.sum-card.amber .val { color: #F59E0B; }
+.sum-card.amber { border-top: 4px solid #F59E0B; }
+.sum-card.green .val { color: #10B981; }
+.sum-card.green { border-top: 4px solid #10B981; }
+.sum-card.blue { border-top: 4px solid #1A3B8B; }
+
+/* Name/company cell */
+.name-cell .primary { font-size: 13px; font-weight: 600; color: #1A2333; }
+.name-cell .secondary { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+
+/* Table row colors */
+tbody tr { transition: background .1s; }
+tbody tr:hover { background: #F8FAFC; }
+tbody tr.overdue-row { background: #FFF5F5; }
+tbody tr.overdue-row:hover { background: #FEE2E2; }
+
+/* Created date cell */
+.date-cell { font-size: 12px; color: #64748B; white-space: nowrap; }
+
+/* Avatar wrap */
+.av-wrap { display: flex; align-items: center; gap: 8px; }
+.av { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: white; background: #1A3B8B; flex-shrink: 0; }
+
+/* Page header */
+.page-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.page-head-title { font-size: 20px; font-weight: 700; color: #1A2333; }
+
+/* Section labels */
+.section-label { font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
