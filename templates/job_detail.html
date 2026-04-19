@@ -34,7 +34,7 @@
         <div style="display:flex;gap:8px;align-items:center;">
           <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
           {% if job.customer.phone %}
-          <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ job.customer.name|urlencode }}%2C%0A%0AHere%20is%20an%20update%20on%20your%20{{ job.job_type|urlencode }}%20application%20with%20Tahfeel%20Business%20Solutions.%0A%0A%F0%9F%93%8B%20Service%3A%20{{ job.job_type|urlencode }}%0A%F0%9F%93%8C%20Status%3A%20{{ job.status|urlencode }}%0A%F0%9F%93%85%20Due%20Date%3A%20{{ job.due_date.strftime('%d %b %Y')|urlencode if job.due_date else 'TBD' }}%0A%F0%9F%91%A4%20Representative%3A%20{{ job.assignee.name|urlencode if job.assignee else 'Tahfeel Team' }}%0A%0AWe%20are%20actively%20working%20on%20your%20application.%20We%20will%20keep%20you%20updated.%0A%0A%E2%80%94%20Tahfeel%20Business%20Solutions%20%F0%9F%8F%A2" target="_blank" class="ib" style="background:#25D366;border-color:#25D366;color:white;font-size:14px;" title="Send WhatsApp Update">💬</a>
+          <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ job.customer.name|urlencode }}%2C%0A%0AThank%20you%20for%20choosing%20Tahfeel%20Business%20Setup%20Services.%0A%0AHere%20is%20the%20latest%20update%20on%20your%20application%3A%0A%0A%F0%9F%93%8B%20*Service%3A*%20{{ job.job_type|urlencode }}%0A%F0%9F%93%8C%20*Status%3A*%20{{ job.status|urlencode }}{% if job.due_date %}%0A%F0%9F%93%85%20*Expected%20Completion%3A*%20{{ job.due_date.strftime('%d %b %Y')|urlencode }}{% endif %}{% if job.assignee %}%0A%F0%9F%91%A4%20*Your%20Representative%3A*%20{{ job.assignee.name|urlencode }}{% endif %}%0A%0A{% if job.status in ['Done','Closed'] %}%E2%9C%85%20Your%20application%20has%20been%20completed%20successfully.%20Please%20contact%20us%20if%20you%20need%20anything%20further.{% else %}We%20are%20actively%20working%20on%20your%20application%20and%20will%20keep%20you%20informed%20at%20every%20step.{% endif %}%0A%0AFor%20any%20queries%2C%20feel%20free%20to%20reach%20out%20to%20us%20anytime.%0A%0A%E2%80%94%20*Tahfeel%20Business%20Setup%20Services*%20%F0%9F%8F%A2%0ADubai%2C%20UAE" target="_blank" class="ib" style="background:#25D366;border-color:#25D366;color:white;font-size:14px;" title="Send WhatsApp Update">💬</a>
           {% endif %}
           {% if job.status != 'Closed' and session.role in ['admin','operations'] %}
           <a href="/jobs/{{ job.id }}/edit" class="ib" title="Edit">✏</a>
@@ -323,7 +323,7 @@
       <div class="card-header">
         <h2>📋 Timeline <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ job.updates|length }} update{{ 's' if job.updates|length != 1 else '' }}</span></h2>
         {% if job.updates %}
-        <button onclick="downloadTimeline()" class="ib" title="Download as Image" style="font-size:14px;">🖼</button>
+        <button onclick="openTimelinePopup()" class="ib" title="Preview & Download Timeline" style="font-size:14px;">🖼</button>
         {% endif %}
       </div>
       <div style="padding:16px 20px;" id="timelineContent">
@@ -362,20 +362,69 @@
     }
     toggleCompletion();
   </script>
+  <!-- Timeline Popup -->
+  <div id="tlPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:white;border-radius:16px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="padding:16px 20px;border-bottom:1px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:14px;font-weight:700;color:#1A2333;">Task Timeline Preview</div>
+        <button onclick="closePopup()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#94A3B8;">✕</button>
+      </div>
+      <!-- Timeline card that will be captured -->
+      <div id="tlCapture" style="padding:20px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:38px;height:38px;background:#1A3B8B;border-radius:9px;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:16px;">T</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#1A2333;">Tahfeel Business Setup Services</div>
+            <div style="font-size:10px;color:#94A3B8;">Task Status Update</div>
+          </div>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:#1A2333;margin-bottom:2px;">{{ job.job_type }}</div>
+        <div style="font-size:11px;color:#94A3B8;margin-bottom:14px;">{{ job.customer.name }}{% if job.customer.company %} · {{ job.customer.company }}{% endif %}{% if job.due_date %} · Due {{ job.due_date.strftime('%d %b %Y') }}{% endif %}</div>
+        {% if job.updates %}
+        {% for u in job.updates %}
+        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;">
+          <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;margin-top:1px;
+            background:{% if u.status in ['Done','Closed'] %}#10B981{% elif u.status == 'Processing' %}#F59E0B{% elif u.status in ['On Hold','Delayed'] %}#EF4444{% else %}#1A3B8B{% endif %};
+            display:flex;align-items:center;justify-content:center;color:white;font-size:8px;font-weight:700;">{{ loop.index }}</div>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#1A2333;">{{ u.status }}</div>
+            <div style="font-size:10px;color:#94A3B8;">{{ u.created_at.strftime('%d %b %Y') }} · {{ u.staff_name }}</div>
+            {% if u.remark %}<div style="font-size:11px;color:#475569;margin-top:3px;">{{ u.remark }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="font-size:12px;color:#94A3B8;text-align:center;padding:12px 0;">No updates yet</div>
+        {% endif %}
+        <div style="margin-top:14px;padding-top:10px;border-top:1px solid #F1F5F9;font-size:10px;color:#CBD5E1;text-align:center;">Tahfeel Business Setup Services · Dubai, UAE</div>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="closePopup()" style="height:36px;padding:0 16px;background:white;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;cursor:pointer;color:#475569;">Close</button>
+        <button onclick="downloadFromPopup()" style="height:36px;padding:0 16px;background:#1A3B8B;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:white;">⬇ Download Image</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-  function downloadTimeline() {
-    const el = document.getElementById('taskTimeline');
-    const btn = el.querySelector('button');
-    btn.style.display = 'none';
+  function openTimelinePopup() {
+    document.getElementById('tlPopup').style.display = 'flex';
+  }
+  function closePopup() {
+    document.getElementById('tlPopup').style.display = 'none';
+  }
+  function downloadFromPopup() {
+    const el = document.getElementById('tlCapture');
     html2canvas(el, { backgroundColor: '#ffffff', scale: 2, useCORS: true }).then(canvas => {
-      btn.style.display = '';
       const link = document.createElement('a');
-      link.download = 'task-timeline-{{ job.id }}.png';
+      link.download = 'tahfeel-task-{{ job.id }}.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
     });
   }
+  document.getElementById('tlPopup').addEventListener('click', function(e) {
+    if (e.target === this) closePopup();
+  });
   </script>
 </body>
 </html>
