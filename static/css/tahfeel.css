@@ -180,8 +180,9 @@ input, select, textarea, button { font-family: var(--font); }
 .card {
   background: var(--surface);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
+  border: 0.5px solid var(--border);
+  border-top: 5px solid #1A3B8B;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   overflow: hidden;
   margin-bottom: 14px;
   transition: box-shadow .2s;
@@ -1255,13 +1256,13 @@ tbody tr.overdue-row:hover { background: #FEE2E2; }
 /* Lead card accent */
 .card-leads { border-top:5px solid #1A3B8B; }
 /* Task card accent */  
-.card-tasks { border-top:5px solid #10B981; }
+.card-tasks { border-top:5px solid #10B981 !important; }
 /* Finance card accent */
-.card-finance { border-top:5px solid #F59E0B; }
+.card-finance { border-top:5px solid #F59E0B !important; }
 /* Customer card accent */
-.card-customers { border-top:5px solid #8B5CF6; }
+.card-customers { border-top:5px solid #8B5CF6 !important; }
 /* Document card accent */
-.card-documents { border-top:5px solid #64748B; }
+.card-documents { border-top:5px solid #64748B !important; }
 
 /* Table header row */
 table thead tr { background:#F8FAFC; }
@@ -1280,3 +1281,7 @@ table tbody tr:last-child td { border-bottom:none; }
 /* Page header */
 .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
 .page-header h2 { font-size:20px; font-weight:700; color:#1A2333; }
+
+/* Finance detail cards */
+.card-pending-finance { border-top: 5px solid #8B5CF6 !important; }
+.card-done { border-top: 5px solid #10B981 !important; }

@@ -51,7 +51,7 @@
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
-    <div class="card">
+    <div class="card card-tasks">
       <h2>Add New Task</h2>
       <form method="post">
         <div class="form-group">
