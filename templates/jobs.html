@@ -8,8 +8,9 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-  {%- from 'macros.html' import topbar, nav -%}
+  {%- from 'macros.html' import topbar, nav, birthday_banner -%}
   {{ topbar() }}
+  {{ birthday_banner(birthdays_today, now) }}
   {{ nav('jobs') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -41,7 +42,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="filter-card">
+    <div class="filter-card" style="border-top:4px solid #10B981;">
       <div class="filter-card-head"><div class="filter-card-title">⊟ Filters</div></div>
       <form method="get" id="jobFilters" style="margin:0;">
         <!-- Search bar -->

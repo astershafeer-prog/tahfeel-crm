@@ -270,6 +270,21 @@ class DeskNote(db.Model):
     user = db.relationship('User', foreign_keys=[user_id])
     mention_user = db.relationship('User', foreign_keys=[mention_user_id])
 
+@app.context_processor
+def inject_birthdays():
+    try:
+        if 'user_id' in session:
+            from datetime import datetime as dt
+            today = dt.now()
+            customers = Customer.query.filter(Customer.date_of_birth != None).all()
+            bdays = [c for c in customers if c.date_of_birth and 
+                     c.date_of_birth.month == today.month and 
+                     c.date_of_birth.day == today.day]
+            return {'birthdays_today': bdays}
+    except:
+        pass
+    return {'birthdays_today': []}
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -1098,7 +1113,13 @@ def customers():
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
     paginated = customer_list[(page-1)*per_page : page*per_page]
-    return render_template('customers.html', customers=paginated, page=page, total_pages=total_pages, total=total, search=request.args.get('search',''))
+    now = datetime.now()
+    try:
+        bday_list = Customer.query.filter(Customer.date_of_birth != None).all()
+        birthdays_today = [c for c in bday_list if c.date_of_birth and c.date_of_birth.month == now.month and c.date_of_birth.day == now.day]
+    except:
+        birthdays_today = []
+    return render_template('customers.html', customers=paginated, page=page, total_pages=total_pages, total=total, search=request.args.get('search',''), birthdays_today=birthdays_today)
 
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required

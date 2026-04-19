@@ -8,8 +8,9 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+    {%- from 'macros.html' import topbar, nav, birthday_banner, welcome -%}
   {{ topbar() }}
+  {{ birthday_banner(birthdays_today, now) }}
   {{ nav('documents') }}
 
   <div class="container">
@@ -34,7 +35,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="filter-card">
+    <div class="filter-card" style="border-top:4px solid #64748B;">
       <div class="filter-card-head">
         <div class="filter-card-title">⊟ Filters</div>
       </div>

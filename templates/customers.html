@@ -8,8 +8,9 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-  {%- from 'macros.html' import topbar, nav -%}
+  {%- from 'macros.html' import topbar, nav, birthday_banner -%}
   {{ topbar() }}
+  {{ birthday_banner(birthdays_today, now) }}
   {{ nav('customers') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -25,7 +26,28 @@
       </div>
     </div>
 
-    <div class="filter-card">
+
+    {% if birthdays_today %}
+    <a href="/customers?search=birthday" id="bday-banner" style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#FDF2F8,#FCE7F3);border:1px solid #F9A8D4;border-left:5px solid #EC4899;border-radius:10px;padding:12px 18px;margin-bottom:14px;text-decoration:none;cursor:pointer;" onclick="event.preventDefault();showBirthdays()">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:24px;">🎂</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#9D174D;">{{ birthdays_today|length }} customer{{ 's' if birthdays_today|length > 1 else '' }} celebrate{{ '' if birthdays_today|length > 1 else 's' }} their birthday today!</div>
+          <div style="font-size:12px;color:#BE185D;margin-top:2px;">
+            {% for c in birthdays_today %}{{ c.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+        {% for c in birthdays_today %}{% if c.phone %}
+        <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ c.name|urlencode }}%2C%20Wishing%20you%20a%20very%20Happy%20Birthday!%20%F0%9F%8E%82%20May%20this%20year%20bring%20you%20great%20success.%20%E2%80%94%20Tahfeel%20Business%20Solutions" target="_blank" onclick="event.stopPropagation()" style="background:#25D366;color:white;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;">🎂 Wish {{ c.name.split()[0] }}</a>
+        {% endif %}{% endfor %}
+        <span style="font-size:12px;color:#BE185D;font-weight:600;">{{ now.strftime('%d %b') }} →</span>
+      </div>
+    </a>
+    {% endif %}
+
+    <div class="filter-card" style="border-top:4px solid #1A3B8B;">
       <div class="filter-card-head">
         <div class="filter-card-title">⊟ Filters</div>
         {% if search %}<a href="/customers" class="btn-reset" style="font-size:11px;">Reset</a>{% endif %}
@@ -57,7 +79,7 @@
           {% for c in customers %}
           <tr>
             <td colspan="2">
-              <a href="/customers/{{ c.id }}" style="font-size:13px;font-weight:600;color:#1A2333;text-decoration:none;">{{ c.name }}</a>
+              <a href="/customers/{{ c.id }}" style="font-size:13px;font-weight:700;color:#1A3B8B;text-decoration:none;">{{ c.name }}</a>
               {% if c.lead_id %}<span style="font-size:10px;background:#EBF2FF;color:#1A3B8B;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:4px;">↩ Lead</span>{% endif %}
               {% if c.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ c.company }}</div>{% endif %}
             </td>

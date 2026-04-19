@@ -8,8 +8,9 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+    {%- from 'macros.html' import topbar, nav, birthday_banner, welcome -%}
   {{ topbar() }}
+  {{ birthday_banner(birthdays_today, now) }}
   {{ nav('leads') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -122,7 +123,7 @@
                 <tr id="row-{{ lead.id }}">
                   <td><input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="row-check" onchange="updateBulkBar()"></td>
                   <td colspan="2">
-                    <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ lead.name }}</div>
+                    <div style="font-size:13px;font-weight:700;color:#1A3B8B;">{{ lead.name }}</div>
                     {% if lead.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ lead.company }}</div>{% endif %}
                   </td>
                   <td>{{ lead.service or '—' }}</td>
