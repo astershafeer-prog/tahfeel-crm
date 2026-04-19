@@ -33,11 +33,11 @@
 
     <!-- Summary Cards -->
     <div class="cards-5" style="margin-bottom:12px;">
-      <div class="stat-card"><div class="label">Total</div><div class="value">{{ jobs|length }}</div></div>
-      <div class="stat-card red"><div class="label">Overdue</div><div class="value">{{ overdue|length }}</div></div>
-      <div class="stat-card amber"><div class="label">Processing</div><div class="value">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div></div>
-      <div class="stat-card purple"><div class="label">Pending Close</div><div class="value">{{ jobs|selectattr('status','eq','Pending Finance Close')|list|length }}</div></div>
-      <div class="stat-card green"><div class="label">Done</div><div class="value">{{ jobs|selectattr('status','eq','Done')|list|length }}</div></div>
+      <div class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Total</div><div class="cs-value">{{ jobs|length }}</div></div><div class="cs-icon cs-blue">✓</div></div>
+      <div class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Overdue</div><div class="cs-value">{{ overdue|length }}</div></div><div class="cs-icon cs-red">⚠</div></div>
+      <div class="card-stat cs-amber"><div class="cs-left"><div class="cs-label">Processing</div><div class="cs-value">{{ jobs|selectattr('status','eq','Processing')|list|length }}</div></div><div class="cs-icon cs-amber">⚙</div></div>
+      <div class="card-stat cs-purple"><div class="cs-left"><div class="cs-label">Pending Close</div><div class="cs-value">{{ jobs|selectattr('status','eq','Pending Finance Close')|list|length }}</div></div><div class="cs-icon cs-purple">💰</div></div>
+      <div class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Done</div><div class="cs-value">{{ jobs|selectattr('status','eq','Done')|list|length }}</div></div><div class="cs-icon cs-green">🏆</div></div>
     </div>
 
     <!-- Filters -->

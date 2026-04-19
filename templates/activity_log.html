@@ -359,8 +359,8 @@
               <td style="padding:9px 12px;text-align:center;font-weight:600;color:var(--primary);" id="at-target-{{ at.id }}">{{ at.weekly_target|int if at.weekly_target == (at.weekly_target|int) else at.weekly_target }}</td>
               <td style="padding:9px 12px;text-align:center;">
                 <div id="at-actions-{{ at.id }}" style="display:flex;gap:6px;justify-content:center;">
-                  <button onclick="editActivity({{ at.id }}, '{{ at.label|replace("'","\'") }}', {{ at.weekly_target }})" class="btn-sm">Edit</button>
-                  <a href="/admin/activity-type/{{ at.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Remove activity? Historical data will be preserved.')">Delete</a>
+                  <button onclick="editActivity({{ at.id }}, '{{ at.label|replace("'","\'") }}', {{ at.weekly_target }})" class="ib" title="Edit">✏</button>
+                  <a href="/admin/activity-type/{{ at.id }}/delete" class="ib ib-del" onclick="return confirm('Remove activity? Historical data will be preserved.')" title="Delete">🗑</a>
                 </div>
                 <form id="at-form-{{ at.id }}" method="post" action="/admin/activity-type/{{ at.id }}/edit" style="display:none;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">
                   <input type="text" name="label" id="at-input-label-{{ at.id }}" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:220px;">

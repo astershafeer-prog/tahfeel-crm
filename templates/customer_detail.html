@@ -29,9 +29,9 @@
 <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Task</a>
             <a href="/documents/add?customer_id={{ customer.id }}" class="btn-sm" style="background:white;border-color:var(--primary);color:var(--primary);">📄 Add Document</a>
-            <a href="/customers/{{ customer.id }}/edit" class="btn-sm">✏ Edit</a>
+            <a href="/customers/{{ customer.id }}/edit" class="ib" title="Edit">✏</a>
             {% if session.role == 'admin' %}
-            <a href="/customers/{{ customer.id }}/delete" class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="return confirm('Delete {{ customer.name }}? This cannot be undone.')">🗑 Delete</a>
+            <a href="/customers/{{ customer.id }}/delete" class="ib ib-del" onclick="return confirm('Delete {{ customer.name }}? This cannot be undone.')" title="Delete">🗑</a>
             {% endif %}
           </div>
         </div>
@@ -102,9 +102,9 @@
 
     <!-- Financial Summary -->
     <div class="cards-3" style="margin-bottom:12px;">
-      <div class="stat-card"><div class="label">Total Invoiced</div><div class="val-amount">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div>
-      <div class="stat-card amber"><div class="label">Total Received</div><div class="val-amount">AED {{ '{:,.0f}'.format(total_received) }}</div></div>
-      <div class="stat-card red"><div class="label">Pending</div><div class="val-amount">AED {{ '{:,.0f}'.format(total_invoiced - total_received) }}</div></div>
+      <div class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Total Invoiced</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format(total_invoiced) }}</div></div><div class="cs-icon cs-blue">📊</div></div>
+      <div class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Total Received</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format(total_received) }}</div></div><div class="cs-icon cs-green">✓</div></div>
+      <div class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Pending</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format(total_invoiced - total_received) }}</div></div><div class="cs-icon cs-red">⚠</div></div>
     </div>
 
     <!-- Tasks -->

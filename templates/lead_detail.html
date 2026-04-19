@@ -24,7 +24,7 @@
         <h2>Customer Details</h2>
         <div style="display:flex;align-items:center;gap:10px;">
           <span class="badge b-{{ lead.status|lower|replace(' ','')|replace('—','') }}">{{ lead.status }}</span>
-          <a href="/leads/{{ lead.id }}/edit" class="btn-sm">✏ Edit</a>
+          <a href="/leads/{{ lead.id }}/edit" class="ib" title="Edit">✏</a>
         </div>
       </div>
       <div class="card-body">

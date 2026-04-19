@@ -41,8 +41,6 @@
           {% endif %}
           {% if job.status != 'Closed' and session.role in ['admin','operations'] %}
           <a href="/jobs/{{ job.id }}/edit" class="ib" title="Edit">✏</a>
-          {% endif %}
-          {% if session.role in ['admin','operations'] and job.status != 'Closed' %}
           <button class="ib ib-del" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'" title="Delete">🗑</button>
           {% endif %}
         </div>
@@ -92,10 +90,10 @@
 
         <!-- Financial Summary -->
         <div class="fin-row">
-          <div class="fin-card"><div class="lbl">Invoiced</div><div class="val">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</div></div>
-          <div class="fin-card amber"><div class="lbl">Received</div><div class="val">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div></div>
-          <div class="fin-card red"><div class="lbl">Pending</div><div class="val">AED {{ '{:,.0f}'.format((job.amount_invoiced or 0)-(job.amount_received or 0)) }}</div></div>
-          <div class="fin-card {% if job.finance_approved_at %}green{% endif %}"><div class="lbl">Finance</div><div class="val" style="font-size:11px;">{% if job.finance_approved_at %}✓ Approved{% else %}Awaiting{% endif %}</div></div>
+          <div class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Invoiced</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</div></div><div class="cs-icon cs-blue">📊</div></div>
+          <div class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Received</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div></div><div class="cs-icon cs-green">✓</div></div>
+          <div class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Pending</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format((job.amount_invoiced or 0)-(job.amount_received or 0)) }}</div></div><div class="cs-icon cs-red">⚠</div></div>
+          <div class="card-stat {% if job.finance_approved_at %}cs-green{% else %}cs-amber{% endif %}"><div class="cs-left"><div class="cs-label">Finance</div><div class="cs-value" style="font-size:13px;">{% if job.finance_approved_at %}✓ Approved{% else %}Awaiting{% endif %}</div></div><div class="cs-icon {% if job.finance_approved_at %}cs-green{% else %}cs-amber{% endif %}">💰</div></div>
         </div>
 
         <!-- Completion Summary -->
