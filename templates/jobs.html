@@ -147,7 +147,7 @@
         <div class="due-pill {% if is_overdue %}overdue{% endif %}">
           📅 {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
         </div>
-        <span class="badge b-{{ job.status|lower|replace(' ','') }}" style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:145px;display:inline-block;">{{ job.status }}</span>
+        <span class="badge status-badge" style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:145px;display:inline-block;padding:3px 10px;border-radius:20px;font-weight:600;">{{ job.status }}</span>
         <div style="display:flex;gap:5px;align-items:center;">
           {% if session.role in ['admin','operations'] %}<input type="checkbox" name="job_ids" value="{{ job.id }}" class="job-checkbox" onchange="updateCount()" onclick="event.stopPropagation()" style="margin-right:2px;">{% endif %}
           <a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a>
@@ -210,5 +210,37 @@
     window.location.href = url.toString();
   }
 </script>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.job-row').forEach(function(row) {
+      var status = row.getAttribute('data-status') || '';
+      var bar = row.querySelector('.bar');
+      if (!bar) return;
+      if (status === 'Done') bar.style.background = '#10B981';
+      else if (['Pending Finance Approval','Pending Finance Close'].includes(status)) bar.style.background = '#8B5CF6';
+      else if (status === 'Closed') bar.style.background = '#94A3B8';
+      else if (status === 'On Hold') bar.style.background = '#F59E0B';
+      else if (['Delayed','Overdue'].includes(status)) bar.style.background = '#EF4444';
+      else if (status === 'Processing') bar.style.background = '#F59E0B';
+      else if (status === 'Assigned') bar.style.background = '#1A3B8B';
+      else bar.style.background = '#1A3B8B';
+      // Also color the status badge
+      var badge = row.querySelector('.status-badge');
+      if (!badge) return;
+      if (status === 'Done') { badge.style.background='#DCFCE7'; badge.style.color='#15803D'; }
+      else if (status === 'Closed') { badge.style.background='#F1F5F9'; badge.style.color='#475569'; badge.style.border='1px solid #E2E8F0'; }
+      else if (['Pending Finance Approval','Pending Finance Close'].includes(status)) { badge.style.background='#F5F3FF'; badge.style.color='#6D28D9'; }
+      else if (status === 'Assigned') { badge.style.background='#EBF2FF'; badge.style.color='#1A3B8B'; }
+      else if (status === 'On Hold') { badge.style.background='#FEF9C3'; badge.style.color='#854D0E'; }
+      else if (['Delayed'].includes(status)) { badge.style.background='#FEF2F2'; badge.style.color='#B91C1C'; }
+      else if (status === 'Processing') { badge.style.background='#FFFBEB'; badge.style.color='#B45309'; }
+      else if (status === 'Job Started') { badge.style.background='#EBF2FF'; badge.style.color='#1A3B8B'; }
+      else if (status === 'Pending Authority') { badge.style.background='#FFF7ED'; badge.style.color='#C2410C'; }
+      else if (status === 'Final Stage') { badge.style.background='#F0FDF4'; badge.style.color='#15803D'; }
+      else { badge.style.background='#F1F5F9'; badge.style.color='#475569'; }
+    });
+  });
+  </script>
 </body>
 </html>

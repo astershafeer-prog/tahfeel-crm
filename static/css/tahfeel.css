@@ -275,6 +275,9 @@ input, select, textarea, button { font-family: var(--font); }
 
 /* ── Badges ────────────────────────────────────────────── */
 .badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   padding: 3px 9px;
