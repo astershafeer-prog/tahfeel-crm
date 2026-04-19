@@ -79,9 +79,9 @@
       </div>
       <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;white-space:nowrap;">View all →</a>
     </div>
-    {% if birthdays_today %}
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #EC4899;padding:18px 20px;margin-bottom:14px;box-shadow:0 4px 12px rgba(236,72,153,0.08);">
-      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">🎂 Birthdays Today</div>
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">🎂 Birthdays Today <span style="font-size:11px;color:#94A3B8;font-weight:400;text-transform:none;">{{ now.strftime('%d %b') }}</span></div>
+      {% if birthdays_today %}
       {% for c in birthdays_today %}
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #F8FAFC;">
         <div class="av-wrap">
