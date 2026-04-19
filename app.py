@@ -131,6 +131,7 @@ class Customer(db.Model):
     address = db.Column(db.String(200))
     source = db.Column(db.String(50))
     nationality = db.Column(db.String(50))
+    date_of_birth = db.Column(db.Date, nullable=True)
     customer_type = db.Column(db.String(20), default='Individual')
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notes = db.Column(db.Text)
