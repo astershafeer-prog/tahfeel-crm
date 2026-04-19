@@ -35,6 +35,14 @@
       </div>
     </div>
 
+    <!-- Period filter -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <a href="?period=today" style="height:30px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;{% if period=='today' %}background:#1A3B8B;color:white;{% else %}background:white;color:#475569;border:1px solid #E2E8F0;{% endif %}">Today</a>
+      <a href="?period=week" style="height:30px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;{% if period=='week' %}background:#1A3B8B;color:white;{% else %}background:white;color:#475569;border:1px solid #E2E8F0;{% endif %}">This Week</a>
+      <a href="?period=month" style="height:30px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;{% if period=='month' or not period %}background:#1A3B8B;color:white;{% else %}background:white;color:#475569;border:1px solid #E2E8F0;{% endif %}">This Month</a>
+      <a href="?period=all" style="height:30px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;{% if period=='all' %}background:#1A3B8B;color:white;{% else %}background:white;color:#475569;border:1px solid #E2E8F0;{% endif %}">All Time</a>
+    </div>
+
     <!-- 3 blocks: Leads | Tasks | Finance -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
 

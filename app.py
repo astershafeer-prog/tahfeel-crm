@@ -527,12 +527,12 @@ def dashboard():
                                total_pending=total_pending,
                                completed_value=completed_value,
                                staff_stats=staff_stats,
-                               docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
+                               docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                now=now, date_filter=date_filter,
                                from_date=from_date, to_date=to_date)
 
     # ── Staff dashboard ──────────────────────────────────────────────────────
-    period = request.args.get('period', 'today')
+    period = request.args.get('period', 'month')
     all_leads = Lead.query.filter_by(assigned_to=session['user_id']).order_by(Lead.due_date).all()
     if period == 'today':
         leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()]
@@ -588,9 +588,9 @@ def dashboard():
                            total_received=total_received,
                            total_pending=total_pending,
                            completed_value=completed_value,
-                           docs_30=docs_30, docs_60=docs_60, total_docs=total_docs,
+                           docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                            pending_approval_jobs=pending_approval_jobs,
-                           followups=followups, now=now)
+                           followups=followups, now=now, period=period)
 
 @app.route('/leads')
 @login_required
