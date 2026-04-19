@@ -149,7 +149,7 @@
         </div>
         <span class="badge b-{{ job.status|lower|replace(' ','') }}" style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:145px;display:inline-block;">{{ job.status }}</span>
         <div style="display:flex;gap:5px;align-items:center;">
-          <input type="checkbox" name="job_ids" value="{{ job.id }}" class="job-checkbox" onchange="updateCount()" onclick="event.stopPropagation()" style="margin-right:2px;">
+          {% if session.role in ['admin','operations'] %}<input type="checkbox" name="job_ids" value="{{ job.id }}" class="job-checkbox" onchange="updateCount()" onclick="event.stopPropagation()" style="margin-right:2px;">{% endif %}
           <a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a>
           {% if session.role in ['admin','operations'] and job.status != 'Closed' %}
           <a href="/jobs/{{ job.id }}/edit" class="ib" title="Edit">✏</a>
@@ -184,13 +184,31 @@
       const count = document.querySelectorAll('.job-checkbox:checked').length;
       if (confirm(`Delete ${count} task(s)?`)) document.getElementById('bulkForm').submit();
     }
-  </script>
+  
+  function sortTable(col) {
+    const url = new URL(window.location.href);
+    const current = url.searchParams.get('sort');
+    const currentOrder = url.searchParams.get('order') || 'asc';
+    url.searchParams.set('sort', col);
+    url.searchParams.set('order', current === col && currentOrder === 'asc' ? 'desc' : 'asc');
+    window.location.href = url.toString();
+  }
+</script>
   <script>
     function toggleCustom(val) {
       const show = val === 'custom';
       document.getElementById('customFrom').style.display = show ? 'block' : 'none';
       document.getElementById('customTo').style.display = show ? 'block' : 'none';
     }
-  </script>
+  
+  function sortTable(col) {
+    const url = new URL(window.location.href);
+    const current = url.searchParams.get('sort');
+    const currentOrder = url.searchParams.get('order') || 'asc';
+    url.searchParams.set('sort', col);
+    url.searchParams.set('order', current === col && currentOrder === 'asc' ? 'desc' : 'asc');
+    window.location.href = url.toString();
+  }
+</script>
 </body>
 </html>

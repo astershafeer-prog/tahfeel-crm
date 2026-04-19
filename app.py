@@ -505,8 +505,14 @@ def dashboard():
             total_docs = len(all_docs)
         except:
             docs_30 = docs_60 = docs_90 = total_docs = 0
+        # Birthdays today
+        from datetime import date
+        today = now.date()
+        all_customers = Customer.query.filter(Customer.date_of_birth != None).all()
+        birthdays_today = [c for c in all_customers if c.date_of_birth and c.date_of_birth.month == today.month and c.date_of_birth.day == today.day]
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
+                               birthdays_today=birthdays_today,
                                wl_filter=wl_filter, wl_from=wl_from, wl_to=wl_to,
                                total=total, overdue_leads=overdue_leads,
                                converted=converted, lost=lost, pending=pending,
@@ -1444,9 +1450,10 @@ def jobs():
         flash('System update applied. Please refresh.')
         return redirect(url_for('dashboard'))
     return render_template('jobs.html', jobs=job_list, now=now, overdue=overdue,
-                           statuses=JOB_STATUSES, users=users,
+                           statuses=JOB_STATUSES + (['Closed'] if session.get('role') in ['admin','finance'] else []), users=users,
                            status_filter=status_filter, priority_filter=priority_filter,
                            assigned_filter=assigned_filter, date_filter=date_filter,
+                           sort=sort, order=order,
                            jobs_invoiced=jobs_invoiced, jobs_received=jobs_received,
                            jobs_pending=jobs_pending, jobs_completed=jobs_completed)
 
@@ -2408,6 +2415,7 @@ def init_db():
                     )
                 """))
                 conn.execute(db.text('ALTER TABLE monthly_target ADD COLUMN IF NOT EXISTS amount_target FLOAT DEFAULT 0'))
+                conn.execute(db.text('ALTER TABLE customer ADD COLUMN IF NOT EXISTS date_of_birth DATE'))
                 conn.execute(db.text('ALTER TABLE monthly_target ADD COLUMN IF NOT EXISTS lead_target INTEGER DEFAULT 0'))
                 conn.execute(db.text('ALTER TABLE monthly_target ADD COLUMN IF NOT EXISTS conversion_target INTEGER DEFAULT 0'))
                 conn.commit()

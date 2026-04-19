@@ -78,6 +78,26 @@
         <a href="/documents?expiry=90" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#475569;">{{ docs_90 }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">61–90 Days</div></a>
       </div>
     </div>
+    {% if birthdays_today %}
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:4px solid #EC4899;padding:18px 20px;margin-bottom:14px;box-shadow:0 4px 12px rgba(236,72,153,0.08);">
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">🎂 Birthdays Today</div>
+      {% for c in birthdays_today %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #F8FAFC;">
+        <div class="av-wrap">
+          <div class="av" style="background:#EC4899;">{{ c.name[:2].upper() }}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ c.name }}</div>
+            {% if c.phone %}<div style="font-size:11px;color:#94A3B8;">{{ c.phone }}</div>{% endif %}
+          </div>
+        </div>
+        {% if c.phone %}
+        <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ c.name|urlencode }}%2C%20wishing%20you%20a%20very%20Happy%20Birthday!%20%F0%9F%8E%82%20Hope%20this%20year%20brings%20you%20great%20success%20and%20happiness.%20%E2%80%94%20Tahfeel%20Business%20Setup%20Services" target="_blank" style="background:#25D366;color:white;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;">🎂 Wish WA</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="card" style="margin-bottom:14px;">
       <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;">
         <div>

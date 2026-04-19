@@ -33,16 +33,6 @@
       <a href="/documents?expiry=90" class="sum-card" style="border-top-color:#4A5568;"><div class="lbl">61–90 Days</div><div class="val" style="color:#4A5568;">{{ expiring_90 }}</div></a>
     </div>
 
-    <!-- Search -->
-    <form method="get" style="background:var(--surface);border-radius:var(--radius-md);border:1px solid var(--border);padding:10px 14px;margin-bottom:10px;display:flex;gap:8px;box-shadow:var(--shadow-sm);">
-      <input type="text" name="search" value="{{ search }}" placeholder="Search by owner name, document type, customer..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;">
-      {% if belongs_filter %}<input type="hidden" name="belongs_to" value="{{ belongs_filter }}">{% endif %}
-      {% if doc_type_filter %}<input type="hidden" name="doc_type" value="{{ doc_type_filter }}">{% endif %}
-      {% if expiry_filter %}<input type="hidden" name="expiry" value="{{ expiry_filter }}">{% endif %}
-      <button type="submit" class="btn-search">Search</button>
-      {% if search %}<a href="/documents" class="btn-clear">Clear</a>{% endif %}
-    </form>
-
     <!-- Filters -->
     <div class="filter-card">
       <div class="filter-card-head">
