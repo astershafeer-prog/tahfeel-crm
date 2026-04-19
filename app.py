@@ -407,7 +407,8 @@ def dashboard():
                                total_received=total_received,
                                total_pending=total_pending,
                                completed_value=completed_value,
-                               now=now)
+                               now=now,
+                               birthdays_today=[])
 
     # ── Admin dashboard ──────────────────────────────────────────────────────
     if role == 'admin':
@@ -573,7 +574,14 @@ def dashboard():
         total_docs = len(all_docs)
     except:
         docs_30 = docs_60 = docs_90 = total_docs = 0
+    try:
+        today_date = now.date()
+        all_customers_bday = Customer.query.filter(Customer.date_of_birth != None).all()
+        birthdays_today = [c for c in all_customers_bday if c.date_of_birth and c.date_of_birth.month == today_date.month and c.date_of_birth.day == today_date.day]
+    except:
+        birthdays_today = []
     return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
+                           birthdays_today=birthdays_today,
                            converted=converted, lost=lost, pending=pending,
                            my_jobs=my_jobs, overdue_jobs=overdue_jobs,
                            total_invoiced=total_invoiced,
@@ -1382,9 +1390,14 @@ JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES + ['Pending Finan
 def jobs():
     now = datetime.now()
     role = session['role']
+    sort = request.args.get('sort', 'due')
+    order = request.args.get('order', 'asc')
+    show_closed = request.args.get('status') == 'Closed'
     try:
-        # All roles see all tasks — sorted by due date ascending
-        job_list = Job.query.order_by(Job.due_date.asc()).all()
+        if show_closed:
+            job_list = Job.query.all()
+        else:
+            job_list = Job.query.filter(Job.status != 'Closed').order_by(Job.due_date.asc()).all()
         status_filter = request.args.get('status', '')
         priority_filter = request.args.get('priority', '')
         assigned_filter = request.args.get('assigned_to', '') or request.args.get('staff', '')
