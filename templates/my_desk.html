@@ -150,11 +150,11 @@
               <button type="button" onclick="selectAllStaff()" style="font-size:11px;color:#1A3B8B;background:#EBF2FF;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-weight:600;">Select All</button>
               <button type="button" onclick="deselectAllStaff()" style="font-size:11px;color:#475569;background:#F1F5F9;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-weight:600;">Deselect All</button>
             </div>
-            <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:8px;padding:8px;max-height:120px;overflow-y:auto;" id="staffList">
+            <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:8px;padding:6px 8px;max-height:130px;overflow-y:auto;" id="staffList">
               {% for u in all_users %}
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:6px;margin-bottom:2px;">
-                <input type="checkbox" name="mention_user_ids" value="{{ u.id }}" class="staff-cb" style="margin:0;">
-                <div class="av" style="width:20px;height:20px;font-size:8px;flex-shrink:0;">{{ u.name[:2].upper() }}</div>
+              <label style="display:grid;grid-template-columns:18px 22px 1fr;align-items:center;gap:8px;cursor:pointer;padding:5px 4px;border-radius:6px;margin-bottom:2px;">
+                <input type="checkbox" name="mention_user_ids" value="{{ u.id }}" class="staff-cb" style="margin:0;width:14px;height:14px;">
+                <div class="av" style="width:22px;height:22px;font-size:8px;flex-shrink:0;">{{ u.name[:2].upper() }}</div>
                 <span style="font-size:12px;color:#1A2333;">{{ u.name }}</span>
               </label>
               {% endfor %}
