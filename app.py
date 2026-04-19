@@ -251,6 +251,17 @@ class JobUpdate(db.Model):
     staff_name = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+class DeskNote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    reminder_date = db.Column(db.Date, nullable=True)
+    mention_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    is_done = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    user = db.relationship('User', foreign_keys=[user_id])
+    mention_user = db.relationship('User', foreign_keys=[mention_user_id])
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -2344,6 +2355,23 @@ def admin_delete_doctype(doctype_id):
 def init_db():
     with app.app_context():
         db.create_all()
+        # Create desk_note table if not exists
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text("""
+                    CREATE TABLE IF NOT EXISTS desk_note (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER REFERENCES "user"(id),
+                        text TEXT NOT NULL,
+                        reminder_date DATE,
+                        mention_user_id INTEGER REFERENCES "user"(id),
+                        is_done BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+                conn.commit()
+        except Exception as e:
+            print(f'desk_note table: {e}')
         migrations = [
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0',
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)',
@@ -2427,6 +2455,64 @@ def init_db():
         except Exception as e:
             db.session.rollback()
             print(f'Init db error: {e}')
+
+@app.route('/desk', methods=['GET','POST'])
+@login_required
+def my_desk():
+    now = datetime.now()
+    user_id = session['user_id']
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'add':
+            text = request.form.get('text','').strip()
+            reminder_date = request.form.get('reminder_date','').strip()
+            mention_user_id = request.form.get('mention_user_id','').strip()
+            if text:
+                rd = datetime.strptime(reminder_date, '%Y-%m-%d').date() if reminder_date else None
+                mid = int(mention_user_id) if mention_user_id else None
+                note = DeskNote(user_id=user_id, text=text, reminder_date=rd, mention_user_id=mid)
+                db.session.add(note)
+                db.session.commit()
+        elif action == 'done':
+            note_id = request.form.get('note_id')
+            note = DeskNote.query.get(note_id)
+            if note and (note.user_id == user_id or note.mention_user_id == user_id):
+                note.is_done = not note.is_done
+                db.session.commit()
+        elif action == 'delete':
+            note_id = request.form.get('note_id')
+            note = DeskNote.query.get(note_id)
+            if note and note.user_id == user_id:
+                db.session.delete(note)
+                db.session.commit()
+        return redirect(url_for('my_desk'))
+
+    # My notes + mentions
+    my_notes = DeskNote.query.filter_by(user_id=user_id).order_by(DeskNote.is_done, DeskNote.reminder_date.asc().nullslast(), DeskNote.created_at.desc()).all()
+    mentions = DeskNote.query.filter_by(mention_user_id=user_id, is_done=False).order_by(DeskNote.created_at.desc()).all()
+    all_users = User.query.filter_by(active=True).filter(User.id != user_id).order_by(User.name).all()
+
+    # Create table if not exists
+    try:
+        db.session.execute(db.text('SELECT 1 FROM desk_note LIMIT 1'))
+    except:
+        db.session.rollback()
+        with db.engine.connect() as conn:
+            conn.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS desk_note (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES "user"(id),
+                    text TEXT NOT NULL,
+                    reminder_date DATE,
+                    mention_user_id INTEGER REFERENCES "user"(id),
+                    is_done BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            conn.commit()
+
+    return render_template('my_desk.html', my_notes=my_notes, mentions=mentions,
+                           all_users=all_users, now=now)
 
 if __name__ == '__main__':
     init_db()

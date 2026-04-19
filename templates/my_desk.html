@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — My Desk</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .note-card { background:white; border-radius:10px; border:0.5px solid #E2E8F0; overflow:hidden; }
+    .note-item { padding:11px 16px; border-bottom:0.5px solid #F8FAFC; display:flex; align-items:flex-start; gap:10px; }
+    .note-item:last-child { border-bottom:none; }
+    .note-cb { width:16px; height:16px; border-radius:4px; border:1.5px solid #CBD5E1; flex-shrink:0; margin-top:3px; cursor:pointer; background:white; }
+    .note-text { font-size:13px; color:#1A2333; line-height:1.5; flex:1; }
+    .note-text.done { text-decoration:line-through; color:#94A3B8; }
+    .note-reminder { font-size:10px; font-weight:600; margin-top:3px; display:flex; align-items:center; gap:4px; }
+    .nr-today { color:#EF4444; }
+    .nr-soon { color:#F59E0B; }
+    .nr-future { color:#94A3B8; }
+    .mention-tag { font-size:10px; background:#EBF2FF; color:#1A3B8B; padding:1px 7px; border-radius:20px; font-weight:600; margin-top:3px; display:inline-block; }
+    .from-tag { font-size:10px; background:#F5F3FF; color:#6D28D9; padding:1px 7px; border-radius:20px; font-weight:600; margin-top:3px; display:inline-block; }
+    .quick-add { background:white; border-radius:10px; border:0.5px solid #E2E8F0; padding:16px; }
+    .qi { height:38px; border:1.5px solid #E2E8F0; border-radius:8px; padding:0 12px; font-size:13px; color:#1A2333; outline:none; width:100%; }
+    .qi:focus { border-color:#1A3B8B; }
+    .section-head { padding:12px 16px; border-bottom:0.5px solid #F1F5F9; display:flex; justify-content:space-between; align-items:center; }
+    .section-head h2 { font-size:13px; font-weight:700; color:#1A2333; }
+    .nbadge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('desk') }}
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-head" style="margin-bottom:14px;">
+      <div>
+        <div class="page-head-title">📌 My Desk</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Your personal notes and reminders — private to you</div>
+      </div>
+    </div>
+
+    <!-- Quick Add -->
+    <div class="quick-add" style="margin-bottom:14px;">
+      <form method="post" style="display:flex;flex-direction:column;gap:10px;">
+        <input type="hidden" name="action" value="add">
+        <div class="ff">
+          <label>Note or Reminder</label>
+          <input type="text" name="text" class="qi" placeholder="What do you need to remember or do?" required autofocus>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end;">
+          <div class="ff">
+            <label>Remind me on</label>
+            <input type="date" name="reminder_date" class="qi" style="width:100%;" min="{{ now.strftime('%Y-%m-%d') }}">
+          </div>
+          <div class="ff">
+            <label>@ Mention colleague <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+            <select name="mention_user_id" class="qi" style="width:100%;">
+              <option value="">— No mention —</option>
+              {% for u in all_users %}
+              <option value="{{ u.id }}">{{ u.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn-primary" style="height:38px;padding:0 20px;white-space:nowrap;">+ Add Note</button>
+        </div>
+      </form>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
+      <!-- My Notes -->
+      <div class="note-card">
+        <div class="section-head">
+          <h2>📌 My Notes</h2>
+          <span class="nbadge" style="background:#EBF2FF;color:#1A3B8B;">
+            {{ my_notes|selectattr('is_done','eq',False)|list|length }} active
+          </span>
+        </div>
+        {% if my_notes %}
+        {% for note in my_notes %}
+        <div class="note-item {% if note.is_done %}done{% endif %}">
+          <!-- Toggle done -->
+          <form method="post" style="margin:0;padding:0;">
+            <input type="hidden" name="action" value="done">
+            <input type="hidden" name="note_id" value="{{ note.id }}">
+            <button type="submit" class="note-cb" style="{% if note.is_done %}background:#10B981;border-color:#10B981;{% endif %}">
+              {% if note.is_done %}<span style="color:white;font-size:9px;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">✓</span>{% endif %}
+            </button>
+          </form>
+          <div style="flex:1;">
+            <div class="note-text {% if note.is_done %}done{% endif %}">{{ note.text }}</div>
+            {% if note.mention_user_id %}
+            <span class="mention-tag">@ {{ note.mention_user.name }}</span>
+            {% endif %}
+            {% if note.reminder_date and not note.is_done %}
+              {% set diff = (note.reminder_date - now.date()).days %}
+              {% if diff < 0 %}
+              <div class="note-reminder nr-today">⏰ Overdue — {{ note.reminder_date.strftime('%d %b') }}</div>
+              {% elif diff == 0 %}
+              <div class="note-reminder nr-today">⏰ Today</div>
+              {% elif diff <= 3 %}
+              <div class="note-reminder nr-soon">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>
+              {% else %}
+              <div class="note-reminder nr-future">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>
+              {% endif %}
+            {% endif %}
+          </div>
+          <!-- Delete -->
+          <form method="post" style="margin:0;padding:0;">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="note_id" value="{{ note.id }}">
+            <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" onclick="return confirm('Delete this note?')">🗑</button>
+          </form>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="padding:24px;text-align:center;font-size:12px;color:#CBD5E1;">No notes yet. Add one above ↑</div>
+        {% endif %}
+      </div>
+
+      <!-- Mentions from colleagues -->
+      <div class="note-card">
+        <div class="section-head">
+          <h2>💬 Mentioned by Colleagues</h2>
+          <span class="nbadge" style="background:#F5F3FF;color:#6D28D9;">{{ mentions|length }}</span>
+        </div>
+        {% if mentions %}
+        {% for note in mentions %}
+        <div class="note-item">
+          <form method="post" style="margin:0;padding:0;">
+            <input type="hidden" name="action" value="done">
+            <input type="hidden" name="note_id" value="{{ note.id }}">
+            <button type="submit" class="note-cb">
+              {% if note.is_done %}<span style="color:white;font-size:9px;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">✓</span>{% endif %}
+            </button>
+          </form>
+          <div style="flex:1;">
+            <div class="note-text">{{ note.text }}</div>
+            <span class="from-tag">from {{ note.user.name }}</span>
+            {% if note.reminder_date %}
+            <div class="note-reminder nr-future" style="margin-top:3px;">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="padding:24px;text-align:center;font-size:12px;color:#CBD5E1;">No mentions yet. Colleagues can tag you in their notes.</div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
