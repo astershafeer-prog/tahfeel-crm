@@ -43,9 +43,7 @@ db = SQLAlchemy(app)
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+    return "<h2>Something went wrong. Please <a href='/'>try again</a> or <a href='/logout'>logout and login</a>.</h2>", 500
 
 @app.errorhandler(404)
 def not_found(error):
@@ -506,10 +504,12 @@ def dashboard():
         except:
             docs_30 = docs_60 = docs_90 = total_docs = 0
         # Birthdays today
-        from datetime import date
-        today = now.date()
-        all_customers = Customer.query.filter(Customer.date_of_birth != None).all()
-        birthdays_today = [c for c in all_customers if c.date_of_birth and c.date_of_birth.month == today.month and c.date_of_birth.day == today.day]
+        try:
+            today = now.date()
+            all_customers = Customer.query.filter(Customer.date_of_birth != None).all()
+            birthdays_today = [c for c in all_customers if c.date_of_birth and c.date_of_birth.month == today.month and c.date_of_birth.day == today.day]
+        except:
+            birthdays_today = []
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
                                birthdays_today=birthdays_today,
