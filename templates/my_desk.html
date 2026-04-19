@@ -8,23 +8,26 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
   <style>
     .note-card { background:white; border-radius:10px; border:0.5px solid #E2E8F0; overflow:hidden; }
-    .note-item { padding:11px 16px; border-bottom:0.5px solid #F8FAFC; display:flex; align-items:flex-start; gap:10px; }
+    .note-item { padding:10px 16px; border-bottom:0.5px solid #F8FAFC; display:flex; align-items:flex-start; gap:8px; }
     .note-item:last-child { border-bottom:none; }
-    .note-cb { width:16px; height:16px; border-radius:4px; border:1.5px solid #CBD5E1; flex-shrink:0; margin-top:3px; cursor:pointer; background:white; }
-    .note-text { font-size:13px; color:#1A2333; line-height:1.5; flex:1; }
+    .note-cb { width:15px; height:15px; border-radius:4px; border:1.5px solid #CBD5E1; flex-shrink:0; margin-top:3px; cursor:pointer; background:white; }
+    .note-text { font-size:12px; color:#1A2333; line-height:1.5; flex:1; }
     .note-text.done { text-decoration:line-through; color:#94A3B8; }
-    .note-reminder { font-size:10px; font-weight:600; margin-top:3px; display:flex; align-items:center; gap:4px; }
+    .note-reminder { font-size:10px; font-weight:600; margin-top:3px; }
     .nr-today { color:#EF4444; }
     .nr-soon { color:#F59E0B; }
     .nr-future { color:#94A3B8; }
     .mention-tag { font-size:10px; background:#EBF2FF; color:#1A3B8B; padding:1px 7px; border-radius:20px; font-weight:600; margin-top:3px; display:inline-block; }
     .from-tag { font-size:10px; background:#F5F3FF; color:#6D28D9; padding:1px 7px; border-radius:20px; font-weight:600; margin-top:3px; display:inline-block; }
     .quick-add { background:white; border-radius:10px; border:0.5px solid #E2E8F0; padding:16px; }
-    .qi { height:38px; border:1.5px solid #E2E8F0; border-radius:8px; padding:0 12px; font-size:13px; color:#1A2333; outline:none; width:100%; }
+    .qi { height:36px; border:1.5px solid #E2E8F0; border-radius:8px; padding:0 12px; font-size:13px; color:#1A2333; outline:none; width:100%; }
     .qi:focus { border-color:#1A3B8B; }
-    .section-head { padding:12px 16px; border-bottom:0.5px solid #F1F5F9; display:flex; justify-content:space-between; align-items:center; }
+    .section-head { padding:11px 16px; border-bottom:0.5px solid #F1F5F9; display:flex; justify-content:space-between; align-items:center; }
     .section-head h2 { font-size:13px; font-weight:700; color:#1A2333; }
     .nbadge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
+    .stat-box { }
+    .stat-label { font-size:10px; color:#94A3B8; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }
+    .stat-val { font-size:22px; font-weight:700; }
   </style>
 </head>
 <body>
@@ -39,14 +42,81 @@
     <div class="page-head" style="margin-bottom:14px;">
       <div>
         <div class="page-head-title">📌 My Desk</div>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Your personal notes and reminders — private to you</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Your personal workspace — private to you</div>
       </div>
     </div>
 
-    <!-- Quick Add -->
+    <!-- Sales Target + Workload Stats -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+
+      <!-- Sales Target -->
+      {% set amt_pct = [(invoiced_actual / amount_target * 100)|int, 100]|min if amount_target > 0 else 0 %}
+      <div style="background:white;border-radius:10px;border:0.5px solid #E2E8F0;padding:16px 20px;">
+        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:14px;">🎯 My Sales — {{ now.strftime('%B %Y') }}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div class="stat-box">
+            <div class="stat-label">Invoiced</div>
+            <div class="stat-val" style="color:#1A3B8B;">AED {{ '{:,.0f}'.format(invoiced_actual) }}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Closed Value</div>
+            <div class="stat-val" style="color:#10B981;">AED {{ '{:,.0f}'.format(closed_actual) }}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Target</div>
+            <div class="stat-val" style="color:#475569;">{% if amount_target > 0 %}AED {{ '{:,.0f}'.format(amount_target) }}{% else %}<span style="font-size:13px;color:#CBD5E1;">Not set</span>{% endif %}</div>
+          </div>
+        </div>
+        {% if amount_target > 0 %}
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+          <span style="font-size:11px;color:#475569;">Progress</span>
+          <span style="font-size:11px;font-weight:700;color:{% if amt_pct>=100 %}#10B981{% elif amt_pct>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};">{{ amt_pct }}%</span>
+        </div>
+        <div style="height:8px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
+          <div style="width:{{ amt_pct }}%;height:100%;background:{% if amt_pct>=100 %}#10B981{% elif amt_pct>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- My Workload -->
+      <div style="background:white;border-radius:10px;border:0.5px solid #E2E8F0;padding:16px 20px;">
+        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:14px;">📊 My Workload — This Month</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div class="stat-box">
+            <div class="stat-label">Leads</div>
+            <div class="stat-val" style="color:#1A3B8B;">{{ my_leads_count }}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Conversions</div>
+            <div class="stat-val" style="color:#10B981;">{{ my_conversions_count }}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Lost</div>
+            <div class="stat-val" style="color:#EF4444;">{{ my_lost_count }}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div class="stat-box">
+            <div class="stat-label">Overdue Leads</div>
+            <div class="stat-val" style="color:{% if my_overdue_leads > 0 %}#EF4444{% else %}#CBD5E1{% endif %};">{{ my_overdue_leads }}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Active Tasks</div>
+            <div class="stat-val" style="color:#F59E0B;">{{ my_active_tasks }}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Overdue Tasks</div>
+            <div class="stat-val" style="color:{% if my_overdue_tasks > 0 %}#EF4444{% else %}#CBD5E1{% endif %};">{{ my_overdue_tasks }}</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Add Note + Mention -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
 
-      <!-- Section 1: Personal Note / Reminder -->
+      <!-- Personal Note -->
       <div class="quick-add">
         <div style="font-size:12px;font-weight:700;color:#1A2333;margin-bottom:10px;">📌 Add Personal Note</div>
         <form method="post" style="display:flex;flex-direction:column;gap:8px;">
@@ -65,23 +135,27 @@
         </form>
       </div>
 
-      <!-- Section 2: Mention Colleague -->
+      <!-- Mention Colleague -->
       <div class="quick-add">
         <div style="font-size:12px;font-weight:700;color:#1A2333;margin-bottom:10px;">💬 Mention Colleague</div>
         <form method="post" style="display:flex;flex-direction:column;gap:8px;">
           <input type="hidden" name="action" value="add">
           <div class="ff">
             <label>Message <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
-            <input type="text" name="text" value=" " class="qi" placeholder="e.g. Team meeting at 3pm, check customer docs...">
+            <input type="text" name="text" class="qi" placeholder="e.g. Team meeting at 3pm...">
           </div>
-          <div class="ff" style="margin-bottom:6px;">
-            <label>Tag Staff <span style="color:#94A3B8;font-weight:400;">(select one or more)</span></label>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+          <div class="ff">
+            <label>Tag Staff</label>
+            <div style="display:flex;gap:6px;margin-bottom:5px;">
+              <button type="button" onclick="selectAllStaff()" style="font-size:11px;color:#1A3B8B;background:#EBF2FF;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-weight:600;">Select All</button>
+              <button type="button" onclick="deselectAllStaff()" style="font-size:11px;color:#475569;background:#F1F5F9;border:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-weight:600;">Deselect All</button>
+            </div>
+            <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:8px;padding:8px;max-height:120px;overflow-y:auto;" id="staffList">
               {% for u in all_users %}
-              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#475569;background:#F8FAFC;border:1px solid #E2E8F0;padding:4px 10px;border-radius:20px;">
-                <input type="checkbox" name="mention_user_ids" value="{{ u.id }}" style="margin:0;">
-                <div class="av" style="width:18px;height:18px;font-size:8px;background:#1A3B8B;">{{ u.name[:2].upper() }}</div>
-                {{ u.name.split()[0] }}
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:6px;margin-bottom:2px;">
+                <input type="checkbox" name="mention_user_ids" value="{{ u.id }}" class="staff-cb" style="margin:0;">
+                <div class="av" style="width:20px;height:20px;font-size:8px;flex-shrink:0;">{{ u.name[:2].upper() }}</div>
+                <span style="font-size:12px;color:#1A2333;">{{ u.name }}</span>
               </label>
               {% endfor %}
             </div>
@@ -91,59 +165,25 @@
               <label>Remind on <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
               <input type="date" name="reminder_date" class="qi" style="width:100%;" min="{{ now.strftime('%Y-%m-%d') }}">
             </div>
-            <button type="submit" class="btn-primary" style="height:36px;padding:0 16px;white-space:nowrap;">Send</button>
+            <button type="submit" class="btn-primary" style="height:36px;padding:0 16px;">Send</button>
           </div>
         </form>
       </div>
 
     </div>
 
-
-    <!-- My Targets This Month -->
-    {% set amt_pct = [(invoiced_actual / amount_target * 100)|int, 100]|min if amount_target > 0 else 0 %}
-    <div style="background:white;border-radius:10px;border:0.5px solid #E2E8F0;padding:16px 20px;margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:14px;">🎯 My Sales — {{ now.strftime('%B %Y') }}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
-        <div>
-          <div style="font-size:10px;color:#94A3B8;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Invoiced</div>
-          <div style="font-size:20px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(invoiced_actual) }}</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:#94A3B8;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Closed Value</div>
-          <div style="font-size:20px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(closed_actual) }}</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:#94A3B8;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Target</div>
-          <div style="font-size:20px;font-weight:700;color:#475569;">{% if amount_target > 0 %}AED {{ '{:,.0f}'.format(amount_target) }}{% else %}<span style="font-size:13px;color:#CBD5E1;">Not set</span>{% endif %}</div>
-        </div>
-      </div>
-      {% if amount_target > 0 %}
-      <div style="margin-top:12px;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-          <span style="font-size:11px;color:#475569;">Progress towards target</span>
-          <span style="font-size:11px;font-weight:700;color:{% if amt_pct>=100 %}#10B981{% elif amt_pct>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};">{{ amt_pct }}%</span>
-        </div>
-        <div style="height:8px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
-          <div style="width:{{ amt_pct }}%;height:100%;background:{% if amt_pct>=100 %}#10B981{% elif amt_pct>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
-        </div>
-      </div>
-      {% endif %}
-    </div>
-
+    <!-- Notes + Mentions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
 
       <!-- My Notes -->
       <div class="note-card">
         <div class="section-head">
           <h2>📌 My Notes</h2>
-          <span class="nbadge" style="background:#EBF2FF;color:#1A3B8B;">
-            {{ my_notes|selectattr('is_done','eq',False)|list|length }} active
-          </span>
+          <span class="nbadge" style="background:#EBF2FF;color:#1A3B8B;">{{ my_notes|selectattr('is_done','eq',False)|list|length }} active</span>
         </div>
         {% if my_notes %}
         {% for note in my_notes %}
-        <div class="note-item {% if note.is_done %}done{% endif %}">
-          <!-- Toggle done -->
+        <div class="note-item">
           <form method="post" style="margin:0;padding:0;">
             <input type="hidden" name="action" value="done">
             <input type="hidden" name="note_id" value="{{ note.id }}">
@@ -153,27 +193,19 @@
           </form>
           <div style="flex:1;">
             <div class="note-text {% if note.is_done %}done{% endif %}">{{ note.text }}</div>
-            {% if note.mention_user_id %}
-            <span class="mention-tag">@ {{ note.mention_user.name }}</span>
-            {% endif %}
             {% if note.reminder_date and not note.is_done %}
               {% set diff = (note.reminder_date - now.date()).days %}
-              {% if diff < 0 %}
-              <div class="note-reminder nr-today">⏰ Overdue — {{ note.reminder_date.strftime('%d %b') }}</div>
-              {% elif diff == 0 %}
-              <div class="note-reminder nr-today">⏰ Today</div>
-              {% elif diff <= 3 %}
-              <div class="note-reminder nr-soon">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>
-              {% else %}
-              <div class="note-reminder nr-future">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>
+              {% if diff < 0 %}<div class="note-reminder nr-today">⏰ Overdue — {{ note.reminder_date.strftime('%d %b') }}</div>
+              {% elif diff == 0 %}<div class="note-reminder nr-today">⏰ Today</div>
+              {% elif diff <= 3 %}<div class="note-reminder nr-soon">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>
+              {% else %}<div class="note-reminder nr-future">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>
               {% endif %}
             {% endif %}
           </div>
-          <!-- Delete -->
           <form method="post" style="margin:0;padding:0;">
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="note_id" value="{{ note.id }}">
-            <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" onclick="return confirm('Delete this note?')">🗑</button>
+            <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" onclick="return confirm('Delete?')">🗑</button>
           </form>
         </div>
         {% endfor %}
@@ -191,40 +223,35 @@
         {% if mentions %}
         {% for note in mentions %}
         <div class="note-item">
-          <form method="post" style="margin:0;padding:0;">
-            <input type="hidden" name="action" value="done">
-            <input type="hidden" name="note_id" value="{{ note.id }}">
-            <button type="submit" class="note-cb">
-              {% if note.is_done %}<span style="color:white;font-size:9px;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">✓</span>{% endif %}
-            </button>
-          </form>
           <div style="flex:1;">
-            <div class="note-text">{{ note.text }}</div>
+            <div class="note-text">{{ note.text if note.text != '📌' else '(ping)' }}</div>
             <span class="from-tag">from {{ note.user.name }}</span>
-            {% if note.reminder_date %}
-            <div class="note-reminder nr-future" style="margin-top:3px;">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>
-            {% endif %}
+            {% if note.reminder_date %}<div class="note-reminder nr-future" style="margin-top:3px;">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>{% endif %}
           </div>
           <div style="display:flex;gap:4px;">
             <form method="post" style="margin:0;padding:0;">
               <input type="hidden" name="action" value="done">
               <input type="hidden" name="note_id" value="{{ note.id }}">
-              <button type="submit" class="ib" style="width:24px;height:24px;font-size:11px;background:#DCFCE7;border-color:#BBF7D0;color:#15803D;" title="Mark done">✓</button>
+              <button type="submit" class="ib" style="width:24px;height:24px;font-size:11px;background:#DCFCE7;border-color:#BBF7D0;color:#15803D;" title="Done">✓</button>
             </form>
             <form method="post" style="margin:0;padding:0;">
               <input type="hidden" name="action" value="delete">
               <input type="hidden" name="note_id" value="{{ note.id }}">
-              <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" onclick="return confirm('Remove this mention?')" title="Delete">🗑</button>
+              <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" onclick="return confirm('Remove?')" title="Delete">🗑</button>
             </form>
           </div>
         </div>
         {% endfor %}
         {% else %}
-        <div style="padding:24px;text-align:center;font-size:12px;color:#CBD5E1;">No mentions yet. Colleagues can tag you in their notes.</div>
+        <div style="padding:24px;text-align:center;font-size:12px;color:#CBD5E1;">No mentions yet.</div>
         {% endif %}
       </div>
 
     </div>
   </div>
+  <script>
+  function selectAllStaff() { document.querySelectorAll('.staff-cb').forEach(cb => cb.checked = true); }
+  function deselectAllStaff() { document.querySelectorAll('.staff-cb').forEach(cb => cb.checked = false); }
+  </script>
 </body>
 </html>

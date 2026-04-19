@@ -2581,12 +2581,23 @@ def my_desk():
     my_notes = DeskNote.query.filter_by(user_id=user_id).order_by(DeskNote.is_done, DeskNote.reminder_date.asc().nullslast(), DeskNote.created_at.desc()).all()
     mentions = DeskNote.query.filter_by(mention_user_id=user_id, is_done=False).order_by(DeskNote.created_at.desc()).all()
     all_users = User.query.filter_by(active=True).filter(User.id != user_id).order_by(User.name).all()
-    # Monthly targets
+    # Monthly targets + workload
     target = MonthlyTarget.query.filter_by(user_id=user_id, month=now.month, year=now.year).first()
     my_jobs_all = Job.query.filter_by(assigned_to=user_id).all()
     invoiced_actual = sum((j.amount_invoiced or 0) for j in my_jobs_all if j.status not in ['Pending Finance Approval'])
     closed_actual = sum((j.amount_received or 0) for j in my_jobs_all if j.status == 'Closed')
     amount_target = target.amount_target if target else 0
+    # Workload this month
+    my_leads_month = Lead.query.filter_by(assigned_to=user_id).filter(
+        db.extract('month', Lead.created_at) == now.month,
+        db.extract('year', Lead.created_at) == now.year
+    ).all()
+    my_leads_count = len(my_leads_month)
+    my_conversions_count = len([l for l in my_leads_month if l.status == 'Converted'])
+    my_lost_count = len([l for l in my_leads_month if l.status == 'Lost'])
+    my_overdue_leads = len([l for l in my_leads_month if l.due_date and l.due_date < now and l.status not in ['Converted','Lost']])
+    my_active_tasks = len([j for j in my_jobs_all if j.status not in ['Done','Closed','Pending Finance Approval']])
+    my_overdue_tasks = len([j for j in my_jobs_all if j.due_date and j.due_date < now and j.status not in ['Done','Closed','Pending Finance Approval']])
 
     # Create table if not exists
     try:
@@ -2610,7 +2621,10 @@ def my_desk():
     return render_template('my_desk.html', my_notes=my_notes, mentions=mentions,
                            all_users=all_users, now=now,
                            invoiced_actual=invoiced_actual, closed_actual=closed_actual,
-                           amount_target=amount_target)
+                           amount_target=amount_target,
+                           my_leads_count=my_leads_count, my_conversions_count=my_conversions_count,
+                           my_lost_count=my_lost_count, my_overdue_leads=my_overdue_leads,
+                           my_active_tasks=my_active_tasks, my_overdue_tasks=my_overdue_tasks)
 
 if __name__ == '__main__':
     init_db()
