@@ -69,14 +69,15 @@
         {% if total_invoiced > 0 %}{% set crate = [(total_received / total_invoiced * 100)|int, 100]|min %}<div style="margin-top:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;color:#475569;">Collection Rate</span><span style="font-size:11px;font-weight:700;color:#1A3B8B;">{{ crate }}%</span></div><div style="height:6px;background:#F1F5F9;border-radius:10px;overflow:hidden;"><div style="width:{{ crate }}%;height:100%;background:#1A3B8B;border-radius:10px;"></div></div></div>{% endif %}
       </div>
     </div>
-    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:14px;">
-      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Documents <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
-        <a href="/documents" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#1A3B8B;">{{ total_docs }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">Total</div></a>
-        <a href="/documents?expiry=30" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#EF4444;">{{ docs_30 }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">≤30 Days</div></a>
-        <a href="/documents?expiry=60" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#F59E0B;">{{ docs_60 }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">31–60 Days</div></a>
-        <a href="/documents?expiry=90" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#475569;">{{ docs_90 }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">61–90 Days</div></a>
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #64748B;padding:10px 20px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between;gap:16px;">
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Documents</div>
+      <div style="display:flex;gap:28px;align-items:center;flex:1;justify-content:center;">
+        <a href="/documents" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A3B8B;">{{ total_docs }}</div><div style="font-size:10px;color:#94A3B8;">Total</div></a>
+        <a href="/documents?expiry=30" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#EF4444;">{{ docs_30 }}</div><div style="font-size:10px;color:#94A3B8;">≤30 Days</div></a>
+        <a href="/documents?expiry=60" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#F59E0B;">{{ docs_60 }}</div><div style="font-size:10px;color:#94A3B8;">31–60 Days</div></a>
+        <a href="/documents?expiry=90" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#475569;">{{ docs_90 }}</div><div style="font-size:10px;color:#94A3B8;">61–90 Days</div></a>
       </div>
+      <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;white-space:nowrap;">View all →</a>
     </div>
     {% if birthdays_today %}
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #EC4899;padding:18px 20px;margin-bottom:14px;box-shadow:0 4px 12px rgba(236,72,153,0.08);">
