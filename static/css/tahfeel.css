@@ -1285,3 +1285,17 @@ table tbody tr:last-child td { border-bottom:none; }
 /* Finance detail cards */
 .card-pending-finance { border-top: 5px solid #8B5CF6 !important; }
 .card-done { border-top: 5px solid #10B981 !important; }
+
+/* ── Global border-top for all custom card classes ───────────────────────── */
+.note-card,
+.quick-add,
+.block,
+.stat-card,
+.filter-card,
+.sum-card {
+  border-top: 5px solid #1A3B8B;
+}
+
+/* Override per context */
+.quick-add.mention  { border-top-color: #8B5CF6; }
+.note-card.mentions { border-top-color: #8B5CF6; }
