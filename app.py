@@ -1099,27 +1099,34 @@ def admin_toggle_staff(user_id):
 @app.route('/customers')
 @login_required
 def customers():
+    now = datetime.now()
     search = request.args.get('search', '').strip().lower()
-    from sqlalchemy import func
+    birthday_filter = request.args.get('birthday', '')
     customer_list = Customer.query.order_by(Customer.created_at.desc()).all()
     if search:
         customer_list = [c for c in customer_list if
             search in (c.name or '').lower() or
             search in (c.company or '').lower() or
             search in (c.phone or '').lower()]
+    if birthday_filter == 'today':
+        customer_list = [c for c in customer_list if c.date_of_birth and
+                         c.date_of_birth.month == now.month and
+                         c.date_of_birth.day == now.day]
+    try:
+        bday_list = Customer.query.filter(Customer.date_of_birth != None).all()
+        birthdays_today = [c for c in bday_list if c.date_of_birth and
+                           c.date_of_birth.month == now.month and c.date_of_birth.day == now.day]
+    except:
+        birthdays_today = []
     page = int(request.args.get('page', 1))
     per_page = 25
     total = len(customer_list)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
     paginated = customer_list[(page-1)*per_page : page*per_page]
-    now = datetime.now()
-    try:
-        bday_list = Customer.query.filter(Customer.date_of_birth != None).all()
-        birthdays_today = [c for c in bday_list if c.date_of_birth and c.date_of_birth.month == now.month and c.date_of_birth.day == now.day]
-    except:
-        birthdays_today = []
-    return render_template('customers.html', customers=paginated, page=page, total_pages=total_pages, total=total, search=request.args.get('search',''), birthdays_today=birthdays_today, now=now)
+    return render_template('customers.html', customers=paginated, page=page, total_pages=total_pages,
+                           total=total, search=request.args.get('search',''),
+                           birthdays_today=birthdays_today, now=now, birthday_filter=birthday_filter)
 
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required
