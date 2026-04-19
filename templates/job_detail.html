@@ -33,11 +33,14 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
+          {% if job.customer.phone %}
+          <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ job.customer.name|urlencode }}%2C%0A%0AHere%20is%20an%20update%20on%20your%20{{ job.job_type|urlencode }}%20application%20with%20Tahfeel%20Business%20Solutions.%0A%0A%F0%9F%93%8B%20Service%3A%20{{ job.job_type|urlencode }}%0A%F0%9F%93%8C%20Status%3A%20{{ job.status|urlencode }}%0A%F0%9F%93%85%20Due%20Date%3A%20{{ job.due_date.strftime('%d %b %Y')|urlencode if job.due_date else 'TBD' }}%0A%F0%9F%91%A4%20Representative%3A%20{{ job.assignee.name|urlencode if job.assignee else 'Tahfeel Team' }}%0A%0AWe%20are%20actively%20working%20on%20your%20application.%20We%20will%20keep%20you%20updated.%0A%0A%E2%80%94%20Tahfeel%20Business%20Solutions%20%F0%9F%8F%A2" target="_blank" class="ib" style="background:#25D366;border-color:#25D366;color:white;font-size:14px;" title="Send WhatsApp Update">💬</a>
+          {% endif %}
           {% if job.status != 'Closed' and session.role in ['admin','operations'] %}
-          <a href="/jobs/{{ job.id }}/edit" class="btn-sm">✏ Edit</a>
+          <a href="/jobs/{{ job.id }}/edit" class="ib" title="Edit">✏</a>
           {% endif %}
           {% if session.role in ['admin','operations'] and job.status != 'Closed' %}
-          <button class="btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'">Delete</button>
+          <button class="ib ib-del" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'" title="Delete">🗑</button>
           {% endif %}
         </div>
       </div>
@@ -316,24 +319,37 @@
     {% endif %}
 
     <!-- Timeline -->
-    <div class="card">
-      <div class="card-header"><h2>Timeline ({{ job.updates|length }})</h2></div>
-      <div class="card-body" style="padding:0;">
+    <div class="card" id="taskTimeline">
+      <div class="card-header">
+        <h2>📋 Timeline <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ job.updates|length }} update{{ 's' if job.updates|length != 1 else '' }}</span></h2>
         {% if job.updates %}
-        <div class="timeline">
-          {% for u in job.updates %}
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div>
-              <div class="timeline-status">{{ u.status }}</div>
-              <div class="timeline-remark">{{ u.remark }}</div>
-              <div class="timeline-meta">{{ u.staff_name }} · {{ u.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
-            </div>
+        <button onclick="downloadTimeline()" class="ib" title="Download as Image" style="font-size:14px;">🖼</button>
+        {% endif %}
+      </div>
+      <div style="padding:16px 20px;" id="timelineContent">
+        {% if job.updates %}
+        {% for u in job.updates %}
+        {% set idx = loop.index %}
+        <div style="display:grid;grid-template-columns:24px 1fr;gap:0;position:relative;{% if not loop.last %}padding-bottom:4px;{% endif %}">
+          {% if not loop.last %}
+          <div style="position:absolute;left:11px;top:24px;bottom:0;width:2px;background:#E2E8F0;z-index:0;"></div>
+          {% endif %}
+          <div style="padding-top:3px;z-index:1;">
+            <div style="width:22px;height:22px;border-radius:50%;
+              background:{% if u.status in ['Done','Closed'] %}#10B981{% elif u.status == 'Processing' %}#F59E0B{% elif u.status in ['On Hold','Delayed'] %}#EF4444{% else %}#1A3B8B{% endif %};
+              color:white;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ idx }}</div>
           </div>
-          {% endfor %}
+          <div style="padding:0 0 18px 12px;">
+            <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ u.status }}</div>
+            <div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ u.staff_name }} · {{ u.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+            {% if u.remark %}
+            <div style="font-size:12px;color:#475569;margin-top:5px;background:#F8FAFC;border-radius:6px;padding:6px 10px;border-left:2px solid #E2E8F0;">{{ u.remark }}</div>
+            {% endif %}
+          </div>
         </div>
+        {% endfor %}
         {% else %}
-        <div class="empty" style="padding:24px;">No updates yet.</div>
+        <div class="empty" style="padding:16px 0;">No updates yet.</div>
         {% endif %}
       </div>
     </div>
@@ -345,6 +361,21 @@
       document.getElementById('completionFields').style.display = status === 'Done' ? 'block' : 'none';
     }
     toggleCompletion();
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+  function downloadTimeline() {
+    const el = document.getElementById('taskTimeline');
+    const btn = el.querySelector('button');
+    btn.style.display = 'none';
+    html2canvas(el, { backgroundColor: '#ffffff', scale: 2, useCORS: true }).then(canvas => {
+      btn.style.display = '';
+      const link = document.createElement('a');
+      link.download = 'task-timeline-{{ job.id }}.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  }
   </script>
 </body>
 </html>

@@ -107,59 +107,33 @@
       <div class="stat-card red"><div class="label">Pending</div><div class="val-amount">AED {{ '{:,.0f}'.format(total_invoiced - total_received) }}</div></div>
     </div>
 
-    <!-- Tasks Timeline -->
+    <!-- Tasks -->
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header">
-        <h2>📋 Task Timeline <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ jobs|length }} task{{ 's' if jobs|length != 1 else '' }}</span></h2>
+        <h2>Tasks <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ jobs|length }}</span></h2>
         <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add" style="font-size:12px;padding:6px 14px;">+ Add Task</a>
       </div>
       {% if jobs %}
-      <div style="padding:16px 20px;">
-        {% for job in jobs %}
-        {% set is_overdue = job.due_date and job.due_date < now and job.status not in ['Done','Closed','Pending Finance Close'] %}
-        {% if job.status == 'Closed' %}{% set dot_bg = '#94A3B8' %}{% set dot_txt = '✓' %}
-        {% elif job.status in ['Done','Pending Finance Close'] %}{% set dot_bg = '#10B981' %}{% set dot_txt = '✓' %}
-        {% elif is_overdue %}{% set dot_bg = '#EF4444' %}{% set dot_txt = loop.index|string %}
-        {% elif job.status == 'Processing' %}{% set dot_bg = '#F59E0B' %}{% set dot_txt = loop.index|string %}
-        {% else %}{% set dot_bg = '#1A3B8B' %}{% set dot_txt = loop.index|string %}{% endif %}
-        <div style="display:grid;grid-template-columns:28px 1fr;gap:0;position:relative;{% if not loop.last %}padding-bottom:4px;{% endif %}">
-          {% if not loop.last %}
-          <div style="position:absolute;left:13px;top:28px;bottom:0;width:2px;background:#E2E8F0;z-index:0;"></div>
-          {% endif %}
-          <div style="padding-top:4px;z-index:1;">
-            <div style="width:22px;height:22px;border-radius:50%;background:{{ dot_bg }};color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ dot_txt }}</div>
-          </div>
-          <div style="padding:0 0 20px 14px;">
-            <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ job.job_type }}</div>
-            <div style="font-size:11px;color:#94A3B8;margin-top:2px;display:flex;align-items:center;gap:8px;">
-              {% if job.assignee %}
-              <span style="width:18px;height:18px;border-radius:50%;background:#1A3B8B;color:white;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;">{{ job.assignee.name[:2].upper() }}</span>
-              {{ job.assignee.name.split()[0] }} ·
-              {% endif %}
-              {% if job.due_date %}Due {{ job.due_date.strftime('%d %b %Y') }}{% endif %}
-              {% if job.amount_invoiced %}· AED {{ '{:,.0f}'.format(job.amount_invoiced) }}{% endif %}
-            </div>
-            <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
-              <span style="height:20px;padding:0 8px;border-radius:20px;font-size:10px;font-weight:600;display:inline-flex;align-items:center;
-                background:{% if job.status=='Closed' %}#F1F5F9{% elif job.status in ['Done'] %}#DCFCE7{% elif is_overdue %}#FEF2F2{% elif job.status=='Processing' %}#FFFBEB{% else %}#EBF2FF{% endif %};
-                color:{% if job.status=='Closed' %}#475569{% elif job.status in ['Done'] %}#15803D{% elif is_overdue %}#B91C1C{% elif job.status=='Processing' %}#B45309{% else %}#1A3B8B{% endif %};">
-                {{ job.status }}
-              </span>
-              <a href="/jobs/{{ job.id }}" class="ib" style="width:24px;height:24px;font-size:11px;" title="View">👁</a>
-              {% if job.status != 'Closed' and session.role in ['admin','operations'] %}
-              <a href="/jobs/{{ job.id }}/edit" class="ib" style="width:24px;height:24px;font-size:11px;" title="Edit">✏</a>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
+      <table>
+        <thead><tr><th>Service</th><th>Assigned</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr>
+            <td><strong>{{ job.job_type }}</strong></td>
+            <td>{% if job.assignee %}<div class="av-wrap"><div class="av">{{ job.assignee.name[:2].upper() }}</div><span class="av-name">{{ job.assignee.name.split()[0] }}</span></div>{% else %}—{% endif %}</td>
+            <td><span class="due-pill {% if job.due_date and job.due_date < now %}overdue{% endif %}">📅 {{ job.due_date.strftime('%d %b') if job.due_date else '—' }}</span></td>
+            <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></td>
+            <td><a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
       {% else %}
       <div class="empty">No tasks yet. <a href="/jobs/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add first task →</a></div>
       {% endif %}
     </div>
 
-    <!-- Documents -->
+        <!-- Documents -->
     <div class="section-label">Documents ({{ documents|length }})</div>
     <div class="card">
       {% if documents %}
