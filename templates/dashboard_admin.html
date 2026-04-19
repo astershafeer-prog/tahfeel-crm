@@ -92,17 +92,7 @@
       <div class="section-label" style="margin:0;">Staff Workload & Targets</div>
       <a href="/admin/targets" style="font-size:12px;color:var(--primary);text-decoration:none;">🎯 Set Targets →</a>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;">
-      <a href="?wl=today" class="btn-sm {% if wl_filter=='today' %}active{% endif %}" style="{% if wl_filter=='today' %}background:#1A3B8B;color:white;{% endif %}">Today</a>
-      <a href="?wl=week" class="btn-sm {% if wl_filter=='week' %}active{% endif %}" style="{% if wl_filter=='week' %}background:#1A3B8B;color:white;{% endif %}">This Week</a>
-      <a href="?wl=month" class="btn-sm {% if wl_filter=='month' or not wl_filter %}active{% endif %}" style="{% if wl_filter=='month' or not wl_filter %}background:#1A3B8B;color:white;{% endif %}">This Month</a>
-      <form method="get" style="display:flex;gap:6px;align-items:center;margin:0;">
-        <input type="hidden" name="wl" value="custom">
-        <input type="date" name="wl_from" value="{{ wl_from }}" style="height:28px;border:1px solid #E2E8F0;border-radius:6px;padding:0 8px;font-size:11px;outline:none;">
-        <input type="date" name="wl_to" value="{{ wl_to }}" style="height:28px;border:1px solid #E2E8F0;border-radius:6px;padding:0 8px;font-size:11px;outline:none;">
-        <button type="submit" class="btn-sm" style="{% if wl_filter=='custom' %}background:#1A3B8B;color:white;{% endif %}">Range</button>
-      </form>
-    </div>
+
     <div class="card" style="margin-bottom:20px;">
       <div style="display:grid;grid-template-columns:1.3fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr;gap:8px;padding:8px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Staff</span>

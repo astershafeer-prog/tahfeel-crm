@@ -455,24 +455,14 @@ def dashboard():
         pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
 
         users = User.query.filter_by(active=True).filter(User.role != 'admin').all()
-        # Workload filter — default this month
-        wl_filter = request.args.get('wl', 'month')
-        wl_from = request.args.get('wl_from', '')
-        wl_to = request.args.get('wl_to', '')
+        # Workload — always this month
+        wl_filter = 'month'
+        wl_from = wl_to = ''
         all_leads_db = Lead.query.all()
         all_jobs_db = Job.query.all()
         def in_period(dt, f):
             if not dt: return False
             d = dt.date() if hasattr(dt,'date') else dt
-            if f == 'today': return d == now.date()
-            if f == 'week':
-                ws = now.date() - timedelta(days=now.weekday())
-                return d >= ws
-            if f == 'month': return d.month == now.month and d.year == now.year
-            if f == 'custom' and wl_from and wl_to:
-                fd = datetime.strptime(wl_from,'%Y-%m-%d').date()
-                td = datetime.strptime(wl_to,'%Y-%m-%d').date()
-                return fd <= d <= td
             return d.month == now.month and d.year == now.year
         # Targets
         staff_targets = {t.user_id: t for t in MonthlyTarget.query.filter_by(month=now.month, year=now.year).all()}
@@ -2526,21 +2516,35 @@ def set_targets():
     now = datetime.now()
     month = int(request.args.get('month', now.month))
     year = int(request.args.get('year', now.year))
-    users = User.query.filter_by(active=True).filter(User.role != 'admin').order_by(User.name).all()
     if request.method == 'POST':
         month = int(request.form.get('month', now.month))
         year = int(request.form.get('year', now.year))
-        for u in users:
-            amount_t = float(request.form.get(f'amount_{u.id}', 0) or 0)
-            t = MonthlyTarget.query.filter_by(user_id=u.id, month=month, year=year).first()
-            if t:
-                t.amount_target = amount_t
-            else:
-                t = MonthlyTarget(user_id=u.id, month=month, year=year, amount_target=amount_t)
-                db.session.add(t)
-        db.session.commit()
-        flash('Targets saved.')
+        # Get all active non-admin users fresh for POST
+        all_users = User.query.filter_by(active=True).filter(User.role != 'admin').all()
+        saved = 0
+        for u in all_users:
+            val = request.form.get(f'amount_{u.id}', '').strip()
+            amount_t = float(val) if val else 0.0
+            try:
+                t = MonthlyTarget.query.filter_by(user_id=u.id, month=month, year=year).first()
+                if t:
+                    t.amount_target = amount_t
+                else:
+                    t = MonthlyTarget(user_id=u.id, month=month, year=year,
+                                     lead_target=0, conversion_target=0, amount_target=amount_t)
+                    db.session.add(t)
+                saved += 1
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error saving target for {u.name}: {e}')
+        try:
+            db.session.commit()
+            flash(f'Targets saved for {month}/{year}.')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Save failed: {e}')
         return redirect(url_for('set_targets', month=month, year=year))
+    users = User.query.filter_by(active=True).filter(User.role != 'admin').order_by(User.name).all()
     targets = {t.user_id: t for t in MonthlyTarget.query.filter_by(month=month, year=year).all()}
     return render_template('targets.html', users=users, targets=targets, month=month, year=year, now=now)
 
