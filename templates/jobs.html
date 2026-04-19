@@ -42,62 +42,71 @@
 
     <!-- Filters -->
     <div class="filter-card">
-    <div class="filter-card-head"><div class="filter-card-title">⊟ Filters</div><a href="/jobs" class="btn-reset" style="font-size:11px;">Reset</a></div>
-    <form method="get" class="filter-grid-4" id="jobFilters" style="margin:0;align-items:start;">
-      <div class="filter-group">
-        <label>Due Date</label>
-        <select name="date" onchange="toggleCustom(this.value)">
-          <option value="">All</option>
-          <option value="today" {% if request.args.get('date')=='today' %}selected{% endif %}>Today</option>
-          <option value="week" {% if request.args.get('date')=='week' %}selected{% endif %}>This Week</option>
-          <option value="month" {% if request.args.get('date')=='month' %}selected{% endif %}>This Month</option>
-          <option value="custom" {% if request.args.get('date')=='custom' %}selected{% endif %}>Custom Range</option>
-        </select>
-      </div>
-      <div class="filter-group" id="customFrom" style="display:{% if request.args.get('date')=='custom' %}block{% else %}none{% endif %};">
-        <label>From</label>
-        <input type="date" name="from_date" value="{{ request.args.get('from_date','') }}">
-      </div>
-      <div class="filter-group" id="customTo" style="display:{% if request.args.get('date')=='custom' %}block{% else %}none{% endif %};">
-        <label>To</label>
-        <input type="date" name="to_date" value="{{ request.args.get('to_date','') }}">
-      </div>
-      <div class="filter-group">
-        <label>Status</label>
-        <select name="status">
-          <option value="">All Statuses</option>
-          <option value="Pending Finance Approval" {% if status_filter=="Pending Finance Approval" %}selected{% endif %}>Pending Finance Approval</option>
-          <option value="Pending Finance Close" {% if status_filter=="Pending Finance Close" %}selected{% endif %}>Pending Finance Close</option>
-          <option value="Closed" {% if status_filter=="Closed" %}selected{% endif %}>Closed</option>
-          {% for s in statuses %}
-          <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="ff">
-        <label>Priority</label>
-        <select name="priority">
-          <option value="">All Priorities</option>
-          <option value="High" {% if priority_filter=="High" %}selected{% endif %}>High</option>
-          <option value="Medium" {% if priority_filter=="Medium" %}selected{% endif %}>Medium</option>
-          <option value="Low" {% if priority_filter=="Low" %}selected{% endif %}>Low</option>
-        </select>
-      </div>
-      {% if session.role in ['admin','finance'] %}
-      <div class="ff">
-        <label>Assigned To</label>
-        <select name="assigned_to">
-          <option value="">All Staff</option>
-          {% for u in users %}
-          <option value="{{ u.id }}" {% if request.args.get('assigned_to')==u.id|string %}selected{% endif %}>{{ u.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      {% endif %}
-      <div style="display:flex;gap:8px;align-items:flex-end;padding-top:18px;">
-        <button type="submit" class="btn-primary" style="height:34px;padding:0 16px;">Apply</button>
-      </div>
-    </form>
+      <div class="filter-card-head"><div class="filter-card-title">⊟ Filters</div></div>
+      <form method="get" id="jobFilters" style="margin:0;">
+        <!-- Search bar -->
+        <div class="ff" style="margin-bottom:12px;">
+          <label>Search Customer</label>
+          <input type="text" name="customer" value="{{ request.args.get('customer','') }}" placeholder="Search by customer name or company...">
+        </div>
+        <!-- Filter grid -->
+        <div class="filter-grid-4" style="align-items:start;">
+          <div class="ff">
+            <label>Due Date</label>
+            <select name="date" onchange="toggleCustom(this.value)">
+              <option value="">All</option>
+              <option value="today" {% if request.args.get('date')=='today' %}selected{% endif %}>Today</option>
+              <option value="week" {% if request.args.get('date')=='week' %}selected{% endif %}>This Week</option>
+              <option value="month" {% if request.args.get('date')=='month' %}selected{% endif %}>This Month</option>
+              <option value="custom" {% if request.args.get('date')=='custom' %}selected{% endif %}>Custom Range</option>
+            </select>
+          </div>
+          <div class="ff" id="customFrom" style="display:{% if request.args.get('date')=='custom' %}block{% else %}none{% endif %};">
+            <label>From</label>
+            <input type="date" name="from_date" value="{{ request.args.get('from_date','') }}">
+          </div>
+          <div class="ff" id="customTo" style="display:{% if request.args.get('date')=='custom' %}block{% else %}none{% endif %};">
+            <label>To</label>
+            <input type="date" name="to_date" value="{{ request.args.get('to_date','') }}">
+          </div>
+          <div class="ff">
+            <label>Status</label>
+            <select name="status">
+              <option value="">All Statuses</option>
+              <option value="Pending Finance Approval" {% if status_filter=="Pending Finance Approval" %}selected{% endif %}>Pending Finance Approval</option>
+              <option value="Pending Finance Close" {% if status_filter=="Pending Finance Close" %}selected{% endif %}>Pending Finance Close</option>
+              <option value="Closed" {% if status_filter=="Closed" %}selected{% endif %}>Closed</option>
+              {% for s in statuses %}
+              <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="ff">
+            <label>Priority</label>
+            <select name="priority">
+              <option value="">All Priorities</option>
+              <option value="High" {% if priority_filter=="High" %}selected{% endif %}>High</option>
+              <option value="Medium" {% if priority_filter=="Medium" %}selected{% endif %}>Medium</option>
+              <option value="Low" {% if priority_filter=="Low" %}selected{% endif %}>Low</option>
+            </select>
+          </div>
+          {% if session.role in ['admin','finance'] %}
+          <div class="ff">
+            <label>Assigned To</label>
+            <select name="assigned_to">
+              <option value="">All Staff</option>
+              {% for u in users %}
+              <option value="{{ u.id }}" {% if request.args.get('assigned_to')==u.id|string %}selected{% endif %}>{{ u.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div style="display:flex;gap:8px;align-items:flex-end;padding-top:18px;">
+            <button type="submit" class="btn-primary" style="height:34px;padding:0 16px;">Apply</button>
+            <a href="/jobs" class="btn-reset" style="height:34px;display:flex;align-items:center;padding:0 14px;">Reset</a>
+          </div>
+        </div>
+      </form>
     </div>
 
     <!-- Task List — Bar Style -->
