@@ -1336,6 +1336,9 @@ def jobs():
         from_date = request.args.get('from_date', '')
         to_date = request.args.get('to_date', '')
 
+        customer_search = request.args.get('customer', '').strip().lower()
+        if customer_search:
+            job_list = [j for j in job_list if customer_search in (j.customer.name or '').lower() or customer_search in (j.customer.company or '').lower()]
         if status_filter:
             job_list = [j for j in job_list if j.status == status_filter]
         if priority_filter:
