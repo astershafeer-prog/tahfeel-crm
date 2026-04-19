@@ -2482,7 +2482,7 @@ def my_desk():
         elif action == 'delete':
             note_id = request.form.get('note_id')
             note = DeskNote.query.get(note_id)
-            if note and note.user_id == user_id:
+            if note and (note.user_id == user_id or note.mention_user_id == user_id):
                 db.session.delete(note)
                 db.session.commit()
         return redirect(url_for('my_desk'))

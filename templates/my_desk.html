@@ -145,6 +145,18 @@
             <div class="note-reminder nr-future" style="margin-top:3px;">⏰ {{ note.reminder_date.strftime('%d %b') }}</div>
             {% endif %}
           </div>
+          <div style="display:flex;gap:4px;">
+            <form method="post" style="margin:0;padding:0;">
+              <input type="hidden" name="action" value="done">
+              <input type="hidden" name="note_id" value="{{ note.id }}">
+              <button type="submit" class="ib" style="width:24px;height:24px;font-size:11px;background:#DCFCE7;border-color:#BBF7D0;color:#15803D;" title="Mark done">✓</button>
+            </form>
+            <form method="post" style="margin:0;padding:0;">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="note_id" value="{{ note.id }}">
+              <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" onclick="return confirm('Remove this mention?')" title="Delete">🗑</button>
+            </form>
+          </div>
         </div>
         {% endfor %}
         {% else %}

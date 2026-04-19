@@ -32,10 +32,10 @@
   {% if session.role in ['admin', 'sales'] %}
   <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
   {% endif %}
+  <div style="flex:1;"></div>
   {% if session.role == 'admin' %}
   <a href="/admin" class="admin-link {% if active=='admin' %}active{% endif %}" style="display:flex;align-items:center;gap:5px;">⚙ Admin</a>
   {% endif %}
-  <div style="flex:1;"></div>
   <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;">{{ session.user_name[:2].upper() if session.user_name else 'U' }}</div>
 </div>
 {% endmacro %}
