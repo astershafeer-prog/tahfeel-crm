@@ -1155,7 +1155,8 @@ def add_customer():
                 nationality=request.form.get('nationality', '').strip() or None,
                 customer_type=request.form.get('customer_type', 'Individual'),
                 assigned_to=int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None,
-                notes=request.form.get('notes', '').strip() or None
+                notes=request.form.get('notes', '').strip() or None,
+                date_of_birth=datetime.strptime(request.form.get('date_of_birth'), '%Y-%m-%d').date() if request.form.get('date_of_birth') else None
             )
         db.session.add(customer)
         db.session.flush()  # get customer.id before commit
@@ -1220,6 +1221,8 @@ def edit_customer(customer_id):
         customer.address = request.form.get('address', '').strip()
         customer.source = request.form.get('source', '').strip()
         customer.nationality = request.form.get('nationality', '').strip() or None
+        dob_str = request.form.get('date_of_birth', '').strip()
+        customer.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
         customer.customer_type = request.form.get('customer_type', 'Individual')
         try:
             customer.assigned_to = int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None

@@ -70,6 +70,10 @@
           <div>
           </div>
           <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Date of Birth</div>
+            <div style="font-size:13px;">{% if customer.date_of_birth %}{{ customer.date_of_birth.strftime('%d %b %Y') }}{% else %}—{% endif %}</div>
+          </div>
+          <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Customer Type</div>
             <div style="font-size:13px;"><span class="badge b-{{ (customer.customer_type or 'individual')|lower }}">{{ customer.customer_type or 'Individual' }}</span></div>
           </div>

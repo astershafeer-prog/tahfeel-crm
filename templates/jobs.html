@@ -81,15 +81,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="ff">
-            <label>Priority</label>
-            <select name="priority">
-              <option value="">All Priorities</option>
-              <option value="High" {% if priority_filter=="High" %}selected{% endif %}>High</option>
-              <option value="Medium" {% if priority_filter=="Medium" %}selected{% endif %}>Medium</option>
-              <option value="Low" {% if priority_filter=="Low" %}selected{% endif %}>Low</option>
-            </select>
-          </div>
+
           {% if session.role in ['admin','finance'] %}
           <div class="ff">
             <label>Assigned To</label>
