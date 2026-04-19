@@ -349,7 +349,7 @@ def dashboard():
         try:
             all_jobs = Job.query.order_by(Job.created_at.desc()).all()
             active_jobs = [j for j in all_jobs if j.status != 'Done']
-            pending_approval = [j for j in all_jobs if j.status == 'Pending Finance Approval']
+            pending_approval = [j for j in all_jobs if j.status in ['Pending Finance Approval', 'Done']]
             pending_close = [j for j in all_jobs if j.status == 'Pending Finance Close']
             total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
             total_received = sum((j.amount_received or 0) for j in active_jobs)
@@ -1319,6 +1319,7 @@ def import_customers():
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 
 JOB_STATUSES = ['Assigned', 'Job Started', 'Processing', 'Pending Authority', 'On Hold', 'Delayed', 'Final Stage', 'Done']
+JOB_STATUSES_FINANCE = ['Closed']  # Finance-only status
 JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES + ['Pending Finance Close', 'Closed']
 
 @app.route('/jobs')
@@ -1584,9 +1585,10 @@ def job_detail(job_id):
         new_status = request.form.get('status', job.status)
         if role == 'staff' and new_status == 'Pending Finance Approval':
             new_status = job.status
-        # When staff marks Done → automatically move to Pending Finance Close
-        if new_status == 'Done' and role == 'staff':
-            new_status = 'Pending Finance Close'
+        # When ops marks Done → stays as Done, appears in Finance queue
+        # Finance will verify payment and close the task
+        if new_status == 'Done' and role not in ['admin', 'finance']:
+            pass  # Keep as Done — Finance will close it
         job.status = new_status
         # Save completion fields when marking Done or Pending Finance Close
         if new_status in ['Done', 'Pending Finance Close']:
@@ -1712,19 +1714,26 @@ def approve_job(job_id):
             job.amount_received = float(amount_received)
     except:
         pass
-    job.status = 'Assigned'
+    # If task was Done, Finance is closing it; if Pending Finance Approval, Finance is approving it
+    if job.status == 'Done':
+        job.status = 'Closed'
+        job.completed_at = datetime.now()
+    else:
+        job.status = 'Assigned'
     job.finance_approved_by = session['user_id']
     job.finance_approved_at = datetime.now()
     notes = request.form.get('finance_notes', '').strip()
     if notes:
         job.finance_notes = notes  # save to job record
-    remark = f'Approved by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}'
+    action = 'Closed' if job.status == 'Closed' else 'Approved'
+    remark = f'{action} by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}'
     if notes:
         remark += f'. Notes: {notes}'
-    update = JobUpdate(job_id=job.id, status='Assigned', remark=remark, staff_name=session['user_name'])
+    update = JobUpdate(job_id=job.id, status=job.status, remark=remark, staff_name=session['user_name'])
     db.session.add(update)
     db.session.commit()
-    flash('Task approved and assigned to staff.')
+    msg = 'Task closed successfully.' if job.status == 'Closed' else 'Task approved and assigned to staff.'
+    flash(msg)
     return redirect(request.referrer or url_for('dashboard'))
 
 @app.route('/jobs/<int:job_id>/payment', methods=['POST'])

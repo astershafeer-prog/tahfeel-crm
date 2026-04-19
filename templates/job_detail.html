@@ -236,6 +236,7 @@
               <label>Testimonial</label>
               <select name="testimonial">
                 <option value="">— Optional —</option>
+                <option value="Requested" {% if job.testimonial=='Requested' %}selected{% endif %}>Requested</option>
                 <option value="Collected" {% if job.testimonial=='Collected' %}selected{% endif %}>✓ Collected</option>
                 <option value="Not Collected" {% if job.testimonial=='Not Collected' %}selected{% endif %}>Not Collected</option>
               </select>
@@ -258,7 +259,9 @@
               <label>Status *</label>
               <select name="status" id="statusSelect" onchange="toggleCompletion()">
                 {% for s in statuses %}
+                {% if s != 'Closed' or session.role in ['admin','finance'] %}
                 <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endif %}
                 {% endfor %}
               </select>
             </div>
