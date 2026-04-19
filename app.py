@@ -275,7 +275,9 @@ class DeskNote(db.Model):
 def inject_birthdays():
     try:
         if 'user_id' in session:
-            today = datetime.now()
+            from datetime import timezone, timedelta
+            dubai_tz = timezone(timedelta(hours=4))
+            today = datetime.now(dubai_tz)
             bdays = []
             try:
                 result = db.session.execute(db.text(
@@ -283,7 +285,6 @@ def inject_birthdays():
                 ), {'m': today.month, 'd': today.day}).fetchall()
                 bdays = [{'id': r[0], 'name': r[1], 'phone': r[2]} for r in result]
             except:
-                # Fallback: load all and filter in Python
                 try:
                     all_c = db.session.execute(db.text("SELECT id, name, phone, date_of_birth FROM customer WHERE date_of_birth IS NOT NULL")).fetchall()
                     bdays = [{'id':r[0],'name':r[1],'phone':r[2]} for r in all_c if r[3] and r[3].month==today.month and r[3].day==today.day]
@@ -1108,7 +1109,8 @@ def admin_toggle_staff(user_id):
 @app.route('/customers')
 @login_required
 def customers():
-    now = datetime.now()
+    from datetime import timezone, timedelta as td2
+    now = datetime.now(timezone(td2(hours=4)))
     search = request.args.get('search', '').strip().lower()
     birthday_filter = request.args.get('birthday', '')
     birthdays_today = []
@@ -2721,10 +2723,12 @@ def my_desk():
 @app.route('/check-birthdays')
 @login_required
 def check_birthdays():
-    today = datetime.now()
+    from datetime import timezone, timedelta
+    dubai_tz = timezone(timedelta(hours=4))
+    today = datetime.now(dubai_tz)
     try:
         result = db.session.execute(db.text("SELECT id, name, date_of_birth FROM customer WHERE date_of_birth IS NOT NULL")).fetchall()
-        out = f"<b>Today: {today.day}/{today.month}/{today.year}</b><br><br>Customers with DOB ({len(result)}):<br>"
+        out = f"<b>Today (Dubai): {today.day}/{today.month}/{today.year}</b><br><br>Customers with DOB ({len(result)}):<br>"
         for r in result:
             dob = r[2]
             match = dob and dob.month == today.month and dob.day == today.day
