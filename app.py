@@ -272,6 +272,16 @@ class DeskNote(db.Model):
     user = db.relationship('User', foreign_keys=[user_id])
     mention_user = db.relationship('User', foreign_keys=[mention_user_id])
 
+@app.context_processor
+def inject_mentions():
+    if 'user_id' in session:
+        try:
+            count = DeskNote.query.filter_by(mention_user_id=session['user_id'], is_done=False).count()
+            return {'unread_mentions': count}
+        except:
+            pass
+    return {'unread_mentions': 0}
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):

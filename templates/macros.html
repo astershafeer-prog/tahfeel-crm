@@ -17,6 +17,24 @@
     <a href="/logout" class="topbar-logout">Logout</a>
   </div>
 </div>
+
+{% if unread_mentions > 0 %}
+<div id="mentionPopup" style="position:fixed;top:16px;right:16px;z-index:9999;background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:14px 18px;display:flex;align-items:center;gap:12px;max-width:320px;animation:slideIn .3s ease;">
+  <div style="width:36px;height:36px;border-radius:50%;background:#F5F3FF;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">💬</div>
+  <div style="flex:1;">
+    <div style="font-size:13px;font-weight:600;color:#1A2333;">You have {{ unread_mentions }} mention{{ 's' if unread_mentions > 1 else '' }}</div>
+    <div style="font-size:11px;color:#94A3B8;margin-top:2px;">Colleagues tagged you on My Desk</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+    <a href="/desk" style="font-size:11px;font-weight:600;color:#1A3B8B;text-decoration:none;background:#EBF2FF;padding:3px 10px;border-radius:6px;">View →</a>
+    <button onclick="document.getElementById('mentionPopup').style.display='none'" style="font-size:11px;color:#94A3B8;background:none;border:none;cursor:pointer;padding:0;">Dismiss</button>
+  </div>
+</div>
+<style>
+@keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+</style>
+{% endif %}
+
 {% endmacro %}
 
 {% macro nav(active='') %}
