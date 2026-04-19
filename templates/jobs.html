@@ -102,10 +102,16 @@
 
     <!-- Task List — Bar Style -->
     <form method="post" action="/jobs/bulk-delete" id="bulkForm">
-    <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
-      <label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:5px;cursor:pointer;">
-        <input type="checkbox" id="selectAll" onclick="toggleAll()"> Select all
-      </label>
+    <!-- Column headers -->
+    <div style="display:grid;grid-template-columns:4px 1.5fr 1fr 130px 120px auto;gap:10px;padding:8px 14px;margin-bottom:4px;">
+      <div></div>
+      <div style="display:flex;align-items:center;gap:20px;">
+        <label style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="selectAll" onclick="toggleAll()"> Customer</label>
+      </div>
+      <span style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Assigned To</span>
+      <span style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Due Date</span>
+      <span style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Status</span>
+      <span style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Actions</span>
     </div>
     {% for job in jobs %}
     {% set is_overdue = job.due_date and job.due_date < now and job.status not in ['Done','Closed','Pending Finance Close'] %}

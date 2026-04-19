@@ -1056,7 +1056,7 @@ tr.selected td { background: var(--info-bg) !important; }
 /* Filter card */
 .filter-card { background: white; border-radius: 10px; border: 0.5px solid #E2E8F0; padding: 14px 16px; margin-bottom: 12px; }
 .filter-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.filter-card-title { font-size: 12px; font-weight: 600; color: #475569; }
+.filter-card-title { font-size: 14px; font-weight: 700; color: #1A2333; }
 .filter-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .filter-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
 .ff label { font-size: 10px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 4px; }

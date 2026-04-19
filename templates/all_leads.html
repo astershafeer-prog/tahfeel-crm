@@ -125,10 +125,18 @@
                   <td><strong>{{ lead.name }}</strong></td>
                   <td>{{ lead.company or '—' }}</td>
                   <td>{{ lead.service or '—' }}</td>
-                  <td>{{ lead.assignee.name if lead.assignee else '—' }}</td>
+                  <td>
+                    {% if lead.assignee %}
+                    <div class="av-wrap">
+                      <div class="av" style="background:{% if loop.index % 4 == 1 %}#1A3B8B{% elif loop.index % 4 == 2 %}#10B981{% elif loop.index % 4 == 3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ lead.assignee.name[:2].upper() }}</div>
+                      <span class="av-name">{{ lead.assignee.name.split()[0] }}</span>
+                    </div>
+                    {% else %}<span style="font-size:12px;color:#CBD5E1;">—</span>{% endif %}
+                  </td>
                   <td style="font-size:12px;color:var(--text-muted);">{{ lead.created_at.strftime('%d %b') if lead.created_at else '—' }}</td>
-                  <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;{% endif %}">
-                    {{ lead.due_date.strftime('%d %b %Y') }}
+                  <td>
+                    {% set is_overdue = lead.due_date < now and lead.status not in ['Converted','Lost'] %}
+                    <span class="due-pill {% if is_overdue %}overdue{% endif %}">📅 {{ lead.due_date.strftime('%d %b') }}</span>
                   </td>
                   <td>
                     {% if lead.status == 'Converted' %}
