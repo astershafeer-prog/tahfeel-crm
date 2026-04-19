@@ -87,24 +87,27 @@
     </div>
     <div class="section-label" style="margin-top:14px;">Staff Workload</div>
     <div class="card">
-      <table>
-        <thead>
-          <tr><th>Staff</th><th>Leads</th><th>Overdue Leads</th><th>Active Tasks</th><th>Overdue Tasks</th></tr>
-        </thead>
-        <tbody>
-          {% for s in staff_stats %}
-          <tr>
-            <td><strong>{{ s.name }}</strong></td>
-            <td>{{ s.leads }}</td>
-            <td>{% if s.overdue_leads > 0 %}<span class="badge b-lost">{{ s.overdue_leads }}</span>{% else %}0{% endif %}</td>
-            <td>{{ s.active_jobs }}</td>
-            <td>{% if s.overdue_jobs > 0 %}<span class="badge b-lost">{{ s.overdue_jobs }}</span>{% else %}0{% endif %}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="5" class="empty">No staff found.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div style="display:grid;grid-template-columns:1.5fr 80px 100px 100px 100px;gap:10px;padding:8px 16px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Staff Member</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Leads</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue Leads</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Active Tasks</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue Tasks</span>
+      </div>
+      {% for s in staff_stats %}
+      <div style="display:grid;grid-template-columns:1.5fr 80px 100px 100px 100px;gap:10px;padding:11px 16px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
+        <div class="av-wrap">
+          <div class="av" style="background:{% if loop.index % 4 == 1 %}#1A3B8B{% elif loop.index % 4 == 2 %}#10B981{% elif loop.index % 4 == 3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ s.name[:2].upper() }}</div>
+          <span style="font-size:13px;font-weight:600;color:#1A2333;">{{ s.name }}</span>
+        </div>
+        <span style="font-size:13px;color:#475569;">{{ s.leads }}</span>
+        <span>{% if s.overdue_leads > 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">{{ s.overdue_leads }}</span>{% else %}<span style="font-size:13px;color:#CBD5E1;">0</span>{% endif %}</span>
+        <span style="font-size:13px;color:#475569;">{{ s.active_jobs }}</span>
+        <span>{% if s.overdue_jobs > 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">{{ s.overdue_jobs }}</span>{% else %}<span style="font-size:13px;color:#CBD5E1;">0</span>{% endif %}</span>
+      </div>
+      {% else %}
+      <div class="empty">No staff found.</div>
+      {% endfor %}
     </div>
   </div>
 

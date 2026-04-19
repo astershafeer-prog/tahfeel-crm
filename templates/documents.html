@@ -47,22 +47,24 @@
     <div class="filter-card">
       <div class="filter-card-head">
         <div class="filter-card-title">⊟ Filters</div>
-        <a href="/documents" class="btn-reset" style="font-size:11px;">Reset</a>
       </div>
-      <form method="get" class="filter-grid-3">
-        <div class="ff"><label>Expiry</label>
-          <select name="expiry">
-            <option value="">All Documents</option>
-            <option value="30" {% if request.args.get('expiry')=='30' %}selected{% endif %}>≤30 Days</option>
-            <option value="60" {% if request.args.get('expiry')=='60' %}selected{% endif %}>31–60 Days</option>
-            <option value="90" {% if request.args.get('expiry')=='90' %}selected{% endif %}>61–90 Days</option>
-          </select>
+      <form method="get">
+        <div class="ff" style="margin-bottom:12px;">
+          <label>Search</label>
+          <input type="text" name="search" value="{{ request.args.get('search','') }}" placeholder="Customer name, doc type, owner...">
         </div>
-        <div class="ff"><label>Search</label>
-          <input type="text" name="search" value="{{ request.args.get('search','') }}" placeholder="Customer, doc type, owner...">
-        </div>
-        <div style="display:flex;align-items:flex-end;gap:8px;">
-          <button type="submit" class="btn-primary" style="height:36px;padding:0 20px;">Apply</button>
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end;">
+          <div class="ff">
+            <label>Expiry</label>
+            <select name="expiry">
+              <option value="">All Documents</option>
+              <option value="30" {% if request.args.get('expiry')=='30' %}selected{% endif %}>≤30 Days</option>
+              <option value="60" {% if request.args.get('expiry')=='60' %}selected{% endif %}>31–60 Days</option>
+              <option value="90" {% if request.args.get('expiry')=='90' %}selected{% endif %}>61–90 Days</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-primary" style="height:36px;padding:0 20px;white-space:nowrap;">Apply</button>
+          <a href="/documents" class="btn-reset" style="height:36px;display:flex;align-items:center;padding:0 14px;">Reset</a>
         </div>
       </form>
     </div>
