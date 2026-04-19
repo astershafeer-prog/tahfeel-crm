@@ -33,6 +33,9 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
+          {% if job.updates %}
+          <button onclick="openTimelinePopup()" class="ib" title="Preview & Download Timeline" style="font-size:14px;">🖼</button>
+          {% endif %}
           {% if job.customer.phone %}
           <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ job.customer.name|urlencode }}%2C%0A%0AThank%20you%20for%20choosing%20Tahfeel%20Business%20Setup%20Services.%0A%0AHere%20is%20the%20latest%20update%20on%20your%20application%3A%0A%0A%F0%9F%93%8B%20*Service%3A*%20{{ job.job_type|urlencode }}%0A%F0%9F%93%8C%20*Status%3A*%20{{ job.status|urlencode }}{% if job.due_date %}%0A%F0%9F%93%85%20*Expected%20Completion%3A*%20{{ job.due_date.strftime('%d %b %Y')|urlencode }}{% endif %}{% if job.assignee %}%0A%F0%9F%91%A4%20*Your%20Representative%3A*%20{{ job.assignee.name|urlencode }}{% endif %}%0A%0A{% if job.status in ['Done','Closed'] %}%E2%9C%85%20Your%20application%20has%20been%20completed%20successfully.%20Please%20contact%20us%20if%20you%20need%20anything%20further.{% else %}We%20are%20actively%20working%20on%20your%20application%20and%20will%20keep%20you%20informed%20at%20every%20step.{% endif %}%0A%0AFor%20any%20queries%2C%20feel%20free%20to%20reach%20out%20to%20us%20anytime.%0A%0A%E2%80%94%20*Tahfeel%20Business%20Setup%20Services*%20%F0%9F%8F%A2%0ADubai%2C%20UAE" target="_blank" class="ib" style="background:#25D366;border-color:#25D366;color:white;font-size:14px;" title="Send WhatsApp Update">💬</a>
           {% endif %}
@@ -322,9 +325,7 @@
     <div class="card" id="taskTimeline">
       <div class="card-header">
         <h2>📋 Timeline <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ job.updates|length }} update{{ 's' if job.updates|length != 1 else '' }}</span></h2>
-        {% if job.updates %}
-        <button onclick="openTimelinePopup()" class="ib" title="Preview & Download Timeline" style="font-size:14px;">🖼</button>
-        {% endif %}
+
       </div>
       <div style="padding:16px 20px;" id="timelineContent">
         {% if job.updates %}
