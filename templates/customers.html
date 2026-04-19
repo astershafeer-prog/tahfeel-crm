@@ -66,7 +66,7 @@
               <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
               {% else %}—{% endif %}
             </td>
-            <td><span class="badge b-{{ (c.customer_type or 'individual')|lower }}">{{ c.customer_type or 'Individual' }}</span></td>
+            <td><span title="{{ c.customer_type or 'Individual' }}" style="font-size:16px;">{% if c.customer_type == 'Company' %}🏢{% elif c.customer_type == 'Investor' %}💼{% else %}👤{% endif %}</span></td>
             <td>{{ c.nationality or '—' }}</td>
             <td>
               {% if c.rep %}
