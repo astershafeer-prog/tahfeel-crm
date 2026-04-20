@@ -2758,26 +2758,3 @@ else:
 
 from reports import reports_bp
 app.register_blueprint(reports_bp)
-
-@app.route('/admin/clear-all-data-tahfeel2026', methods=['GET'])
-@login_required
-def clear_all_data():
-    if session.get('role') != 'admin':
-        return "Admin only", 403
-    try:
-        db.session.execute(db.text("DELETE FROM job_update"))
-        db.session.execute(db.text("DELETE FROM sub_task"))
-        db.session.execute(db.text("DELETE FROM document"))
-        db.session.execute(db.text("DELETE FROM job"))
-        db.session.execute(db.text("DELETE FROM activity_log"))
-        db.session.execute(db.text("DELETE FROM desk_note"))
-        db.session.execute(db.text("DELETE FROM monthly_target"))
-        db.session.execute(db.text("DELETE FROM lead_update"))
-        db.session.execute(db.text("UPDATE customer SET lead_id = NULL"))
-        db.session.execute(db.text("DELETE FROM customer"))
-        db.session.execute(db.text("DELETE FROM lead"))
-        db.session.commit()
-        return "<h2 style='font-family:Arial;color:green;padding:40px;'>✅ All data cleared successfully. Users, services, sources and job types are intact. <a href='/dashboard'>Go to Dashboard</a></h2>"
-    except Exception as e:
-        db.session.rollback()
-        return f"<h2 style='color:red;padding:40px;'>Error: {e}</h2>"
