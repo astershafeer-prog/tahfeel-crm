@@ -50,6 +50,9 @@
   {% if session.role in ['admin', 'sales'] %}
   <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
   {% endif %}
+  {% if session.role in ['admin', 'finance'] %}
+  <a href="/reports" {% if active=='reports' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📊 Reports</a>
+  {% endif %}
   <div style="flex:1;"></div>
   {% if session.role == 'admin' %}
   <a href="/admin" class="admin-link {% if active=='admin' %}active{% endif %}" style="display:flex;align-items:center;gap:5px;">⚙ Admin</a>

@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Reports — Tahfeel Business Solutions{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+
+  <!-- Page Header -->
+  <div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-0" style="color:#133E87; font-weight:700;">
+        <i class="bi bi-file-earmark-bar-graph-fill me-2"></i>Reports
+      </h2>
+      <small class="text-muted">Export data reports as Excel (.xlsx)</small>
+    </div>
+  </div>
+
+  <!-- Global Date Range Filter -->
+  <div class="card shadow-sm mb-4 border-0" style="background:#f8f9fc;">
+    <div class="card-body py-3">
+      <form id="dateForm" class="row g-3 align-items-end">
+        <div class="col-auto">
+          <label class="form-label fw-semibold mb-1" style="color:#133E87;">From</label>
+          <input type="date" id="date_from" name="date_from" class="form-control form-control-sm"
+                 value="{{ defaults.date_from }}" style="min-width:150px;">
+        </div>
+        <div class="col-auto">
+          <label class="form-label fw-semibold mb-1" style="color:#133E87;">To</label>
+          <input type="date" id="date_to" name="date_to" class="form-control form-control-sm"
+                 value="{{ defaults.date_to }}" style="min-width:150px;">
+        </div>
+        <div class="col-auto">
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-secondary" onclick="setRange('this_month')">This Month</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="setRange('last_month')">Last Month</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="setRange('this_year')">This Year</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Report Cards Grid -->
+  <div class="row g-4">
+
+    <!-- 1. Lead Detail Report -->
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 border-0 shadow-sm report-card">
+        <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#133E87,#1a5299);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="report-icon"><i class="bi bi-person-lines-fill"></i></div>
+            <div>
+              <h6 class="mb-0 text-white fw-bold">Lead Detail Report</h6>
+              <small class="text-white-50">Full lead lifecycle & history</small>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <ul class="report-features">
+            <li><i class="bi bi-check2 text-success"></i> Lead name, company, phone, service, source</li>
+            <li><i class="bi bi-check2 text-success"></i> Assigned staff &amp; current status</li>
+            <li><i class="bi bi-check2 text-success"></i> Full status history with timestamps</li>
+            <li><i class="bi bi-check2 text-success"></i> Days to decision &amp; interaction count</li>
+            <li><i class="bi bi-check2 text-success"></i> Potential value (AED)</li>
+          </ul>
+        </div>
+        <div class="card-footer border-0 bg-transparent pt-0">
+          <button class="btn btn-report w-100" onclick="exportReport('leads')">
+            <i class="bi bi-download me-2"></i>Export to Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Sales Report -->
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 border-0 shadow-sm report-card">
+        <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#1a6e3c,#21874b);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="report-icon"><i class="bi bi-bag-check-fill"></i></div>
+            <div>
+              <h6 class="mb-0 text-white fw-bold">Sales Report</h6>
+              <small class="text-white-50">Customer, service &amp; revenue summary</small>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <ul class="report-features">
+            <li><i class="bi bi-check2 text-success"></i> Customer, company, phone, email</li>
+            <li><i class="bi bi-check2 text-success"></i> Job type, source, assigned staff</li>
+            <li><i class="bi bi-check2 text-success"></i> Created &amp; due dates</li>
+            <li><i class="bi bi-check2 text-success"></i> Invoiced, received &amp; outstanding (AED)</li>
+            <li><i class="bi bi-check2 text-success"></i> Column totals</li>
+          </ul>
+        </div>
+        <div class="card-footer border-0 bg-transparent pt-0">
+          <button class="btn btn-report w-100" onclick="exportReport('sales')" style="background:#1a6e3c;">
+            <i class="bi bi-download me-2"></i>Export to Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Finance Report -->
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 border-0 shadow-sm report-card">
+        <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#6a3d9a,#7b4fb5);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="report-icon"><i class="bi bi-cash-stack"></i></div>
+            <div>
+              <h6 class="mb-0 text-white fw-bold">Finance Report</h6>
+              <small class="text-white-50">Invoiced / received / pending per month</small>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <ul class="report-features">
+            <li><i class="bi bi-check2 text-success"></i> Monthly summary by staff member</li>
+            <li><i class="bi bi-check2 text-success"></i> Invoiced, received, pending (AED)</li>
+            <li><i class="bi bi-check2 text-success"></i> Collection rate per staff</li>
+            <li><i class="bi bi-check2 text-success"></i> Job detail sheet (2nd tab)</li>
+            <li><i class="bi bi-check2 text-success"></i> Grand totals row</li>
+          </ul>
+        </div>
+        <div class="card-footer border-0 bg-transparent pt-0">
+          <button class="btn btn-report w-100" onclick="exportReport('finance')" style="background:#6a3d9a;">
+            <i class="bi bi-download me-2"></i>Export to Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Task Report -->
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 border-0 shadow-sm report-card">
+        <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#c45c00,#e07000);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="report-icon"><i class="bi bi-list-task"></i></div>
+            <div>
+              <h6 class="mb-0 text-white fw-bold">Task Report</h6>
+              <small class="text-white-50">Jobs with full status history</small>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <ul class="report-features">
+            <li><i class="bi bi-check2 text-success"></i> Customer, company, job type</li>
+            <li><i class="bi bi-check2 text-success"></i> Assigned staff &amp; current status</li>
+            <li><i class="bi bi-check2 text-success"></i> Created &amp; due dates</li>
+            <li><i class="bi bi-check2 text-success"></i> Full status history log</li>
+            <li><i class="bi bi-check2 text-success"></i> Days to completion &amp; interaction count</li>
+          </ul>
+        </div>
+        <div class="card-footer border-0 bg-transparent pt-0">
+          <button class="btn btn-report w-100" onclick="exportReport('tasks')" style="background:#c45c00;">
+            <i class="bi bi-download me-2"></i>Export to Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Document Expiry Report -->
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 border-0 shadow-sm report-card">
+        <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#b5000f,#d4001a);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="report-icon"><i class="bi bi-file-earmark-x-fill"></i></div>
+            <div>
+              <h6 class="mb-0 text-white fw-bold">Document Expiry Report</h6>
+              <small class="text-white-50">Track expiring documents by date</small>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <ul class="report-features">
+            <li><i class="bi bi-check2 text-success"></i> Customer name &amp; company</li>
+            <li><i class="bi bi-check2 text-success"></i> Document type &amp; number</li>
+            <li><i class="bi bi-check2 text-success"></i> Issue &amp; expiry dates</li>
+            <li><i class="bi bi-check2 text-success"></i> Days remaining (color-coded)</li>
+            <li><i class="bi bi-check2 text-success"></i> Status: Valid / Expiring / Critical / Expired</li>
+          </ul>
+        </div>
+        <div class="card-footer border-0 bg-transparent pt-0">
+          <button class="btn btn-report w-100" onclick="exportReport('documents')" style="background:#b5000f;">
+            <i class="bi bi-download me-2"></i>Export to Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Staff Performance Report -->
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 border-0 shadow-sm report-card">
+        <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#006666,#008888);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="report-icon"><i class="bi bi-people-fill"></i></div>
+            <div>
+              <h6 class="mb-0 text-white fw-bold">Staff Performance Report</h6>
+              <small class="text-white-50">Leads, tasks &amp; revenue per person</small>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <ul class="report-features">
+            <li><i class="bi bi-check2 text-success"></i> Leads assigned, won, lost &amp; conversion rate</li>
+            <li><i class="bi bi-check2 text-success"></i> Tasks assigned &amp; completion rate</li>
+            <li><i class="bi bi-check2 text-success"></i> Total invoiced &amp; received (AED)</li>
+            <li><i class="bi bi-check2 text-success"></i> Outstanding per staff</li>
+            <li><i class="bi bi-check2 text-success"></i> Lead detail by staff (2nd tab)</li>
+          </ul>
+        </div>
+        <div class="card-footer border-0 bg-transparent pt-0">
+          <button class="btn btn-report w-100" onclick="exportReport('staff')" style="background:#006666;">
+            <i class="bi bi-download me-2"></i>Export to Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /row -->
+</div><!-- /reports-page -->
+
+<!-- Loading Overlay -->
+<div id="exportOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45);
+     z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:12px;">
+  <div class="spinner-border text-light" style="width:3rem; height:3rem;" role="status"></div>
+  <div class="text-white fw-semibold fs-6">Generating report…</div>
+</div>
+
+<style>
+.report-card {
+  border-radius: 12px !important;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.report-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(19,62,135,.15) !important;
+}
+.report-card .card-header {
+  border-radius: 12px 12px 0 0 !important;
+}
+.report-icon {
+  width: 38px; height: 38px;
+  background: rgba(255,255,255,.18);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: #fff; flex-shrink: 0;
+}
+.report-features {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.report-features li {
+  font-size: 13px; color: #444;
+  display: flex; align-items: flex-start; gap: 6px;
+}
+.report-features li i { flex-shrink: 0; margin-top: 2px; }
+.btn-report {
+  background: #133E87;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 9px 0;
+  transition: opacity .15s;
+}
+.btn-report:hover { opacity: .88; color: #fff; }
+</style>
+
+<script>
+function setRange(preset) {
+  const today = new Date();
+  let from, to;
+  if (preset === 'this_month') {
+    from = new Date(today.getFullYear(), today.getMonth(), 1);
+    to   = today;
+  } else if (preset === 'last_month') {
+    from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    to   = new Date(today.getFullYear(), today.getMonth(), 0);
+  } else if (preset === 'this_year') {
+    from = new Date(today.getFullYear(), 0, 1);
+    to   = today;
+  }
+  document.getElementById('date_from').value = from.toISOString().slice(0, 10);
+  document.getElementById('date_to').value   = to.toISOString().slice(0, 10);
+}
+
+function exportReport(type) {
+  const from = document.getElementById('date_from').value;
+  const to   = document.getElementById('date_to').value;
+  if (!from || !to) {
+    alert('Please select both From and To dates.');
+    return;
+  }
+  if (new Date(from) > new Date(to)) {
+    alert('"From" date cannot be after "To" date.');
+    return;
+  }
+  const urls = {
+    leads:     '/reports/leads/export',
+    sales:     '/reports/sales/export',
+    finance:   '/reports/finance/export',
+    tasks:     '/reports/tasks/export',
+    documents: '/reports/documents/export',
+    staff:     '/reports/staff/export',
+  };
+  const url = `${urls[type]}?date_from=${from}&date_to=${to}`;
+  const overlay = document.getElementById('exportOverlay');
+  overlay.style.display = 'flex';
+  // Trigger download via hidden link
+  const a = document.createElement('a');
+  a.href = url;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Hide overlay after short delay (download starts in background)
+  setTimeout(() => { overlay.style.display = 'none'; }, 2500);
+}
+</script>
+{% endblock %}

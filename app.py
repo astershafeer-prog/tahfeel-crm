@@ -43,6 +43,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+from reports import reports_bp
+app.register_blueprint(reports_bp)
+
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
