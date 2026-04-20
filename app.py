@@ -507,9 +507,9 @@ def dashboard():
             u_jobs_all = [j for j in all_jobs_db if j.assigned_to == u.id]
             u_jobs = [j for j in u_jobs_all if in_period(j.created_at, wl_filter)]
             u_closed = [j for j in u_jobs_all if j.status == 'Closed']
-            # Sales value: credited to the person who CREATED the job (primary representative)
-            u_sales_jobs = [j for j in all_jobs_db if j.created_by == u.id and in_period(j.created_at, wl_filter)]
-            u_sales_closed = [j for j in all_jobs_db if j.created_by == u.id and j.status == 'Closed']
+            # Sales value: credited to the customer's representative (assigned_to on customer)
+            u_sales_jobs = [j for j in all_jobs_db if j.customer and j.customer.assigned_to == u.id and in_period(j.created_at, wl_filter)]
+            u_sales_closed = [j for j in all_jobs_db if j.customer and j.customer.assigned_to == u.id and j.status == 'Closed']
             u_invoiced = sum((j.amount_invoiced or 0) for j in u_sales_jobs if j.status not in ['Pending Finance Approval'])
             u_closed_val = sum((j.amount_received or 0) for j in u_sales_closed)
             t = staff_targets.get(u.id)

@@ -95,7 +95,7 @@
     </div>
 
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #0F2660;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:20px;overflow:hidden;">
-      <div style="display:grid;grid-template-columns:1.3fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr;gap:8px;padding:8px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
+      <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.9fr;gap:8px;padding:8px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Staff</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Leads</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue</span>
@@ -109,11 +109,11 @@
       </div>
       {% for s in staff_stats %}
       {% set amt_pct = [(s.invoiced / s.amount_target * 100)|int, 100]|min if s.amount_target > 0 else 0 %}
-      <div style="display:grid;grid-template-columns:1.3fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr;gap:8px;padding:10px 14px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
+      <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.9fr;gap:8px;padding:10px 14px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
         <div class="av-wrap">
           <div class="av" style="background:{% if loop.index%4==1 %}#1A3B8B{% elif loop.index%4==2 %}#10B981{% elif loop.index%4==3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ s.name[:2].upper() }}</div>
           <div>
-            <div style="font-size:12px;font-weight:600;color:#1A2333;">{{ s.name.split()[0] }}</div>
+            <div style="font-size:12px;font-weight:600;color:#1A2333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.name }}</div>
             <div style="font-size:10px;color:#94A3B8;">{{ s.role|capitalize }}</div>
           </div>
         </div>

@@ -479,10 +479,10 @@ def export_staff_report():
         jd  = sum(1 for j in jobs if j.status in done_s)
         jcr = f"{jd/jt*100:.1f}%" if jt > 0 else "—"
 
-        # Sales value: credited to job CREATOR (primary representative), not assignee
-        sales_jobs = db.session.query(Job).filter(
-            Job.created_by == user.id,
+        # Sales value: credited to customer's representative (assigned_to on customer)
+        all_jobs_period = db.session.query(Job).filter(
             Job.created_at >= df_d, Job.created_at <= dt_d).all()
+        sales_jobs = [j for j in all_jobs_period if j.customer and j.customer.assigned_to == user.id]
         inv = sum(float(j.amount_invoiced or 0) for j in sales_jobs)
         rec = sum(float(j.amount_received or 0) for j in sales_jobs)
         rows.append([user.name, user.role, lt, lw, ll, lcr, jt, jd, jcr, inv, rec, inv - rec])
