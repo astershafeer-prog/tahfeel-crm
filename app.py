@@ -800,6 +800,7 @@ def import_leads():
                 remarks = row[8] if len(row) > 8 else None
                 assigned_name = str(row[9]).strip() if len(row) > 9 and row[9] else None
                 lead_date_str = str(row[10]).strip() if len(row) > 10 and row[10] else None
+                campaign = str(row[11]).strip() if len(row) > 11 and row[11] else None
                 assigned_id = None
                 if assigned_name:
                     assigned_id = staff_map.get(assigned_name.lower())
@@ -830,6 +831,7 @@ def import_leads():
                     remarks=str(remarks) if remarks else None,
                     representative=session['user_name'],
                     assigned_to=assigned_id,
+                    campaign=campaign,
                     created_at=created_dt,
                     due_date=created_dt + timedelta(days=1)
                 )
@@ -860,20 +862,22 @@ def download_template():
     wb = Workbook()
     ws = wb.active
     ws.title = "Leads"
+    campaigns = Campaign.query.order_by(Campaign.name).all()
     headers = ['Name*', 'Company', 'Phone*', 'Email', 'Address',
-               'Source', 'Service', 'Lead Type', 'Remarks', 'Assigned To', 'Lead Date']
+               'Source', 'Service', 'Lead Type', 'Remarks', 'Assigned To', 'Lead Date', 'Campaign']
     ws.append(headers)
     ws.append(['John Smith', 'ABC Trading LLC', '+971501234567',
                'john@abc.ae', 'Dubai',
                sources[0].name if sources else 'WhatsApp',
                services[0].name if services else 'Trade License',
                'New', 'Interested in mainland license',
-               staff[0].name if staff else '', '2026-04-16'])
+               staff[0].name if staff else '', '2026-04-16',
+               campaigns[0].name if campaigns else ''])
     ws.append(['Sara Ahmed', '', '+971509876543', '', 'Sharjah',
                sources[1].name if len(sources) > 1 else '',
                services[1].name if len(services) > 1 else '',
                'New', '',
-               staff[1].name if len(staff) > 1 else '', '2026-04-16'])
+               staff[1].name if len(staff) > 1 else '', '2026-04-16', ''])
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
     for cell in ws[1]:
@@ -895,10 +899,14 @@ def download_template():
     ref['D1'] = 'Lead Type'
     ref['D2'] = 'New'
     ref['D3'] = 'Old Follow-up'
+    ref['E1'] = 'Campaigns'
+    for i, c in enumerate(campaigns, start=2):
+        ref.cell(row=i, column=5, value=c.name)
     ref.sheet_state = 'hidden'
     service_count = len(services) + 1
     source_count = len(sources) + 1
     staff_count = len(staff) + 1
+    campaign_count = len(campaigns) + 1
     dv_source = DataValidation(type="list", formula1=f"Reference!$B$2:$B${source_count}", allow_blank=True, showDropDown=False)
     dv_source.sqref = "F2:F1000"
     ws.add_data_validation(dv_source)
@@ -911,6 +919,10 @@ def download_template():
     dv_staff = DataValidation(type="list", formula1=f"Reference!$C$2:$C${staff_count}", allow_blank=True, showDropDown=False)
     dv_staff.sqref = "J2:J1000"
     ws.add_data_validation(dv_staff)
+    if campaigns:
+        dv_campaign = DataValidation(type="list", formula1=f"Reference!$E$2:$E${campaign_count}", allow_blank=True, showDropDown=False)
+        dv_campaign.sqref = "L2:L1000"
+        ws.add_data_validation(dv_campaign)
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
