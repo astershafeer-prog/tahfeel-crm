@@ -171,10 +171,8 @@ class Job(db.Model):
     assignee = db.relationship('User', foreign_keys=[assigned_to])
     creator = db.relationship('User', foreign_keys=[created_by])
     finance_approver = db.relationship('User', foreign_keys=[finance_approved_by])
-    parent_job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=True)
     updates = db.relationship('JobUpdate', backref='job', lazy=True, order_by='JobUpdate.created_at.desc()')
     subtasks = db.relationship('SubTask', backref='job', lazy=True, order_by='SubTask.created_at')
-    child_jobs = db.relationship('Job', foreign_keys='Job.parent_job_id', backref=db.backref('parent_job', remote_side='Job.id'), lazy=True, order_by='Job.created_at')
 
 class SubTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1597,8 +1595,7 @@ def add_job():
             amount_received=0,
             num_persons=int(request.form.get('num_persons') or 1),
             created_by=session['user_id'],
-            status='Pending Finance Approval',
-            parent_job_id=int(request.form['parent_job_id']) if request.form.get('parent_job_id') else None
+            status='Pending Finance Approval'
         )
         db.session.add(job)
         db.session.commit()
@@ -1755,9 +1752,12 @@ def job_detail(job_id):
         return redirect(url_for('job_detail', job_id=job_id))
     users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
     service_types = ServiceType.query.order_by(ServiceType.name).all()
+    # All jobs for same customer (for multi-task timeline)
+    sibling_jobs = Job.query.filter_by(customer_id=job.customer_id).order_by(Job.created_at.asc()).all()
     return render_template('job_detail.html', job=job, now=now,
                            statuses=JOB_STATUSES, users=users,
-                           service_types=service_types, timedelta=timedelta)
+                           service_types=service_types, timedelta=timedelta,
+                           sibling_jobs=sibling_jobs)
 
 @app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -2539,7 +2539,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS final_remarks TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS future_work_notes TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
-            'ALTER TABLE job ADD COLUMN IF NOT EXISTS parent_job_id INTEGER REFERENCES job(id)',
+
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_url TEXT',

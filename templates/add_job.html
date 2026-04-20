@@ -90,19 +90,6 @@
             <label>Internal Notes</label>
             <textarea name="internal_notes" placeholder="Context, special instructions..." rows="2"></textarea>
           </div>
-          <div class="form-group" style="margin-top:4px;">
-            <label style="display:flex;align-items:center;gap:6px;">
-              🔗 Parent Task <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(optional — link this as a sub-job of another task)</span>
-            </label>
-            <select name="parent_job_id">
-              <option value="">— Standalone task —</option>
-              {% for j in all_jobs %}
-              <option value="{{ j.id }}" {% if request.args.get('parent_job_id') == j.id|string %}selected{% endif %}>
-                #{{ j.id }} · {{ j.job_type }} — {{ j.customer.name }}{% if j.customer.company %} ({{ j.customer.company }}){% endif %}
-              </option>
-              {% endfor %}
-            </select>
-          </div>
         </div>
       </div>
 

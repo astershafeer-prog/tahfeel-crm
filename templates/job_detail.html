@@ -30,23 +30,7 @@
             <a href="/customers/{{ job.customer_id }}" style="color:var(--primary);text-decoration:none;font-weight:600;">{{ job.customer.name }}</a>
             {% if job.customer.company %} — {{ job.customer.company }}{% endif %}
           </div>
-          {% if job.parent_job %}
-          <div style="margin-top:4px;font-size:11px;">
-            <span style="background:#EEF2FF;color:#4F46E5;padding:2px 8px;border-radius:10px;font-weight:600;">
-              🔗 Sub-job of: <a href="/jobs/{{ job.parent_job.id }}" style="color:#4F46E5;text-decoration:none;">#{{ job.parent_job.id }} {{ job.parent_job.job_type }}</a>
-            </span>
-          </div>
-          {% endif %}
-          {% if job.child_jobs %}
-          <div style="margin-top:4px;font-size:11px;display:flex;gap:6px;flex-wrap:wrap;">
-            <span style="color:#94A3B8;">Sub-jobs:</span>
-            {% for cj in job.child_jobs %}
-            <a href="/jobs/{{ cj.id }}" style="background:#F0FDF4;color:#059669;padding:2px 8px;border-radius:10px;font-weight:600;text-decoration:none;font-size:11px;">
-              #{{ cj.id }} {{ cj.job_type }} <span style="opacity:0.7;">({{ cj.status }})</span>
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
+
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
@@ -396,84 +380,84 @@
         <!-- Brand header -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #EEF2FF;">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:42px;height:42px;background:#133E87;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:18px;letter-spacing:-1px;">T</div>
+            <div style="width:42px;height:42px;background:#133E87;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:18px;">T</div>
             <div>
-              <div style="font-size:14px;font-weight:800;color:#133E87;letter-spacing:-0.3px;">Tahfeel Business Setup Services</div>
+              <div style="font-size:14px;font-weight:800;color:#133E87;">Tahfeel Business Setup Services</div>
               <div style="font-size:10px;color:#94A3B8;margin-top:1px;">Application Status Update · Dubai, UAE</div>
             </div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:10px;color:#94A3B8;">Generated</div>
+            <div style="font-size:9px;color:#94A3B8;">Generated</div>
             <div style="font-size:11px;font-weight:600;color:#475569;" id="tlDate"></div>
           </div>
         </div>
 
-        <!-- Job info -->
-        <div style="margin-bottom:24px;">
-          <div style="font-size:18px;font-weight:800;color:#1A2333;margin-bottom:4px;">{{ job.job_type }}</div>
-          <div style="font-size:12px;color:#64748B;display:flex;gap:16px;flex-wrap:wrap;">
-            <span>👤 {{ job.customer.name }}{% if job.customer.company %} · {{ job.customer.company }}{% endif %}</span>
-            {% if job.due_date %}<span>📅 Due {{ job.due_date.strftime('%d %b %Y') }}</span>{% endif %}
-            <span>📌
-              {% if job.status in ['Done','Closed'] %}✅ {{ job.status }}
-              {% elif job.status in ['On Hold','Delayed','Rejected'] %}🔴 {{ job.status }}
-              {% else %}🔵 {{ job.status }}{% endif %}
-            </span>
-          </div>
+        <!-- Customer info -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:13px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Customer</div>
+          <div style="font-size:17px;font-weight:800;color:#1A2333;">{{ job.customer.name }}</div>
+          {% if job.customer.company %}<div style="font-size:12px;color:#64748B;">{{ job.customer.company }}</div>{% endif %}
         </div>
 
-        <!-- Horizontal timeline -->
-        {% set all_updates = job.updates | list | reverse | list %}
-        {% set total = all_updates | length %}
-        {% if total > 0 %}
+        {% if sibling_jobs|length > 1 %}
+        {# ── MULTI-TASK: Horizontal timeline showing all tasks as steps ── #}
+        <div style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">Service Progress</div>
+
         <div style="overflow-x:auto;padding-bottom:8px;">
-          <div style="min-width:{{ [total * 120, 500] | max }}px;padding:16px 0 24px 0;position:relative;">
+          <div style="min-width:{{ sibling_jobs|length * 130 }}px;padding:20px 0 28px 0;position:relative;">
 
-            <!-- Track line -->
-            <div style="position:absolute;top:38px;left:40px;right:40px;height:3px;background:#E2E8F0;z-index:0;"></div>
-            <!-- Filled line (progress) -->
+            {# Track line background #}
+            <div style="position:absolute;top:42px;left:50px;right:50px;height:3px;background:#E2E8F0;z-index:0;"></div>
+
+            {# Filled progress line #}
             {% set done_count = namespace(val=0) %}
-            {% for u in all_updates %}
-              {% if u.status in ['Done','Closed','Completed','Approved','Collected','Submitted','Paid','Received','Issued'] %}
-                {% set done_count.val = done_count.val + 1 %}
-              {% endif %}
+            {% for sj in sibling_jobs %}
+              {% if sj.status in ['Done','Closed','Completed'] %}{% set done_count.val = done_count.val + 1 %}{% endif %}
             {% endfor %}
-            {% if total > 1 %}
-            <div style="position:absolute;top:38px;left:40px;width:calc(({{ done_count.val }} / {{ total }}) * (100% - 80px));height:3px;background:#10B981;z-index:0;transition:width 0.3s;"></div>
-            {% endif %}
+            {% set total_jobs = sibling_jobs|length %}
+            <div style="position:absolute;top:42px;left:50px;height:3px;background:#10B981;z-index:0;
+              width:calc({{ done_count.val }} / {{ total_jobs }} * (100% - 100px));"></div>
 
-            <!-- Steps -->
-            <div style="display:flex;justify-content:space-between;position:relative;z-index:1;">
-            {% for u in all_updates %}
-              {% set is_done = u.status in ['Done','Closed','Completed','Approved','Collected','Submitted','Paid','Received','Issued'] %}
-              {% set is_current = loop.last and not is_done %}
-              <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:100px;padding:0 4px;">
+            {# Steps #}
+            <div style="display:flex;justify-content:space-around;position:relative;z-index:1;">
+            {% for sj in sibling_jobs %}
+              {% set is_done = sj.status in ['Done','Closed','Completed'] %}
+              {% set is_current = sj.id == job.id %}
+              {% set is_active = sj.status not in ['Pending Finance Approval','Pending Finance Close','Closed'] and not is_done %}
 
-                <!-- Icon above circle -->
-                <div style="font-size:16px;margin-bottom:6px;opacity:{{ '1' if is_done or is_current else '0.35' }};">
-                  {% if is_done %}👤
-                  {% elif is_current %}⏳
-                  {% else %}👤{% endif %}
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:110px;padding:0 6px;">
+
+                {# Icon #}
+                <div style="font-size:20px;margin-bottom:8px;opacity:{{ '1' if is_done or is_current or is_active else '0.4' }};">
+                  {% if is_done %}👤{% elif is_current %}⚙️{% else %}👤{% endif %}
                 </div>
 
-                <!-- Circle -->
-                <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;
-                  {% if is_done %}background:#10B981;color:white;box-shadow:0 0 0 3px #D1FAE5;
-                  {% elif is_current %}background:#133E87;color:white;box-shadow:0 0 0 3px #DBEAFE;border:2px dashed #93C5FD;
+                {# Circle #}
+                <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;
+                  {% if is_done %}background:#10B981;color:white;box-shadow:0 0 0 4px #D1FAE5;
+                  {% elif is_current %}background:#133E87;color:white;box-shadow:0 0 0 4px #DBEAFE;
+                  {% elif is_active %}background:#F59E0B;color:white;box-shadow:0 0 0 4px #FEF3C7;
                   {% else %}background:#E2E8F0;color:#94A3B8;{% endif %}">
-                  {% if is_done %}✓{% elif is_current %}●{% else %}○{% endif %}
+                  {% if is_done %}✓{% elif is_current or is_active %}●{% else %}○{% endif %}
                 </div>
 
-                <!-- Label below -->
-                <div style="margin-top:8px;text-align:center;">
-                  <div style="font-size:11px;font-weight:{% if is_done or is_current %}700{% else %}400{% endif %};
-                    color:{% if is_done %}#059669{% elif is_current %}#133E87{% else %}#94A3B8{% endif %};
-                    line-height:1.3;max-width:100px;">
-                    {{ u.status }}
+                {# Label #}
+                <div style="margin-top:10px;text-align:center;">
+                  <div style="font-size:11px;font-weight:{% if is_done or is_current %}700{% else %}500{% endif %};
+                    color:{% if is_done %}#059669{% elif is_current %}#133E87{% elif is_active %}#D97706{% else %}#94A3B8{% endif %};
+                    line-height:1.3;max-width:110px;">{{ sj.job_type }}</div>
+                  <div style="font-size:10px;margin-top:4px;font-weight:600;padding:2px 8px;border-radius:10px;display:inline-block;
+                    {% if is_done %}background:#D1FAE5;color:#059669;
+                    {% elif is_current %}background:#DBEAFE;color:#1D4ED8;
+                    {% elif is_active %}background:#FEF3C7;color:#D97706;
+                    {% else %}background:#F1F5F9;color:#94A3B8;{% endif %}">
+                    {{ sj.status }}
                   </div>
-                  {% if u.created_at and (is_done or is_current) %}
-                  <div style="font-size:9px;color:#94A3B8;margin-top:3px;">{{ u.created_at.strftime('%d/%m/%Y') }}</div>
-                  <div style="font-size:9px;color:#94A3B8;">{{ u.created_at.strftime('%I:%M %p') }}</div>
+                  {% if sj.assignee %}
+                  <div style="font-size:9px;color:#94A3B8;margin-top:4px;">👤 {{ sj.assignee.name }}</div>
+                  {% endif %}
+                  {% if sj.due_date %}
+                  <div style="font-size:9px;color:#94A3B8;">📅 {{ sj.due_date.strftime('%d %b') }}</div>
                   {% endif %}
                 </div>
               </div>
@@ -482,39 +466,40 @@
           </div>
         </div>
 
-        <!-- Child jobs as additional timelines -->
-        {% if job.child_jobs %}
-        <div style="margin-top:20px;padding-top:16px;border-top:1px dashed #E2E8F0;">
-          <div style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Sub-Services</div>
-          {% for cj in job.child_jobs %}
-          <div style="margin-bottom:12px;background:#F8FAFC;border-radius:8px;padding:10px 14px;border-left:3px solid {% if cj.status in ['Done','Closed'] %}#10B981{% elif cj.status in ['On Hold','Delayed'] %}#EF4444{% else %}#133E87{% endif %};">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div style="font-size:12px;font-weight:700;color:#1A2333;">{{ cj.job_type }}</div>
-              <div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;
-                {% if cj.status in ['Done','Closed'] %}background:#D1FAE5;color:#059669;
-                {% elif cj.status in ['On Hold','Delayed'] %}background:#FEE2E2;color:#DC2626;
-                {% else %}background:#DBEAFE;color:#1D4ED8;{% endif %}">
-                {{ cj.status }}
-              </div>
-            </div>
-            {% if cj.assignee %}<div style="font-size:10px;color:#94A3B8;margin-top:3px;">👤 {{ cj.assignee.name }}</div>{% endif %}
-          </div>
-          {% endfor %}
-        </div>
-        {% endif %}
-
         {% else %}
-        <div style="text-align:center;padding:32px 0;color:#94A3B8;font-size:13px;">No updates yet — add the first status update to generate the timeline.</div>
+        {# ── SINGLE TASK: Vertical status history timeline ── #}
+        <div style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">{{ job.job_type }}</div>
+        {% if job.due_date %}<div style="font-size:11px;color:#64748B;margin-bottom:14px;">📅 Due {{ job.due_date.strftime('%d %b %Y') }}</div>{% endif %}
+
+        {% set updates_asc = job.updates | list | reverse | list %}
+        {% if updates_asc %}
+        {% for u in updates_asc %}
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;">
+          <div style="width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:1px;
+            background:{% if u.status in ['Done','Closed','Completed'] %}#10B981{% elif u.status in ['On Hold','Delayed','Rejected'] %}#EF4444{% elif u.status == 'Processing' %}#F59E0B{% else %}#133E87{% endif %};
+            display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700;">
+            {% if u.status in ['Done','Closed','Completed'] %}✓{% else %}{{ loop.index }}{% endif %}
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:700;color:#1A2333;">{{ u.status }}</div>
+            <div style="font-size:10px;color:#94A3B8;">{{ u.created_at.strftime('%d %b %Y · %I:%M %p') }} · {{ u.staff_name }}</div>
+            {% if u.remark %}<div style="font-size:11px;color:#475569;margin-top:3px;line-height:1.4;">{{ u.remark }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="font-size:12px;color:#94A3B8;text-align:center;padding:20px 0;">No updates yet.</div>
+        {% endif %}
         {% endif %}
 
         <!-- Footer -->
         <div style="margin-top:24px;padding-top:12px;border-top:1px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:9px;color:#CBD5E1;">Tahfeel Business Setup Services · Dubai, UAE · tahfeelbusiness.com</div>
-          <div style="font-size:9px;color:#CBD5E1;">For queries: info@tahfeelbusiness.com</div>
+          <div style="font-size:9px;color:#CBD5E1;">Tahfeel Business Setup Services · Dubai, UAE</div>
+          <div style="font-size:9px;color:#CBD5E1;">info@tahfeelbusiness.com</div>
         </div>
       </div>
 
-      <!-- Popup actions -->
+            <!-- Popup actions -->
       <div style="padding:14px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:flex-end;">
         <button onclick="closePopup()" style="height:36px;padding:0 16px;background:white;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;cursor:pointer;color:#475569;">Close</button>
         <button onclick="downloadFromPopup()" style="height:36px;padding:0 20px;background:#133E87;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:white;">⬇ Download Image</button>
