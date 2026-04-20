@@ -88,9 +88,12 @@
         <div class="filter-group">
           <label>Assigned To</label>
           <select name="staff">
-            <option value="">All staff</option>
+            <option value="" {% if session.role != 'sales' and not request.args.get('staff') %}selected{% endif %}>All Staff</option>
             {% for user in users %}
-              <option value="{{ user.id }}" {% if request.args.get('staff') == user.id|string %}selected{% endif %}>{{ user.name }}</option>
+              <option value="{{ user.id }}"
+                {% if request.args.get('staff') == user.id|string %}selected
+                {% elif session.role == 'sales' and not request.args.get('staff') and user.id == session.user_id %}selected
+                {% endif %}>{{ user.name }}</option>
             {% endfor %}
           </select>
         </div>

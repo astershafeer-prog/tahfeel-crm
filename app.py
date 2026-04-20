@@ -635,13 +635,20 @@ def all_leads():
     search = request.args.get('search', '').strip().lower()
     is_default = not any(request.args.get(k) for k in ['date', 'status', 'staff', 'search', 'from', 'to'])
 
+    role = session.get('role')
+    user_id = session.get('user_id')
+
+    # For sales: default to their own leads unless staff filter explicitly set
+    if role == 'sales' and not request.args.get('staff'):
+        leads = [l for l in leads if l.assigned_to == user_id]
+
     if search:
         leads = [l for l in leads if
                  search in (l.name or '').lower() or
                  search in (l.phone or '').lower() or
                  search in (l.company or '').lower()]
     if is_default:
-        # Default: show today's leads only
+        # Default: show today's leads only (admin/operations see all staff, sales see own)
         leads = [l for l in leads if l.created_at and l.created_at.date() == now.date()]
     else:
         leads = apply_lead_filters(leads, request.args, now)
