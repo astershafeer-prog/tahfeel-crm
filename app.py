@@ -773,8 +773,10 @@ def lead_detail(lead_id):
 
 @app.route('/leads/import', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def import_leads():
+    if session.get('role') not in ['admin', 'sales']:
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
     if request.method == 'POST':
         file = request.files.get('file')
         if not file or not file.filename.endswith('.xlsx'):
