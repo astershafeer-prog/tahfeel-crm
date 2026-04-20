@@ -7,7 +7,6 @@ from openpyxl.utils import get_column_letter
 
 reports_bp = Blueprint('reports', __name__)
 
-# ── Tahfeel brand colors
 HEADER_BG  = "133E87"
 HEADER_FG  = "FFFFFF"
 SUBHDR_BG  = "DCDCBF"
@@ -16,9 +15,10 @@ ALT_ROW_BG = "EEF2F8"
 TOTAL_BG   = "D0D8EC"
 BORDER_CLR = "BBBBBB"
 
-# ─────────────────────────────────────────────
-# Styling helpers
-# ─────────────────────────────────────────────
+def _get_models():
+    import app as _a
+    return (_a.db, _a.Lead, _a.LeadUpdate, _a.Customer,
+            _a.Job, _a.JobUpdate, _a.User, _a.Document)
 
 def _border():
     s = Side(style='thin', color=BORDER_CLR)
@@ -49,27 +49,24 @@ def _title_block(ws, title, df, dt, ncols):
     c.font = Font(name='Arial', bold=True, size=13, color=HEADER_FG)
     c.fill = PatternFill("solid", fgColor=HEADER_BG)
     c.alignment = Alignment(horizontal='center', vertical='center')
-
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=ncols)
     c = ws.cell(row=2, column=1, value=title)
     c.font = Font(name='Arial', bold=True, size=11, color=SUBHDR_FG)
     c.fill = PatternFill("solid", fgColor=SUBHDR_BG)
     c.alignment = Alignment(horizontal='center', vertical='center')
-
     ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=ncols)
     c = ws.cell(row=3, column=1,
                 value=f"Period: {df}  to  {dt}    |    Generated: {datetime.now().strftime('%d %b %Y, %H:%M')}")
     c.font = Font(name='Arial', italic=True, size=9, color="666666")
     c.alignment = Alignment(horizontal='center', vertical='center')
-
     ws.row_dimensions[1].height = 22
     ws.row_dimensions[2].height = 18
     ws.row_dimensions[3].height = 14
 
-def _headers(ws, cols, row=4):
+def _headers(ws, cols):
     for i, h in enumerate(cols, 1):
-        _hdr(ws.cell(row=row, column=i, value=h))
-    ws.row_dimensions[row].height = 28
+        _hdr(ws.cell(row=4, column=i, value=h))
+    ws.row_dimensions[4].height = 28
 
 def _write_rows(ws, rows, start=5, num_cols=None):
     num_cols = num_cols or set()
@@ -119,13 +116,7 @@ def _guard():
         return redirect(url_for('dashboard'))
     return None
 
-def _uname(user_obj):
-    return user_obj.name if user_obj else '—'
-
-# ─────────────────────────────────────────────
-# ROUTES
-# ─────────────────────────────────────────────
-
+# ── Reports index page
 @reports_bp.route('/reports')
 def reports_index():
     g = _guard()
@@ -143,15 +134,13 @@ def reports_index():
 def export_lead_report():
     g = _guard()
     if g: return g
-    from app import db, Lead, LeadUpdate, User
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
 
+    users = {u.id: u.name for u in db.session.query(User).all()}
     leads = (db.session.query(Lead)
              .filter(Lead.created_at >= df_d, Lead.created_at <= dt_d)
              .order_by(Lead.created_at.desc()).all())
-
-    # Build user id→name map
-    users = {u.id: u.name for u in db.session.query(User).all()}
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -164,45 +153,31 @@ def export_lead_report():
     _headers(ws, cols)
 
     rows = []
-    won = {'Won', 'Converted', 'Closed-Won'}
     for i, lead in enumerate(leads, 1):
         updates = (db.session.query(LeadUpdate)
                    .filter(LeadUpdate.lead_id == lead.id)
                    .order_by(LeadUpdate.created_at.asc()).all())
-
         hist = []
         for u in updates:
             ts = u.created_at.strftime('%d/%m/%y %H:%M') if u.created_at else ''
-            stage = u.stage or u.status if hasattr(u, 'status') else u.stage or ''
-            hist.append(f"[{ts}] {stage} — {u.remark or ''} ({u.staff_name or ''})")
-
+            hist.append(f"[{ts}] {u.stage or ''} — {u.remark or ''} ({u.staff_name or ''})")
         days_open = (datetime.now() - lead.created_at).days if lead.created_at else ''
-
         rows.append([
-            i,
-            lead.name or '',
-            lead.company or '',
-            lead.phone or '',
-            lead.service or '',
-            lead.source or '',
+            i, lead.name or '', lead.company or '', lead.phone or '',
+            lead.service or '', lead.source or '',
             users.get(lead.assigned_to, '—'),
             lead.status or '',
             lead.created_at.strftime('%d/%m/%Y') if lead.created_at else '',
             lead.due_date.strftime('%d/%m/%Y') if lead.due_date else '',
             float(lead.potential_value or 0),
-            days_open,
-            len(updates),
+            days_open, len(updates),
             " | ".join(hist),
         ])
 
     nr = _write_rows(ws, rows, num_cols={11})
-    # Totals
-    ws.cell(row=nr, column=1, value='TOTAL')
-    _tot(ws.cell(row=nr, column=1))
+    ws.cell(row=nr, column=1, value='TOTAL'); _tot(ws.cell(row=nr, column=1))
     c = ws.cell(row=nr, column=11, value=f'=SUM(K5:K{nr-1})')
     _tot(c, right=True); c.number_format = '#,##0.00'
-    c2 = ws.cell(row=nr, column=13, value=f'=SUM(M5:M{nr-1})')
-    _tot(c2, right=True)
 
     _col_widths(ws, [4, 22, 22, 15, 18, 14, 18, 14, 13, 13, 18, 10, 12, 70])
     _freeze(ws); _filter(ws, len(cols))
@@ -214,11 +189,10 @@ def export_lead_report():
 def export_sales_report():
     g = _guard()
     if g: return g
-    from app import db, Job, Customer, User
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
 
     users = {u.id: u.name for u in db.session.query(User).all()}
-
     jobs = (db.session.query(Job, Customer)
             .join(Customer, Job.customer_id == Customer.id)
             .filter(Job.created_at >= df_d, Job.created_at <= dt_d)
@@ -240,10 +214,8 @@ def export_sales_report():
         inv = float(job.amount_invoiced or 0)
         rec = float(job.amount_received or 0)
         rows.append([
-            i,
-            cust.name or '', cust.company or '', cust.phone or '', cust.email or '',
-            job.job_type or '',
-            cust.source or '',
+            i, cust.name or '', cust.company or '', cust.phone or '', cust.email or '',
+            job.job_type or '', cust.source or '',
             users.get(job.assigned_to, '—'),
             users.get(job.created_by, '—'),
             job.status or '',
@@ -269,11 +241,10 @@ def export_sales_report():
 def export_finance_report():
     g = _guard()
     if g: return g
-    from app import db, Job, Customer, User
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
 
     users = {u.id: u.name for u in db.session.query(User).all()}
-
     jobs = (db.session.query(Job, Customer)
             .join(Customer, Job.customer_id == Customer.id)
             .filter(Job.created_at >= df_d, Job.created_at <= dt_d)
@@ -290,7 +261,6 @@ def export_finance_report():
 
     wb = openpyxl.Workbook()
 
-    # Sheet 1: Monthly summary
     ws1 = wb.active
     ws1.title = "Monthly Summary"
     cols1 = ['Month', 'Staff Member', 'Jobs', 'Invoiced (AED)', 'Received (AED)', 'Pending (AED)', 'Collection %']
@@ -313,7 +283,6 @@ def export_finance_report():
     _col_widths(ws1, [12, 22, 10, 18, 18, 18, 14])
     _freeze(ws1); _filter(ws1, len(cols1))
 
-    # Sheet 2: Job detail
     ws2 = wb.create_sheet("Job Detail")
     cols2 = ['#', 'Month', 'Customer', 'Company', 'Job Type', 'Assigned To',
              'Status', 'Finance Approved By', 'Created Date', 'Due Date',
@@ -350,16 +319,15 @@ def export_finance_report():
     return _respond(wb, f"Finance_Report_{df}_{dt}.xlsx")
 
 
-# ── 4. Task (Job) Report
+# ── 4. Task Report
 @reports_bp.route('/reports/tasks/export')
 def export_task_report():
     g = _guard()
     if g: return g
-    from app import db, Job, Customer, JobUpdate, User
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
 
     users = {u.id: u.name for u in db.session.query(User).all()}
-
     jobs = (db.session.query(Job, Customer)
             .join(Customer, Job.customer_id == Customer.id)
             .filter(Job.created_at >= df_d, Job.created_at <= dt_d)
@@ -375,35 +343,27 @@ def export_task_report():
     _title_block(ws, "TASK REPORT", df, dt, len(cols))
     _headers(ws, cols)
 
-    done = {'Completed', 'Done', 'Closed', 'Delivered'}
     rows = []
     for i, (job, cust) in enumerate(jobs, 1):
         updates = (db.session.query(JobUpdate)
                    .filter(JobUpdate.job_id == job.id)
                    .order_by(JobUpdate.created_at.asc()).all())
-
         hist = []
         for u in updates:
             ts = u.created_at.strftime('%d/%m/%y %H:%M') if u.created_at else ''
             hist.append(f"[{ts}] {u.status or ''} — {u.remark or ''} ({u.staff_name or ''})")
-
         days_to_complete = ''
         completed_at_str = job.completed_at.strftime('%d/%m/%Y') if job.completed_at else ''
         if job.completed_at and job.created_at:
             days_to_complete = (job.completed_at - job.created_at).days
-
         rows.append([
-            i,
-            cust.name or '', cust.company or '',
+            i, cust.name or '', cust.company or '',
             job.job_type or '',
             users.get(job.assigned_to, '—'),
-            job.status or '',
-            job.priority or '',
+            job.status or '', job.priority or '',
             job.created_at.strftime('%d/%m/%Y') if job.created_at else '',
             job.due_date.strftime('%d/%m/%Y') if job.due_date else '',
-            completed_at_str,
-            days_to_complete,
-            len(updates),
+            completed_at_str, days_to_complete, len(updates),
             " | ".join(hist),
         ])
 
@@ -418,13 +378,11 @@ def export_task_report():
 def export_document_report():
     g = _guard()
     if g: return g
-    from app import db, Document, Customer
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
 
-    # Show docs expiring within the selected date range
     docs = (db.session.query(Document)
-            .filter(Document.expiry_date >= df_d,
-                    Document.expiry_date <= dt_d)
+            .filter(Document.expiry_date >= df_d, Document.expiry_date <= dt_d)
             .order_by(Document.expiry_date.asc()).all())
 
     wb = openpyxl.Workbook()
@@ -449,30 +407,21 @@ def export_document_report():
             elif delta <= 30:  status = 'CRITICAL'
             elif delta <= 90:  status = 'EXPIRING SOON'
             else:              status = 'VALID'
-
         cust = doc.customer
         rows.append([
-            i,
-            doc.owner_name or '',
-            doc.belongs_to or '',
-            cust.company if cust else '',
-            cust.phone if cust else '',
+            i, doc.owner_name or '', doc.belongs_to or '',
+            cust.company if cust else '', cust.phone if cust else '',
             doc.doc_type or '',
             doc.expiry_date.strftime('%d/%m/%Y') if doc.expiry_date else '',
-            days_rem,
-            status,
-            doc.notes or '',
-            doc.added_by or '',
+            days_rem, status, doc.notes or '', doc.added_by or '',
         ])
 
     nr = _write_rows(ws, rows, num_cols={8})
-
-    # Color-code status column (col 9)
     status_colors = {
-        'EXPIRED':      ('FF3333', 'FFFFFF'),
-        'CRITICAL':     ('FF8800', 'FFFFFF'),
-        'EXPIRING SOON':('FFD700', '000000'),
-        'VALID':        ('22AA55', 'FFFFFF'),
+        'EXPIRED':       ('FF3333', 'FFFFFF'),
+        'CRITICAL':      ('FF8800', 'FFFFFF'),
+        'EXPIRING SOON': ('FFD700', '000000'),
+        'VALID':         ('22AA55', 'FFFFFF'),
     }
     for r in range(5, nr):
         sc = ws.cell(row=r, column=9)
@@ -492,16 +441,15 @@ def export_document_report():
 def export_staff_report():
     g = _guard()
     if g: return g
-    from app import db, Lead, Job, User
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
 
     users = db.session.query(User).filter(User.active == True).all()
 
     wb = openpyxl.Workbook()
-
-    # Sheet 1: Summary
     ws1 = wb.active
     ws1.title = "Staff Summary"
+
     cols1 = ['Staff Member', 'Role',
              'Leads Assigned', 'Leads Won', 'Leads Lost', 'Conversion %',
              'Jobs Assigned', 'Jobs Completed', 'Completion %',
@@ -532,7 +480,6 @@ def export_staff_report():
 
         inv = sum(float(j.amount_invoiced or 0) for j in jobs)
         rec = sum(float(j.amount_received or 0) for j in jobs)
-
         rows.append([user.name, user.role, lt, lw, ll, lcr, jt, jd, jcr, inv, rec, inv - rec])
 
     nr1 = _write_rows(ws1, rows, num_cols={3, 4, 5, 7, 8, 10, 11, 12})
@@ -545,14 +492,12 @@ def export_staff_report():
     _col_widths(ws1, [22, 12, 14, 12, 12, 14, 14, 14, 14, 18, 18, 18])
     _freeze(ws1); _filter(ws1, len(cols1))
 
-    # Sheet 2: Lead detail by staff
     ws2 = wb.create_sheet("Leads by Staff")
     cols2 = ['Staff', 'Lead Name', 'Company', 'Service', 'Source', 'Status',
              'Created', 'Due Date', 'Potential Value (AED)', 'Interactions']
     _title_block(ws2, "LEAD DETAIL BY STAFF", df, dt, len(cols2))
     _headers(ws2, cols2)
 
-    from app import LeadUpdate
     users_map = {u.id: u.name for u in users}
     all_leads = (db.session.query(Lead)
                  .filter(Lead.created_at >= df_d, Lead.created_at <= dt_d)
@@ -567,8 +512,7 @@ def export_staff_report():
             l.status or '',
             l.created_at.strftime('%d/%m/%Y') if l.created_at else '',
             l.due_date.strftime('%d/%m/%Y') if l.due_date else '',
-            float(l.potential_value or 0),
-            cnt,
+            float(l.potential_value or 0), cnt,
         ])
     _write_rows(ws2, l_rows, num_cols={9, 10})
     _col_widths(ws2, [20, 22, 22, 18, 14, 14, 13, 13, 18, 12])
