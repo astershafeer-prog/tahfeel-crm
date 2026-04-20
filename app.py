@@ -81,6 +81,7 @@ class Lead(db.Model):
     customer_story = db.Column(db.Text)
     potential_value = db.Column(db.Float, default=0)
     phone2 = db.Column(db.String(20))
+    campaign = db.Column(db.String(100))
     assignee = db.relationship('User', foreign_keys=[assigned_to])
     updates = db.relationship('LeadUpdate', backref='lead', lazy=True, order_by='LeadUpdate.created_at.desc()')
 
@@ -115,6 +116,10 @@ class Service(db.Model):
     name = db.Column(db.String(100), nullable=False, unique=True)
 
 class Source(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+
+class Campaign(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
 
@@ -724,14 +729,16 @@ def add_lead():
             assigned_to=int(request.form['assigned_to']) if request.form.get('assigned_to') else None,
             due_date=due_dt,
             remarks=request.form.get('remarks'),
+            campaign=request.form.get('campaign') or None,
             created_at=created_dt
         )
         db.session.add(lead)
         db.session.commit()
         flash('Lead added successfully')
         return redirect(url_for('all_leads'))
+    campaigns = Campaign.query.order_by(Campaign.name).all()
     tomorrow = (now_dubai() + timedelta(days=1)).strftime('%Y-%m-%d')
-    return render_template('add_lead.html', users=users, services=services, sources=sources, now=now, tomorrow=tomorrow)
+    return render_template('add_lead.html', users=users, services=services, sources=sources, campaigns=campaigns, now=now, tomorrow=tomorrow)
 
 @app.route('/leads/<int:lead_id>', methods=['GET', 'POST'])
 @login_required
@@ -929,6 +936,7 @@ def edit_lead(lead_id):
         lead.address = request.form.get('address')
         lead.source = request.form.get('source')
         lead.service = request.form.get('service')
+        lead.campaign = request.form.get('campaign') or None
         lead.lead_type = request.form.get('lead_type', 'New')
         lead.remarks = request.form.get('remarks')
         assigned = request.form.get('assigned_to')
@@ -939,7 +947,8 @@ def edit_lead(lead_id):
         db.session.commit()
         flash('Lead updated successfully')
         return redirect(url_for('lead_detail', lead_id=lead_id))
-    return render_template('edit_lead.html', lead=lead, users=users, services=services, sources=sources, now=now)
+    campaigns = Campaign.query.order_by(Campaign.name).all()
+    return render_template('edit_lead.html', lead=lead, users=users, services=services, sources=sources, campaigns=campaigns, now=now)
 
 @app.route('/leads/<int:lead_id>/delete')
 @login_required
@@ -981,10 +990,11 @@ def admin_panel():
     users = User.query.order_by(User.name).all()
     services = Service.query.order_by(Service.name).all()
     sources = Source.query.order_by(Source.name).all()
+    campaigns = Campaign.query.order_by(Campaign.name).all()
     job_types = ServiceType.query.order_by(ServiceType.name).all()
     doc_types = DocType.query.order_by(DocType.name).all()
     return render_template('admin_panel.html', users=users, services=services,
-                           sources=sources, job_types=job_types, doc_types=doc_types)
+                           sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types)
 
 @app.route('/admin/staff/add', methods=['POST'])
 @login_required
@@ -2178,6 +2188,43 @@ def admin_edit_source(item_id):
         flash('Source updated')
     return redirect(url_for('admin_panel') + '#sources')
 
+@app.route('/admin/campaign/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_campaign():
+    name = request.form.get('name', '').strip()
+    if name:
+        existing = Campaign.query.filter_by(name=name).first()
+        if existing:
+            flash('Campaign already exists')
+        else:
+            db.session.add(Campaign(name=name))
+            db.session.commit()
+            flash(f'Campaign "{name}" added')
+    return redirect(url_for('admin_panel') + '#campaigns')
+
+@app.route('/admin/campaign/<int:item_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_campaign(item_id):
+    item = Campaign.query.get_or_404(item_id)
+    name = request.form.get('name', '').strip()
+    if name:
+        item.name = name
+        db.session.commit()
+        flash('Campaign updated')
+    return redirect(url_for('admin_panel') + '#campaigns')
+
+@app.route('/admin/campaign/<int:item_id>/delete')
+@login_required
+@admin_required
+def admin_delete_campaign(item_id):
+    item = Campaign.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash(f'Campaign "{item.name}" removed')
+    return redirect(url_for('admin_panel') + '#campaigns')
+
 @app.route('/admin/jobtype/<int:item_id>/edit', methods=['POST'])
 @login_required
 @admin_required
@@ -2539,6 +2586,11 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS final_remarks TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS future_work_notes TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS campaign VARCHAR(100)',
+            """CREATE TABLE IF NOT EXISTS campaign (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL UNIQUE
+            )""",
 
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',

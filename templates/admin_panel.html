@@ -193,6 +193,46 @@
         </div>
       </div>
 
+      <!-- Campaigns -->
+      <div class="card" id="campaigns">
+        <div class="card-header">
+          <h2>📣 Campaigns <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--info-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Leads</span></h2>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="/admin/campaign/add">
+            <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;">
+              <div class="form-group" style="margin:0;flex:1;">
+                <input type="text" name="name" required placeholder="e.g. Ramadan Campaign 2026">
+              </div>
+              <button type="submit" class="btn-primary" style="white-space:nowrap;">+ Add</button>
+            </div>
+          </form>
+          <hr class="divider">
+          <input type="text" oninput="filterList(this,'ca-view')" placeholder="Filter campaigns..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
+          {% if campaigns %}
+            {% for campaign in campaigns %}
+            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
+              <div id="ca-view-{{ campaign.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
+                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
+                <span style="font-size:13px;">{{ campaign.name }}</span>
+                <div style="display:flex;gap:5px;">
+                  <button onclick="caEdit({{ campaign.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
+                  <a href="/admin/campaign/{{ campaign.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ campaign.name }}?')" title="Remove">🗑</a>
+                </div>
+              </div>
+              <form id="ca-form-{{ campaign.id }}" method="POST" action="/admin/campaign/{{ campaign.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
+                <input type="text" name="name" value="{{ campaign.name }}" required style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
+                <button type="button" onclick="caCancel({{ campaign.id }})" class="btn-sm">Cancel</button>
+              </form>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No campaigns yet.</div>
+          {% endif %}
+        </div>
+      </div>
+
       <!-- Service Types (Tasks) -->
       <div class="card" id="service-types">
         <div class="card-header">
@@ -303,6 +343,8 @@
     function svCancel(id) { document.getElementById('sv-view-'+id).style.display='flex'; document.getElementById('sv-form-'+id).style.display='none'; }
     function soEdit(id) { document.getElementById('so-view-'+id).style.display='none'; document.getElementById('so-form-'+id).style.display='flex'; }
     function soCancel(id) { document.getElementById('so-view-'+id).style.display='flex'; document.getElementById('so-form-'+id).style.display='none'; }
+    function caEdit(id) { document.getElementById('ca-view-'+id).style.display='none'; document.getElementById('ca-form-'+id).style.display='flex'; }
+    function caCancel(id) { document.getElementById('ca-view-'+id).style.display='flex'; document.getElementById('ca-form-'+id).style.display='none'; }
     function dtEdit(id) { document.getElementById('dt-view-'+id).style.display='none'; document.getElementById('dt-form-'+id).style.display='flex'; }
     function dtCancel(id) { document.getElementById('dt-view-'+id).style.display='flex'; document.getElementById('dt-form-'+id).style.display='none'; }
   </script>
