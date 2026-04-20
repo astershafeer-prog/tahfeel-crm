@@ -1197,6 +1197,11 @@ def add_customer():
                 if i < len(doc_expiries) and doc_expiries[i]:
                     expiry = datetime.strptime(doc_expiries[i], '%Y-%m-%d')
             except: pass
+            file_url, file_name = None, None
+            doc_file = request.files.get(f'doc_file_{i+1}')
+            if doc_file and doc_file.filename:
+                file_url, _ = upload_to_cloudinary(doc_file)
+                file_name = doc_file.filename
             doc = Document(
                 customer_id=customer.id,
                 doc_type=dt,
@@ -1204,7 +1209,10 @@ def add_customer():
                 belongs_to='Individual',
                 expiry_date=expiry,
                 notes=doc_notes_list[i] if i < len(doc_notes_list) else None,
-                added_by=session['user_name']
+                added_by=session['user_name'],
+                file_url=file_url,
+                file_name=file_name,
+                uploaded_by=session.get('user_id')
             )
             db.session.add(doc)
 
