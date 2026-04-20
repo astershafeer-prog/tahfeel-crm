@@ -2769,12 +2769,13 @@ def clear_all_data():
         db.session.execute(db.text("DELETE FROM sub_task"))
         db.session.execute(db.text("DELETE FROM document"))
         db.session.execute(db.text("DELETE FROM job"))
-        db.session.execute(db.text("DELETE FROM lead_update"))
-        db.session.execute(db.text("DELETE FROM lead"))
-        db.session.execute(db.text("DELETE FROM customer"))
         db.session.execute(db.text("DELETE FROM activity_log"))
         db.session.execute(db.text("DELETE FROM desk_note"))
         db.session.execute(db.text("DELETE FROM monthly_target"))
+        db.session.execute(db.text("DELETE FROM lead_update"))
+        db.session.execute(db.text("UPDATE customer SET lead_id = NULL"))
+        db.session.execute(db.text("DELETE FROM customer"))
+        db.session.execute(db.text("DELETE FROM lead"))
         db.session.commit()
         return "<h2 style='font-family:Arial;color:green;padding:40px;'>✅ All data cleared successfully. Users, services, sources and job types are intact. <a href='/dashboard'>Go to Dashboard</a></h2>"
     except Exception as e:
