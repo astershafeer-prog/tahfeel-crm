@@ -112,6 +112,8 @@ def _dates(req):
     return df_d, dt_d, df, dt
 
 def _guard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
     if session.get('role') not in ('admin', 'finance'):
         flash("Access denied.", "danger")
         return redirect(url_for('dashboard'))
