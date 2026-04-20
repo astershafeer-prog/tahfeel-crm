@@ -2447,7 +2447,9 @@ def add_document():
             f = request.files['document_file']
             if f and f.filename:
                 file_name = f.filename
-                file_url, _ = upload_to_cloudinary(f)  # TODO: upload to Cloudinary
+                file_url, _ = upload_to_cloudinary(f)
+                if not file_url:
+                    flash('⚠️ File could not be uploaded — document saved without attachment. Please check Cloudinary settings.', 'warning')
         doc = Document(
             doc_type=request.form['doc_type'],
             belongs_to=request.form['belongs_to'],
