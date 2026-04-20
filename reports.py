@@ -471,6 +471,7 @@ def export_staff_report():
         ll  = sum(1 for l in leads if l.status in lost_s)
         lcr = f"{lw/lt*100:.1f}%" if lt > 0 else "—"
 
+        # Tasks assigned to this person (for completion tracking)
         jobs = db.session.query(Job).filter(
             Job.assigned_to == user.id,
             Job.created_at >= df_d, Job.created_at <= dt_d).all()
@@ -478,8 +479,12 @@ def export_staff_report():
         jd  = sum(1 for j in jobs if j.status in done_s)
         jcr = f"{jd/jt*100:.1f}%" if jt > 0 else "—"
 
-        inv = sum(float(j.amount_invoiced or 0) for j in jobs)
-        rec = sum(float(j.amount_received or 0) for j in jobs)
+        # Sales value: credited to job CREATOR (primary representative), not assignee
+        sales_jobs = db.session.query(Job).filter(
+            Job.created_by == user.id,
+            Job.created_at >= df_d, Job.created_at <= dt_d).all()
+        inv = sum(float(j.amount_invoiced or 0) for j in sales_jobs)
+        rec = sum(float(j.amount_received or 0) for j in sales_jobs)
         rows.append([user.name, user.role, lt, lw, ll, lcr, jt, jd, jcr, inv, rec, inv - rec])
 
     nr1 = _write_rows(ws1, rows, num_cols={3, 4, 5, 7, 8, 10, 11, 12})
