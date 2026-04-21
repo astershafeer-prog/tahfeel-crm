@@ -2857,6 +2857,26 @@ def delete_staff_temp(user_id):
         db.session.rollback()
         return f"<h2 style='color:red;padding:40px;'>Error: {e}</h2>"
 
+@app.route('/admin/rename-admin-tahfeel2026')
+@login_required
+def rename_admin_temp():
+    if session.get('role') != 'admin':
+        return "Admin only", 403
+    try:
+        from werkzeug.security import generate_password_hash
+        u = User.query.filter_by(email='admin@tahfeel.ae').first()
+        if not u:
+            u = User.query.filter_by(role='admin').first()
+        if u:
+            u.name = 'Shafeer'
+            u.email = 'shafeer.pv@tahfeel.ae'
+            db.session.commit()
+            return "<h2 style='font-family:Arial;color:green;padding:40px;'>✅ Admin renamed to Shafeer — email updated to shafeer.pv@tahfeel.ae. <a href='/dashboard'>Go to Dashboard</a></h2>"
+        return "<h2 style='padding:40px;'>Admin user not found</h2>"
+    except Exception as e:
+        db.session.rollback()
+        return f"<h2 style='color:red;padding:40px;'>Error: {e}</h2>"
+
 @app.route('/admin/list-staff-tahfeel2026')
 @login_required
 def list_staff_temp():
