@@ -56,6 +56,9 @@
   {% if session.role in ['admin', 'sales'] %}
   <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
   {% endif %}
+  {% if session.role in ['admin', 'finance', 'operations'] %}
+  <a href="/invoice-generator" {% if active=='invoice' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧾 Temp Gen</a>
+  {% endif %}
   {% if session.role in ['admin', 'finance'] %}
   <a href="/reports" {% if active=='reports' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📊 Reports</a>
   <a href="/analytics" {% if active=='analytics' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📈 Analytics</a>
