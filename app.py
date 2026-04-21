@@ -2865,12 +2865,6 @@ def invoice_generator():
     services = [s.name for s in Service.query.order_by(Service.name).all()]
     return render_template('invoice_generator.html', services=services)
    
-    if __name__ == '__main__':
-    init_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
-else:
-    init_db()
-
 @app.route('/admin/backup/export')
 @login_required
 @admin_required
@@ -3157,3 +3151,8 @@ def analytics():
 from reports import reports_bp
 app.register_blueprint(reports_bp)
 
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True, host='0.0.0.0', port=5000)
+else:
+    init_db()
