@@ -1098,7 +1098,7 @@ tr.selected td { background: var(--info-bg) !important; }
 .task-bar.bar-green { background: #10B981; }
 .task-bar.bar-grey { background: #94A3B8; }
 .task-bar.bar-purple { background: #8B5CF6; }
-.task-bar-body { padding: 12px 14px; display: grid; grid-template-columns: 1.5fr 1fr 130px 150px 100px; gap: 10px; align-items: center; }
+.task-bar-body { padding: 12px 14px; display: grid; grid-template-columns: 1.3fr 0.8fr 115px 130px 120px 90px; gap: 8px; align-items: center; }
 
 /* Doc alert card */
 .doc-alert-card { background: white; border-radius: 10px; border: 0.5px solid #E2E8F0; border-left: 4px solid #EF4444; overflow: hidden; }

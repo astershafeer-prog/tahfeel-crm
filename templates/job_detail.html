@@ -151,7 +151,7 @@
             <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" placeholder="0"></div>
             <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01" placeholder="0"></div>
           </div>
-          <div class="form-group"><label>Finance Notes (optional)</label><textarea name="finance_notes" placeholder="Any comments or conditions...">{{ job.finance_notes or '' }}</textarea></div>
+          <div class="form-group"><label>Finance Notes (optional)</label><input type="text" name="finance_notes" maxlength="30" placeholder="Max 30 characters..." value="{{ job.finance_notes or '' }}"></div>
           <button type="submit" class="btn-primary" style="background:var(--success);">Approve & Start Task</button>
         </form>
       </div>
@@ -174,7 +174,7 @@
             <div class="form-group"><label>Final Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
             <div class="form-group"><label>Total Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
           </div>
-          <div class="form-group"><label>Finance Closing Notes (optional)</label><textarea name="finance_notes" placeholder="Any final notes..."></textarea></div>
+          <div class="form-group"><label>Finance Closing Notes (optional)</label><input type="text" name="finance_notes" maxlength="30" placeholder="Max 30 characters..."></div>
           {% set balance = (job.amount_invoiced or 0) - (job.amount_received or 0) %}
           {% if balance > 0 %}
           <div style="background:var(--danger-bg);border:1px solid #F7C1C1;border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--danger);font-weight:600;">
@@ -197,7 +197,7 @@
             <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
             <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
           </div>
-          <div class="form-group"><label>Finance Notes (optional)</label><textarea name="finance_notes" placeholder="Payment notes...">{{ job.finance_notes or '' }}</textarea></div>
+          <div class="form-group"><label>Finance Notes (optional)</label><input type="text" name="finance_notes" maxlength="30" placeholder="Max 30 characters..." value="{{ job.finance_notes or '' }}"></div>
           <button type="submit" class="btn-primary">Update Payment</button>
         </form>
       </div>
@@ -265,6 +265,7 @@
                 {% endif %}
                 {% endfor %}
               </select>
+              <input type="text" name="status_note" maxlength="30" placeholder="Status note (optional, shows in task list)..." style="margin-top:6px;font-size:12px;">
             </div>
             <div class="form-group">
               <label>Remark * (required)</label>

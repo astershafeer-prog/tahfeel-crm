@@ -102,7 +102,7 @@
     <!-- Task List — Bar Style -->
     <form method="post" action="/jobs/bulk-delete" id="bulkForm">
     <!-- Column headers -->
-    <div style="display:grid;grid-template-columns:4px 1.5fr 1fr 130px 150px 100px;gap:10px;padding:8px 14px 6px;margin-bottom:2px;border-bottom:1px solid #E2E8F0;background:white;border-radius:10px 10px 0 0;">
+    <div style="display:grid;grid-template-columns:4px 1.3fr 0.8fr 115px 130px 120px 90px;gap:8px;padding:8px 14px 6px;margin-bottom:2px;border-bottom:1px solid #E2E8F0;background:white;border-radius:10px 10px 0 0;">
       <div></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <input type="checkbox" id="selectAll" onclick="toggleAll()" style="margin:0;">
@@ -111,6 +111,7 @@
       <span style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Assigned To</span>
       <span style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Due Date</span>
       <span style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Status</span>
+      <span style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Status Note</span>
       <span style="font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Actions</span>
     </div>
     {% for job in jobs %}
@@ -138,7 +139,10 @@
         <div class="due-pill {% if is_overdue %}overdue{% endif %}">
           📅 {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
         </div>
-        <span class="badge status-badge" style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:145px;display:inline-block;padding:3px 10px;border-radius:20px;font-weight:600;">{{ job.status }}</span>
+        <span class="badge status-badge" style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;display:inline-block;padding:3px 10px;border-radius:20px;font-weight:600;">{{ job.status }}</span>
+        <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          {% if job.updates %}{% set latest = job.updates[0] %}{% if latest.status_note %}<span style="background:#EEF2FF;color:#3730A3;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">{{ latest.status_note }}</span>{% else %}<span style="color:#CBD5E1;font-size:11px;">—</span>{% endif %}{% else %}<span style="color:#CBD5E1;font-size:11px;">—</span>{% endif %}
+        </div>
         <div style="display:flex;gap:5px;align-items:center;">
           {% if session.role in ['admin','operations'] %}<input type="checkbox" name="job_ids" value="{{ job.id }}" class="job-checkbox" onchange="updateCount()" onclick="event.stopPropagation()" style="margin-right:2px;">{% endif %}
           <a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a>

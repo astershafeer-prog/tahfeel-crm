@@ -255,6 +255,7 @@ class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
     status = db.Column(db.String(50))
+    status_note = db.Column(db.String(100))
     remark = db.Column(db.Text, nullable=False)
     staff_name = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -1801,6 +1802,7 @@ def job_detail(job_id):
             update_completion = JobUpdate(job_id=job.id, status=new_status, remark=completion_note, staff_name=session['user_name'])
             db.session.add(update_completion)
         update = JobUpdate(job_id=job.id, status=new_status,
+                           status_note=request.form.get('status_note', '').strip()[:100] or None,
                            remark=remark, staff_name=session['user_name'])
         db.session.add(update)
         db.session.commit()
@@ -2636,6 +2638,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS future_work_notes TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS service_note VARCHAR(200)',
+            'ALTER TABLE job_update ADD COLUMN IF NOT EXISTS status_note VARCHAR(100)',
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS campaign VARCHAR(100)',
             """CREATE TABLE IF NOT EXISTS campaign (
                 id SERIAL PRIMARY KEY,
