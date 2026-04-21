@@ -274,7 +274,7 @@
               <div style="font-size:18px;font-weight:800;color:{% if item.avg <= 7 %}#10B981{% elif item.avg <= 30 %}#133E87{% elif item.avg <= 60 %}#F59E0B{% else %}#EF4444{% endif %};white-space:nowrap;">{{ item.avg }} days</div>
             </div>
             <div style="height:4px;background:#E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:5px;">
-              <div style="width:{{ ((item.avg / max_avg) * 100)|int }}%;height:100%;background:{% if item.avg <= 7 %}#10B981{% elif item.avg <= 30 %}#133E87{% elif item.avg <= 60 %}#F59E0B{% else %}#EF4444{% endif %};border-radius:10px;"></div>
+              <div style="width:{{ ((item.avg / max_avg) * 100)|int if max_avg and max_avg > 0 else 0 }}%;height:100%;background:{% if item.avg <= 7 %}#10B981{% elif item.avg <= 30 %}#133E87{% elif item.avg <= 60 %}#F59E0B{% else %}#EF4444{% endif %};border-radius:10px;"></div>
             </div>
             <div style="font-size:10px;color:#94A3B8;">Based on {{ item.count }} completed job{{ 's' if item.count != 1 else '' }}</div>
           </div>
