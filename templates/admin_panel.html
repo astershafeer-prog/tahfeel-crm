@@ -4,53 +4,116 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Admin Panel</title>
-  <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+    .topbar a { color: #DCDCBF; text-decoration: none; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .nav a.admin-link:hover, .nav a.admin-link.active { color: #FFE0A0; border-bottom-color: #FAC775; }
+    .container { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .page-title { font-size: 20px; font-weight: 700; color: #133E87; margin-bottom: 24px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 16px 20px; border-bottom: 0.5px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h2 { font-size: 15px; color: #133E87; font-weight: 700; }
+    .card-body { padding: 20px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 9px 14px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+    td { padding: 10px 14px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-staff { background: #E6F1FB; color: #0C447C; }
+    .badge-admin { background: #FAEEDA; color: #633806; }
+    .badge-active { background: #EAF3DE; color: #27500A; }
+    .badge-inactive { background: #f0f0f0; color: #888; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; cursor: pointer; background: none; }
+    .btn-sm:hover { background: #133E87; color: white; }
+    .btn-danger { border-color: #c0392b; color: #c0392b; }
+    .btn-danger:hover { background: #c0392b; color: white; }
+    .btn-warning { border-color: #854F0B; color: #854F0B; }
+    .btn-warning:hover { background: #854F0B; color: white; }
+    .form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+    .form-group label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .form-group input, .form-group select { padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; }
+    .form-group input:focus, .form-group select:focus { border-color: #133E87; }
+    .btn-primary { background: #133E87; color: white; padding: 9px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-primary:hover { background: #1E5AB8; }
+    .divider { border: none; border-top: 0.5px solid #eee; margin: 20px 0; }
+    .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid #f0f0f0; font-size: 13px; }
+    .list-item:last-child { border-bottom: none; }
+    .empty { color: #aaa; font-size: 13px; padding: 12px 0; }
+    .protected { font-size: 12px; color: #aaa; }
+    .edit-row { display: none; background: #f8f9fa; padding: 12px 14px; border-bottom: 0.5px solid #eee; }
+    .edit-row.active { display: table-row; }
+    .edit-row td { padding: 12px 14px; }
+  </style>
 </head>
 <body>
-  {%- from 'macros.html' import topbar, nav -%}
-  {{ topbar() }}
-  {{ nav('admin') }}
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div class="right">
+      <span>{{ session.user_name }} (Admin)</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/leads">All Leads</a>
+    <a href="/leads/add">Add Lead</a>
+    <a href="/leads/import">Import Leads</a>
+    <a href="/admin" class="admin-link active">⚙ Admin Panel</a>
+  </div>
 
   <div class="container">
-    <div style="margin-bottom:14px;"><a href="/admin/targets" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;">🎯 Monthly Targets</a></div>
     {% with messages = get_flashed_messages() %}
       {% if messages %}{% for msg in messages %}
         <div class="flash">{{ msg }}</div>
       {% endfor %}{% endif %}
     {% endwith %}
 
-    <div class="page-header" style="margin-bottom:20px;">
-      <h2>⚙ Admin Panel</h2>
-      <a href="/admin/backup/export" class="btn-sm" style="background:#133E87;color:white;border-color:#133E87;display:flex;align-items:center;gap:5px;">⬇ Download Full Backup</a>
-    </div>
+    <div class="page-title">⚙ Admin Panel</div>
 
-    <!-- Staff Management — full width -->
-    <div class="card" style="margin-bottom:16px;">
+    <!-- Staff Management -->
+    <div class="card">
       <div class="card-header">
         <h2>👥 Staff Management</h2>
       </div>
       <div class="card-body">
         <form method="POST" action="/admin/staff/add">
-          <div class="section-label">Add New Staff</div>
-          <div class="form-row-2" style="align-items:flex-end;">
-            <div class="form-group"><label>Full Name</label><input type="text" name="name" required placeholder="Staff name"></div>
-            <div class="form-group"><label>Email</label><input type="email" name="email" required placeholder="email@tahfeel.ae"></div>
-            <div class="form-group"><label>Password</label><input type="password" name="password" required placeholder="Password"></div>
+          <div class="form-row">
             <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" name="name" required placeholder="Staff name">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" name="email" required placeholder="email@tahfeel.ae">
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" name="password" required placeholder="Password">
+            </div>
+            <div class="form-group" style="max-width:130px;">
               <label>Role</label>
               <select name="role">
-                <option value="sales">Sales</option>
-                <option value="operations">Operations</option>
-                <option value="finance">Finance</option>
+                <option value="staff">Staff</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
+            <button type="submit" class="btn-primary">Add Staff</button>
           </div>
-          <button type="submit" class="btn-primary" style="margin-top:4px;">Add Staff</button>
         </form>
         <hr class="divider">
-        <div class="section-label">Current Staff</div>
         <table>
           <thead>
             <tr>
@@ -65,40 +128,35 @@
             {% for user in users %}
             <tr>
               <td><strong>{{ user.name }}</strong></td>
-              <td style="color:var(--text-muted);font-size:12px;">{{ user.email }}</td>
+              <td>{{ user.email }}</td>
               <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span></td>
               <td><span class="badge {{ 'badge-active' if user.active else 'badge-inactive' }}">{{ 'Active' if user.active else 'Inactive' }}</span></td>
               <td>
                 {% if user.role == 'admin' %}
-                  <span style="font-size:12px;color:var(--text-muted);">Protected</span>
+                  <span class="protected">Protected</span>
                 {% else %}
-                <div style="display:flex;gap:6px;">
+                <div class="actions">
                   <button class="btn-sm" onclick="toggleEdit({{ user.id }})">Edit</button>
-                  <a href="/admin/staff/{{ user.id }}/toggle" class="btn-sm" style="border-color:{{ 'var(--danger)' if user.active else 'var(--success)' }};color:{{ 'var(--danger)' if user.active else 'var(--success)' }};">
+                  <a href="/admin/staff/{{ user.id }}/toggle" class="btn-sm btn-warning">
                     {{ 'Deactivate' if user.active else 'Activate' }}
                   </a>
+                 
                 </div>
                 {% endif %}
               </td>
             </tr>
-            <tr id="edit-row-{{ user.id }}" style="display:none;background:var(--bg);">
-              <td colspan="5" style="padding:12px;">
+            <tr id="edit-row-{{ user.id }}" style="display:none; background:#f0f4f8;">
+              <td colspan="5">
                 <form method="POST" action="/admin/staff/{{ user.id }}/edit">
-                  <div class="form-row-2" style="align-items:flex-end;">
-                    <div class="form-group"><label>Name</label><input type="text" name="name" value="{{ user.name }}" required></div>
-                    <div class="form-group"><label>Email</label><input type="email" name="email" value="{{ user.email }}" required></div>
+                  <div class="form-row">
                     <div class="form-group">
-                      <label>Role</label>
-                      <select name="role">
-                        <option value="sales" {% if user.role=='sales' %}selected{% endif %}>Sales</option>
-                        <option value="operations" {% if user.role=='operations' %}selected{% endif %}>Operations</option>
-                        <option value="finance" {% if user.role=='finance' %}selected{% endif %}>Finance</option>
-                        <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Admin</option>
-                      </select>
+                      <label>Name</label>
+                      <input type="text" name="name" value="{{ user.name }}" required>
                     </div>
-                    <div class="form-group"><label>New Password <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label><input type="password" name="password" placeholder="Leave blank to keep current"></div>
-                  </div>
-                  <div style="display:flex;gap:8px;margin-top:8px;">
+                    <div class="form-group">
+                      <label>Email</label>
+                      <input type="email" name="email" value="{{ user.email }}" required>
+                    </div>
                     <button type="submit" class="btn-primary">Save</button>
                     <button type="button" class="btn-sm" onclick="toggleEdit({{ user.id }})">Cancel</button>
                   </div>
@@ -111,41 +169,29 @@
       </div>
     </div>
 
-    <!-- 2x2 Grid for dropdown lists -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-
-      <!-- Services (Leads) -->
-      <div class="card" id="services">
+    <div class="grid">
+      <!-- Services -->
+      <div class="card">
         <div class="card-header">
-          <h2>🔧 Services <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--info-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Leads</span></h2>
+          <h2>🔧 Services</h2>
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/service/add">
-            <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;">
-              <div class="form-group" style="margin:0;flex:1;">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Service Name</label>
                 <input type="text" name="name" required placeholder="e.g. Trade License">
               </div>
-              <button type="submit" class="btn-primary" style="white-space:nowrap;">+ Add</button>
+              <button type="submit" class="btn-primary">Add</button>
             </div>
           </form>
           <hr class="divider">
-          <input type="text" oninput="filterList(this,'sv-view')" placeholder="Filter services..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if services %}
             {% for service in services %}
-            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
-              <div id="sv-view-{{ service.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
-                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
-                <span style="font-size:13px;">{{ service.name }}</span>
-                <div style="display:flex;gap:5px;">
-                  <button onclick="svEdit({{ service.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/service/{{ service.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ service.name }}?')" title="Remove">🗑</a>
-                </div>
-              </div>
-              <form id="sv-form-{{ service.id }}" method="POST" action="/admin/service/{{ service.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
-                <input type="text" name="name" value="{{ service.name }}" required style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
-                <button type="button" onclick="svCancel({{ service.id }})" class="btn-sm">Cancel</button>
-              </form>
+            <div class="list-item">
+              <span>{{ service.name }}</span>
+              <a href="/admin/service/{{ service.id }}/delete" class="btn-sm btn-danger"
+                 onclick="return confirm('Remove {{ service.name }}?')">Remove</a>
             </div>
             {% endfor %}
           {% else %}
@@ -154,38 +200,28 @@
         </div>
       </div>
 
-      <!-- Lead Sources -->
-      <div class="card" id="sources">
+      <!-- Sources -->
+      <div class="card">
         <div class="card-header">
-          <h2>📋 Lead Sources <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--info-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Leads</span></h2>
+          <h2>📋 Lead Sources</h2>
         </div>
         <div class="card-body">
           <form method="POST" action="/admin/source/add">
-            <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;">
-              <div class="form-group" style="margin:0;flex:1;">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Source Name</label>
                 <input type="text" name="name" required placeholder="e.g. WhatsApp">
               </div>
-              <button type="submit" class="btn-primary" style="white-space:nowrap;">+ Add</button>
+              <button type="submit" class="btn-primary">Add</button>
             </div>
           </form>
           <hr class="divider">
-          <input type="text" oninput="filterList(this,'so-view')" placeholder="Filter sources..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
           {% if sources %}
             {% for source in sources %}
-            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
-              <div id="so-view-{{ source.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
-                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
-                <span style="font-size:13px;">{{ source.name }}</span>
-                <div style="display:flex;gap:5px;">
-                  <button onclick="soEdit({{ source.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/source/{{ source.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ source.name }}?')" title="Remove">🗑</a>
-                </div>
-              </div>
-              <form id="so-form-{{ source.id }}" method="POST" action="/admin/source/{{ source.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
-                <input type="text" name="name" value="{{ source.name }}" required style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
-                <button type="button" onclick="soCancel({{ source.id }})" class="btn-sm">Cancel</button>
-              </form>
+            <div class="list-item">
+              <span>{{ source.name }}</span>
+              <a href="/admin/source/{{ source.id }}/delete" class="btn-sm btn-danger"
+                 onclick="return confirm('Remove {{ source.name }}?')">Remove</a>
             </div>
             {% endfor %}
           {% else %}
@@ -193,161 +229,14 @@
           {% endif %}
         </div>
       </div>
-
-      <!-- Campaigns -->
-      <div class="card" id="campaigns">
-        <div class="card-header">
-          <h2>📣 Campaigns <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--info-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Leads</span></h2>
-        </div>
-        <div class="card-body">
-          <form method="POST" action="/admin/campaign/add">
-            <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;">
-              <div class="form-group" style="margin:0;flex:1;">
-                <input type="text" name="name" required placeholder="e.g. Ramadan Campaign 2026">
-              </div>
-              <button type="submit" class="btn-primary" style="white-space:nowrap;">+ Add</button>
-            </div>
-          </form>
-          <hr class="divider">
-          <input type="text" oninput="filterList(this,'ca-view')" placeholder="Filter campaigns..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
-          {% if campaigns %}
-            {% for campaign in campaigns %}
-            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
-              <div id="ca-view-{{ campaign.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
-                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
-                <span style="font-size:13px;">{{ campaign.name }}</span>
-                <div style="display:flex;gap:5px;">
-                  <button onclick="caEdit({{ campaign.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/campaign/{{ campaign.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ campaign.name }}?')" title="Remove">🗑</a>
-                </div>
-              </div>
-              <form id="ca-form-{{ campaign.id }}" method="POST" action="/admin/campaign/{{ campaign.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
-                <input type="text" name="name" value="{{ campaign.name }}" required style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
-                <button type="button" onclick="caCancel({{ campaign.id }})" class="btn-sm">Cancel</button>
-              </form>
-            </div>
-            {% endfor %}
-          {% else %}
-            <div class="empty">No campaigns yet.</div>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Service Types (Tasks) -->
-      <div class="card" id="service-types">
-        <div class="card-header">
-          <h2>💼 Service Types <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:#EEF4FF;padding:2px 8px;border-radius:10px;margin-left:6px;">Tasks</span></h2>
-        </div>
-        <div class="card-body">
-          <form method="POST" action="/admin/jobtype/add">
-            <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;">
-              <div class="form-group" style="margin:0;flex:2;">
-                <input type="text" name="name" required placeholder="e.g. Family Visa">
-              </div>
-              <div class="form-group" style="margin:0;width:90px;">
-                <input type="number" name="default_days" value="1" min="1" max="365" placeholder="Days">
-              </div>
-              <button type="submit" class="btn-primary" style="white-space:nowrap;">+ Add</button>
-            </div>
-          </form>
-          <hr class="divider">
-          <input type="text" oninput="filterList(this,'jt-view')" placeholder="Filter service types..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
-          {% if job_types %}
-            {% for jt in job_types %}
-            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
-              <div id="jt-view-{{ jt.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
-                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
-                <div>
-                  <span style="font-size:13px;">{{ jt.name }}</span>
-                  <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">{{ jt.default_days or 1 }}d</span>
-                </div>
-                <div style="display:flex;gap:5px;">
-                  <button onclick="jtEdit({{ jt.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/jobtype/{{ jt.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ jt.name }}?')" title="Remove">🗑</a>
-                </div>
-              </div>
-              <form id="jt-form-{{ jt.id }}" method="POST" action="/admin/jobtype/{{ jt.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;flex-wrap:wrap;">
-                <input type="text" name="name" value="{{ jt.name }}" required style="flex:2;min-width:120px;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-                <input type="number" name="default_days" value="{{ jt.default_days or 1 }}" min="1" max="365" style="width:70px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
-                <button type="button" onclick="jtCancel({{ jt.id }})" class="btn-sm">Cancel</button>
-              </form>
-            </div>
-            {% endfor %}
-          {% else %}
-            <div class="empty">No service types yet.</div>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Document Types -->
-      <div class="card" id="doc-types">
-        <div class="card-header">
-          <h2>📄 Document Types <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--success-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Documents</span></h2>
-        </div>
-        <div class="card-body">
-          <form method="POST" action="/admin/doctype/add">
-            <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;">
-              <div class="form-group" style="margin:0;flex:1;">
-                <input type="text" name="name" required placeholder="e.g. Emirates ID">
-              </div>
-              <button type="submit" class="btn-primary" style="white-space:nowrap;">+ Add</button>
-            </div>
-          </form>
-          <hr class="divider">
-          <input type="text" oninput="filterList(this,'dt-view')" placeholder="Filter document types..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
-          {% if doc_types %}
-            {% for dt in doc_types %}
-            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
-              <div id="dt-view-{{ dt.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
-                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
-                <span style="font-size:13px;">{{ dt.name }}</span>
-                <div style="display:flex;gap:5px;">
-                  <button onclick="dtEdit({{ dt.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/doctype/{{ dt.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ dt.name }}?')" title="Remove">🗑</a>
-                </div>
-              </div>
-              <form id="dt-form-{{ dt.id }}" method="POST" action="/admin/doctype/{{ dt.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
-                <input type="text" name="name" value="{{ dt.name }}" required style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
-                <button type="button" onclick="dtCancel({{ dt.id }})" class="btn-sm">Cancel</button>
-              </form>
-            </div>
-            {% endfor %}
-          {% else %}
-            <div class="empty">No document types yet.</div>
-          {% endif %}
-        </div>
-      </div>
-
     </div>
   </div>
 
   <script>
-    function filterList(input, prefix) {
-      const q = input.value.toLowerCase();
-      document.querySelectorAll('[id^="'+prefix+'-"]').forEach(el => {
-        const text = el.textContent.toLowerCase();
-        el.closest('div[style*="padding:7px"]').style.display = text.includes(q) ? '' : 'none';
-      });
-    }
-  </script>
-  <script>
-    function toggleEdit(id) {
-      const row = document.getElementById('edit-row-' + id);
+    function toggleEdit(userId) {
+      const row = document.getElementById('edit-row-' + userId);
       row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
     }
-    function jtEdit(id) { document.getElementById('jt-view-'+id).style.display='none'; document.getElementById('jt-form-'+id).style.display='flex'; }
-    function jtCancel(id) { document.getElementById('jt-view-'+id).style.display='flex'; document.getElementById('jt-form-'+id).style.display='none'; }
-    function svEdit(id) { document.getElementById('sv-view-'+id).style.display='none'; document.getElementById('sv-form-'+id).style.display='flex'; }
-    function svCancel(id) { document.getElementById('sv-view-'+id).style.display='flex'; document.getElementById('sv-form-'+id).style.display='none'; }
-    function soEdit(id) { document.getElementById('so-view-'+id).style.display='none'; document.getElementById('so-form-'+id).style.display='flex'; }
-    function soCancel(id) { document.getElementById('so-view-'+id).style.display='flex'; document.getElementById('so-form-'+id).style.display='none'; }
-    function caEdit(id) { document.getElementById('ca-view-'+id).style.display='none'; document.getElementById('ca-form-'+id).style.display='flex'; }
-    function caCancel(id) { document.getElementById('ca-view-'+id).style.display='flex'; document.getElementById('ca-form-'+id).style.display='none'; }
-    function dtEdit(id) { document.getElementById('dt-view-'+id).style.display='none'; document.getElementById('dt-form-'+id).style.display='flex'; }
-    function dtCancel(id) { document.getElementById('dt-view-'+id).style.display='flex'; document.getElementById('dt-form-'+id).style.display='none'; }
   </script>
 </body>
 </html>

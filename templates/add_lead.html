@@ -4,138 +4,136 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — Add Lead</title>
-  <link rel="stylesheet" href="/static/css/tahfeel.css">
-  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar a { color: #DCDCBF; text-decoration: none; font-size: 13px; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
+    .container { padding: 24px; max-width: 800px; margin: 0 auto; }
+    .card { background: white; border-radius: 10px; border: 0.5px solid #ddd; padding: 28px; }
+    .card h2 { font-size: 16px; color: #133E87; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #133E87; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { display: block; font-size: 12px; color: #555; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.3px; }
+    label .req { color: #c0392b; }
+    input, select, textarea { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: Arial, sans-serif; outline: none; background: white; }
+    input:focus, select:focus, textarea:focus { border-color: #133E87; }
+    textarea { resize: vertical; min-height: 80px; }
+    .section-title { font-size: 13px; font-weight: 700; color: #133E87; margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #eee; grid-column: 1 / -1; }
+    .actions { display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #eee; }
+    .btn-primary { background: #133E87; color: white; padding: 11px 28px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #1E5AB8; }
+    .btn-cancel { padding: 11px 24px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; color: #555; text-decoration: none; background: white; }
+    .btn-cancel:hover { border-color: #133E87; color: #133E87; }
+  </style>
 </head>
 <body>
-  {%- from 'macros.html' import topbar, nav -%}
-  {{ topbar() }}
-  {{ nav('add_lead') }}
-  <div class="container" style="max-width:780px;">
-    <a href="javascript:history.back()" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back</a>
-    <div class="card card-leads">
-      <div class="card-header">
-        <h2>New Lead Entry</h2>
-        <a href="/leads/import" style="background:white;border:1.5px solid var(--border);color:var(--text-secondary);padding:7px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;text-decoration:none;">📥 Import from Excel</a>
-      </div>
-      <div class="card-body">
-        <form method="POST">
-          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Customer Information</div>
-          <div class="form-row-2">
-            <div class="form-group"><label>Full Name *</label><input type="text" name="name" required placeholder="Customer full name"></div>
-            <div class="form-group"><label>Company</label><input type="text" name="company" placeholder="Company or business name"></div>
-          </div>
-          <div class="form-row-2">
-            <div class="form-group"><label>Phone *</label><input type="text" name="phone" required placeholder="+971 50 000 0000"></div>
-            <div class="form-group"><label>Phone 2</label><input type="text" name="phone2" placeholder="+971 50 000 0000"></div>
-          </div>
-          <div class="form-row-2">
-            <div class="form-group"><label>Email</label><input type="email" name="email" placeholder="email@example.com"></div>
-            <div class="form-group"><label>Address</label><input type="text" name="address" placeholder="Dubai, UAE"></div>
-          </div>
-          <hr class="divider">
-          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Lead Details</div>
-          <div class="form-row-2">
-            <div class="form-group"><label>Service Enquired *</label>
-              <select name="service" required id="lead-service">
-                <option value="">— Select service —</option>
-                {% for s in services %}<option value="{{ s.name }}">{{ s.name }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="form-group"><label>Source</label>
-              <select name="source">
-                <option value="">— Select source —</option>
-                {% for s in sources %}<option value="{{ s.name }}">{{ s.name }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="form-group"><label>Campaign <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(optional)</span></label>
-              <select name="campaign">
-                <option value="">— No campaign —</option>
-                {% for c in campaigns %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
-              </select>
-            </div>
-          </div>
-          <div class="form-row-3">
-            <div class="form-group"><label>Assign To</label>
-              <select name="assigned_to">
-                <option value="">— Select staff —</option>
-                {% for user in users %}<option value="{{ user.id }}">{{ user.name }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="form-group"><label>Lead Date</label><input type="date" name="lead_date" id="lead_date" value="{{ now.strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}"></div>
-            <div class="form-group"><label>Due Date *</label><input type="date" name="due_date" id="due_date" required></div>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <a href="/logout">Logout</a>
+  </div>
+  <div class="nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/leads">All Leads</a>
+    <a href="/leads/add" class="active">Add Lead</a>
+    <a href="/leads/import">Import Leads</a>
+    {% if session.role == 'admin' %}<a href="/admin" class="admin-link">⚙ Admin Panel</a>{% endif %}
+  </div>
+  <div class="container">
+    <div class="card">
+      <h2>New Lead Entry</h2>
+      <form method="POST">
+        <div class="grid-2">
+          <div class="section-title">Customer Information</div>
+          <div class="form-group">
+            <label>Full Name <span class="req">*</span></label>
+            <input type="text" name="name" required placeholder="Customer full name">
           </div>
           <div class="form-group">
+            <label>Company</label>
+            <input type="text" name="company" placeholder="Company or business name">
+          </div>
+          <div class="form-group">
+            <label>Phone <span class="req">*</span></label>
+            <input type="text" name="phone" required placeholder="+971 50 000 0000">
+          </div>
+          <div class="form-group">
+            <label>Phone 2 (Optional)</label>
+            <input type="text" name="phone2" placeholder="+971 50 000 0000">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" placeholder="email@example.com">
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <input type="text" name="address" placeholder="Dubai, UAE">
+          </div>
+          <div class="section-title">Lead Details</div>
+          <div class="form-group">
+            <label>Service Enquired <span class="req">*</span></label>
+            <select name="service" required>
+              <option value="">— Select service —</option>
+              {% for s in services %}
+              <option value="{{ s.name }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Source</label>
+            <select name="source">
+              <option value="">— Select source —</option>
+              {% for s in sources %}
+              <option value="{{ s.name }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Assign To</label>
+            <select name="assigned_to">
+              <option value="">— Select staff —</option>
+              {% for user in users %}
+              <option value="{{ user.id }}">{{ user.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Lead Date</label>
+            <input type="date" name="lead_date" value="{{ now.strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}">
+          </div>
+          <div class="form-group">
+            <label>Due Date</label>
+            <input type="date" name="due_date" min="{{ now.strftime('%Y-%m-%d') }}">
+          </div>
+          <div class="form-group full">
             <label>Lead Type</label>
-            <div style="display:flex;gap:20px;margin-top:6px;">
-              <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:500;font-size:13px;cursor:pointer;"><input type="radio" name="lead_type" value="New" checked style="width:auto;"> New Lead</label>
-              <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:500;font-size:13px;cursor:pointer;"><input type="radio" name="lead_type" value="Old Follow-up" style="width:auto;"> Old Follow-up</label>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:400;font-size:14px;">
+                <input type="radio" name="lead_type" value="New" checked style="width:auto;"> New Lead
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:400;font-size:14px;">
+                <input type="radio" name="lead_type" value="Old Follow-up" style="width:auto;"> Old Follow-up
+              </label>
             </div>
           </div>
-          <div class="form-group"><label>Remarks</label><textarea name="remarks" placeholder="Any initial notes about this lead..."></textarea></div>
-          <div class="form-actions">
-            <button type="submit" class="btn-primary">Save Lead</button>
-            <a href="/dashboard" class="btn-cancel">Cancel</a>
+          <div class="form-group full">
+            <label>Remarks</label>
+            <textarea name="remarks" placeholder="Any initial notes about this lead..."></textarea>
           </div>
-        </form>
-      </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-primary">Save Lead</button>
+          <a href="/dashboard" class="btn-cancel">Cancel</a>
+        </div>
+      </form>
     </div>
   </div>
-  <script src="/static/js/searchable_select.js"></script>
-  <script>makeSearchable('lead-service', 'Search service...');</script>
-
-<script>
-// Phone: default +971 on empty fields, allow editing
-document.querySelectorAll('input[name="phone"], input[name="phone2"]').forEach(function(el) {
-  if (!el.value || el.value.trim() === '') {
-    el.value = '+971 ';
-  }
-  el.addEventListener('focus', function() {
-    if (this.value === '+971 ') {
-      var len = this.value.length;
-      this.setSelectionRange(len, len);
-    }
-  });
-  el.addEventListener('keydown', function(e) {
-    // Prevent deleting the +971 prefix entirely
-    if ((e.key === 'Backspace' || e.key === 'Delete') && this.value === '+971 ') {
-      e.preventDefault();
-    }
-  });
-});
-
-// Name fields: auto title-case on blur
-document.querySelectorAll('input[name="name"]').forEach(function(el) {
-  el.addEventListener('blur', function() {
-    if (this.value) {
-      this.value = this.value.replace(/\w/g, function(c) { return c.toUpperCase(); });
-    }
-  });
-});
-
-// Owner name in doc fields
-document.querySelectorAll('input[name="owner_name"]').forEach(function(el) {
-  el.addEventListener('blur', function() {
-    if (this.value) {
-      this.value = this.value.replace(/\w/g, function(c) { return c.toUpperCase(); });
-    }
-  });
-});
-</script>
 </body>
 </html>
-<script>
-  function setDueDate() {
-    const leadDate = document.getElementById('lead_date').value;
-    if (leadDate) {
-      const next = new Date(leadDate);
-      next.setDate(next.getDate() + 1);
-      const yyyy = next.getFullYear();
-      const mm = String(next.getMonth() + 1).padStart(2, '0');
-      const dd = String(next.getDate()).padStart(2, '0');
-      document.getElementById('due_date').value = `${yyyy}-${mm}-${dd}`;
-    }
-  }
-  setDueDate();
-  document.getElementById('lead_date').addEventListener('change', setDueDate);
-</script>
