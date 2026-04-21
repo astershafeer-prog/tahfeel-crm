@@ -21,7 +21,7 @@
     {% endwith %}
 
     <div class="page-header">
-      <h2>All Leads <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ total }} total{% if is_default %} — today{% elif request.args.get('date') == 'today' %} — today{% endif %})</span></h2>
+      <h2>All Leads <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ total }} total{% if is_default %} — this week{% elif request.args.get('date') == 'today' %} — today{% elif request.args.get('date') == 'week' %} — this week{% endif %})</span></h2>
       <div class="header-btns">
         <button class="btn-bulk-delete" id="bulkDeleteBtn" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
         <a href="/leads/import" class="btn-sm">📥 Import</a>
@@ -54,8 +54,8 @@
           <label>Created Date</label>
           <select name="date" id="dateFilter" onchange="toggleCustomDates(this.value)">
             <option value="">All time</option>
-            <option value="today" {% if request.args.get('date') == 'today' or is_default %}selected{% endif %}>Today</option>
-            <option value="week" {% if request.args.get('date') == 'week' %}selected{% endif %}>This Week</option>
+            <option value="today" {% if request.args.get('date') == 'today' %}selected{% endif %}>Today</option>
+            <option value="week" {% if request.args.get('date') == 'week' or is_default %}selected{% endif %}>This Week</option>
             <option value="month" {% if request.args.get('date') == 'month' %}selected{% endif %}>This Month</option>
             <option value="custom" {% if request.args.get('date') == 'custom' %}selected{% endif %}>Custom Range</option>
           </select>
