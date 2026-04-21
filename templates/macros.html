@@ -53,10 +53,10 @@
   <a href="/customers" {% if active=='customers' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">👤 Customers</a>
   <a href="/documents" {% if active=='documents' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Documents</a>
   <a href="/desk" {% if active=='desk' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📌 My Desk{% if session.get('unread_mentions',0) > 0 %}<span style="background:#EF4444;color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:2px;">{{ session.get('unread_mentions',0) }}</span>{% endif %}</a>
-  {% if session.role in ['admin', 'sales'] %}{% if session.role in ['admin', 'finance', 'operations'] %}
-  <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %}>🧾 Invoice</a>
-{% endif %}
+  {% if session.role in ['admin', 'sales'] %}
   <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
+  {% if session.role in ['admin', 'finance', 'operations'] %}
+  <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %}>🧾 Inv Generator</a>
   {% endif %}
   {% if session.role in ['admin', 'finance', 'operations'] %}
   <a href="/invoice-generator" {% if active=='invoice' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧾 Temp Gen</a>
