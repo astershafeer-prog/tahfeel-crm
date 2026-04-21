@@ -186,5 +186,44 @@
       }
     }
   </script>
+
+<script>
+// Phone: default +971 on empty fields, allow editing
+document.querySelectorAll('input[name="phone"], input[name="phone2"]').forEach(function(el) {
+  if (!el.value || el.value.trim() === '') {
+    el.value = '+971 ';
+  }
+  el.addEventListener('focus', function() {
+    if (this.value === '+971 ') {
+      var len = this.value.length;
+      this.setSelectionRange(len, len);
+    }
+  });
+  el.addEventListener('keydown', function(e) {
+    // Prevent deleting the +971 prefix entirely
+    if ((e.key === 'Backspace' || e.key === 'Delete') && this.value === '+971 ') {
+      e.preventDefault();
+    }
+  });
+});
+
+// Name fields: auto title-case on blur
+document.querySelectorAll('input[name="name"]').forEach(function(el) {
+  el.addEventListener('blur', function() {
+    if (this.value) {
+      this.value = this.value.replace(/\w/g, function(c) { return c.toUpperCase(); });
+    }
+  });
+});
+
+// Owner name in doc fields
+document.querySelectorAll('input[name="owner_name"]').forEach(function(el) {
+  el.addEventListener('blur', function() {
+    if (this.value) {
+      this.value = this.value.replace(/\w/g, function(c) { return c.toUpperCase(); });
+    }
+  });
+});
+</script>
 </body>
 </html>
