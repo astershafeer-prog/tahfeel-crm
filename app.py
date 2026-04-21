@@ -1692,6 +1692,7 @@ def add_job():
         extra_amount = request.form.getlist('extra_amount[]')
         extra_persons = request.form.getlist('extra_persons[]')
         extra_notes = request.form.getlist('extra_notes[]')
+        extra_service_notes = request.form.getlist('extra_service_note[]')
 
         for i, jt in enumerate(extra_types):
             if not jt: continue
@@ -1712,6 +1713,7 @@ def add_job():
                 amount_invoiced=eamt,
                 num_persons=ep,
                 internal_notes=extra_notes[i] if i < len(extra_notes) else None,
+                service_note=extra_service_notes[i].strip() if i < len(extra_service_notes) and extra_service_notes[i].strip() else None,
                 status='Pending Finance Approval',
                 created_by=session['user_id']
             )
