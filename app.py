@@ -280,6 +280,23 @@ class DeskNote(db.Model):
     mention_user = db.relationship('User', foreign_keys=[mention_user_id])
 
 @app.context_processor
+def inject_globals():
+    result = {'birthdays_today': [], 'show_backup_reminder': False}
+    try:
+        if 'user_id' in session and session.get('role') == 'admin':
+            last_backup = session.get('last_backup_date')
+            if not last_backup:
+                result['show_backup_reminder'] = True
+            else:
+                from datetime import datetime as _dt
+                last = _dt.strptime(last_backup, '%Y-%m-%d')
+                if (now_dubai() - last).days >= 14:
+                    result['show_backup_reminder'] = True
+    except:
+        pass
+    return result
+
+@app.context_processor
 def inject_birthdays():
     try:
         if 'user_id' in session:
@@ -2833,6 +2850,108 @@ if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 else:
     init_db()
+
+@app.route('/admin/backup/export')
+@login_required
+@admin_required
+def export_full_backup():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import make_response
+    import io
+
+    wb = Workbook()
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
+
+    def style_headers(ws, headers):
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+        for col in ws.columns:
+            max_len = max((len(str(cell.value or '')) for cell in col), default=10)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+
+    # Sheet 1: Leads
+    ws1 = wb.active
+    ws1.title = "Leads"
+    users_map = {u.id: u.name for u in User.query.all()}
+    style_headers(ws1, ['ID','Name','Company','Phone','Email','Service','Source','Campaign',
+                         'Status','Assigned To','Potential Value','Created Date','Due Date','Remarks'])
+    for l in Lead.query.order_by(Lead.created_at.desc()).all():
+        ws1.append([
+            l.id, l.name or '', l.company or '', l.phone or '', l.email or '',
+            l.service or '', l.source or '', l.campaign or '',
+            l.status or '', users_map.get(l.assigned_to, ''),
+            float(l.potential_value or 0),
+            l.created_at.strftime('%d/%m/%Y %H:%M') if l.created_at else '',
+            l.due_date.strftime('%d/%m/%Y') if l.due_date else '',
+            l.remarks or ''
+        ])
+
+    # Sheet 2: Customers
+    ws2 = wb.create_sheet("Customers")
+    style_headers(ws2, ['ID','Name','Company','Phone','Email','Source','Nationality',
+                         'Customer Type','Assigned To','Notes','Created Date'])
+    for c in Customer.query.order_by(Customer.created_at.desc()).all():
+        ws2.append([
+            c.id, c.name or '', c.company or '', c.phone or '', c.email or '',
+            c.source or '', c.nationality or '', c.customer_type or '',
+            users_map.get(c.assigned_to, ''), c.notes or '',
+            c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else ''
+        ])
+
+    # Sheet 3: Jobs
+    ws3 = wb.create_sheet("Jobs")
+    style_headers(ws3, ['ID','Customer','Company','Job Type','Assigned To','Created By',
+                         'Status','Invoiced (AED)','Received (AED)','Created Date','Due Date'])
+    for j in Job.query.order_by(Job.created_at.desc()).all():
+        ws3.append([
+            j.id,
+            j.customer.name if j.customer else '',
+            j.customer.company if j.customer else '',
+            j.job_type or '',
+            users_map.get(j.assigned_to, ''),
+            users_map.get(j.created_by, ''),
+            j.status or '',
+            float(j.amount_invoiced or 0),
+            float(j.amount_received or 0),
+            j.created_at.strftime('%d/%m/%Y %H:%M') if j.created_at else '',
+            j.due_date.strftime('%d/%m/%Y') if j.due_date else ''
+        ])
+
+    # Sheet 4: Documents
+    ws4 = wb.create_sheet("Documents")
+    style_headers(ws4, ['ID','Doc Type','Owner Name','Belongs To','Customer',
+                         'Expiry Date','Notes','Added By','Created Date'])
+    for d in Document.query.order_by(Document.created_at.desc()).all():
+        ws4.append([
+            d.id, d.doc_type or '', d.owner_name or '', d.belongs_to or '',
+            d.customer.name if d.customer else '',
+            d.expiry_date.strftime('%d/%m/%Y') if d.expiry_date else '',
+            d.notes or '', d.added_by or '',
+            d.created_at.strftime('%d/%m/%Y %H:%M') if d.created_at else ''
+        ])
+
+    # Sheet 5: Staff
+    ws5 = wb.create_sheet("Staff")
+    style_headers(ws5, ['ID','Name','Email','Role','Active'])
+    for u in User.query.order_by(User.name).all():
+        ws5.append([u.id, u.name, u.email, u.role, 'Yes' if u.active else 'No'])
+
+    # Mark backup date in session
+    session['last_backup_date'] = now_dubai().strftime('%Y-%m-%d')
+    session.modified = True
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    filename = f"tahfeel_backup_{now_dubai().strftime('%Y%m%d_%H%M')}.xlsx"
+    response = make_response(output.read())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
 
 from reports import reports_bp
 app.register_blueprint(reports_bp)

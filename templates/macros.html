@@ -38,6 +38,12 @@
 {% endmacro %}
 
 {% macro nav(active='') %}
+{% if show_backup_reminder and session.role == 'admin' %}
+<div style="background:#854F0B;color:#FEF3C7;padding:7px 20px;font-size:12px;display:flex;align-items:center;justify-content:space-between;">
+  <span>⚠️ <strong>Backup reminder:</strong> It's been a while since your last data backup. Download a full backup now to keep your data safe.</span>
+  <a href="/admin/backup/export" style="background:#FAEEDA;color:#633806;padding:4px 14px;border-radius:20px;font-weight:700;font-size:11px;text-decoration:none;white-space:nowrap;margin-left:16px;">⬇ Download Backup</a>
+</div>
+{% endif %}
 <div class="nav" style="background:#0F2660;">
   <a href="/dashboard" {% if active=='dashboard' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">⊞ Dashboard</a>
   {% if session.role != 'finance' %}
