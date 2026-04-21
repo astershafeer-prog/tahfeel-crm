@@ -3094,6 +3094,18 @@ def analytics():
             completion_days.append((j.completed_at - j.created_at).days)
     avg_completion = round(sum(completion_days) / len(completion_days), 1) if completion_days else 0
 
+    # Avg completion days per job type
+    from collections import defaultdict
+    jtype_days = defaultdict(list)
+    for j in Job.query.filter(Job.status.in_(['Done','Closed']), Job.completed_at.isnot(None)).all():
+        if j.created_at and j.completed_at and j.job_type:
+            jtype_days[j.job_type].append((j.completed_at - j.created_at).days)
+    avg_by_job_type = sorted(
+        [{'type': jt, 'avg': round(sum(days)/len(days), 1), 'count': len(days)}
+         for jt, days in jtype_days.items()],
+        key=lambda x: x['avg'], reverse=True
+    )
+
     # ── Documents stats
     from datetime import timedelta as _td
     all_docs = Document.query.all()
@@ -3122,7 +3134,7 @@ def analytics():
         users_map=users_map,
         total_jobs=total_jobs, completed_jobs=len(completed_jobs),
         active_jobs_ops=len(active_jobs_ops), overdue_jobs=len(overdue_jobs),
-        avg_completion=avg_completion, top_job_types=top_job_types,
+        avg_completion=avg_completion, top_job_types=top_job_types, avg_by_job_type=avg_by_job_type,
         max_job_type=max_job_type, job_status_counts=job_status_counts,
         total_docs=total_docs, expired_docs=expired_docs,
         expiring_30=expiring_30, expiring_60=expiring_60, expiring_90=expiring_90,

@@ -256,9 +256,38 @@
         {% if not top_job_types %}<div class="empty-state">No jobs this period</div>{% endif %}
         {% if avg_completion > 0 %}
         <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid #F1F5F9;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:12px;color:#94A3B8;">Avg. days to complete</span>
+          <span style="font-size:12px;color:#94A3B8;">Overall avg. days to complete</span>
           <span style="font-size:16px;font-weight:700;color:#133E87;">{{ avg_completion }} days</span>
         </div>
+        {% endif %}
+      </div>
+
+      <div class="an-card" style="grid-column:1/-1;">
+        <div class="an-card-title">Average Completion Time by Service Type</div>
+        {% if avg_by_job_type %}
+        {% set max_avg = avg_by_job_type[0].avg if avg_by_job_type else 1 %}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+          {% for item in avg_by_job_type %}
+          <div style="background:#F8FAFC;border-radius:8px;padding:12px 14px;border-left:3px solid {% if item.avg <= 7 %}#10B981{% elif item.avg <= 30 %}#133E87{% elif item.avg <= 60 %}#F59E0B{% else %}#EF4444{% endif %};">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+              <div style="font-size:12px;font-weight:700;color:#1A2333;flex:1;padding-right:8px;">{{ item.type }}</div>
+              <div style="font-size:18px;font-weight:800;color:{% if item.avg <= 7 %}#10B981{% elif item.avg <= 30 %}#133E87{% elif item.avg <= 60 %}#F59E0B{% else %}#EF4444{% endif %};white-space:nowrap;">{{ item.avg }} days</div>
+            </div>
+            <div style="height:4px;background:#E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:5px;">
+              <div style="width:{{ ((item.avg / max_avg) * 100)|int }}%;height:100%;background:{% if item.avg <= 7 %}#10B981{% elif item.avg <= 30 %}#133E87{% elif item.avg <= 60 %}#F59E0B{% else %}#EF4444{% endif %};border-radius:10px;"></div>
+            </div>
+            <div style="font-size:10px;color:#94A3B8;">Based on {{ item.count }} completed job{{ 's' if item.count != 1 else '' }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;">
+          <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#10B981;display:inline-block;"></span>≤7 days (Fast)</span>
+          <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#133E87;display:inline-block;"></span>8–30 days (Normal)</span>
+          <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#F59E0B;display:inline-block;"></span>31–60 days (Long)</span>
+          <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#EF4444;display:inline-block;"></span>60+ days (Very Long)</span>
+        </div>
+        {% else %}
+        <div class="empty-state">No completed jobs yet — data will appear as jobs are marked Done/Closed</div>
         {% endif %}
       </div>
     </div>
