@@ -4,5 +4,5 @@ werkzeug
 gunicorn
 openpyxl
 psycopg2-binary
-cloudinary
 # v13
+cloudinary
