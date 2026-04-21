@@ -670,7 +670,7 @@ def all_leads():
                  search in (l.name or '').lower() or
                  search in (l.phone or '').lower() or
                  search in (l.company or '').lower()]
-    if is_default:
+    if is_default and request.args.get('date') != '':
         # Default: show this week's leads
         week_start = (now - timedelta(days=now.weekday())).date()
         leads = [l for l in leads if l.created_at and l.created_at.date() >= week_start]
