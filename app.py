@@ -158,6 +158,7 @@ class Job(db.Model):
     priority = db.Column(db.String(20), default='Medium')
     status = db.Column(db.String(50), default='Pending Finance Approval')
     internal_notes = db.Column(db.Text)
+    service_note = db.Column(db.String(200))
     amount_invoiced = db.Column(db.Float, default=0)
     amount_received = db.Column(db.Float, default=0)
     num_persons = db.Column(db.Integer, default=1)
@@ -1643,6 +1644,7 @@ def add_job():
             due_date=due_dt,
             priority=request.form.get('priority', 'Medium'),
             internal_notes=request.form.get('internal_notes'),
+            service_note=request.form.get('service_note', '').strip() or None,
             amount_invoiced=float(amount_invoiced),
             amount_received=0,
             num_persons=int(request.form.get('num_persons') or 1),
@@ -1837,6 +1839,7 @@ def edit_job(job_id):
         job.due_date = datetime.strptime(due, '%Y-%m-%d') if due else None
         job.priority = request.form.get('priority', 'Medium')
         job.internal_notes = request.form.get('internal_notes')
+        job.service_note = request.form.get('service_note', '').strip() or None
         if request.form.get('num_persons'):
             job.num_persons = int(request.form.get('num_persons'))
         try:
@@ -2630,6 +2633,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS final_remarks TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS future_work_notes TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS service_note VARCHAR(200)',
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS campaign VARCHAR(100)',
             """CREATE TABLE IF NOT EXISTS campaign (
                 id SERIAL PRIMARY KEY,

@@ -105,6 +105,10 @@
           <div class="form-group">
             <textarea name="internal_notes" rows="3" placeholder="Context, special instructions...">{{ job.internal_notes or '' }}</textarea>
           </div>
+          <div class="form-group">
+            <label>Service Note <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(optional — shown in task list)</span></label>
+            <input type="text" name="service_note" value="{{ job.service_note or '' }}" placeholder="e.g. Typing, Printing, Medical Fitness...">
+          </div>
 
           <div class="form-actions">
             <button type="submit" class="btn-primary">Save Changes</button>
