@@ -24,6 +24,7 @@
     <a href="javascript:history.back()" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back</a>
 
     <form method="post" enctype="multipart/form-data" id="docForm">
+      <input type="hidden" name="add_another" id="addAnotherField" value="">
       <div class="card card-documents">
         <div class="card-header"><h2>Add Document</h2></div>
         <div class="card-body">
@@ -109,8 +110,8 @@
           </div>
 
           <div class="form-actions">
-            <button type="submit" name="add_another" value="" class="btn-primary">Save Document</button>
-            <button type="submit" name="add_another" value="1" class="btn-sm">Save & Add Another</button>
+            <button type="button" onclick="validateAndSubmit('')" class="btn-primary">Save Document</button>
+            <button type="button" onclick="validateAndSubmit('1')" class="btn-sm">Save & Add Another</button>
             <a href="/documents" class="btn-cancel">Cancel</a>
           </div>
         </div>
@@ -118,6 +119,20 @@
     </form>
   </div>
   <script>
+  function validateAndSubmit(addAnother) {
+    const custSelect = document.getElementById('customerSelect');
+    const newCustName = document.querySelector('input[name="new_customer_name"]');
+    const hasExisting = custSelect && custSelect.value;
+    const hasNew = newCustName && newCustName.value.trim();
+    if (!hasExisting && !hasNew) {
+      alert('⚠️ Please select an existing customer or create a new one before saving.');
+      if (custSelect) custSelect.focus();
+      return;
+    }
+    // Set add_another hidden field and submit
+    document.getElementById('addAnotherField').value = addAnother;
+    document.getElementById('docForm').submit();
+  }
     function toggleNew(btn) {
       const el = document.getElementById('new-customer-fields');
       const visible = el.style.display === 'block';
