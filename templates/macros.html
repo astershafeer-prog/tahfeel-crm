@@ -56,10 +56,7 @@
   {% if session.role in ['admin', 'sales'] %}
   <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
   {% if session.role in ['admin', 'finance', 'operations'] %}
-  <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %}>🧾 Inv Generator</a>
-  {% endif %}
-  {% if session.role in ['admin', 'finance', 'operations'] %}
-  <a href="/invoice-generator" {% if active=='invoice' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧾 Temp Gen</a>
+   <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧾 Inv Generator</a>
   {% endif %}
   {% if session.role in ['admin', 'finance'] %}
   <a href="/reports" {% if active=='reports' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📊 Reports</a>
