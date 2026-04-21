@@ -18,12 +18,13 @@ def upload_to_cloudinary(file, folder='tahfeel-documents'):
     try:
         if not file or not file.filename: return None, None
         result = cloudinary.uploader.upload(
-            file,
-            folder=folder,
-            resource_type='auto',  # handles PDF, images, Word docs
-            use_filename=True,
-            unique_filename=True
-        )
+    file,
+    folder=folder,
+    resource_type='auto',
+    use_filename=True,
+    unique_filename=True,
+    access_mode='public'
+)
         return result.get('secure_url'), result.get('public_id')
     except Exception as e:
         print(f'Cloudinary upload error: {e}')
