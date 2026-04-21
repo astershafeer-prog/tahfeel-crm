@@ -2836,3 +2836,29 @@ else:
 
 from reports import reports_bp
 app.register_blueprint(reports_bp)
+
+@app.route('/admin/delete-staff-tahfeel2026/<int:user_id>')
+@login_required
+def delete_staff_temp(user_id):
+    if session.get('role') != 'admin':
+        return "Admin only", 403
+    try:
+        u = User.query.get(user_id)
+        if u:
+            name = u.name
+            db.session.delete(u)
+            db.session.commit()
+            return f"<h2 style='font-family:Arial;color:green;padding:40px;'>✅ Deleted: {name}. <a href='/admin'>Back to Admin</a></h2>"
+        return "<h2 style='padding:40px;'>User not found</h2>"
+    except Exception as e:
+        db.session.rollback()
+        return f"<h2 style='color:red;padding:40px;'>Error: {e}</h2>"
+
+@app.route('/admin/list-staff-tahfeel2026')
+@login_required
+def list_staff_temp():
+    if session.get('role') != 'admin':
+        return "Admin only", 403
+    users = User.query.order_by(User.name).all()
+    rows = ''.join(f"<tr><td>{u.id}</td><td>{u.name}</td><td>{u.email}</td><td>{u.role}</td><td><a href='/admin/delete-staff-tahfeel2026/{u.id}' onclick=\"return confirm('Delete {u.name}?')\">Delete</a></td></tr>" for u in users)
+    return f"<table border='1' style='font-family:Arial;padding:20px;border-collapse:collapse;'><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr>{rows}</table>"
