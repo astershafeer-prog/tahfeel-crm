@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Reports</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('reports') }}
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>📊 Reports</h2>
+      <div style="font-size:13px;color:#94A3B8;">Export data as Excel (.xlsx)</div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="filter-card" style="border-top:4px solid #133E87; margin-bottom:24px;">
+      <div class="filter-card-head">
+        <div class="filter-card-title">📅 Select Date Range</div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="ff">
+          <label>From</label>
+          <input type="date" id="date_from" value="{{ defaults.date_from }}" style="height:36px;">
+        </div>
+        <div class="ff">
+          <label>To</label>
+          <input type="date" id="date_to" value="{{ defaults.date_to }}" style="height:36px;">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm" onclick="setRange('this_month')">This Month</button>
+          <button class="btn-sm" onclick="setRange('last_month')">Last Month</button>
+          <button class="btn-sm" onclick="setRange('this_year')">This Year</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
+
+      <!-- 1. Lead Detail -->
+      <div class="card" style="border-top:4px solid #133E87;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">◉</span>
+          <div>
+            <div style="font-weight:700;color:#133E87;font-size:15px;">Lead Detail Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Full lead lifecycle & history</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Lead name, company, phone, service, source</li>
+          <li>Assigned staff & current status</li>
+          <li>Full status history with timestamps</li>
+          <li>Days open & interaction count</li>
+          <li>Potential value (AED) with totals</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;" onclick="exportReport('leads')">⬇ Export to Excel</button>
+      </div>
+
+      <!-- 2. Sales -->
+      <div class="card" style="border-top:4px solid #1a6e3c;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">💼</span>
+          <div>
+            <div style="font-weight:700;color:#1a6e3c;font-size:15px;">Sales Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Customer, service & revenue summary</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Customer, company, phone, email</li>
+          <li>Job type, source, assigned staff</li>
+          <li>Created & due dates</li>
+          <li>Invoiced, received & outstanding (AED)</li>
+          <li>Grand totals row</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#1a6e3c;" onclick="exportReport('sales')">⬇ Export to Excel</button>
+      </div>
+
+      <!-- 3. Finance -->
+      <div class="card" style="border-top:4px solid #6a3d9a;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">💰</span>
+          <div>
+            <div style="font-weight:700;color:#6a3d9a;font-size:15px;">Finance Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Invoiced / received / pending per month</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Monthly summary by staff member</li>
+          <li>Invoiced, received, pending (AED)</li>
+          <li>Collection rate per staff</li>
+          <li>Job detail sheet (2nd tab)</li>
+          <li>Finance approval tracking</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#6a3d9a;" onclick="exportReport('finance')">⬇ Export to Excel</button>
+      </div>
+
+      <!-- 4. Task -->
+      <div class="card" style="border-top:4px solid #c45c00;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">✓</span>
+          <div>
+            <div style="font-weight:700;color:#c45c00;font-size:15px;">Task Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Jobs with full status history</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Customer, company, job type</li>
+          <li>Assigned staff, status & priority</li>
+          <li>Created, due & completed dates</li>
+          <li>Full status history log</li>
+          <li>Days to completion</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#c45c00;" onclick="exportReport('tasks')">⬇ Export to Excel</button>
+      </div>
+
+      <!-- 5. Document Expiry -->
+      <div class="card" style="border-top:4px solid #b5000f;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">📄</span>
+          <div>
+            <div style="font-weight:700;color:#b5000f;font-size:15px;">Document Expiry Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Track expiring documents by date range</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Owner name, company, phone</li>
+          <li>Document type & expiry date</li>
+          <li>Days remaining (color-coded)</li>
+          <li>Status: Valid / Expiring Soon / Critical / Expired</li>
+          <li>Set date range = expiry window to check</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#b5000f;" onclick="exportReport('documents')">⬇ Export to Excel</button>
+      </div>
+
+      <!-- 6. Staff Performance -->
+      <div class="card" style="border-top:4px solid #006666;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">👤</span>
+          <div>
+            <div style="font-weight:700;color:#006666;font-size:15px;">Staff Performance Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Leads, tasks & revenue per person</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Leads assigned, won, lost & conversion %</li>
+          <li>Tasks assigned & completion %</li>
+          <li>Total invoiced & received (AED)</li>
+          <li>Outstanding per staff member</li>
+          <li>Lead detail by staff (2nd tab)</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#006666;" onclick="exportReport('staff')">⬇ Export to Excel</button>
+      </div>
+
+    </div><!-- /grid -->
+  </div><!-- /container -->
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+    <div style="width:44px;height:44px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+    <div style="color:white;font-weight:600;font-size:15px;">Generating report…</div>
+  </div>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .card { background:white;border-radius:10px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.08); }
+  </style>
+
+  <script>
+    function setRange(preset) {
+      const today = new Date();
+      let from, to;
+      if (preset === 'this_month') {
+        from = new Date(today.getFullYear(), today.getMonth(), 1);
+        to = today;
+      } else if (preset === 'last_month') {
+        from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        to = new Date(today.getFullYear(), today.getMonth(), 0);
+      } else if (preset === 'this_year') {
+        from = new Date(today.getFullYear(), 0, 1);
+        to = today;
+      }
+      document.getElementById('date_from').value = from.toISOString().slice(0, 10);
+      document.getElementById('date_to').value = to.toISOString().slice(0, 10);
+    }
+
+    function exportReport(type) {
+      const from = document.getElementById('date_from').value;
+      const to = document.getElementById('date_to').value;
+      if (!from || !to) { alert('Please select both dates.'); return; }
+      if (new Date(from) > new Date(to)) { alert('"From" date cannot be after "To" date.'); return; }
+      const urls = {
+        leads: '/reports/leads/export',
+        sales: '/reports/sales/export',
+        finance: '/reports/finance/export',
+        tasks: '/reports/tasks/export',
+        documents: '/reports/documents/export',
+        staff: '/reports/staff/export',
+      };
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      const a = document.createElement('a');
+      a.href = `${urls[type]}?date_from=${from}&date_to=${to}`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => { document.getElementById('loadingOverlay').style.display = 'none'; }, 3000);
+    }
+  </script>
+</body>
+</html>

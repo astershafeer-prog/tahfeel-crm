@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Add Customer</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('customers') }}
+  <div class="container" style="max-width:860px;">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    <a href="javascript:history.back()" style="display:inline-block;margin-bottom:14px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back</a>
+
+    <form method="post" enctype="multipart/form-data">
+      <!-- Customer Info Card -->
+      <div class="card card-customers" style="margin-bottom:12px;">
+        <div class="card-header">
+          <h2>Add Customer</h2>
+          <a href="/customers/import" style="font-size:12px;color:var(--text-muted);text-decoration:none;border:1.5px solid var(--border);padding:6px 12px;border-radius:var(--radius-sm);">📥 Import from Excel</a>
+        </div>
+        <div class="card-body">
+
+          {% if converted_leads %}
+          <div class="section-label">Quick Add from Converted Lead</div>
+          <div class="form-group" style="margin-bottom:16px;">
+            <select name="lead_id" onchange="this.form.submit()">
+              <option value="">— Select converted lead to auto-fill —</option>
+              {% for l in converted_leads %}
+              <option value="{{ l.id }}">{{ l.name }}{% if l.company %} — {{ l.company }}{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <hr class="divider">
+          {% endif %}
+
+          <div class="section-label">Customer Information</div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Full Name *</label>
+              <input type="text" name="name" required placeholder="Customer full name">
+            </div>
+            <div class="form-group">
+              <label>Company</label>
+              <input type="text" name="company" placeholder="Company or business name">
+            </div>
+            <div class="form-group">
+              <label>Phone *</label>
+              <input type="text" name="phone" required placeholder="+971 50 000 0000">
+            </div>
+            <div class="form-group">
+              <label>Phone 2 (Alternative)</label>
+              <input type="text" name="phone2" placeholder="+971 50 000 0000">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" name="email" placeholder="email@example.com">
+            </div>
+            <div class="form-group">
+              <label>Address</label>
+              <input type="text" name="address" placeholder="Dubai, UAE">
+            </div>
+            <div class="form-group">
+              <label>Nationality</label>
+              <input type="text" name="nationality" placeholder="e.g. Indian, Pakistani">
+            </div>
+            <div class="form-group">
+              <label>Date of Birth <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+              <input type="date" name="date_of_birth" value="">
+            </div>
+            <div class="form-group">
+              <label>Customer Type</label>
+              <select name="customer_type">
+                <option value="Individual">Individual</option>
+                <option value="Company">Company</option>
+                <option value="Investor">Investor</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Source</label>
+              <select name="source">
+                <option value="">— Select source —</option>
+                {% for s in sources %}<option value="{{ s.name }}">{{ s.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Primary Representative</label>
+              <select name="assigned_to">
+                <option value="">— Select staff —</option>
+                {% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label>Notes</label>
+              <textarea name="notes" rows="2" placeholder="Any notes about this customer..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents Card -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-header">
+          <h2>📄 Documents <span style="font-size:12px;font-weight:400;color:var(--text-muted);">Optional — add customer documents right away</span></h2>
+          <button type="button" onclick="addDocRow()" class="btn-sm" style="border-color:var(--primary);color:var(--primary);">+ Add Document</button>
+        </div>
+        <div class="card-body">
+          <div id="doc-rows">
+            <!-- Rows added dynamically -->
+          </div>
+          <div id="doc-empty" style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">
+            No documents added yet. Click "+ Add Document" above to add Emirates ID, Passport, Visa etc.
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Save Customer</button>
+        <a href="/customers" class="btn-cancel">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    let docCount = 0;
+    const docTypes = [{% for dt in doc_types %}"{{ dt.name }}"{% if not loop.last %},{% endif %}{% endfor %}];
+
+    function addDocRow() {
+      docCount++;
+      document.getElementById('doc-empty').style.display = 'none';
+
+      const opts = docTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+
+      const div = document.createElement('div');
+      div.id = 'doc-row-' + docCount;
+      div.style.cssText = 'background:var(--bg);border-radius:var(--radius-md);padding:14px;margin-bottom:10px;border:1px solid var(--border);';
+      div.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Document ${docCount}</span>
+          <button type="button" onclick="removeDoc(${docCount})" style="background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;">✕ Remove</button>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Document Type *</label>
+            <select name="doc_type[]" required>
+              <option value="">— Select type —</option>
+              ${opts}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Owner Name</label>
+            <input type="text" name="doc_owner[]" placeholder="Name on document">
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Expiry Date</label>
+            <input type="date" name="doc_expiry[]">
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Notes</label>
+            <input type="text" name="doc_notes[]" placeholder="Any notes...">
+          </div>
+          <div class="form-group" style="margin-bottom:8px;grid-column:1/-1;">
+            <label>Attach File (PDF / Image / Word)</label>
+            <input type="file" name="doc_file_${docCount}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="padding:6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;width:100%;">
+          </div>
+        </div>`;
+      document.getElementById('doc-rows').appendChild(div);
+    }
+
+    function removeDoc(id) {
+      document.getElementById('doc-row-' + id)?.remove();
+      if (!document.querySelector('#doc-rows > div')) {
+        document.getElementById('doc-empty').style.display = 'block';
+      }
+    }
+  </script>
+
+<script>
+// Phone: default +971 on empty fields, allow editing
+document.querySelectorAll('input[name="phone"], input[name="phone2"]').forEach(function(el) {
+  if (!el.value || el.value.trim() === '') {
+    el.value = '+971 ';
+  }
+  el.addEventListener('focus', function() {
+    if (this.value === '+971 ') {
+      var len = this.value.length;
+      this.setSelectionRange(len, len);
+    }
+  });
+  el.addEventListener('keydown', function(e) {
+    // Prevent deleting the +971 prefix entirely
+    if ((e.key === 'Backspace' || e.key === 'Delete') && this.value === '+971 ') {
+      e.preventDefault();
+    }
+  });
+});
+
+// Name fields: auto title-case on blur
+document.querySelectorAll('input[name="name"]').forEach(function(el) {
+  el.addEventListener('blur', function() {
+    if (this.value) {
+      this.value = this.value.replace(/\w/g, function(c) { return c.toUpperCase(); });
+    }
+  });
+});
+
+// Owner name in doc fields
+document.querySelectorAll('input[name="owner_name"]').forEach(function(el) {
+  el.addEventListener('blur', function() {
+    if (this.value) {
+      this.value = this.value.replace(/\w/g, function(c) { return c.toUpperCase(); });
+    }
+  });
+});
+</script>
+</body>
+</html>

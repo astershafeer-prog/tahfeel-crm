@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Customers</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('customers') }}
+  {% if birthdays_today %}
+  <div style="background:linear-gradient(135deg,#FDF2F8,#FCE7F3);border-bottom:2px solid #FBCFE8;padding:9px 28px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">🎂</span>
+      <div>
+        <span style="font-size:13px;font-weight:700;color:#9D174D;">{{ birthdays_today|length }} customer{{ 's' if birthdays_today|length > 1 else '' }} celebrating birthday today</span>
+        <span style="font-size:12px;color:#BE185D;margin-left:8px;">— {% for c in birthdays_today %}{{ c['name'] if c is mapping else c.name }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+      </div>
+    </div>
+    <a href="/customers?birthday=today" style="font-size:12px;font-weight:600;color:#9D174D;text-decoration:none;background:white;padding:5px 14px;border-radius:20px;border:1px solid #FBCFE8;">View Only →</a>
+  </div>
+  {% endif %}
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>Customers <span class="page-subtitle">({{ total }} total)</span></h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+        {% if birthdays_today %}
+        <a href="/customers?birthday=today" class="btn-sm" style="background:#FDF2F8;border:1px solid #FBCFE8;color:#9D174D;display:flex;align-items:center;gap:4px;">🎂 Birthdays <span style="background:#EC4899;color:white;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;">{{ birthdays_today|length }}</span></a>
+        {% endif %}
+        <a href="/customers/import" class="btn-sm">📥 Import</a>
+        <a href="/customers/export" class="btn-sm" style="background:var(--success-bg);border-color:var(--success);color:var(--success);">⬇ Export</a>
+        <a href="/customers/add" class="btn-add">+ Add Customer</a>
+      </div>
+    </div>
+
+
+
+
+    <div class="filter-card" style="border-top:4px solid #1A3B8B;">
+      <div class="filter-card-head">
+        <div class="filter-card-title">⊟ Filters</div>
+        {% if search %}<a href="/customers" class="btn-reset" style="font-size:11px;">Reset</a>{% endif %}
+      </div>
+      <form method="get" style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end;">
+        <div class="ff">
+          <label>Search</label>
+          <input type="text" name="search" value="{{ search }}" placeholder="Name, company, phone or email...">
+        </div>
+        <button type="submit" class="btn-primary" style="height:36px;padding:0 20px;white-space:nowrap;">Search</button>
+        <a href="/customers" class="btn-reset" style="height:36px;display:flex;align-items:center;padding:0 14px;">Reset</a>
+      </form>
+    </div>
+
+    <div class="card card-customers">
+      <table>
+        <thead>
+          <tr>
+            <th colspan="2">Name / Company</th>
+            <th>Phone</th>
+            <th>Type</th>
+            <th>Rep</th>
+            <th style="text-align:center;">Tasks</th>
+            <th style="text-align:center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in customers %}
+          <tr>
+            <td colspan="2">
+              <a href="/customers/{{ c.id }}" style="font-size:13px;font-weight:700;color:#1A3B8B;text-decoration:none;">{{ c.name }}</a>
+              {% if c.lead_id %}<span style="font-size:10px;background:#EBF2FF;color:#1A3B8B;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:4px;">↩ Lead</span>{% endif %}
+              {% if c.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ c.company }}</div>{% endif %}
+            </td>
+            <td>
+              {% if c.phone %}
+              <span style="font-size:13px;">{{ c.phone }}</span>
+              {% else %}—{% endif %}
+            </td>
+            <td><span title="{{ c.customer_type or 'Individual' }}" style="font-size:16px;">{% if c.customer_type == 'Company' %}🏢{% elif c.customer_type == 'Investor' %}💼{% else %}👤{% endif %}</span></td>
+            <td>
+              {% if c.rep %}
+              <div class="av-wrap">
+                <div class="av" style="background:#1A3B8B;">{{ c.rep.name[:2].upper() }}</div>
+                <span class="av-name">{{ c.rep.name.split()[0] }}</span>
+              </div>
+              {% else %}<span style="font-size:12px;color:#CBD5E1;">—</span>{% endif %}
+            </td>
+            <td style="text-align:center;">
+              {% if c.jobs|length > 0 %}
+              <span style="background:#EBF2FF;color:#1A3B8B;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700;">{{ c.jobs|length }}</span>
+              {% else %}<span style="color:var(--text-light);">0</span>{% endif %}
+            </td>
+            <td>
+              <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
+                <a href="/customers/{{ c.id }}" class="ib" title="View">👁</a>
+                <a href="/customers/{{ c.id }}/edit" class="ib" title="Edit">✏</a>
+                <a href="/documents?customer_id={{ c.id }}" class="ib" title="Documents">📄</a>
+                {% if session.role == 'admin' %}<a href="/customers/{{ c.id }}/delete" class="ib ib-del" onclick="return confirm('Delete {{ c.name }}?')" title="Delete">🗑</a>{% endif %}
+                {% if c.phone %}<a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ c.name.split()[0]|replace(' ','%20') }}%2C%20" target="_blank" class="ib" title="WhatsApp" style="background:#25D366;color:white;">💬</a>{% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" class="empty">No customers found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+      {% if page > 1 %}<a href="?page={{ page-1 }}&search={{ search }}" class="page-btn">← Prev</a>{% endif %}
+      {% for p in range(1, total_pages+1) %}
+        {% if p == page %}
+          <span class="page-btn active">{{ p }}</span>
+        {% elif p == 1 or p == total_pages or (p >= page-2 and p <= page+2) %}
+          <a href="?page={{ p }}&search={{ search }}" class="page-btn">{{ p }}</a>
+        {% elif p == page-3 or p == page+3 %}
+          <span style="padding:0 4px;color:var(--text-muted);">…</span>
+        {% endif %}
+      {% endfor %}
+      {% if page < total_pages %}<a href="?page={{ page+1 }}&search={{ search }}" class="page-btn">Next →</a>{% endif %}
+    </div>
+    {% endif %}
+
+  </div>
+</body>
+</html>

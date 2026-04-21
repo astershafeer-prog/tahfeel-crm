@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Edit Task</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    .topbar { background: var(--primary); color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+    .topbar a { color: #DCDCBF; text-decoration: none; }
+    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
+    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
+    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
+    .nav a.admin-link { color: #FAC775; }
+    .container { padding: 24px; max-width: 700px; margin: 0 auto; }
+    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 28px; }
+    .card h2 { font-size: 17px; font-weight: 700; color: var(--primary); margin-bottom: 24px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; font-family: Arial, sans-serif; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-actions { display: flex; gap: 10px; margin-top: 24px; }
+    .btn-submit { background: var(--primary); color: white; padding: 10px 24px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { background: white; color: #555; padding: 10px 20px; border-radius: 8px; border: 1px solid #ddd; font-size: 14px; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div class="right">
+      <span>{{ session.user_name }} {% if session.role == 'admin' %}(Admin){% endif %}</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/dashboard" >Dashboard</a>
+    <a href="/leads" >All Leads</a>
+    <a href="/leads/add" >Add Lead</a>
+    <a href="/leads/import" >Import Leads</a>
+    <a href="/jobs" >Jobs</a>
+    <a href="/tasks" class="active">All Tasks</a>
+    <a href="/admin" class="admin-link ">⚙ Admin Panel</a>
+  </div>
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    <div class="card card-tasks">
+      <h2>Edit Task</h2>
+      <form method="post">
+        <div class="form-group">
+          <label>Task Title *</label>
+          <input type="text" name="title" required value="{{ task.title }}">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description">{{ task.description or '' }}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Assign To</label>
+            <select name="assigned_to">
+              {% for u in users %}
+              <option value="{{ u.id }}" {% if task.assigned_to == u.id %}selected{% endif %}>{{ u.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Due Date</label>
+            <input type="date" name="due_date" value="{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '' }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Priority</label>
+            <select name="priority">
+              <option value="High" {% if task.priority=='High' %}selected{% endif %}>High</option>
+              <option value="Medium" {% if task.priority=='Medium' %}selected{% endif %}>Medium</option>
+              <option value="Low" {% if task.priority=='Low' %}selected{% endif %}>Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+              <option value="Pending" {% if task.status=='Pending' %}selected{% endif %}>Pending</option>
+              <option value="In Progress" {% if task.status=='In Progress' %}selected{% endif %}>In Progress</option>
+              <option value="Done" {% if task.status=='Done' %}selected{% endif %}>Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Linked Lead (optional)</label>
+          <select name="lead_id">
+            <option value="">— None —</option>
+            {% for lead in leads %}
+            <option value="{{ lead.id }}" {% if task.lead_id == lead.id %}selected{% endif %}>{{ lead.name }}{% if lead.company %} — {{ lead.company }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-submit">Save Changes</button>
+          <a href="/tasks" class="btn-cancel">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

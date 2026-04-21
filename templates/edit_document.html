@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Edit Document</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('documents') }}
+  <div class="container" style="max-width:780px;">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    <a href="javascript:history.back()" style="display:inline-block;margin-bottom:14px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back</a>
+
+    <form method="post" enctype="multipart/form-data" id="editDocForm">
+      <div class="card card-documents">
+        <div class="card-header">
+          <h2>Edit Document</h2>
+          {% if doc.file_url %}
+          <a href="{{ doc.file_url }}" target="_blank" style="font-size:12px;color:var(--primary);text-decoration:none;border:1.5px solid var(--border);padding:6px 12px;border-radius:var(--radius-sm);">📎 View Current File</a>
+          {% endif %}
+        </div>
+        <div class="card-body">
+
+          <div class="form-row-3">
+            <div class="form-group">
+              <label>Document Type *</label>
+              <select name="doc_type" required>
+                <option value="">— Select —</option>
+                {% for dt in doc_types %}
+                <option value="{{ dt.name }}" {% if doc.doc_type == dt.name %}selected{% endif %}>{{ dt.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Belongs To *</label>
+              <select name="belongs_to" required>
+                <option value="Company" {% if doc.belongs_to == 'Company' %}selected{% endif %}>Company</option>
+                <option value="Individual" {% if doc.belongs_to == 'Individual' %}selected{% endif %}>Individual</option>
+                <option value="Staff" {% if doc.belongs_to == 'Staff' %}selected{% endif %}>Staff</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Owner Name *</label>
+              <input type="text" name="owner_name" value="{{ doc.owner_name }}" required placeholder="Name on document">
+            </div>
+          </div>
+
+          <div class="form-row-3">
+            <div class="form-group">
+              <label>Expiry Date</label>
+              <input type="date" name="expiry_date" value="{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}">
+            </div>
+            <div class="form-group">
+              <label>Link to Customer</label>
+              <select name="customer_id">
+                <option value="">— None —</option>
+                {% for c in customers %}
+                <option value="{{ c.id }}" {% if doc.customer_id == c.id %}selected{% endif %}>
+                  {{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <input type="text" name="notes" value="{{ doc.notes or '' }}" placeholder="Any notes...">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Replace File (leave empty to keep current)</label>
+            {% if doc.file_url %}
+            <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);">
+              Current file: <a href="{{ doc.file_url }}" target="_blank" style="color:var(--primary);">📎 View</a>
+            </div>
+            {% elif doc.file_name %}
+            <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);">Current: {{ doc.file_name }}</div>
+            {% endif %}
+            <input type="file" name="document_file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="padding:6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;width:100%;">
+          </div>
+
+          <div class="form-actions">
+            <input type="hidden" name="add_another" id="add_another_input" value="">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <button type="button" onclick="document.getElementById('add_another_input').value='1'; document.getElementById('editDocForm').submit();" class="btn-sm">Save & Add Another</button>
+            <a href="/documents" class="btn-cancel">Cancel</a>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

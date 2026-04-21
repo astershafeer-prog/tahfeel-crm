@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Finance Dashboard</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav, welcome -%}
+  {{ topbar() }}
+  {{ nav('dashboard') }}
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    <div class="page-head" style="margin-bottom:14px;">
+      <div><div class="page-head-title">Finance Dashboard</div><div style="font-size:12px;color:#94A3B8;margin-top:2px;">Welcome back, {{ session.user_name.split()[0] }}</div></div>
+    </div>
+
+    <!-- Tasks + Finance Blocks -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+
+      <!-- Tasks Block -->
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);border-top:6px solid #10B981;">
+        <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Tasks <a href="/jobs" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>
+        <a href="/jobs" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Active</span><span style="font-size:22px;font-weight:700;color:#1A3B8B;">{{ tasks_active }}</span></a>
+        <a href="/jobs?status=Overdue" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Overdue</span><span style="font-size:22px;font-weight:700;color:#EF4444;">{{ tasks_overdue }}</span></a>
+        <a href="/jobs?status=Processing" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Processing</span><span style="font-size:22px;font-weight:700;color:#F59E0B;">{{ tasks_processing }}</span></a>
+        <a href="/jobs?status=Pending+Finance+Approval" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;"><span style="font-size:13px;color:#475569;">Pending Approval</span><span style="font-size:22px;font-weight:700;color:#8B5CF6;">{{ tasks_pending_approval }}</span></a>
+      </div>
+
+      <!-- Finance Block -->
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);border-top:6px solid #F59E0B;">
+        <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Finance</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Invoiced</span><span style="font-size:16px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(total_invoiced) }}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Received</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Closed Value</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(completed_value) }}</span></div>
+        {% if total_invoiced > 0 %}{% set crate = [(total_received / total_invoiced * 100)|int, 100]|min %}
+        <div style="margin-top:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;color:#475569;">Collection Rate</span><span style="font-size:11px;font-weight:700;color:#1A3B8B;">{{ crate }}%</span></div><div style="height:6px;background:#F1F5F9;border-radius:10px;overflow:hidden;"><div style="width:{{ crate }}%;height:100%;background:#1A3B8B;border-radius:10px;"></div></div></div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- Documents Block -->
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Documents <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
+        <a href="/documents" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#1A3B8B;">{{ total_docs }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">Total</div></a>
+        <a href="/documents?expiry=30" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#EF4444;">{{ docs_30 }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">≤30 Days</div></a>
+        <a href="/documents?expiry=60" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#F59E0B;">{{ docs_60 }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">31–60 Days</div></a>
+        <a href="/documents?expiry=90" style="text-decoration:none;text-align:center;"><div style="font-size:28px;font-weight:700;color:#475569;">{{ docs_90 }}</div><div style="font-size:11px;color:#94A3B8;margin-top:3px;">61–90 Days</div></a>
+      </div>
+    </div>
+
+    <!-- Pending Finance Approval -->
+    <div class="card card-pending-finance" style="margin-bottom:14px;">
+      <div class="card-header">
+        <h2>⏳ Pending Finance Approval
+          {% if pending_approval %}<span style="background:#FEF3C7;color:#B45309;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:8px;">{{ pending_approval|length }} waiting</span>{% endif %}
+        </h2>
+      </div>
+      <!-- Column headers -->
+      <div style="display:grid;grid-template-columns:1fr 0.8fr 0.7fr 1.6fr auto;gap:10px;padding:8px 16px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Customer</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Service</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Assigned To</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Payment</span>
+        <span></span>
+      </div>
+      {% if pending_approval %}
+      {% for job in pending_approval %}
+      <div style="padding:12px 16px;border-bottom:1px solid #F8FAFC;display:grid;grid-template-columns:1fr 0.8fr 0.7fr 1.6fr auto;gap:10px;align-items:center;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ job.customer.name }}</div>
+          {% if job.customer.company %}<div style="font-size:11px;color:#94A3B8;">{{ job.customer.company }}</div>{% endif %}
+          {% if job.status == 'Done' %}<span style="background:#DCFCE7;color:#15803D;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;">✓ Done — Ready to Close</span>
+          {% else %}<span style="background:#FFFBEB;color:#B45309;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;">Pending Approval</span>{% endif %}
+        </div>
+        <div style="font-size:13px;color:#475569;">{{ job.job_type }}</div>
+        <div class="av-wrap">
+          {% if job.assignee %}
+          <div class="av">{{ job.assignee.name[:2].upper() }}</div>
+          <span class="av-name">{{ job.assignee.name.split()[0] }}</span>
+          {% else %}<span style="font-size:12px;color:#CBD5E1;">—</span>{% endif %}
+        </div>
+        {% if job.status == 'Done' %}
+        <form method="post" action="/jobs/{{ job.id }}/approve" style="display:flex;gap:6px;align-items:center;">
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:80px;">
+            <span style="font-size:9px;color:#94A3B8;text-transform:uppercase;font-weight:600;letter-spacing:0.3px;">Invoiced</span>
+            <input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" placeholder="AED" style="width:80px;height:30px;border:1.5px solid #E2E8F0;border-radius:6px;padding:0 7px;font-size:12px;outline:none;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:80px;">
+            <span style="font-size:9px;color:#94A3B8;text-transform:uppercase;font-weight:600;letter-spacing:0.3px;">Received</span>
+            <input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01" placeholder="AED" style="width:80px;height:30px;border:1.5px solid #E2E8F0;border-radius:6px;padding:0 7px;font-size:12px;outline:none;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:80px;">
+            <span style="font-size:9px;color:#94A3B8;text-transform:uppercase;font-weight:600;letter-spacing:0.3px;">+ Receipt</span>
+            <input type="number" name="additional_receipt" min="0" step="0.01" placeholder="Optional" style="width:80px;height:30px;border:1.5px solid #E2E8F0;border-radius:6px;padding:0 7px;font-size:12px;outline:none;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:70px;">
+            <span style="font-size:9px;color:#94A3B8;text-transform:uppercase;font-weight:600;letter-spacing:0.3px;">Balance</span>
+            <div style="height:30px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:6px;padding:0 7px;font-size:11px;color:#B91C1C;font-weight:700;display:flex;align-items:center;white-space:nowrap;">
+              {{ '{:,.0f}'.format((job.amount_invoiced or 0) - (job.amount_received or 0)) }}
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;justify-content:flex-end;">
+            <span style="font-size:9px;opacity:0;">x</span>
+            <button type="submit" style="height:30px;padding:0 12px;background:#1A3B8B;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Close Task</button>
+          </div>
+        </form>
+        {% else %}
+        <form method="post" action="/jobs/{{ job.id }}/approve" style="display:flex;gap:6px;align-items:center;">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:9px;color:#94A3B8;text-transform:uppercase;font-weight:600;">Invoiced</span>
+            <input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" placeholder="AED" style="width:100px;height:32px;border:1.5px solid #E2E8F0;border-radius:7px;padding:0 8px;font-size:12px;outline:none;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:9px;color:#94A3B8;text-transform:uppercase;font-weight:600;">Received</span>
+            <input type="number" name="amount_received" min="0" step="0.01" placeholder="AED" style="width:100px;height:32px;border:1.5px solid #E2E8F0;border-radius:7px;padding:0 8px;font-size:12px;outline:none;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;justify-content:flex-end;">
+            <span style="font-size:9px;opacity:0;">-</span>
+            <button type="submit" style="height:32px;padding:0 14px;background:#10B981;color:white;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">✓ Approve</button>
+          </div>
+        </form>
+        {% endif %}
+        <a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty">No tasks pending approval or completion.</div>
+      {% endif %}
+    </div>
+
+    <!-- All Active Tasks -->
+    <div class="card">
+      <div class="card-header">
+        <h2>All Active Tasks</h2>
+        <a href="/jobs" style="font-size:12px;color:var(--primary);text-decoration:none;">View all →</a>
+      </div>
+      <div style="display:grid;grid-template-columns:4px 1.2fr 1fr 100px 110px 110px 110px auto;gap:10px;padding:8px 0 8px 0;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
+        <div></div>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;padding-left:10px;">Customer / Service</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Assigned To</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Status</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Invoiced</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Received</span>
+        <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Pending</span>
+        <span></span>
+      </div>
+      {% for job in all_jobs %}
+      {% set is_overdue = job.due_date and job.due_date < now and job.status not in ['Done','Closed','Pending Finance Close'] %}
+      {% if job.status == 'Closed' %}{% set bar = 'bar-grey' %}
+      {% elif job.status in ['Done','Pending Finance Close'] %}{% set bar = 'bar-green' %}
+      {% elif is_overdue %}{% set bar = 'bar-red' %}
+      {% elif job.status == 'Processing' %}{% set bar = 'bar-amber' %}
+      {% elif job.status in ['On Hold','Delayed'] %}{% set bar = 'bar-purple' %}
+      {% else %}{% set bar = 'bar-blue' %}{% endif %}
+      <div style="display:grid;grid-template-columns:4px 1.2fr 1fr 100px 110px 110px 110px auto;gap:10px;align-items:center;padding:10px 0;border-bottom:0.5px solid #F8FAFC;">
+        <div style="height:100%;background:{% if bar=='bar-red' %}#EF4444{% elif bar=='bar-green' %}#10B981{% elif bar=='bar-amber' %}#F59E0B{% elif bar=='bar-purple' %}#8B5CF6{% elif bar=='bar-grey' %}#94A3B8{% else %}#1A3B8B{% endif %};border-radius:2px;min-height:40px;"></div>
+        <div style="padding-left:10px;">
+          <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ job.customer.name }}</div>
+          <div style="font-size:11px;color:#94A3B8;">{{ job.job_type }}</div>
+        </div>
+        <div class="av-wrap">
+          {% if job.assignee %}<div class="av">{{ job.assignee.name[:2].upper() }}</div><span class="av-name">{{ job.assignee.name.split()[0] }}</span>{% else %}<span style="font-size:12px;color:#CBD5E1;">—</span>{% endif %}
+        </div>
+        <span class="badge b-{{ job.status|lower|replace(' ','') }}" style="font-size:10px;">{{ job.status }}</span>
+        <div style="font-size:12px;color:#475569;">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</div>
+        <div style="font-size:12px;color:#10B981;">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div>
+        <div style="font-size:12px;color:{% if (job.amount_invoiced or 0) - (job.amount_received or 0) > 0 %}#EF4444{% else %}#94A3B8{% endif %};">AED {{ '{:,.0f}'.format((job.amount_invoiced or 0) - (job.amount_received or 0)) }}</div>
+        <a href="/jobs/{{ job.id }}" class="ib" title="View" style="margin-right:10px;">👁</a>
+      </div>
+      {% else %}
+      <div class="empty">No active tasks.</div>
+      {% endfor %}
+    </div>
+
+  </div>
+</body>
+</html>
