@@ -2857,6 +2857,22 @@ def delete_staff_temp(user_id):
         db.session.rollback()
         return f"<h2 style='color:red;padding:40px;'>Error: {e}</h2>"
 
+@app.route('/admin/reset-password-tahfeel2026/<email>/<new_password>')
+@login_required
+def reset_password_temp(email, new_password):
+    if session.get('role') != 'admin':
+        return "Admin only", 403
+    try:
+        u = User.query.filter_by(email=email).first()
+        if not u:
+            return f"<h2 style='padding:40px;'>User with email {email} not found</h2>"
+        u.password = generate_password_hash(new_password)
+        db.session.commit()
+        return f"<h2 style='font-family:Arial;color:green;padding:40px;'>✅ Password reset for {u.name} ({email}). <a href='/dashboard'>Go to Dashboard</a></h2>"
+    except Exception as e:
+        db.session.rollback()
+        return f"<h2 style='color:red;padding:40px;'>Error: {e}</h2>"
+
 @app.route('/admin/rename-admin-tahfeel2026')
 @login_required
 def rename_admin_temp():
