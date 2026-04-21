@@ -2846,6 +2846,9 @@ def delete_staff_temp(user_id):
         u = User.query.get(user_id)
         if u:
             name = u.name
+            db.session.execute(db.text(f"DELETE FROM monthly_target WHERE user_id = {user_id}"))
+            db.session.execute(db.text(f"DELETE FROM activity_log WHERE user_id = {user_id}"))
+            db.session.execute(db.text(f"DELETE FROM desk_note WHERE user_id = {user_id}"))
             db.session.delete(u)
             db.session.commit()
             return f"<h2 style='font-family:Arial;color:green;padding:40px;'>✅ Deleted: {name}. <a href='/admin'>Back to Admin</a></h2>"
