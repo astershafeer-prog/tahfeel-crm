@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Analytics</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('analytics') }}
+
+  <div class="container" style="max-width:1200px;">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- Header -->
+    <div class="page-header" style="margin-bottom:20px;">
+      <div>
+        <h2 style="color:#133E87;">📈 Analytics</h2>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Business performance overview</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <a href="/analytics?period=this_month" class="btn-sm {% if period=='this_month' %}btn-primary{% endif %}">This Month</a>
+        <a href="/analytics?period=last_month" class="btn-sm {% if period=='last_month' %}btn-primary{% endif %}">Last Month</a>
+        <a href="/analytics?period=this_year" class="btn-sm {% if period=='this_year' %}btn-primary{% endif %}">This Year</a>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+      <div style="background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;border-top:4px solid #133E87;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Total Leads</div>
+        <div style="font-size:28px;font-weight:800;color:#1A2333;">{{ total_leads }}</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:4px;">{{ converted }} converted · {{ lost }} lost</div>
+      </div>
+      <div style="background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;border-top:4px solid #10B981;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Conversion Rate</div>
+        <div style="font-size:28px;font-weight:800;color:#10B981;">{{ conversion_rate }}%</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:4px;">{{ converted }} out of {{ total_leads }} leads</div>
+      </div>
+      <div style="background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;border-top:4px solid #F59E0B;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Invoiced (AED)</div>
+        <div style="font-size:28px;font-weight:800;color:#1A2333;">{{ '{:,.0f}'.format(total_invoiced) }}</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:4px;">{{ '{:,.0f}'.format(total_received) }} received</div>
+      </div>
+      <div style="background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;border-top:4px solid #EF4444;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Outstanding (AED)</div>
+        <div style="font-size:28px;font-weight:800;color:#EF4444;">{{ '{:,.0f}'.format(total_outstanding) }}</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:4px;">Pending collection</div>
+      </div>
+    </div>
+
+    <!-- Row 2: Monthly Revenue + Pipeline -->
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:20px;">
+
+      <!-- Monthly Revenue Chart -->
+      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;color:#1A2333;">Monthly Revenue Trend</div>
+          <div style="display:flex;gap:12px;">
+            <span style="font-size:11px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#133E87;display:inline-block;"></span>Invoiced</span>
+            <span style="font-size:11px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#10B981;display:inline-block;"></span>Received</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;height:100px;padding-bottom:4px;">
+          {% set max_r = max_rev if max_rev > 0 else 1 %}
+          {% for m in monthly_revenue %}
+          {% set inv_h = ((m.invoiced / max_r) * 90)|int %}
+          {% set rec_h = ((m.received / max_r) * 90)|int %}
+          {% set is_last = loop.last %}
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:90px;">
+              <div style="flex:1;background:{% if is_last %}#133E87{% else %}#DBEAFE{% endif %};border-radius:4px 4px 0 0;height:{{ inv_h if inv_h > 2 else 2 }}px;"></div>
+              <div style="flex:1;background:{% if is_last %}#10B981{% else %}#D1FAE5{% endif %};border-radius:4px 4px 0 0;height:{{ rec_h if rec_h > 2 else 2 }}px;"></div>
+            </div>
+            <div style="font-size:9px;color:{% if is_last %}#133E87{% else %}#94A3B8{% endif %};font-weight:{% if is_last %}700{% else %}400{% endif %};">{{ m.month }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:0.5px solid #F1F5F9;">
+          <span style="font-size:11px;color:#94A3B8;">Invoiced <strong style="color:#133E87;">AED {{ '{:,.0f}'.format(total_invoiced) }}</strong></span>
+          <span style="font-size:11px;color:#94A3B8;">Received <strong style="color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</strong></span>
+          <span style="font-size:11px;color:#94A3B8;">Pending <strong style="color:#EF4444;">AED {{ '{:,.0f}'.format(total_outstanding) }}</strong></span>
+        </div>
+      </div>
+
+      <!-- Lead Pipeline -->
+      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
+        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Lead Pipeline</div>
+        {% set pipeline_statuses = [
+          ('New', '#94A3B8'),
+          ('Call Connected', '#3B82F6'),
+          ('Sent WhatsApp', '#8B5CF6'),
+          ('Quotation Sent', '#F59E0B'),
+          ('Potential Lead', '#06B6D4'),
+          ('Meeting Scheduled', '#6366F1'),
+          ('Converted', '#10B981'),
+          ('Lost', '#EF4444'),
+          ('Customer Not Responding', '#F97316'),
+        ] %}
+        {% for status, color in pipeline_statuses %}
+        {% if pipeline.get(status, 0) > 0 %}
+        {% set pct = ((pipeline.get(status, 0) / max_pipeline) * 100)|int %}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="font-size:11px;color:#475569;width:140px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ status }}</div>
+          <div style="flex:1;height:14px;background:#F1F5F9;border-radius:4px;overflow:hidden;">
+            <div style="width:{{ pct }}%;height:100%;background:{{ color }};border-radius:4px;"></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:#1A2333;width:24px;text-align:right;">{{ pipeline.get(status, 0) }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% if not pipeline %}
+        <div style="text-align:center;padding:20px 0;color:#94A3B8;font-size:12px;">No leads in this period</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Row 3: Services + Sources + Campaigns -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;">
+
+      <!-- Top Services -->
+      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
+        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Top Services</div>
+        {% if top_services %}
+        {% for service, count in top_services %}
+        {% set pct = ((count / max_service) * 100)|int %}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+          <div style="font-size:11px;color:#475569;width:100px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ service }}</div>
+          <div style="flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;">
+            <div style="width:{{ pct }}%;height:100%;background:#133E87;border-radius:20px;"></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:#1A2333;width:24px;text-align:right;">{{ count }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="text-align:center;padding:20px 0;color:#94A3B8;font-size:12px;">No data yet</div>
+        {% endif %}
+      </div>
+
+      <!-- Lead Sources -->
+      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
+        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Lead Sources</div>
+        {% set src_colors = ['#133E87','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EF4444'] %}
+        {% if top_sources %}
+        {% for source, count in top_sources %}
+        {% set pct = ((count / max_source) * 100)|int %}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:{{ src_colors[loop.index0 % 6] }};flex-shrink:0;"></div>
+          <div style="font-size:11px;color:#475569;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ source }}</div>
+          <div style="font-size:11px;font-weight:700;color:#1A2333;">{{ count }}</div>
+          <div style="font-size:10px;color:#94A3B8;width:32px;text-align:right;">{{ ((count / total_leads) * 100)|int if total_leads > 0 else 0 }}%</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="text-align:center;padding:20px 0;color:#94A3B8;font-size:12px;">No data yet</div>
+        {% endif %}
+      </div>
+
+      <!-- Campaign Performance -->
+      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
+        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Campaign Performance</div>
+        {% if top_campaigns %}
+        {% for campaign, count in top_campaigns %}
+        {% set pct = ((count / top_campaigns[0][1]) * 100)|int %}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+          <div style="font-size:11px;color:#475569;width:100px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ campaign }}</div>
+          <div style="flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;">
+            <div style="width:{{ pct }}%;height:100%;background:#10B981;border-radius:20px;"></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:#1A2333;width:24px;text-align:right;">{{ count }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="text-align:center;padding:20px 0;color:#94A3B8;font-size:12px;">No campaigns yet — add campaigns in Admin Panel</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Row 4: Staff Performance -->
+    <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;border-top:4px solid #0F2660;margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Staff Performance</div>
+      {% if staff_stats %}
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1.5fr 1.5fr;gap:8px;padding:8px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:8px;">
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Staff</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Leads</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Converted</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Conv. %</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Invoiced (AED)</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Performance</span>
+      </div>
+      {% set colors = ['#1A3B8B','#10B981','#8B5CF6','#F59E0B','#EF4444','#06B6D4','#EC4899'] %}
+      {% for s in staff_stats %}
+      {% set bar_pct = ((s.invoiced / max_invoiced) * 100)|int if max_invoiced > 0 else 0 %}
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1.5fr 1.5fr;gap:8px;padding:10px 12px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:{{ colors[loop.index0 % 7] }};display:flex;align-items:center;justify-content:center;color:white;font-size:10px;font-weight:700;flex-shrink:0;">{{ s.name[:2].upper() }}</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#1A2333;">{{ s.name }}</div>
+            <div style="font-size:10px;color:#94A3B8;">{{ s.role|capitalize }}</div>
+          </div>
+        </div>
+        <span style="font-size:13px;color:#475569;">{{ s.leads }}</span>
+        <span style="font-size:13px;color:#10B981;font-weight:700;">{{ s.converted }}</span>
+        <span style="font-size:12px;font-weight:700;color:{% if s.conv_rate >= 50 %}#10B981{% elif s.conv_rate >= 25 %}#F59E0B{% else %}#EF4444{% endif %};">{{ s.conv_rate }}%</span>
+        <span style="font-size:12px;font-weight:700;color:#133E87;">{{ '{:,.0f}'.format(s.invoiced) }}</span>
+        <div>
+          <div style="height:6px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
+            <div style="width:{{ bar_pct }}%;height:100%;background:{% if bar_pct >= 70 %}#10B981{% elif bar_pct >= 40 %}#133E87{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
+          </div>
+          <div style="font-size:9px;color:#94A3B8;margin-top:2px;">{{ bar_pct }}% of top</div>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="text-align:center;padding:30px 0;color:#94A3B8;font-size:13px;">No staff data for this period</div>
+      {% endif %}
+    </div>
+
+  </div>
+</body>
+</html>

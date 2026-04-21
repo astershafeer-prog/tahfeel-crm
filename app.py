@@ -2953,6 +2953,137 @@ def export_full_backup():
     response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     return response
 
+
+@app.route('/analytics')
+@login_required
+def analytics():
+    if session.get('role') not in ['admin', 'finance']:
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
+
+    now = now_dubai()
+    today = now.date()
+
+    # Date range from request args — default this month
+    period = request.args.get('period', 'this_month')
+    if period == 'last_month':
+        if now.month == 1:
+            start = now.replace(year=now.year-1, month=12, day=1)
+        else:
+            start = now.replace(month=now.month-1, day=1)
+        import calendar
+        last_day = calendar.monthrange(start.year, start.month)[1]
+        end = start.replace(day=last_day)
+    elif period == 'this_year':
+        start = now.replace(month=1, day=1)
+        end = now
+    else:  # this_month
+        start = now.replace(day=1)
+        end = now
+
+    start_dt = start.replace(hour=0, minute=0, second=0) if hasattr(start, 'hour') else now.replace(day=1, hour=0, minute=0, second=0)
+    end_dt = end.replace(hour=23, minute=59, second=59) if hasattr(end, 'hour') else now.replace(hour=23, minute=59, second=59)
+
+    # All data for period
+    all_leads = Lead.query.filter(Lead.created_at >= start_dt, Lead.created_at <= end_dt).all()
+    all_jobs = Job.query.filter(Job.created_at >= start_dt, Job.created_at <= end_dt).all()
+    all_users = User.query.filter_by(active=True).order_by(User.name).all()
+    users_map = {u.id: u.name for u in User.query.all()}
+
+    # ── Lead stats
+    total_leads = len(all_leads)
+    won_s = {'Won', 'Converted', 'Closed-Won'}
+    lost_s = {'Lost', 'Rejected', 'Closed-Lost'}
+    converted = [l for l in all_leads if l.status in won_s]
+    lost = [l for l in all_leads if l.status in lost_s]
+    conversion_rate = round(len(converted) / total_leads * 100, 1) if total_leads > 0 else 0
+
+    # ── Revenue stats
+    active_jobs = [j for j in all_jobs if j.status not in ['Pending Finance Approval']]
+    total_invoiced = sum(j.amount_invoiced or 0 for j in active_jobs)
+    total_received = sum(j.amount_received or 0 for j in active_jobs)
+    total_outstanding = total_invoiced - total_received
+
+    # ── Lead pipeline by status
+    from collections import defaultdict, Counter
+    pipeline = Counter(l.status for l in all_leads)
+
+    # ── Top services
+    service_counts = Counter(l.service for l in all_leads if l.service)
+    top_services = service_counts.most_common(6)
+
+    # ── Top sources
+    source_counts = Counter(l.source for l in all_leads if l.source)
+    top_sources = source_counts.most_common(6)
+
+    # ── Campaign performance
+    campaign_counts = Counter(l.campaign for l in all_leads if l.campaign)
+    top_campaigns = campaign_counts.most_common(5)
+
+    # ── Monthly revenue trend (last 6 months)
+    monthly_revenue = []
+    for i in range(5, -1, -1):
+        if now.month - i <= 0:
+            m = now.month - i + 12
+            y = now.year - 1
+        else:
+            m = now.month - i
+            y = now.year
+        month_jobs = Job.query.filter(
+            db.extract('month', Job.created_at) == m,
+            db.extract('year', Job.created_at) == y,
+            Job.status.notin_(['Pending Finance Approval'])
+        ).all()
+        inv = sum(j.amount_invoiced or 0 for j in month_jobs)
+        rec = sum(j.amount_received or 0 for j in month_jobs)
+        import calendar
+        monthly_revenue.append({
+            'month': calendar.month_abbr[m],
+            'invoiced': inv,
+            'received': rec,
+        })
+
+    # ── Staff performance
+    staff_stats = []
+    for u in all_users:
+        if u.role not in ['sales', 'operations', 'admin']:
+            continue
+        u_leads = [l for l in all_leads if l.assigned_to == u.id]
+        u_sales = [j for j in all_jobs if j.customer and j.customer.assigned_to == u.id]
+        u_inv = sum(j.amount_invoiced or 0 for j in u_sales if j.status not in ['Pending Finance Approval'])
+        u_conv = len([l for l in u_leads if l.status in won_s])
+        conv_rate = round(u_conv / len(u_leads) * 100) if u_leads else 0
+        staff_stats.append({
+            'name': u.name,
+            'role': u.role,
+            'leads': len(u_leads),
+            'converted': u_conv,
+            'conv_rate': conv_rate,
+            'invoiced': u_inv,
+        })
+    staff_stats.sort(key=lambda x: x['invoiced'], reverse=True)
+
+    # Max invoiced for bar scaling
+    max_invoiced = max((s['invoiced'] for s in staff_stats), default=1) or 1
+    max_service = top_services[0][1] if top_services else 1
+    max_source = top_sources[0][1] if top_sources else 1
+    max_pipeline = max(pipeline.values()) if pipeline else 1
+    max_rev = max((m['invoiced'] for m in monthly_revenue), default=1) or 1
+
+    return render_template('analytics.html',
+        now=now, period=period,
+        total_leads=total_leads, converted=len(converted), lost=len(lost),
+        conversion_rate=conversion_rate,
+        total_invoiced=total_invoiced, total_received=total_received,
+        total_outstanding=total_outstanding,
+        pipeline=pipeline, top_services=top_services, top_sources=top_sources,
+        top_campaigns=top_campaigns, monthly_revenue=monthly_revenue,
+        staff_stats=staff_stats, max_invoiced=max_invoiced,
+        max_service=max_service, max_source=max_source,
+        max_pipeline=max_pipeline, max_rev=max_rev,
+        users_map=users_map
+    )
+
 from reports import reports_bp
 app.register_blueprint(reports_bp)
 
