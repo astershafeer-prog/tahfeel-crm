@@ -2856,7 +2856,7 @@ def check_birthdays():
     except Exception as e:
         return f'Error: {e}'
         
-@app.route('/invoice-generator')
+@app.route('/invoice')
 @login_required
 def invoice_generator():
     if session.get('role') not in ['admin', 'finance', 'operations']:
@@ -2865,14 +2865,7 @@ def invoice_generator():
     services = [s.name for s in Service.query.order_by(Service.name).all()]
     return render_template('invoice_generator.html', services=services)
    
-if __name__ == '__main__':
-init_db()
-    if session.get('role') not in ['admin', 'finance', 'operations']:
-        flash('Access denied')
-        return redirect('/dashboard')
-    services = [s.name for s in Service.query.order_by(Service.name).all()]
-    return render_template('invoice_generator.html', services=services)
-if __name__ == '__main__':
+    if __name__ == '__main__':
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
 else:
