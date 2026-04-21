@@ -3070,8 +3070,39 @@ def analytics():
     max_pipeline = max(pipeline.values()) if pipeline else 1
     max_rev = max((m['invoiced'] for m in monthly_revenue), default=1) or 1
 
+    # ── Operations stats
+    total_jobs = len(all_jobs)
+    completed_jobs = [j for j in all_jobs if j.status in ['Done','Closed']]
+    active_jobs_ops = [j for j in all_jobs if j.status not in ['Done','Closed','Pending Finance Approval']]
+    overdue_jobs = [j for j in all_jobs if j.due_date and j.due_date.date() < today and j.status not in ['Done','Closed']]
+    job_type_counts = Counter(j.job_type for j in all_jobs if j.job_type)
+    top_job_types = job_type_counts.most_common(6)
+    max_job_type = top_job_types[0][1] if top_job_types else 1
+    job_status_counts = Counter(j.status for j in all_jobs)
+
+    # Avg days to complete
+    completion_days = []
+    for j in completed_jobs:
+        if j.created_at and j.completed_at:
+            completion_days.append((j.completed_at - j.created_at).days)
+    avg_completion = round(sum(completion_days) / len(completion_days), 1) if completion_days else 0
+
+    # ── Documents stats
+    from datetime import timedelta as _td
+    all_docs = Document.query.all()
+    total_docs = len(all_docs)
+    expired_docs = [d for d in all_docs if d.expiry_date and d.expiry_date.date() < today]
+    expiring_30 = [d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date.date() - today).days <= 30]
+    expiring_60 = [d for d in all_docs if d.expiry_date and 31 <= (d.expiry_date.date() - today).days <= 60]
+    expiring_90 = [d for d in all_docs if d.expiry_date and 61 <= (d.expiry_date.date() - today).days <= 90]
+    doc_type_counts = Counter(d.doc_type for d in all_docs if d.doc_type)
+    top_doc_types = doc_type_counts.most_common(6)
+
+    # Tab from request
+    tab = request.args.get('tab', 'overview')
+
     return render_template('analytics.html',
-        now=now, period=period,
+        now=now, period=period, tab=tab,
         total_leads=total_leads, converted=len(converted), lost=len(lost),
         conversion_rate=conversion_rate,
         total_invoiced=total_invoiced, total_received=total_received,
@@ -3081,7 +3112,14 @@ def analytics():
         staff_stats=staff_stats, max_invoiced=max_invoiced,
         max_service=max_service, max_source=max_source,
         max_pipeline=max_pipeline, max_rev=max_rev,
-        users_map=users_map
+        users_map=users_map,
+        total_jobs=total_jobs, completed_jobs=len(completed_jobs),
+        active_jobs_ops=len(active_jobs_ops), overdue_jobs=len(overdue_jobs),
+        avg_completion=avg_completion, top_job_types=top_job_types,
+        max_job_type=max_job_type, job_status_counts=job_status_counts,
+        total_docs=total_docs, expired_docs=expired_docs,
+        expiring_30=expiring_30, expiring_60=expiring_60, expiring_90=expiring_90,
+        top_doc_types=top_doc_types,
     )
 
 from reports import reports_bp

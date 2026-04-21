@@ -6,6 +6,39 @@
   <title>Tahfeel CRM — Analytics</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .an-card{background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;margin-bottom:16px;}
+    .an-card-title{font-size:13px;font-weight:700;color:#1A2333;margin-bottom:14px;}
+    .kpi{background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;}
+    .kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .kpi-val{font-size:26px;font-weight:800;color:#1A2333;}
+    .kpi-sub{font-size:11px;color:#94A3B8;margin-top:4px;}
+    .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+    .bar-label{font-size:11px;color:#475569;width:120px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .bar-track{flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;}
+    .bar-fill{height:100%;border-radius:20px;}
+    .bar-val{font-size:11px;font-weight:700;color:#1A2333;width:28px;text-align:right;flex-shrink:0;}
+    .tab-nav{display:flex;gap:4px;margin-bottom:20px;background:white;padding:6px;border-radius:10px;border:0.5px solid #E2E8F0;}
+    .tab-btn{padding:8px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;color:#64748B;border:none;background:transparent;}
+    .tab-btn.active{background:#133E87;color:white;}
+    .tab-btn:hover:not(.active){background:#F1F5F9;color:#133E87;}
+    .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+    .staff-row{display:grid;grid-template-columns:2fr 0.8fr 0.8fr 0.8fr 1.2fr 1.4fr;gap:8px;padding:10px 12px;border-bottom:0.5px solid #F8FAFC;align-items:center;}
+    .staff-hdr{background:#F8FAFC;border-radius:8px;margin-bottom:6px;}
+    .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;}
+    .doc-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid #F8FAFC;}
+    .doc-row:last-child{border-bottom:none;}
+    .exp-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;}
+    .pip-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+    .pip-label{font-size:11px;color:#475569;width:150px;flex-shrink:0;}
+    .pip-track{flex:1;height:14px;background:#F1F5F9;border-radius:4px;overflow:hidden;}
+    .pip-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;}
+    .pip-text{font-size:9px;font-weight:700;color:white;}
+    .pip-count{font-size:11px;color:#475569;width:24px;text-align:right;flex-shrink:0;}
+    .empty-state{text-align:center;padding:40px;color:#94A3B8;font-size:13px;}
+  </style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
@@ -18,187 +51,312 @@
     {% endwith %}
 
     <!-- Header -->
-    <div class="page-header" style="margin-bottom:20px;">
+    <div class="page-header" style="margin-bottom:16px;">
       <div>
         <h2 style="color:#133E87;">📈 Analytics</h2>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Business performance overview</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Live business performance</div>
       </div>
       <div style="display:flex;gap:8px;">
-        <a href="/analytics?period=this_month" class="btn-sm {% if period=='this_month' %}btn-primary{% endif %}">This Month</a>
-        <a href="/analytics?period=last_month" class="btn-sm {% if period=='last_month' %}btn-primary{% endif %}">Last Month</a>
-        <a href="/analytics?period=this_year" class="btn-sm {% if period=='this_year' %}btn-primary{% endif %}">This Year</a>
+        <a href="/analytics?tab={{ tab }}&period=this_month" class="btn-sm {% if period=='this_month' %}btn-primary{% endif %}">This Month</a>
+        <a href="/analytics?tab={{ tab }}&period=last_month" class="btn-sm {% if period=='last_month' %}btn-primary{% endif %}">Last Month</a>
+        <a href="/analytics?tab={{ tab }}&period=this_year" class="btn-sm {% if period=='this_year' %}btn-primary{% endif %}">This Year</a>
       </div>
     </div>
 
-    <!-- KPI Cards -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
-      <div style="background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;border-top:4px solid #133E87;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Total Leads</div>
-        <div style="font-size:28px;font-weight:800;color:#1A2333;">{{ total_leads }}</div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:4px;">{{ converted }} converted · {{ lost }} lost</div>
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <a href="/analytics?tab=overview&period={{ period }}" class="tab-btn {% if tab=='overview' %}active{% endif %}">⊞ Overview</a>
+      <a href="/analytics?tab=sales&period={{ period }}" class="tab-btn {% if tab=='sales' %}active{% endif %}">💼 Sales</a>
+      <a href="/analytics?tab=operations&period={{ period }}" class="tab-btn {% if tab=='operations' %}active{% endif %}">✓ Operations</a>
+      <a href="/analytics?tab=documents&period={{ period }}" class="tab-btn {% if tab=='documents' %}active{% endif %}">📄 Documents</a>
+      <a href="/analytics?tab=staff&period={{ period }}" class="tab-btn {% if tab=='staff' %}active{% endif %}">👤 Staff</a>
+    </div>
+
+    <!-- ══ OVERVIEW TAB ══ -->
+    {% if tab == 'overview' %}
+    <div class="grid4">
+      <div class="kpi" style="border-top:4px solid #133E87;">
+        <div class="kpi-label">Total Leads</div>
+        <div class="kpi-val">{{ total_leads }}</div>
+        <div class="kpi-sub">{{ converted }} converted · {{ lost }} lost</div>
       </div>
-      <div style="background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;border-top:4px solid #10B981;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Conversion Rate</div>
-        <div style="font-size:28px;font-weight:800;color:#10B981;">{{ conversion_rate }}%</div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:4px;">{{ converted }} out of {{ total_leads }} leads</div>
+      <div class="kpi" style="border-top:4px solid #10B981;">
+        <div class="kpi-label">Conversion Rate</div>
+        <div class="kpi-val" style="color:#10B981;">{{ conversion_rate }}%</div>
+        <div class="kpi-sub">{{ converted }} of {{ total_leads }} leads</div>
       </div>
-      <div style="background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;border-top:4px solid #F59E0B;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Invoiced (AED)</div>
-        <div style="font-size:28px;font-weight:800;color:#1A2333;">{{ '{:,.0f}'.format(total_invoiced) }}</div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:4px;">{{ '{:,.0f}'.format(total_received) }} received</div>
+      <div class="kpi" style="border-top:4px solid #F59E0B;">
+        <div class="kpi-label">Invoiced (AED)</div>
+        <div class="kpi-val">{{ '{:,.0f}'.format(total_invoiced) }}</div>
+        <div class="kpi-sub">{{ '{:,.0f}'.format(total_received) }} received</div>
       </div>
-      <div style="background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;border-top:4px solid #EF4444;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Outstanding (AED)</div>
-        <div style="font-size:28px;font-weight:800;color:#EF4444;">{{ '{:,.0f}'.format(total_outstanding) }}</div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:4px;">Pending collection</div>
+      <div class="kpi" style="border-top:4px solid #EF4444;">
+        <div class="kpi-label">Outstanding (AED)</div>
+        <div class="kpi-val" style="color:#EF4444;">{{ '{:,.0f}'.format(total_outstanding) }}</div>
+        <div class="kpi-sub">Pending collection</div>
       </div>
     </div>
 
-    <!-- Row 2: Monthly Revenue + Pipeline -->
-    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:20px;">
-
-      <!-- Monthly Revenue Chart -->
-      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <div style="font-size:13px;font-weight:700;color:#1A2333;">Monthly Revenue Trend</div>
-          <div style="display:flex;gap:12px;">
-            <span style="font-size:11px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#133E87;display:inline-block;"></span>Invoiced</span>
-            <span style="font-size:11px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#10B981;display:inline-block;"></span>Received</span>
+    <div class="grid2">
+      <!-- Revenue Trend -->
+      <div class="an-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="an-card-title" style="margin:0;">Monthly Revenue</div>
+          <div style="display:flex;gap:10px;">
+            <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#133E87;display:inline-block;"></span>Invoiced</span>
+            <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#10B981;display:inline-block;"></span>Received</span>
           </div>
         </div>
-        <div style="display:flex;align-items:flex-end;gap:8px;height:100px;padding-bottom:4px;">
+        <div style="display:flex;align-items:flex-end;gap:6px;height:90px;">
           {% set max_r = max_rev if max_rev > 0 else 1 %}
           {% for m in monthly_revenue %}
-          {% set inv_h = ((m.invoiced / max_r) * 90)|int %}
-          {% set rec_h = ((m.received / max_r) * 90)|int %}
-          {% set is_last = loop.last %}
+          {% set inv_h = ((m.invoiced / max_r) * 80)|int %}
+          {% set rec_h = ((m.received / max_r) * 80)|int %}
           <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-            <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:90px;">
-              <div style="flex:1;background:{% if is_last %}#133E87{% else %}#DBEAFE{% endif %};border-radius:4px 4px 0 0;height:{{ inv_h if inv_h > 2 else 2 }}px;"></div>
-              <div style="flex:1;background:{% if is_last %}#10B981{% else %}#D1FAE5{% endif %};border-radius:4px 4px 0 0;height:{{ rec_h if rec_h > 2 else 2 }}px;"></div>
+            <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:80px;">
+              <div style="flex:1;background:{% if loop.last %}#133E87{% else %}#DBEAFE{% endif %};border-radius:3px 3px 0 0;height:{{ inv_h if inv_h > 2 else 2 }}px;"></div>
+              <div style="flex:1;background:{% if loop.last %}#10B981{% else %}#D1FAE5{% endif %};border-radius:3px 3px 0 0;height:{{ rec_h if rec_h > 2 else 2 }}px;"></div>
             </div>
-            <div style="font-size:9px;color:{% if is_last %}#133E87{% else %}#94A3B8{% endif %};font-weight:{% if is_last %}700{% else %}400{% endif %};">{{ m.month }}</div>
+            <div style="font-size:9px;color:{% if loop.last %}#133E87{% else %}#94A3B8{% endif %};font-weight:{% if loop.last %}700{% else %}400{% endif %};">{{ m.month }}</div>
           </div>
           {% endfor %}
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:0.5px solid #F1F5F9;">
-          <span style="font-size:11px;color:#94A3B8;">Invoiced <strong style="color:#133E87;">AED {{ '{:,.0f}'.format(total_invoiced) }}</strong></span>
-          <span style="font-size:11px;color:#94A3B8;">Received <strong style="color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</strong></span>
-          <span style="font-size:11px;color:#94A3B8;">Pending <strong style="color:#EF4444;">AED {{ '{:,.0f}'.format(total_outstanding) }}</strong></span>
         </div>
       </div>
 
       <!-- Lead Pipeline -->
-      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
-        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Lead Pipeline</div>
-        {% set pipeline_statuses = [
-          ('New', '#94A3B8'),
-          ('Call Connected', '#3B82F6'),
-          ('Sent WhatsApp', '#8B5CF6'),
-          ('Quotation Sent', '#F59E0B'),
-          ('Potential Lead', '#06B6D4'),
-          ('Meeting Scheduled', '#6366F1'),
-          ('Converted', '#10B981'),
-          ('Lost', '#EF4444'),
-          ('Customer Not Responding', '#F97316'),
-        ] %}
-        {% for status, color in pipeline_statuses %}
-        {% if pipeline.get(status, 0) > 0 %}
-        {% set pct = ((pipeline.get(status, 0) / max_pipeline) * 100)|int %}
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <div style="font-size:11px;color:#475569;width:140px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ status }}</div>
-          <div style="flex:1;height:14px;background:#F1F5F9;border-radius:4px;overflow:hidden;">
-            <div style="width:{{ pct }}%;height:100%;background:{{ color }};border-radius:4px;"></div>
-          </div>
-          <div style="font-size:11px;font-weight:700;color:#1A2333;width:24px;text-align:right;">{{ pipeline.get(status, 0) }}</div>
+      <div class="an-card">
+        <div class="an-card-title">Lead Pipeline</div>
+        {% set pip_items = [('New','#94A3B8'),('Call Connected','#3B82F6'),('Sent WhatsApp','#8B5CF6'),('Quotation Sent','#F59E0B'),('Potential Lead','#06B6D4'),('Meeting Scheduled','#6366F1'),('Converted','#10B981'),('Lost','#EF4444'),('Customer Not Responding','#F97316')] %}
+        {% for status, color in pip_items %}{% if pipeline.get(status,0) > 0 %}
+        {% set pct = ((pipeline.get(status,0) / max_pipeline) * 100)|int %}
+        <div class="pip-row">
+          <div class="pip-label">{{ status }}</div>
+          <div class="pip-track"><div class="pip-fill" style="width:{{ pct }}%;background:{{ color }};"><span class="pip-text">{% if pct > 15 %}{{ pct }}%{% endif %}</span></div></div>
+          <div class="pip-count">{{ pipeline.get(status,0) }}</div>
         </div>
-        {% endif %}
+        {% endif %}{% endfor %}
+        {% if not pipeline %}<div class="empty-state">No leads this period</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="an-card">
+        <div class="an-card-title">Top Services</div>
+        {% for svc, cnt in top_services %}<div class="bar-row"><div class="bar-label">{{ svc }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_service)*100)|int }}%;background:#133E87;"></div></div><div class="bar-val">{{ cnt }}</div></div>{% endfor %}
+        {% if not top_services %}<div class="empty-state">No data</div>{% endif %}
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Lead Sources</div>
+        {% set sc = ['#133E87','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EF4444'] %}
+        {% for src, cnt in top_sources %}
+        <div class="bar-row">
+          <div style="display:flex;align-items:center;gap:6px;width:120px;flex-shrink:0;"><div style="width:8px;height:8px;border-radius:50%;background:{{ sc[loop.index0%6] }};flex-shrink:0;"></div><div class="bar-label" style="width:auto;">{{ src }}</div></div>
+          <div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_source)*100)|int }}%;background:{{ sc[loop.index0%6] }};"></div></div>
+          <div class="bar-val">{{ cnt }}</div>
+        </div>
         {% endfor %}
-        {% if not pipeline %}
-        <div style="text-align:center;padding:20px 0;color:#94A3B8;font-size:12px;">No leads in this period</div>
+        {% if not top_sources %}<div class="empty-state">No data</div>{% endif %}
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Campaigns</div>
+        {% for camp, cnt in top_campaigns %}<div class="bar-row"><div class="bar-label">{{ camp }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/top_campaigns[0][1])*100)|int if top_campaigns else 0 }}%;background:#10B981;"></div></div><div class="bar-val">{{ cnt }}</div></div>{% endfor %}
+        {% if not top_campaigns %}<div class="empty-state">No campaigns yet</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- ══ SALES TAB ══ -->
+    {% elif tab == 'sales' %}
+    <div class="grid4">
+      <div class="kpi" style="border-top:4px solid #133E87;"><div class="kpi-label">Total Leads</div><div class="kpi-val">{{ total_leads }}</div><div class="kpi-sub">This period</div></div>
+      <div class="kpi" style="border-top:4px solid #10B981;"><div class="kpi-label">Converted</div><div class="kpi-val" style="color:#10B981;">{{ converted }}</div><div class="kpi-sub">{{ conversion_rate }}% conversion rate</div></div>
+      <div class="kpi" style="border-top:4px solid #EF4444;"><div class="kpi-label">Lost</div><div class="kpi-val" style="color:#EF4444;">{{ lost }}</div><div class="kpi-sub">{{ ((lost/total_leads)*100)|round(1) if total_leads > 0 else 0 }}% lost rate</div></div>
+      <div class="kpi" style="border-top:4px solid #F59E0B;"><div class="kpi-label">In Progress</div><div class="kpi-val">{{ total_leads - converted - lost }}</div><div class="kpi-sub">Active leads</div></div>
+    </div>
+    <div class="grid2">
+      <div class="an-card">
+        <div class="an-card-title">Pipeline by Status</div>
+        {% set pip_items = [('New','#94A3B8'),('Call Connected','#3B82F6'),('Sent WhatsApp','#8B5CF6'),('Quotation Sent','#F59E0B'),('Potential Lead','#06B6D4'),('Meeting Scheduled','#6366F1'),('Customer Not Responding','#F97316'),('Converted','#10B981'),('Lost','#EF4444')] %}
+        {% for status, color in pip_items %}{% if pipeline.get(status,0) > 0 %}
+        {% set pct = ((pipeline.get(status,0) / max_pipeline) * 100)|int %}
+        <div class="pip-row">
+          <div class="pip-label">{{ status }}</div>
+          <div class="pip-track"><div class="pip-fill" style="width:{{ pct }}%;background:{{ color }};"></div></div>
+          <div class="pip-count">{{ pipeline.get(status,0) }}</div>
+        </div>
+        {% endif %}{% endfor %}
+        {% if not pipeline %}<div class="empty-state">No leads this period</div>{% endif %}
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Revenue — Invoiced vs Received</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:120px;margin-bottom:12px;">
+          {% set max_r = max_rev if max_rev > 0 else 1 %}
+          {% for m in monthly_revenue %}
+          {% set inv_h = ((m.invoiced / max_r) * 110)|int %}
+          {% set rec_h = ((m.received / max_r) * 110)|int %}
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:110px;">
+              <div style="flex:1;background:{% if loop.last %}#133E87{% else %}#DBEAFE{% endif %};border-radius:3px 3px 0 0;height:{{ inv_h if inv_h > 2 else 2 }}px;"></div>
+              <div style="flex:1;background:{% if loop.last %}#10B981{% else %}#D1FAE5{% endif %};border-radius:3px 3px 0 0;height:{{ rec_h if rec_h > 2 else 2 }}px;"></div>
+            </div>
+            <div style="font-size:9px;color:#94A3B8;">{{ m.month }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:12px;border-top:0.5px solid #F1F5F9;">
+          <div style="text-align:center;"><div style="font-size:10px;color:#94A3B8;">Invoiced</div><div style="font-size:14px;font-weight:700;color:#133E87;">{{ '{:,.0f}'.format(total_invoiced) }}</div></div>
+          <div style="text-align:center;"><div style="font-size:10px;color:#94A3B8;">Received</div><div style="font-size:14px;font-weight:700;color:#10B981;">{{ '{:,.0f}'.format(total_received) }}</div></div>
+          <div style="text-align:center;"><div style="font-size:10px;color:#94A3B8;">Pending</div><div style="font-size:14px;font-weight:700;color:#EF4444;">{{ '{:,.0f}'.format(total_outstanding) }}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="an-card">
+        <div class="an-card-title">Top Services by Leads</div>
+        {% for svc, cnt in top_services %}<div class="bar-row"><div class="bar-label">{{ svc }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_service)*100)|int }}%;background:#133E87;"></div></div><div class="bar-val">{{ cnt }}</div></div>{% endfor %}
+        {% if not top_services %}<div class="empty-state">No data</div>{% endif %}
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Lead Sources</div>
+        {% set sc = ['#133E87','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EF4444'] %}
+        {% for src, cnt in top_sources %}<div class="bar-row"><div class="bar-label">{{ src }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_source)*100)|int }}%;background:{{ sc[loop.index0%6] }};"></div></div><div class="bar-val">{{ cnt }}</div></div>{% endfor %}
+        {% if not top_sources %}<div class="empty-state">No data</div>{% endif %}
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Campaign Performance</div>
+        {% for camp, cnt in top_campaigns %}<div class="bar-row"><div class="bar-label">{{ camp }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/top_campaigns[0][1])*100)|int if top_campaigns else 0 }}%;background:#10B981;"></div></div><div class="bar-val">{{ cnt }}</div></div>{% endfor %}
+        {% if not top_campaigns %}<div class="empty-state">No campaigns yet</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- ══ OPERATIONS TAB ══ -->
+    {% elif tab == 'operations' %}
+    <div class="grid4">
+      <div class="kpi" style="border-top:4px solid #133E87;"><div class="kpi-label">Total Jobs</div><div class="kpi-val">{{ total_jobs }}</div><div class="kpi-sub">This period</div></div>
+      <div class="kpi" style="border-top:4px solid #10B981;"><div class="kpi-label">Completed</div><div class="kpi-val" style="color:#10B981;">{{ completed_jobs }}</div><div class="kpi-sub">{{ ((completed_jobs/total_jobs)*100)|round(1) if total_jobs > 0 else 0 }}% completion rate</div></div>
+      <div class="kpi" style="border-top:4px solid #F59E0B;"><div class="kpi-label">Active Jobs</div><div class="kpi-val">{{ active_jobs_ops }}</div><div class="kpi-sub">In progress now</div></div>
+      <div class="kpi" style="border-top:4px solid #EF4444;"><div class="kpi-label">Overdue Jobs</div><div class="kpi-val" style="color:#EF4444;">{{ overdue_jobs }}</div><div class="kpi-sub">Past due date</div></div>
+    </div>
+    <div class="grid2">
+      <div class="an-card">
+        <div class="an-card-title">Jobs by Status</div>
+        {% set job_colors = {'Pending Finance Approval':'#94A3B8','Assigned':'#3B82F6','Job Started':'#6366F1','Processing':'#8B5CF6','Pending Authority':'#F59E0B','On Hold':'#F97316','Delayed':'#EF4444','Final Stage':'#06B6D4','Done':'#10B981','Pending Finance Close':'#F59E0B','Closed':'#059669'} %}
+        {% for status, cnt in job_status_counts.most_common() %}
+        {% set max_j = job_status_counts.most_common(1)[0][1] if job_status_counts else 1 %}
+        <div class="pip-row">
+          <div class="pip-label">{{ status }}</div>
+          <div class="pip-track"><div class="pip-fill" style="width:{{ ((cnt/max_j)*100)|int }}%;background:{{ job_colors.get(status,'#94A3B8') }};"></div></div>
+          <div class="pip-count">{{ cnt }}</div>
+        </div>
+        {% endfor %}
+        {% if not job_status_counts %}<div class="empty-state">No jobs this period</div>{% endif %}
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Top Job Types</div>
+        {% for jtype, cnt in top_job_types %}<div class="bar-row"><div class="bar-label">{{ jtype }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_job_type)*100)|int }}%;background:#133E87;"></div></div><div class="bar-val">{{ cnt }}</div></div>{% endfor %}
+        {% if not top_job_types %}<div class="empty-state">No jobs this period</div>{% endif %}
+        {% if avg_completion > 0 %}
+        <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid #F1F5F9;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:12px;color:#94A3B8;">Avg. days to complete</span>
+          <span style="font-size:16px;font-weight:700;color:#133E87;">{{ avg_completion }} days</span>
+        </div>
         {% endif %}
       </div>
     </div>
 
-    <!-- Row 3: Services + Sources + Campaigns -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;">
+    <!-- ══ DOCUMENTS TAB ══ -->
+    {% elif tab == 'documents' %}
+    <div class="grid4">
+      <div class="kpi" style="border-top:4px solid #133E87;"><div class="kpi-label">Total Documents</div><div class="kpi-val">{{ total_docs }}</div><div class="kpi-sub">All customers</div></div>
+      <div class="kpi" style="border-top:4px solid #EF4444;"><div class="kpi-label">Expired</div><div class="kpi-val" style="color:#EF4444;">{{ expired_docs|length }}</div><div class="kpi-sub">Action required</div></div>
+      <div class="kpi" style="border-top:4px solid #F59E0B;"><div class="kpi-label">Expiring ≤30 Days</div><div class="kpi-val" style="color:#F59E0B;">{{ expiring_30|length }}</div><div class="kpi-sub">Critical attention</div></div>
+      <div class="kpi" style="border-top:4px solid #06B6D4;"><div class="kpi-label">Expiring 31–90 Days</div><div class="kpi-val">{{ expiring_60|length + expiring_90|length }}</div><div class="kpi-sub">Plan renewals</div></div>
+    </div>
 
-      <!-- Top Services -->
-      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
-        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Top Services</div>
-        {% if top_services %}
-        {% for service, count in top_services %}
-        {% set pct = ((count / max_service) * 100)|int %}
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
-          <div style="font-size:11px;color:#475569;width:100px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ service }}</div>
-          <div style="flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;">
-            <div style="width:{{ pct }}%;height:100%;background:#133E87;border-radius:20px;"></div>
+    <div class="grid2">
+      <div class="an-card">
+        <div class="an-card-title">⚠️ Expired Documents</div>
+        {% if expired_docs %}
+        {% for doc in expired_docs[:8] %}
+        <div class="doc-row">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#1A2333;">{{ doc.owner_name or '—' }}{% if doc.customer %} · {{ doc.customer.name }}{% endif %}</div>
+            <div style="font-size:10px;color:#94A3B8;">{{ doc.doc_type }} · Expired {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '' }}</div>
           </div>
-          <div style="font-size:11px;font-weight:700;color:#1A2333;width:24px;text-align:right;">{{ count }}</div>
+          {% if doc.customer and doc.customer.phone %}
+          <a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-decoration:none;">WA</a>
+          {% else %}
+          <span class="exp-badge" style="background:#FEF2F2;color:#991B1B;">EXPIRED</span>
+          {% endif %}
         </div>
         {% endfor %}
-        {% else %}
-        <div style="text-align:center;padding:20px 0;color:#94A3B8;font-size:12px;">No data yet</div>
-        {% endif %}
+        {% if expired_docs|length > 8 %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ expired_docs|length - 8 }} more expired</div>{% endif %}
+        {% else %}<div class="empty-state">No expired documents ✅</div>{% endif %}
       </div>
 
-      <!-- Lead Sources -->
-      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
-        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Lead Sources</div>
-        {% set src_colors = ['#133E87','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EF4444'] %}
-        {% if top_sources %}
-        {% for source, count in top_sources %}
-        {% set pct = ((count / max_source) * 100)|int %}
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
-          <div style="width:10px;height:10px;border-radius:50%;background:{{ src_colors[loop.index0 % 6] }};flex-shrink:0;"></div>
-          <div style="font-size:11px;color:#475569;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ source }}</div>
-          <div style="font-size:11px;font-weight:700;color:#1A2333;">{{ count }}</div>
-          <div style="font-size:10px;color:#94A3B8;width:32px;text-align:right;">{{ ((count / total_leads) * 100)|int if total_leads > 0 else 0 }}%</div>
-        </div>
-        {% endfor %}
-        {% else %}
-        <div style="text-align:center;padding:20px 0;color:#94A3B8;font-size:12px;">No data yet</div>
-        {% endif %}
-      </div>
-
-      <!-- Campaign Performance -->
-      <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;">
-        <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Campaign Performance</div>
-        {% if top_campaigns %}
-        {% for campaign, count in top_campaigns %}
-        {% set pct = ((count / top_campaigns[0][1]) * 100)|int %}
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
-          <div style="font-size:11px;color:#475569;width:100px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ campaign }}</div>
-          <div style="flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;">
-            <div style="width:{{ pct }}%;height:100%;background:#10B981;border-radius:20px;"></div>
+      <div class="an-card">
+        <div class="an-card-title">🔔 Expiring Within 30 Days</div>
+        {% if expiring_30 %}
+        {% for doc in expiring_30[:8] %}
+        {% set days = (doc.expiry_date.date() - now.date()).days %}
+        <div class="doc-row">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#1A2333;">{{ doc.owner_name or '—' }}{% if doc.customer %} · {{ doc.customer.name }}{% endif %}</div>
+            <div style="font-size:10px;color:#94A3B8;">{{ doc.doc_type }} · {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '' }}</div>
           </div>
-          <div style="font-size:11px;font-weight:700;color:#1A2333;width:24px;text-align:right;">{{ count }}</div>
+          <span class="exp-badge" style="background:#FFFBEB;color:#92400E;">{{ days }}d left</span>
         </div>
         {% endfor %}
-        {% else %}
-        <div style="text-align:center;padding:20px 0;color:#94A3B8;font-size:12px;">No campaigns yet — add campaigns in Admin Panel</div>
-        {% endif %}
+        {% if expiring_30|length > 8 %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ expiring_30|length - 8 }} more</div>{% endif %}
+        {% else %}<div class="empty-state">No documents expiring within 30 days ✅</div>{% endif %}
       </div>
     </div>
 
-    <!-- Row 4: Staff Performance -->
-    <div style="background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;border-top:4px solid #0F2660;margin-bottom:20px;">
-      <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:16px;">Staff Performance</div>
-      {% if staff_stats %}
-      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1.5fr 1.5fr;gap:8px;padding:8px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:8px;">
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Staff</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Leads</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Converted</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Conv. %</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Invoiced (AED)</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Performance</span>
+    <div class="an-card">
+      <div class="an-card-title">Document Types on File</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+        {% for dtype, cnt in top_doc_types %}
+        <div style="background:#F8FAFC;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;color:#475569;">{{ dtype }}</span>
+          <span style="font-size:16px;font-weight:700;color:#133E87;">{{ cnt }}</span>
+        </div>
+        {% endfor %}
+        {% if not top_doc_types %}<div class="empty-state" style="grid-column:1/-1;">No documents yet</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- ══ STAFF TAB ══ -->
+    {% elif tab == 'staff' %}
+    <div class="grid4">
+      <div class="kpi" style="border-top:4px solid #133E87;"><div class="kpi-label">Total Staff</div><div class="kpi-val">{{ staff_stats|length }}</div><div class="kpi-sub">Active members</div></div>
+      <div class="kpi" style="border-top:4px solid #10B981;"><div class="kpi-label">Best Conversion</div>
+        {% set best = staff_stats|sort(attribute='conv_rate',reverse=True)|first if staff_stats else none %}
+        <div class="kpi-val" style="color:#10B981;">{{ best.conv_rate if best else 0 }}%</div>
+        <div class="kpi-sub">{{ best.name if best else '—' }}</div>
+      </div>
+      <div class="kpi" style="border-top:4px solid #F59E0B;"><div class="kpi-label">Top Revenue</div>
+        {% set top_rev = staff_stats|sort(attribute='invoiced',reverse=True)|first if staff_stats else none %}
+        <div class="kpi-val">{{ '{:,.0f}'.format(top_rev.invoiced) if top_rev else 0 }}</div>
+        <div class="kpi-sub">{{ top_rev.name if top_rev else '—' }}</div>
+      </div>
+      <div class="kpi" style="border-top:4px solid #8B5CF6;"><div class="kpi-label">Total Invoiced</div><div class="kpi-val">{{ '{:,.0f}'.format(total_invoiced) }}</div><div class="kpi-sub">All staff combined</div></div>
+    </div>
+
+    <div class="an-card">
+      <div class="an-card-title">Individual Staff Performance</div>
+      <div class="staff-row staff-hdr">
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Staff</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Leads</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Conv.</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Rate</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Invoiced (AED)</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Performance</span>
       </div>
       {% set colors = ['#1A3B8B','#10B981','#8B5CF6','#F59E0B','#EF4444','#06B6D4','#EC4899'] %}
       {% for s in staff_stats %}
       {% set bar_pct = ((s.invoiced / max_invoiced) * 100)|int if max_invoiced > 0 else 0 %}
-      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1.5fr 1.5fr;gap:8px;padding:10px 12px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
+      <div class="staff-row">
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:28px;height:28px;border-radius:50%;background:{{ colors[loop.index0 % 7] }};display:flex;align-items:center;justify-content:center;color:white;font-size:10px;font-weight:700;flex-shrink:0;">{{ s.name[:2].upper() }}</div>
+          <div class="av" style="background:{{ colors[loop.index0 % 7] }};">{{ s.name[:2].upper() }}</div>
           <div>
             <div style="font-size:12px;font-weight:700;color:#1A2333;">{{ s.name }}</div>
             <div style="font-size:10px;color:#94A3B8;">{{ s.role|capitalize }}</div>
@@ -212,14 +370,13 @@
           <div style="height:6px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
             <div style="width:{{ bar_pct }}%;height:100%;background:{% if bar_pct >= 70 %}#10B981{% elif bar_pct >= 40 %}#133E87{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
           </div>
-          <div style="font-size:9px;color:#94A3B8;margin-top:2px;">{{ bar_pct }}% of top</div>
+          <div style="font-size:9px;color:#94A3B8;margin-top:2px;">{{ bar_pct }}% of top performer</div>
         </div>
       </div>
       {% endfor %}
-      {% else %}
-      <div style="text-align:center;padding:30px 0;color:#94A3B8;font-size:13px;">No staff data for this period</div>
-      {% endif %}
+      {% if not staff_stats %}<div class="empty-state">No staff data</div>{% endif %}
     </div>
+    {% endif %}
 
   </div>
 </body>
