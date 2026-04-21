@@ -4,86 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — All Leads</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; }
-    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .topbar h1 { font-size: 18px; font-weight: 700; }
-    .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
-    .topbar a { color: #DCDCBF; text-decoration: none; }
-    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
-    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
-    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
-    .nav a.admin-link { color: #FAC775; }
-    .nav a.admin-link:hover { color: #FFE0A0; border-bottom-color: #FAC775; }
-    .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
-    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .page-header h2 { font-size: 18px; font-weight: 700; color: #133E87; }
-    .header-btns { display: flex; gap: 8px; }
-    .btn-add { background: #133E87; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .btn-export { background: #1D6F42; color: white; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .btn-bulk-delete { background: #c0392b; color: white; padding: 9px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: none; }
-    .btn-bulk-delete.visible { display: inline-block; }
-    .search-bar { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 12px 16px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; }
-    .search-bar input { flex: 1; padding: 9px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-    .search-bar input:focus { border-color: #133E87; }
-    .btn-search { background: #133E87; color: white; padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-clear { background: white; color: #555; padding: 9px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
-    .filters { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-    .filter-group { display: flex; flex-direction: column; gap: 4px; }
-    .filter-group label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-    .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: white; outline: none; min-width: 140px; }
-    .btn-filter { background: #133E87; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-reset { background: white; color: #555; padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; text-decoration: none; }
-    .custom-dates { display: none; gap: 8px; }
-    .custom-dates.visible { display: flex; }
-    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; }
-    td { padding: 11px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #fafbfc; }
-    tr.selected td { background: #EAF3DE; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .badge-new { background: #E6F1FB; color: #0C447C; }
-    .badge-converted { background: #EAF3DE; color: #27500A; }
-    .badge-lost { background: #FCEBEB; color: #791F1F; }
-    .badge-potential { background: #FAEEDA; color: #633806; }
-    .badge-called { background: #EEEDFE; color: #3C3489; }
-    .actions { display: flex; gap: 6px; align-items: center; }
-    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; }
-    .btn-sm:hover { background: #133E87; color: white; }
-    .btn-delete { padding: 5px 12px; border-radius: 6px; font-size: 12px; border: 1px solid #c0392b; color: #c0392b; background: none; cursor: pointer; white-space: nowrap; }
-    .btn-delete:hover { background: #c0392b; color: white; }
-    .empty { padding: 40px; text-align: center; color: #aaa; font-size: 13px; }
-    input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #133E87; }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; }
-    .modal-overlay.active { display: flex; }
-    .modal { background: white; border-radius: 12px; padding: 28px; max-width: 400px; width: 90%; }
-    .modal h3 { font-size: 16px; color: #133E87; margin-bottom: 10px; }
-    .modal p { font-size: 13px; color: #555; margin-bottom: 20px; }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-    .btn-cancel-modal { padding: 8px 18px; border-radius: 6px; font-size: 13px; border: 1px solid #ddd; color: #555; background: white; cursor: pointer; }
-    .btn-confirm-delete { padding: 8px 18px; border-radius: 6px; font-size: 13px; background: #c0392b; color: white; border: none; cursor: pointer; font-weight: 600; text-decoration: none; }
-    .search-highlight { background: #fff3cd; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #633806; }
-  </style>
+    <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-  <div class="topbar">
-    <h1>Tahfeel Business Solutions — CRM</h1>
-    <div class="right">
-      <span>{{ session.user_name }} (Admin)</span>
-      <a href="/logout">Logout</a>
-    </div>
-  </div>
-  <div class="nav">
-    <a href="/dashboard">Dashboard</a>
-    <a href="/leads" class="active">All Leads</a>
-    <a href="/leads/add">Add Lead</a>
-    <a href="/leads/import">Import Leads</a>
-    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
-  </div>
+    {%- from 'macros.html' import topbar, nav, welcome -%}
+  {{ topbar() }}
+  {{ nav('leads') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -94,14 +21,16 @@
     {% endwith %}
 
     <div class="page-header">
-      <h2>All Leads <span style="font-size:14px;color:#888;font-weight:400;">({{ leads|length }} total)</span></h2>
+      <h2>All Leads <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ total }} total{% if is_default %} — this week{% elif request.args.get('date') == 'today' %} — today{% elif request.args.get('date') == 'week' %} — this week{% endif %})</span></h2>
       <div class="header-btns">
         <button class="btn-bulk-delete" id="bulkDeleteBtn" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
-        <a href="/leads/export" class="btn-export">⬇ Export Excel</a>
+        <a href="/leads/import" class="btn-sm">📥 Import</a>
+        <a href="/leads/export" class="btn-sm">⬇ Export</a>
         <a href="/leads/add" class="btn-add">+ Add Lead</a>
       </div>
     </div>
 
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;padding:14px 18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
     <form method="GET" action="/leads">
       <div class="search-bar">
         <input type="text" name="search" placeholder="Search by name, phone or company..." value="{{ search }}">
@@ -122,20 +51,20 @@
       {% endif %}
       <div class="filters">
         <div class="filter-group">
-          <label>Date Range</label>
+          <label>Created Date</label>
           <select name="date" id="dateFilter" onchange="toggleCustomDates(this.value)">
             <option value="">All time</option>
             <option value="today" {% if request.args.get('date') == 'today' %}selected{% endif %}>Today</option>
-            <option value="week" {% if request.args.get('date') == 'week' %}selected{% endif %}>This Week</option>
+            <option value="week" {% if request.args.get('date') == 'week' or is_default %}selected{% endif %}>This Week</option>
             <option value="month" {% if request.args.get('date') == 'month' %}selected{% endif %}>This Month</option>
             <option value="custom" {% if request.args.get('date') == 'custom' %}selected{% endif %}>Custom Range</option>
           </select>
         </div>
-        <div class="filter-group custom-dates {% if request.args.get('date') == 'custom' %}visible{% endif %}" id="customDates">
+        <div class="filter-group" id="customDates" style="display:{% if request.args.get('date')=='custom' %}flex{% else %}none{% endif %};">
           <label>From</label>
           <input type="date" name="from" value="{{ request.args.get('from', '') }}">
         </div>
-        <div class="filter-group custom-dates {% if request.args.get('date') == 'custom' %}visible{% endif %}" id="customDatesTo">
+        <div class="filter-group" id="customDatesTo" style="display:{% if request.args.get('date')=='custom' %}flex{% else %}none{% endif %};">
           <label>To</label>
           <input type="date" name="to" value="{{ request.args.get('to', '') }}">
         </div>
@@ -146,10 +75,12 @@
             <option value="New" {% if request.args.get('status') == 'New' %}selected{% endif %}>New</option>
             <option value="Call Connected" {% if request.args.get('status') == 'Call Connected' %}selected{% endif %}>Call Connected</option>
             <option value="Called — No Answer" {% if request.args.get('status') == 'Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
+            <option value="Customer Not Responding" {% if request.args.get('status') == 'Customer Not Responding' %}selected{% endif %}>Customer Not Responding</option>
             <option value="Sent WhatsApp" {% if request.args.get('status') == 'Sent WhatsApp' %}selected{% endif %}>Sent WhatsApp</option>
             <option value="Sent Mail" {% if request.args.get('status') == 'Sent Mail' %}selected{% endif %}>Sent Mail</option>
             <option value="Potential Lead" {% if request.args.get('status') == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
             <option value="Meeting Scheduled" {% if request.args.get('status') == 'Meeting Scheduled' %}selected{% endif %}>Meeting Scheduled</option>
+            <option value="Quotation Sent" {% if request.args.get('status') == 'Quotation Sent' %}selected{% endif %}>Quotation Sent</option>
             <option value="Converted" {% if request.args.get('status') == 'Converted' %}selected{% endif %}>Converted</option>
             <option value="Lost" {% if request.args.get('status') == 'Lost' %}selected{% endif %}>Lost</option>
             <option value="Overdue" {% if request.args.get('status') == 'Overdue' %}selected{% endif %}>⚠ Overdue</option>
@@ -158,9 +89,12 @@
         <div class="filter-group">
           <label>Assigned To</label>
           <select name="staff">
-            <option value="">All staff</option>
+            <option value="" {% if session.role != 'sales' and not request.args.get('staff') %}selected{% endif %}>All Staff</option>
             {% for user in users %}
-              <option value="{{ user.id }}" {% if request.args.get('staff') == user.id|string %}selected{% endif %}>{{ user.name }}</option>
+              <option value="{{ user.id }}"
+                {% if request.args.get('staff') == user.id|string %}selected
+                {% elif session.role == 'sales' and not request.args.get('staff') and user.id == session.user_id %}selected
+                {% endif %}>{{ user.name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -173,19 +107,19 @@
         </div>
       </div>
     </form>
+    </div>
 
     <form method="POST" action="/leads/bulk-delete" id="bulkForm">
-      <div class="card">
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
         {% if leads %}
           <table>
             <thead>
               <tr>
                 <th style="width:40px;"><input type="checkbox" id="selectAll" onclick="toggleAll(this)"></th>
-                <th>Name</th>
-                <th>Company</th>
+                <th colspan="2">Name / Company</th>
                 <th>Service</th>
                 <th>Assigned To</th>
-                <th>Due Date</th>
+                <th>Created</th><th>Due Date</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -194,30 +128,53 @@
               {% for lead in leads %}
                 <tr id="row-{{ lead.id }}">
                   <td><input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="row-check" onchange="updateBulkBar()"></td>
-                  <td><strong>{{ lead.name }}</strong></td>
-                  <td>{{ lead.company or '—' }}</td>
+                  <td colspan="2">
+                    <div style="font-size:13px;font-weight:700;color:#1A3B8B;">{{ lead.name }}</div>
+                    {% if lead.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ lead.company }}</div>{% endif %}
+                  </td>
                   <td>{{ lead.service or '—' }}</td>
-                  <td>{{ lead.assignee.name if lead.assignee else '—' }}</td>
-                  <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;{% endif %}">
-                    {{ lead.due_date.strftime('%d %b %Y') }}
+                  <td>
+                    {% if lead.assignee %}
+                    <div class="av-wrap">
+                      <div class="av" style="background:{% if loop.index % 4 == 1 %}#1A3B8B{% elif loop.index % 4 == 2 %}#10B981{% elif loop.index % 4 == 3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ lead.assignee.name[:2].upper() }}</div>
+                      <span class="av-name">{{ lead.assignee.name.split()[0] }}</span>
+                    </div>
+                    {% else %}<span style="font-size:12px;color:#CBD5E1;">—</span>{% endif %}
+                  </td>
+                  <td style="font-size:12px;color:var(--text-muted);">{{ lead.created_at.strftime('%d %b') if lead.created_at else '—' }}</td>
+                  <td>
+                    {% set is_overdue = lead.due_date < now and lead.status not in ['Converted','Lost'] %}
+                    <span class="due-pill {% if is_overdue %}overdue{% endif %}">📅 {{ lead.due_date.strftime('%d %b') }}</span>
                   </td>
                   <td>
                     {% if lead.status == 'Converted' %}
-                      <span class="badge badge-converted">{{ lead.status }}</span>
+                      <span style="background:#DCFCE7;color:#15803D;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif lead.status == 'Lost' %}
-                      <span class="badge badge-lost">{{ lead.status }}</span>
+                      <span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif lead.status == 'Potential Lead' %}
-                      <span class="badge badge-potential">{{ lead.status }}</span>
-                    {% elif 'Called' in lead.status %}
-                      <span class="badge badge-called">{{ lead.status }}</span>
+                      <span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif 'Connected' in lead.status or 'Called' in lead.status %}
+                      <span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif 'WhatsApp' in lead.status %}
+                      <span style="background:#F0FDF4;color:#16A34A;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif 'Quotation' in lead.status %}
+                      <span style="background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif lead.status == 'New' %}
+                      <span style="background:#EBF2FF;color:#1A3B8B;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% else %}
-                      <span class="badge badge-new">{{ lead.status }}</span>
+                      <span style="background:#F1F5F9;color:#475569;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% endif %}
                   </td>
                   <td>
-                    <div class="actions">
-                      <a href="/leads/{{ lead.id }}" class="btn-sm">View</a>
-                      <button type="button" class="btn-delete" onclick="confirmDelete({{ lead.id }}, '{{ lead.name }}')">Delete</button>
+                    <div style="display:flex;gap:4px;align-items:center;">
+                      {% if lead.phone %}
+                      <a href="https://wa.me/{{ lead.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+                      {% endif %}
+                      <a href="/leads/{{ lead.id }}" class="ib" title="View">👁</a>
+                      <a href="/leads/{{ lead.id }}/edit" class="ib" title="Edit">✏</a>
+                      {% if session.role == 'admin' %}
+                      <button class="ib ib-del" onclick="openDeleteModal({{ lead.id }}, '{{ lead.name }}')" title="Delete">🗑</button>
+                      {% endif %}
                     </div>
                   </td>
                 </tr>
@@ -229,9 +186,40 @@
         {% endif %}
       </div>
     </form>
+
+    {% if total_pages > 1 %}
+    <div class="pagination">
+      {% set args = request.args.to_dict() %}
+      {% if page > 1 %}
+        {% set _ = args.update({'page': page - 1}) %}
+        <a href="?{{ args | urlencode }}" class="page-btn">‹ Prev</a>
+      {% else %}
+        <span class="page-btn disabled">‹ Prev</span>
+      {% endif %}
+
+      {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}
+          <span class="page-btn active">{{ p }}</span>
+        {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+          {% set _ = args.update({'page': p}) %}
+          <a href="?{{ args | urlencode }}" class="page-btn">{{ p }}</a>
+        {% elif p == page - 3 or p == page + 3 %}
+          <span class="page-btn disabled">…</span>
+        {% endif %}
+      {% endfor %}
+
+      {% if page < total_pages %}
+        {% set _ = args.update({'page': page + 1}) %}
+        <a href="?{{ args | urlencode }}" class="page-btn">Next ›</a>
+      {% else %}
+        <span class="page-btn disabled">Next ›</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
   </div>
 
-  <div class="modal-overlay" id="deleteModal">
+  <div class="modal-overlay" id="deleteModal" style="display:none;">
     <div class="modal">
       <h3>Delete Lead</h3>
       <p id="deleteModalText">Are you sure?</p>
@@ -242,7 +230,7 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="bulkModal">
+  <div class="modal-overlay" id="bulkModal" style="display:none;">
     <div class="modal">
       <h3>Delete Selected Leads</h3>
       <p id="bulkModalText">Are you sure?</p>
@@ -256,8 +244,8 @@
   <script>
     function toggleCustomDates(val) {
       const show = val === 'custom';
-      document.getElementById('customDates').classList.toggle('visible', show);
-      document.getElementById('customDatesTo').classList.toggle('visible', show);
+      document.getElementById('customDates').style.display = show ? 'flex' : 'none';
+      document.getElementById('customDatesTo').style.display = show ? 'flex' : 'none';
     }
     function toggleAll(source) {
       document.querySelectorAll('.row-check').forEach(c => {

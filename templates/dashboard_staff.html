@@ -4,172 +4,120 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel CRM — My Dashboard</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; }
-    .topbar { background: #133E87; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .topbar h1 { font-size: 18px; font-weight: 700; }
-    .topbar .right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
-    .topbar a { color: #DCDCBF; text-decoration: none; }
-    .nav { background: #1E5AB8; padding: 0 24px; display: flex; gap: 4px; }
-    .nav a { color: #c8d8f0; text-decoration: none; padding: 10px 16px; font-size: 13px; border-bottom: 3px solid transparent; }
-    .nav a:hover, .nav a.active { color: white; border-bottom-color: #DCDCBF; }
-    .container { padding: 24px; max-width: 1000px; margin: 0 auto; }
-    .flash { background: #EAF3DE; color: #27500A; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
-    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px; }
-    .stat-card { background: white; border-radius: 12px; padding: 18px 16px; border: 0.5px solid #ddd; }
-    .stat-card .label { font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
-    .stat-card .value { font-size: 26px; font-weight: 700; color: #133E87; }
-    .stat-card .sub { font-size: 11px; color: #aaa; margin-top: 4px; }
-    .stat-card.red .value { color: #c0392b; }
-    .stat-card.amber .value { color: #854F0B; }
-    .stat-card.green .value { color: #1D6F42; }
-    .stat-card.teal .value { color: #0F6E56; font-size: 18px; }
-    .overdue-alert { background: #fff5f5; border: 1px solid #f5c6c6; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: #c0392b; }
-    .card { background: white; border-radius: 12px; border: 0.5px solid #ddd; margin-bottom: 20px; overflow: hidden; }
-    .card-header { padding: 16px 20px; border-bottom: 0.5px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-    .card-header h2 { font-size: 15px; color: #133E87; font-weight: 700; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #f8f9fa; padding: 10px 16px; text-align: left; color: #555; font-weight: 600; border-bottom: 1px solid #eee; font-size: 12px; text-transform: uppercase; }
-    td { padding: 12px 16px; border-bottom: 0.5px solid #f0f0f0; color: #333; vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #fafbfc; }
-    tr.overdue-row td { background: #fff5f5; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .badge-new { background: #E6F1FB; color: #0C447C; }
-    .badge-converted { background: #EAF3DE; color: #27500A; }
-    .badge-lost { background: #FCEBEB; color: #791F1F; }
-    .badge-potential { background: #FAEEDA; color: #633806; }
-    .badge-called { background: #EEEDFE; color: #3C3489; }
-    .overdue-tag { background: #FCEBEB; color: #c0392b; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-left: 6px; }
-    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #133E87; color: #133E87; white-space: nowrap; }
-    .btn-sm:hover { background: #133E87; color: white; }
-    .empty { padding: 24px; text-align: center; color: #aaa; font-size: 13px; }
-    .followup-item { padding: 12px 20px; border-bottom: 0.5px solid #f0f0f0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-    .followup-item:last-child { border-bottom: none; }
-    .followup-item strong { color: #133E87; }
+    .block { background:white; border-radius:12px; border:0.5px solid #E2E8F0; padding:18px 20px; }
+    .block-title { font-size:11px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+    .block-title a { font-size:11px; color:#1A3B8B; text-decoration:none; font-weight:600; text-transform:none; letter-spacing:0; }
+    .stat-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:0.5px solid #F8FAFC; }
+    .stat-row:last-child { border-bottom:none; }
+    .stat-name { font-size:13px; color:#475569; }
+    .stat-val { font-size:22px; font-weight:700; }
+    .bar-track { height:6px; background:#F1F5F9; border-radius:10px; overflow:hidden; margin-top:4px; }
+    .bar-fill { height:100%; border-radius:10px; }
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <h1>Tahfeel Business Solutions — CRM</h1>
-    <div class="right">
-      <span>{{ session.user_name }}</span>
-      <a href="/logout">Logout</a>
-    </div>
-  </div>
-  <div class="nav">
-    <a href="/dashboard" class="active">My Dashboard</a>
-    <a href="/leads/add">Add Lead</a>
-  </div>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('dashboard') }}
   <div class="container">
     {% with messages = get_flashed_messages() %}
-      {% if messages %}{% for msg in messages %}
-        <div class="flash">{{ msg }}</div>
-      {% endfor %}{% endif %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    {% if overdue %}
-    <div class="overdue-alert">
-      ⚠️ <strong>{{ overdue|length }} lead{{ 's' if overdue|length > 1 else '' }}</strong> overdue and need immediate attention!
-    </div>
-    {% endif %}
-
-    <!-- Stats -->
-    <div class="stats">
-      <div class="stat-card">
-        <div class="label">Total Leads</div>
-        <div class="value">{{ leads|length }}</div>
-        <div class="sub">Assigned to me</div>
-      </div>
-      <div class="stat-card amber">
-        <div class="label">Pending</div>
-        <div class="value">{{ pending|length }}</div>
-        <div class="sub">In progress</div>
-      </div>
-      <div class="stat-card green">
-        <div class="label">Converted</div>
-        <div class="value">{{ converted|length }}</div>
-        <div class="sub">Closed won</div>
-      </div>
-      <div class="stat-card red">
-        <div class="label">Overdue</div>
-        <div class="value">{{ overdue|length }}</div>
-        <div class="sub">Need attention</div>
-      </div>
-      <div class="stat-card teal">
-        <div class="label">Potential Value</div>
-        <div class="value">AED {{ '{:,.0f}'.format(potential_value) }}</div>
-        <div class="sub">Active leads</div>
+    <!-- Page header -->
+    <div class="page-head" style="margin-bottom:14px;">
+      <div>
+        <div class="page-head-title">Dashboard</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Welcome back, {{ session.user_name.split()[0] }}</div>
       </div>
     </div>
 
-    <!-- Follow-ups -->
-    {% if followups %}
-    <div class="card">
-      <div class="card-header"><h2>⏰ Follow-ups due today</h2></div>
-      {% for f in followups %}
-      <div class="followup-item">
-        <div>
-          <strong>{{ f.lead.name }}</strong>
-          <span style="color:#888;font-size:12px;margin-left:8px;">{{ f.remark[:60] }}{% if f.remark|length > 60 %}...{% endif %}</span>
+    <!-- Period filter -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <a href="?period=today" style="height:30px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;{% if period=='today' %}background:#1A3B8B;color:white;{% else %}background:white;color:#475569;border:1px solid #E2E8F0;{% endif %}">Today</a>
+      <a href="?period=week" style="height:30px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;{% if period=='week' %}background:#1A3B8B;color:white;{% else %}background:white;color:#475569;border:1px solid #E2E8F0;{% endif %}">This Week</a>
+      <a href="?period=month" style="height:30px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;{% if period=='month' or not period %}background:#1A3B8B;color:white;{% else %}background:white;color:#475569;border:1px solid #E2E8F0;{% endif %}">This Month</a>
+      <a href="?period=all" style="height:30px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;{% if period=='all' %}background:#1A3B8B;color:white;{% else %}background:white;color:#475569;border:1px solid #E2E8F0;{% endif %}">All Time</a>
+    </div>
+
+    <!-- 3 blocks: Leads | Tasks | Finance -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+
+      <!-- Leads Block -->
+      <div class="block" style="border-top:5px solid #1A3B8B;">
+        <div class="block-title">Leads <a href="/leads">View all →</a></div>
+        <a href="/leads" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#1A3B8B;font-weight:500;">My Leads</span><span class="stat-val" style="color:#1A3B8B;">{{ leads|length }}</span></div>
+        </a>
+        <a href="/leads?status=Converted" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#10B981;font-weight:500;">Converted</span><span class="stat-val" style="color:#10B981;">{{ converted|length }}</span></div>
+        </a>
+        <a href="/leads?status=Lost" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#EF4444;font-weight:500;">Lost</span><span class="stat-val" style="color:#EF4444;">{{ lost|length }}</span></div>
+        </a>
+        <a href="/leads?status=Overdue" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#EF4444;font-weight:500;">Overdue</span><span class="stat-val" style="color:#EF4444;">{{ overdue|length }}</span></div>
+        </a>
+        <a href="/leads?status=Pending" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#F59E0B;font-weight:500;">Pending</span><span class="stat-val" style="color:#F59E0B;">{{ pending|length }}</span></div>
+        </a>
+      </div>
+
+      <!-- Tasks Block -->
+      <div class="block" style="border-top:5px solid #10B981;">
+        <div class="block-title">Tasks <a href="/jobs">View all →</a></div>
+        <a href="/jobs" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#1A3B8B;font-weight:500;">Active</span><span class="stat-val" style="color:#1A3B8B;">{{ my_jobs|length }}</span></div>
+        </a>
+        <a href="/jobs?status=Done" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#10B981;font-weight:500;">Done</span><span class="stat-val" style="color:#10B981;">{{ my_jobs|selectattr('status','eq','Done')|list|length }}</span></div>
+        </a>
+        <a href="/jobs?status=Overdue" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#EF4444;font-weight:500;">Overdue</span><span class="stat-val" style="color:#EF4444;">{{ overdue_jobs|length }}</span></div>
+        </a>
+        <a href="/jobs?status=On+Hold" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#94A3B8;font-weight:500;">On Hold</span><span class="stat-val" style="color:#94A3B8;">{{ my_jobs|selectattr('status','eq','On Hold')|list|length }}</span></div>
+        </a>
+        <a href="/jobs?status=Assigned" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#F59E0B;font-weight:500;">Pending</span><span class="stat-val" style="color:#F59E0B;">{{ my_jobs|selectattr('status','ne','Done')|list|length }}</span></div>
+        </a>
+      </div>
+
+      <!-- Finance Block -->
+      <div class="block" style="border-top:5px solid #F59E0B;">
+        <div class="block-title">Finance</div>
+        <div class="stat-row"><span class="stat-name">Invoiced</span><span style="font-size:16px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(total_invoiced) }}</span></div>
+        <div class="stat-row"><span class="stat-name">Received</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</span></div>
+        <div class="stat-row"><span class="stat-name">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
+        <div class="stat-row"><span class="stat-name">Closed Value</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(completed_value) }}</span></div>
+        {% if total_invoiced > 0 %}
+        <div style="margin-top:10px;">
+          {% set crate = [(total_received / total_invoiced * 100)|int, 100]|min %}
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:11px;color:#475569;">Collection Rate</span>
+            <span style="font-size:11px;font-weight:700;color:#1A3B8B;">{{ crate }}%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:{{ crate }}%;background:#1A3B8B;"></div></div>
         </div>
-        <a href="/leads/{{ f.lead_id }}" class="btn-sm">Open</a>
+        {% endif %}
       </div>
-      {% endfor %}
-    </div>
-    {% endif %}
 
-    <!-- My Leads -->
-    <div class="card">
-      <div class="card-header">
-        <h2>My Assigned Leads</h2>
-        <a href="/leads/add" class="btn-sm">+ Add Lead</a>
-      </div>
-      {% if leads %}
-      <table>
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th>Service</th>
-            <th>Due Date</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for lead in leads %}
-          <tr {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}class="overdue-row"{% endif %}>
-            <td>
-              <strong>{{ lead.name }}</strong>
-              {% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}
-                <span class="overdue-tag">Overdue</span>
-              {% endif %}
-              {% if lead.company %}<br><span style="color:#888;font-size:12px;">{{ lead.company }}</span>{% endif %}
-            </td>
-            <td>{{ lead.service or '—' }}</td>
-            <td style="white-space:nowrap;{% if lead.due_date < now and lead.status not in ['Converted','Lost'] %}color:#c0392b;font-weight:600;{% endif %}">
-              {{ lead.due_date.strftime('%d %b %Y') }}
-            </td>
-            <td>
-              <span class="badge
-                {% if lead.status == 'Converted' %}badge-converted
-                {% elif lead.status == 'Lost' %}badge-lost
-                {% elif lead.status == 'Potential Lead' %}badge-potential
-                {% elif 'Called' in lead.status %}badge-called
-                {% else %}badge-new{% endif %}">
-                {{ lead.status }}
-              </span>
-            </td>
-            <td><a href="/leads/{{ lead.id }}" class="btn-sm">Open</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="empty">No leads assigned to you yet.</div>
-      {% endif %}
     </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #64748B;padding:10px 20px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between;gap:16px;">
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Documents</div>
+      <div style="display:flex;gap:28px;align-items:center;flex:1;justify-content:center;">
+        <a href="/documents" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A3B8B;">{{ total_docs }}</div><div style="font-size:10px;color:#94A3B8;">Total</div></a>
+        <a href="/documents?expiry=30" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#EF4444;">{{ docs_30 }}</div><div style="font-size:10px;color:#94A3B8;">≤30 Days</div></a>
+        <a href="/documents?expiry=60" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#F59E0B;">{{ docs_60 }}</div><div style="font-size:10px;color:#94A3B8;">31–60 Days</div></a>
+        <a href="/documents?expiry=90" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#475569;">{{ docs_90 }}</div><div style="font-size:10px;color:#94A3B8;">61–90 Days</div></a>
+      </div>
+      <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;white-space:nowrap;">View all →</a>
+    </div>
+
   </div>
 </body>
 </html>

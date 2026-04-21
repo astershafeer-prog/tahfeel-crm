@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Task Detail</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('jobs') }}
+  <div class="container" style="max-width:860px;">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <a href="/jobs" style="color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to Tasks</a>
+      <a href="/customers/{{ job.customer_id }}" style="color:var(--primary);text-decoration:none;font-size:13px;font-weight:600;">View Customer →</a>
+    </div>
+
+    <!-- Task Header Card -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--text-primary);letter-spacing:-.3px;">{{ job.job_type }}</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">
+            <a href="/customers/{{ job.customer_id }}" style="color:var(--primary);text-decoration:none;font-weight:600;">{{ job.customer.name }}</a>
+            {% if job.customer.company %} — {{ job.customer.company }}{% endif %}
+          </div>
+
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
+          {% if job.updates %}
+          <button onclick="openTimelinePopup()" class="ib" title="Preview & Download Timeline" style="font-size:14px;">🖼</button>
+          {% endif %}
+          {% if job.customer.phone %}
+          <a href="javascript:void(0)" onclick="sendWA()" class="ib" style="background:#25D366;border-color:#25D366;color:white;font-size:14px;" title="Send WhatsApp Update">💬</a>
+          {% endif %}
+          {% if job.status != 'Closed' and session.role in ['admin','operations'] %}
+          <a href="/jobs/{{ job.id }}/edit" class="ib" title="Edit">✏</a>
+          <button class="ib ib-del" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'" title="Delete">🗑</button>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-body">
+
+        <!-- Task Info Grid -->
+        <div class="form-row-2" style="gap:12px;margin-bottom:14px;">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Assigned To</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text-primary);">{{ job.assignee.name if job.assignee else '—' }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Priority</div>
+            <div><span class="badge b-{{ job.priority|lower }}">{{ job.priority }}</span></div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Due Date</div>
+            <div style="font-size:14px;color:var(--text-primary);">
+              {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
+              {% if job.due_date and job.due_date < now and job.status not in ['Done','Closed','Pending Finance Approval'] %}
+              <span style="color:var(--danger);font-size:11px;font-weight:700;"> ⚠ Overdue</span>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">No. of Persons</div>
+            <div style="font-size:14px;color:var(--text-primary);">{{ job.num_persons or 1 }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Customer Phone</div>
+            <div style="font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+              {{ job.customer.phone or '—' }}
+              {% if job.customer.phone %}
+              <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Created</div>
+            <div style="font-size:14px;color:var(--text-primary);">
+              {{ job.created_at.strftime('%d %b %Y') }}
+              <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">Finance: {% if job.finance_approved_at %}✓ {{ job.finance_approved_at.strftime('%d %b') }}{% else %}Pending{% endif %}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Financial Summary -->
+        <div class="fin-row">
+          <div class="card-stat cs-blue"><div class="cs-left"><div class="cs-label">Invoiced</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format(job.amount_invoiced or 0) }}</div></div><div class="cs-icon cs-blue">📊</div></div>
+          <div class="card-stat cs-green"><div class="cs-left"><div class="cs-label">Received</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format(job.amount_received or 0) }}</div></div><div class="cs-icon cs-green">✓</div></div>
+          <div class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Pending</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format((job.amount_invoiced or 0)-(job.amount_received or 0)) }}</div></div><div class="cs-icon cs-red">⚠</div></div>
+          <div class="card-stat {% if job.finance_approved_at %}cs-green{% else %}cs-amber{% endif %}"><div class="cs-left"><div class="cs-label">Finance</div><div class="cs-value" style="font-size:13px;">{% if job.finance_approved_at %}✓ Approved{% else %}Awaiting{% endif %}</div></div><div class="cs-icon {% if job.finance_approved_at %}cs-green{% else %}cs-amber{% endif %}">💰</div></div>
+        </div>
+
+        <!-- Completion Summary -->
+        {% if job.status in ['Done','Pending Finance Close','Closed'] and job.final_remarks %}
+        <div style="background:var(--success-bg);border:1px solid #b8ddb0;border-radius:var(--radius-md);padding:14px 16px;margin-top:12px;">
+          <div style="font-size:10px;font-weight:700;color:var(--success);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;">Completion Summary</div>
+          <div class="form-row-2" style="gap:10px;margin-bottom:8px;">
+            {% if job.customer_rating %}<div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">Rating</div><div>{{ '⭐' * job.customer_rating }}</div></div>{% endif %}
+            {% if job.google_review %}<div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">Google Review</div><div style="font-size:13px;font-weight:600;">{{ job.google_review }}</div></div>{% endif %}
+            {% if job.testimonial %}<div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">Testimonial</div><div style="font-size:13px;font-weight:600;">{{ job.testimonial }}</div></div>{% endif %}
+          </div>
+          {% if job.final_remarks %}<div style="font-size:13px;margin-bottom:4px;"><strong style="color:var(--text-muted);font-size:10px;text-transform:uppercase;">Final: </strong>{{ job.final_remarks }}</div>{% endif %}
+          {% if job.future_work_notes %}<div style="font-size:13px;color:var(--text-secondary);"><strong style="color:var(--text-muted);font-size:10px;text-transform:uppercase;">Future Work: </strong>{{ job.future_work_notes }}</div>{% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Notes -->
+        {% if job.finance_notes %}
+        <div style="background:#FFF8F0;border:1px solid #F0D9B8;border-radius:var(--radius-md);padding:12px 14px;margin-top:10px;">
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Finance Notes</div>
+          <div style="font-size:13px;">{{ job.finance_notes }}</div>
+        </div>
+        {% endif %}
+        {% if job.internal_notes %}
+        <div style="background:#FFF8F0;border:1px solid #F0D9B8;border-radius:var(--radius-md);padding:12px 14px;margin-top:8px;">
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Internal Notes</div>
+          <div style="font-size:13px;">{{ job.internal_notes }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Closed banner -->
+    {% if job.status == 'Closed' %}
+    <div style="background:var(--primary);color:white;border-radius:var(--radius-md);padding:12px 18px;margin-bottom:12px;font-size:13px;font-weight:600;">
+      ✓ This task is CLOSED — no further updates. Closed on {{ job.completed_at.strftime('%d %b %Y') if job.completed_at else '' }}.
+    </div>
+    {% endif %}
+
+    <!-- Awaiting finance banner -->
+    {% if job.status == 'Pending Finance Approval' and session.role not in ['finance','admin'] %}
+    <div style="background:var(--warning-bg);border:1px solid #F0C070;border-radius:var(--radius-md);padding:12px 18px;margin-bottom:12px;font-size:13px;color:var(--warning);font-weight:600;">
+      ⏳ Awaiting finance approval. You can view but not update this task yet.
+    </div>
+    {% endif %}
+
+    <!-- Finance: Approval form -->
+    {% if session.role in ['finance','admin'] and job.status == 'Pending Finance Approval' %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2 style="color:var(--success);">✓ Finance Approval</h2></div>
+      <div class="card-body">
+        <form method="post" action="/jobs/{{ job.id }}/approve">
+          <div class="form-row-2">
+            <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01" placeholder="0"></div>
+            <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01" placeholder="0"></div>
+          </div>
+          <div class="form-group"><label>Finance Notes (optional)</label><input type="text" name="finance_notes" maxlength="30" placeholder="Max 30 characters..." value="{{ job.finance_notes or '' }}"></div>
+          <button type="submit" class="btn-primary" style="background:var(--success);">Approve & Start Task</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Finance: Close form -->
+    {% if session.role in ['finance','admin'] and job.status == 'Pending Finance Close' %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2 style="color:var(--primary);">✓ Finance Close — Final Step</h2></div>
+      <div class="card-body">
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">Staff has completed the work. Verify payment and close this task.</div>
+        {% if job.final_remarks %}
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px;font-size:13px;">
+          <strong style="font-size:10px;text-transform:uppercase;color:var(--text-muted);">Staff Final Remarks:</strong><br>{{ job.final_remarks }}
+        </div>
+        {% endif %}
+        <form method="post" action="/jobs/{{ job.id }}/close">
+          <div class="form-row-2">
+            <div class="form-group"><label>Final Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
+            <div class="form-group"><label>Total Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
+          </div>
+          <div class="form-group"><label>Finance Closing Notes (optional)</label><input type="text" name="finance_notes" maxlength="30" placeholder="Max 30 characters..."></div>
+          {% set balance = (job.amount_invoiced or 0) - (job.amount_received or 0) %}
+          {% if balance > 0 %}
+          <div style="background:var(--danger-bg);border:1px solid #F7C1C1;border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--danger);font-weight:600;">
+            ⚠ Outstanding balance: AED {{ '{:,.0f}'.format(balance) }} — confirm before closing
+          </div>
+          {% endif %}
+          <button type="submit" class="btn-primary">Close Task (Final)</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Finance: Update payment -->
+    {% if session.role in ['finance','admin'] and job.status not in ['Pending Finance Approval','Pending Finance Close','Closed'] %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2>Update Payment</h2></div>
+      <div class="card-body">
+        <form method="post" action="/jobs/{{ job.id }}/payment">
+          <div class="form-row-2">
+            <div class="form-group"><label>Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
+            <div class="form-group"><label>Amount Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
+          </div>
+          <div class="form-group"><label>Finance Notes (optional)</label><input type="text" name="finance_notes" maxlength="30" placeholder="Max 30 characters..." value="{{ job.finance_notes or '' }}"></div>
+          <button type="submit" class="btn-primary">Update Payment</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Feedback update form -->
+    {% if job.status in ['Done','Pending Finance Close','Closed'] and session.role not in ['finance'] and not job.final_remarks %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2>Update Customer Feedback</h2></div>
+      <div class="card-body">
+        <form method="post">
+          <input type="hidden" name="remark" value="Feedback updated">
+          <input type="hidden" name="status" value="{{ job.status }}">
+          <div class="form-row-2" style="margin-bottom:12px;">
+            <div class="form-group">
+              <label>Customer Rating</label>
+              <select name="customer_rating">
+                <option value="">— Optional —</option>
+                <option value="5" {% if job.customer_rating==5 %}selected{% endif %}>⭐⭐⭐⭐⭐ Excellent</option>
+                <option value="4" {% if job.customer_rating==4 %}selected{% endif %}>⭐⭐⭐⭐ Good</option>
+                <option value="3" {% if job.customer_rating==3 %}selected{% endif %}>⭐⭐⭐ Average</option>
+                <option value="2" {% if job.customer_rating==2 %}selected{% endif %}>⭐⭐ Below Average</option>
+                <option value="1" {% if job.customer_rating==1 %}selected{% endif %}>⭐ Poor</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Google Review</label>
+              <select name="google_review">
+                <option value="">— Optional —</option>
+                <option value="Received" {% if job.google_review=='Received' %}selected{% endif %}>✓ Received</option>
+                <option value="Requested" {% if job.google_review=='Requested' %}selected{% endif %}>Requested</option>
+                <option value="Not Applicable" {% if job.google_review=='Not Applicable' %}selected{% endif %}>Not Applicable</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Testimonial</label>
+              <select name="testimonial">
+                <option value="">— Optional —</option>
+                <option value="Requested" {% if job.testimonial=='Requested' %}selected{% endif %}>Requested</option>
+                <option value="Collected" {% if job.testimonial=='Collected' %}selected{% endif %}>✓ Collected</option>
+                <option value="Not Collected" {% if job.testimonial=='Not Collected' %}selected{% endif %}>Not Collected</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" style="font-size:12px;padding:8px 18px;">Update Feedback</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Status Update form -->
+    {% if session.role in ['admin','sales','operations'] and job.status not in ['Pending Finance Approval','Closed'] %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><h2>Add Update</h2></div>
+      <div class="card-body">
+        <form method="post">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Status *</label>
+              <select name="status" id="statusSelect" onchange="toggleCompletion()">
+                {% for s in statuses %}
+                {% if s != 'Closed' or session.role in ['admin','finance'] %}
+                <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endif %}
+                {% endfor %}
+              </select>
+              <input type="text" name="status_note" maxlength="30" placeholder="Status note (optional, shows in task list)..." style="margin-top:6px;font-size:12px;">
+            </div>
+            <div class="form-group">
+              <label>Remark * (required)</label>
+              <textarea name="remark" placeholder="Describe what happened, next steps..." required></textarea>
+            </div>
+          </div>
+
+          <!-- Completion fields -->
+          <div id="completionFields" style="display:none;background:var(--success-bg);border:1px solid #b8ddb0;border-radius:var(--radius-md);padding:14px;margin-top:10px;">
+            <div class="section-label" style="color:var(--success);margin-bottom:10px;">Task Completion Details</div>
+            <div class="form-row-2" style="margin-bottom:10px;">
+              <div class="form-group">
+                <label>Customer Rating</label>
+                <select name="customer_rating">
+                  <option value="">— Optional —</option>
+                  <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+                  <option value="4">⭐⭐⭐⭐ Good</option>
+                  <option value="3">⭐⭐⭐ Average</option>
+                  <option value="2">⭐⭐ Below Average</option>
+                  <option value="1">⭐ Poor</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Google Review</label>
+                <select name="google_review">
+                  <option value="">— Optional —</option>
+                  <option value="Received">✓ Received</option>
+                  <option value="Requested">Requested</option>
+                  <option value="Not Applicable">Not Applicable</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Testimonial</label>
+                <select name="testimonial">
+                  <option value="">— Optional —</option>
+                  <option value="Collected">✓ Collected</option>
+                  <option value="Not Collected">Not Collected</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Final Remarks</label>
+              <textarea name="final_remarks" placeholder="Summary of outcome..." style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Future Work Notes</label>
+              <textarea name="future_work_notes" placeholder="Services this client may need next..." style="min-height:50px;"></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Update</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Timeline -->
+    <div class="card" id="taskTimeline">
+      <div class="card-header">
+        <h2>📋 Timeline <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ job.updates|length }} update{{ 's' if job.updates|length != 1 else '' }}</span></h2>
+
+      </div>
+      <div style="padding:16px 20px;" id="timelineContent">
+        {% if job.updates %}
+        {% for u in job.updates %}
+        {% set idx = loop.index %}
+        <div style="display:grid;grid-template-columns:24px 1fr;gap:0;position:relative;{% if not loop.last %}padding-bottom:4px;{% endif %}">
+          {% if not loop.last %}
+          <div style="position:absolute;left:11px;top:24px;bottom:0;width:2px;background:#E2E8F0;z-index:0;"></div>
+          {% endif %}
+          <div style="padding-top:3px;z-index:1;">
+            <div style="width:22px;height:22px;border-radius:50%;
+              background:{% if u.status in ['Done','Closed'] %}#10B981{% elif u.status == 'Processing' %}#F59E0B{% elif u.status in ['On Hold','Delayed'] %}#EF4444{% else %}#1A3B8B{% endif %};
+              color:white;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ idx }}</div>
+          </div>
+          <div style="padding:0 0 18px 12px;">
+            <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ u.status }}</div>
+            <div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ u.staff_name }} · {{ u.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+            {% if u.remark %}
+            <div style="font-size:12px;color:#475569;margin-top:5px;background:#F8FAFC;border-radius:6px;padding:6px 10px;border-left:2px solid #E2E8F0;">{{ u.remark }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty" style="padding:16px 0;">No updates yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+  <script>
+    function toggleCompletion() {
+      const status = document.getElementById('statusSelect').value;
+      document.getElementById('completionFields').style.display = status === 'Done' ? 'block' : 'none';
+    }
+    toggleCompletion();
+  </script>
+  <!-- Timeline Popup -->
+  <div id="tlPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:white;border-radius:16px;width:100%;max-width:440px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,0.35);">
+      <!-- Popup header -->
+      <div style="padding:14px 20px;border-bottom:1px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:14px;font-weight:700;color:#1A2333;">📊 Task Timeline Preview</div>
+        <button onclick="closePopup()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94A3B8;line-height:1;">✕</button>
+      </div>
+
+      <!-- Captured card -->
+      <div id="tlCapture" style="width:380px;background:#ffffff;padding:20px;font-family:Arial,sans-serif;">
+
+        <!-- Brand header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid #EEF2FF;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;background:#133E87;border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0;">T</div>
+            <div>
+              <div style="font-size:12px;font-weight:800;color:#133E87;line-height:1.2;">Tahfeel Business Setup Services</div>
+              <div style="font-size:9px;color:#94A3B8;margin-top:1px;">Application Status Update · Dubai, UAE</div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:8px;color:#94A3B8;">Generated</div>
+            <div style="font-size:10px;font-weight:600;color:#475569;" id="tlDate"></div>
+          </div>
+        </div>
+
+        <!-- Customer + progress summary -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #F1F5F9;">
+          <div>
+            <div style="font-size:8px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Customer</div>
+            <div style="font-size:14px;font-weight:800;color:#1A2333;line-height:1.2;">{{ job.customer.name }}</div>
+            {% if job.customer.company %}<div style="font-size:10px;color:#64748B;margin-top:1px;">{{ job.customer.company }}</div>{% endif %}
+          </div>
+          <div style="text-align:right;">
+            {% set total_jobs = sibling_jobs|length %}
+            {% set done_jobs = namespace(val=0) %}
+            {% for sj in sibling_jobs %}{% if sj.status in ['Done','Closed','Completed'] %}{% set done_jobs.val = done_jobs.val + 1 %}{% endif %}{% endfor %}
+            <div style="font-size:10px;font-weight:600;color:#133E87;">{{ done_jobs.val }} of {{ total_jobs }} complete</div>
+            <div style="margin-top:5px;background:#EEF2FF;border-radius:20px;height:5px;width:90px;overflow:hidden;">
+              <div style="width:{{ (done_jobs.val / total_jobs * 100)|round|int if total_jobs > 0 else 0 }}%;height:100%;background:#133E87;border-radius:20px;"></div>
+            </div>
+          </div>
+        </div>
+
+        {% if sibling_jobs|length > 1 %}
+        {# MULTI-TASK: Option C compact rows #}
+        <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;">
+          {% for sj in sibling_jobs %}
+            {% set is_done = sj.status in ['Done','Closed','Completed'] %}
+            {% set is_current = sj.id == job.id %}
+            {% set is_hold = sj.status in ['On Hold','Delayed','Rejected'] %}
+            {% set is_active = not is_done and not is_hold and sj.status not in ['Pending Finance Approval'] %}
+
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border-radius:8px;
+              {% if is_done %}background:#E1F5EE;
+              {% elif is_current %}background:#EEF2FF;border:1px solid #BFCFFF;
+              {% elif is_hold %}background:#FEE2E2;
+              {% else %}background:#F8FAFC;{% endif %}">
+
+              <div style="display:flex;align-items:center;gap:9px;">
+                {# Circle indicator #}
+                <div style="width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+                  {% if is_done %}background:#10B981;
+                  {% elif is_current %}background:#133E87;
+                  {% elif is_hold %}background:#EF4444;
+                  {% else %}background:#E2E8F0;{% endif %}">
+                  {% if is_done %}
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 5.5l2.5 2.5 5.5-5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  {% elif is_current or is_active %}
+                  <div style="width:7px;height:7px;border-radius:50%;background:white;"></div>
+                  {% else %}
+                  <div style="width:6px;height:6px;border-radius:50%;background:#94A3B8;"></div>
+                  {% endif %}
+                </div>
+                <div>
+                  <div style="font-size:11px;font-weight:700;
+                    {% if is_done %}color:#085041;
+                    {% elif is_current %}color:#133E87;
+                    {% elif is_hold %}color:#991B1B;
+                    {% else %}color:#64748B;{% endif %}
+                    line-height:1.3;max-width:180px;">{{ sj.job_type }}</div>
+                  <div style="font-size:9px;margin-top:2px;
+                    {% if is_done %}color:#0F6E56;
+                    {% elif is_current %}color:#4F6FBF;
+                    {% elif is_hold %}color:#B91C1C;
+                    {% else %}color:#94A3B8;{% endif %}">
+                    {% if sj.assignee %}{{ sj.assignee.name }}{% endif %}{% if sj.assignee and sj.due_date %} · {% endif %}{% if sj.due_date %}Due {{ sj.due_date.strftime('%d %b') }}{% endif %}
+                  </div>
+                </div>
+              </div>
+
+              {# Status badge #}
+              <div style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;
+                {% if is_done %}background:#10B981;color:white;
+                {% elif is_current %}background:#133E87;color:white;
+                {% elif is_hold %}background:#EF4444;color:white;
+                {% else %}color:#94A3B8;border:1px solid #E2E8F0;background:white;{% endif %}">
+                {{ sj.status }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% else %}
+        {# SINGLE TASK: vertical status history #}
+        <div style="margin-bottom:14px;">
+          <div style="font-size:8px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">{{ job.job_type }}{% if job.due_date %} · Due {{ job.due_date.strftime('%d %b %Y') }}{% endif %}</div>
+          {% set updates_asc = job.updates | list | reverse | list %}
+          {% if updates_asc %}
+          {% for u in updates_asc %}
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:11px;">
+            <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;
+              {% if u.status in ['Done','Closed','Completed'] %}background:#10B981;
+              {% elif u.status in ['On Hold','Delayed','Rejected'] %}background:#EF4444;
+              {% else %}background:#133E87;{% endif %}
+              color:white;font-size:8px;font-weight:700;">
+              {% if u.status in ['Done','Closed','Completed'] %}
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 5l2.5 2.5 5.5-5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+              {% else %}{{ loop.index }}{% endif %}
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:11px;font-weight:700;color:#1A2333;">{{ u.status }}</div>
+              <div style="font-size:9px;color:#94A3B8;margin-top:1px;">{{ u.created_at.strftime('%d %b %Y · %I:%M %p') }} · {{ u.staff_name }}</div>
+              {% if u.remark %}<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.4;">{{ u.remark }}</div>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div style="font-size:11px;color:#94A3B8;text-align:center;padding:16px 0;">No updates yet.</div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div style="padding-top:10px;border-top:1px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:8px;color:#CBD5E1;">Tahfeel Business Setup Services · Dubai, UAE</div>
+          <div style="font-size:8px;color:#CBD5E1;">info@tahfeelbusiness.com</div>
+        </div>
+      </div>
+
+            <!-- Popup actions -->
+      <div style="padding:14px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="closePopup()" style="height:36px;padding:0 16px;background:white;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;cursor:pointer;color:#475569;">Close</button>
+        <button onclick="downloadFromPopup()" style="height:36px;padding:0 20px;background:#133E87;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:white;">⬇ Download Image</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+  function sendWA() {
+    const phone = "{{ job.customer.phone|replace(' ','')|replace('+','') }}";
+    const name = "{{ job.customer.name }}";
+    const service = "{{ job.job_type }}";
+    const status = "{{ job.status }}";
+    const due = "{{ job.due_date.strftime('%d %b %Y') if job.due_date else 'TBD' }}";
+    const rep = "{{ job.assignee.name if job.assignee else 'Tahfeel Team' }}";
+    const isDone = {{ 'true' if job.status in ['Done','Closed'] else 'false' }};
+    const closing = isDone
+      ? "✅ Your application has been completed successfully. Please contact us if you need anything further."
+      : "We are actively working on your application and will keep you informed at every step.";
+    const msg = `Dear ${name},
+
+Thank you for choosing Tahfeel Business Setup Services.
+
+Here is the latest update on your application:
+
+📋 *Service:* ${service}
+📌 *Status:* ${status}
+📅 *Expected Completion:* ${due}
+👤 *Your Representative:* ${rep}
+
+${closing}
+
+For any queries, feel free to reach out to us anytime.
+
+— *Tahfeel Business Setup Services* 🏢
+Dubai, UAE`;
+    const url = "https://wa.me/" + phone + "?text=" + encodeURIComponent(msg);
+    window.open(url, "_blank");
+  }
+
+  function openTimelinePopup() {
+    // Set generated date
+    const now = new Date();
+    const d = now.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
+    const t = now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+    const el = document.getElementById('tlDate');
+    if (el) el.textContent = d + ' ' + t;
+    document.getElementById('tlPopup').style.display = 'flex';
+  }
+  function closePopup() {
+    document.getElementById('tlPopup').style.display = 'none';
+  }
+  function downloadFromPopup() {
+    const el = document.getElementById('tlCapture');
+    html2canvas(el, { backgroundColor: '#ffffff', scale: 3, useCORS: true, logging: false, width: 380 }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = 'tahfeel-{{ job.customer.name|replace(" ","-") }}-update.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  }
+  document.getElementById('tlPopup').addEventListener('click', function(e) {
+    if (e.target === this) closePopup();
+  });
+  </script>
+</body>
+</html>
