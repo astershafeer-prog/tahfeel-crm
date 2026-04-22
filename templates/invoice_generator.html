@@ -11,86 +11,109 @@
     .inv-tabs { display:flex; gap:4px; background:rgba(19,62,135,0.08); border-radius:8px; padding:4px; }
     .inv-tabs button { padding:9px 22px; border:none; background:transparent; font-family:inherit; font-size:13px; font-weight:600; border-radius:6px; cursor:pointer; color:#64748B; transition:all 0.2s; }
     .inv-tabs button.active { background:#133E87; color:#fff; box-shadow:0 2px 6px rgba(19,62,135,0.2); }
-    .inv-card { background:#fff; border-radius:10px; box-shadow:0 2px 12px rgba(19,62,135,0.06); padding:24px 28px; margin-bottom:18px; border:1px solid #E2E8F0; }
-    .inv-card h3 { font-size:13px; font-weight:700; color:#133E87; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; padding-bottom:8px; border-bottom:2px solid #EBF0FA; }
-    .inv-row { display:grid; gap:14px; margin-bottom:12px; }
+    .inv-card { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(19,62,135,0.06); padding:20px 24px; margin-bottom:14px; border:0.5px solid #E2E8F0; border-top:5px solid #1A3B8B; }
+    .inv-card h3 { font-size:11px; font-weight:700; color:#1A3B8B; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; }
+    .inv-row { display:grid; gap:12px; margin-bottom:10px; }
     .inv-row.c2 { grid-template-columns:1fr 1fr; }
     .inv-row.c3 { grid-template-columns:1fr 1fr 1fr; }
+    .inv-row.c4 { grid-template-columns:1fr 1fr 1fr 1fr; }
     .inv-ff label { display:block; font-size:11px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
     .inv-ff label .req { color:#DC2626; }
-    .inv-ff input, .inv-ff select, .inv-ff textarea { width:100%; padding:8px 11px; border:1.5px solid #E2E8F0; border-radius:7px; font-family:inherit; font-size:13px; transition:border-color 0.2s; background:#fff; }
-    .inv-ff input:focus, .inv-ff select:focus, .inv-ff textarea:focus { outline:none; border-color:#133E87; box-shadow:0 0 0 3px rgba(19,62,135,0.07); }
-    .inv-ff textarea { resize:vertical; min-height:55px; }
+    .inv-ff label .opt { color:#94A3B8; font-weight:400; text-transform:none; font-size:10px; letter-spacing:0; }
+    .inv-ff input, .inv-ff select, .inv-ff textarea { width:100%; padding:8px 11px; border:1.5px solid #E2E8F0; border-radius:8px; font-family:inherit; font-size:13px; transition:border-color 0.2s; background:#fff; box-sizing:border-box; }
+    .inv-ff input:focus, .inv-ff select:focus, .inv-ff textarea:focus { outline:none; border-color:#1A3B8B; box-shadow:0 0 0 3px rgba(26,59,139,0.07); }
+    .inv-ff textarea { resize:vertical; }
+    /* Bill To card special */
+    .bto-card { border-top-color: #8B5CF6; }
+    .bto-card h3 { color:#8B5CF6; }
+    /* Services card */
+    .svc-card { border-top-color: #10B981; }
+    .svc-card h3 { color:#10B981; }
+    /* Remarks card */
+    .rem-card { border-top-color: #F59E0B; }
+    .rem-card h3 { color:#F59E0B; }
+    /* Items table */
     .inv-tbl { width:100%; border-collapse:collapse; margin-top:6px; }
-    .inv-tbl thead th { background:#133E87; color:#fff; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.7px; padding:9px 10px; text-align:left; }
-    .inv-tbl thead th:first-child { border-radius:7px 0 0 0; }
-    .inv-tbl thead th:last-child { border-radius:0 7px 0 0; }
+    .inv-tbl thead th { background:#1A3B8B; color:#fff; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.7px; padding:9px 10px; text-align:left; }
     .inv-tbl thead th.r { text-align:right; }
     .inv-tbl tbody td { padding:5px 6px; border-bottom:1px solid #F1F5F9; vertical-align:middle; }
-    .inv-tbl tbody td input, .inv-tbl tbody td select { width:100%; padding:6px 7px; border:1.5px solid #E2E8F0; border-radius:5px; font-family:inherit; font-size:12px; }
-    .inv-tbl tbody td input:focus, .inv-tbl tbody td select:focus { outline:none; border-color:#133E87; }
+    .inv-tbl tbody td input, .inv-tbl tbody td select { width:100%; padding:6px 8px; border:1.5px solid #E2E8F0; border-radius:6px; font-family:inherit; font-size:12px; box-sizing:border-box; }
+    .inv-tbl tbody td input:focus, .inv-tbl tbody td select:focus { outline:none; border-color:#1A3B8B; }
     .inv-tbl tbody td.r input { text-align:right; }
-    .inv-tbl .total-cell { text-align:right; font-weight:600; font-size:13px; color:#0F2660; padding-right:4px; }
-    .inv-tbl .rm-btn { background:none; border:none; color:#DC2626; cursor:pointer; font-size:17px; padding:3px 7px; border-radius:4px; }
+    .inv-tbl .total-cell { text-align:right; font-weight:700; font-size:13px; color:#0F2660; }
+    .inv-tbl .rm-btn { background:none; border:none; color:#DC2626; cursor:pointer; font-size:18px; padding:2px 6px; border-radius:4px; }
     .inv-tbl .rm-btn:hover { background:#FEF2F2; }
-    .inv-totals-wrap { display:flex; justify-content:flex-end; margin-top:14px; }
+    .inv-totals-wrap { display:flex; justify-content:flex-end; margin-top:16px; }
     .inv-totals-box { width:320px; }
-    .inv-tot-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; font-size:13px; }
+    .inv-tot-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; font-size:13px; border-bottom:0.5px solid #F1F5F9; }
     .inv-tot-row .lbl { color:#64748B; font-weight:500; }
-    .inv-tot-row .val { font-weight:700; color:#0F2660; font-size:14px; }
-    .inv-tot-row.grand { border-top:2px solid #133E87; margin-top:4px; padding-top:10px; }
-    .inv-tot-row.grand .lbl { font-size:15px; color:#133E87; font-weight:700; }
-    .inv-tot-row.grand .val { font-size:17px; color:#133E87; }
-    .inv-words { margin-top:10px; font-size:12px; color:#64748B; font-style:italic; padding:7px 11px; background:#F8FAFC; border-radius:6px; border-left:3px solid #C9A84C; }
-    .inv-add-btn { display:inline-flex; align-items:center; gap:5px; margin-top:8px; padding:7px 14px; background:#EBF0FA; color:#133E87; border:1.5px dashed #133E87; border-radius:7px; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
-    .inv-add-btn:hover { background:#133E87; color:#fff; }
+    .inv-tot-row .val { font-weight:700; color:#0F2660; }
+    .inv-tot-row.grand { border-top:2px solid #1A3B8B; border-bottom:none; margin-top:6px; padding-top:10px; }
+    .inv-tot-row.grand .lbl { font-size:15px; color:#1A3B8B; font-weight:700; }
+    .inv-tot-row.grand .val { font-size:17px; color:#1A3B8B; }
+    .inv-words { margin-top:10px; font-size:12px; color:#64748B; font-style:italic; padding:8px 12px; background:#F8FAFC; border-radius:6px; border-left:3px solid #F59E0B; }
+    .inv-add-btn { display:inline-flex; align-items:center; gap:5px; margin-top:10px; padding:8px 16px; background:#EBF2FF; color:#1A3B8B; border:1.5px dashed #1A3B8B; border-radius:8px; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+    .inv-add-btn:hover { background:#1A3B8B; color:#fff; }
     .inv-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
     .inv-btn { padding:10px 24px; border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:7px; }
-    .inv-btn-p { background:#133E87; color:#fff; box-shadow:0 2px 8px rgba(19,62,135,0.2); }
+    .inv-btn-p { background:#1A3B8B; color:#fff; box-shadow:0 2px 8px rgba(26,59,139,0.2); }
     .inv-btn-p:hover { background:#0F2660; transform:translateY(-1px); }
-    .inv-btn-s { background:#fff; color:#133E87; border:1.5px solid #133E87; }
-    .inv-btn-s:hover { background:#EBF0FA; }
-    .inv-btn-g { background:#C9A84C; color:#fff; }
-    .inv-btn-g:hover { background:#B8943F; }
+    .inv-btn-s { background:#fff; color:#1A3B8B; border:1.5px solid #1A3B8B; }
+    .inv-btn-s:hover { background:#EBF2FF; }
+    .inv-btn-g { background:#F59E0B; color:#fff; }
+    .inv-btn-g:hover { background:#D97706; }
+    /* Remarks bullet points */
+    .rem-list { list-style:none; padding:0; margin:0; }
+    .rem-item { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; }
+    .rem-item input { flex:1; padding:8px 11px; border:1.5px solid #E2E8F0; border-radius:8px; font-family:inherit; font-size:13px; }
+    .rem-item input:focus { outline:none; border-color:#F59E0B; box-shadow:0 0 0 3px rgba(245,158,11,0.07); }
+    .rem-item .rem-rm { background:none; border:none; color:#DC2626; cursor:pointer; font-size:18px; padding:4px; }
+    .rem-add-btn { display:inline-flex; align-items:center; gap:5px; margin-top:6px; padding:6px 14px; background:#FFFBEB; color:#B45309; border:1.5px dashed #F59E0B; border-radius:8px; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+    .rem-add-btn:hover { background:#F59E0B; color:#fff; }
+    /* Preview overlay */
     .pv-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; justify-content:center; align-items:flex-start; padding:28px; overflow-y:auto; }
     .pv-overlay.show { display:flex; }
     .pv-paper { background:#fff; width:210mm; min-height:297mm; padding:0; box-shadow:0 8px 40px rgba(0,0,0,0.2); border-radius:4px; position:relative; overflow:hidden; }
-    .pv-hdr { display:flex; justify-content:space-between; align-items:flex-start; padding:32px 36px 16px; }
-    .pv-hdr img { height:60px; }
-    .pv-hdr .pv-dtype { font-size:34px; color:#133E87; font-weight:800; letter-spacing:1px; }
-    .pv-cbar { background:#133E87; color:#fff; padding:11px 36px; display:flex; justify-content:space-between; font-size:11px; letter-spacing:0.3px; flex-wrap:wrap; gap:4px; }
-    .pv-cbar span { margin-right:14px; }
-    .pv-meta { display:flex; justify-content:space-between; padding:20px 36px 14px; }
-    .pv-meta .pv-bto h4 { font-size:10px; font-weight:700; color:#133E87; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
-    .pv-meta .pv-bto p { font-size:12.5px; line-height:1.6; color:#333; }
-    .pv-meta .pv-dd { text-align:right; }
-    .pv-meta .pv-dd p { font-size:12px; color:#555; margin-bottom:3px; }
-    .pv-meta .pv-dd strong { color:#0F2660; }
+    .pv-hdr { display:flex; justify-content:space-between; align-items:flex-start; padding:28px 36px 14px; }
+    .pv-hdr img { height:64px; object-fit:contain; }
+    .pv-hdr-right { text-align:right; }
+    .pv-dtype { font-size:30px; color:#1A3B8B; font-weight:800; letter-spacing:1px; }
+    .pv-company-info { font-size:10px; color:#475569; line-height:1.8; margin-top:4px; }
+    .pv-divider { height:3px; background:linear-gradient(90deg,#1A3B8B,#8B5CF6); margin:0 36px; border-radius:2px; }
+    .pv-meta { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:18px 36px 14px; }
+    .pv-bto h4 { font-size:9px; font-weight:700; color:#1A3B8B; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+    .pv-bto p { font-size:12px; line-height:1.7; color:#1A2333; }
+    .pv-dd { text-align:right; }
+    .pv-dd-row { display:flex; justify-content:flex-end; gap:8px; margin-bottom:3px; font-size:12px; }
+    .pv-dd-row .k { color:#64748B; }
+    .pv-dd-row .v { font-weight:700; color:#1A2333; min-width:120px; text-align:right; }
     .pv-tbl { width:calc(100% - 72px); margin:6px 36px; border-collapse:collapse; }
-    .pv-tbl thead th { background:#133E87; color:#fff; padding:9px 12px; font-size:10px; text-transform:uppercase; letter-spacing:0.7px; font-weight:700; text-align:left; }
-    .pv-tbl thead th:first-child { border-radius:5px 0 0 0; }
-    .pv-tbl thead th:last-child { border-radius:0 5px 0 0; text-align:right; }
+    .pv-tbl thead th { background:#1A3B8B; color:#fff; padding:9px 12px; font-size:10px; text-transform:uppercase; letter-spacing:0.7px; font-weight:700; text-align:left; }
     .pv-tbl thead th.r { text-align:right; }
-    .pv-tbl tbody td { padding:9px 12px; border-bottom:1px solid #eee; font-size:12px; color:#333; }
+    .pv-tbl tbody td { padding:9px 12px; border-bottom:1px solid #F1F5F9; font-size:12px; color:#1A2333; }
     .pv-tbl tbody td.r { text-align:right; }
-    .pv-tbl tbody tr:last-child td { border-bottom:2px solid #133E87; }
-    .pv-bot { display:flex; justify-content:space-between; padding:18px 36px 20px; }
-    .pv-bot .pv-rem { flex:1; max-width:55%; }
-    .pv-bot .pv-rem h4 { font-size:10px; font-weight:700; color:#133E87; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
-    .pv-bot .pv-rem p { font-size:11px; color:#555; line-height:1.6; }
-    .pv-tots { width:220px; }
-    .pv-tots .pv-tr { display:flex; justify-content:space-between; padding:4px 0; font-size:11.5px; }
-    .pv-tots .pv-tr.grand { border-top:2px solid #133E87; margin-top:4px; padding-top:8px; font-size:14px; font-weight:800; color:#133E87; }
-    .pv-words { padding:0 36px; margin-bottom:14px; }
-    .pv-words p { font-size:11px; font-style:italic; color:#666; padding:5px 10px; background:#f8f9fc; border-radius:4px; border-left:3px solid #C9A84C; }
-    .pv-bank { padding:0 36px 16px; }
-    .pv-bank h4 { font-size:10px; font-weight:700; color:#133E87; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
-    .pv-bank p { font-size:11px; color:#444; line-height:1.7; }
-    .pv-ft { background:#133E87; color:rgba(255,255,255,0.85); padding:10px 36px; font-size:10px; display:flex; justify-content:space-between; align-items:center; position:absolute; bottom:0; left:0; right:0; }
+    .pv-tbl tbody tr:last-child td { border-bottom:2px solid #1A3B8B; }
+    .pv-bot { display:flex; justify-content:space-between; align-items:flex-start; padding:16px 36px 14px; gap:20px; }
+    .pv-rem { flex:1; }
+    .pv-rem h4 { font-size:9px; font-weight:700; color:#1A3B8B; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+    .pv-rem ul { margin:0; padding-left:16px; }
+    .pv-rem ul li { font-size:11px; color:#475569; line-height:1.7; }
+    .pv-tots { width:230px; flex-shrink:0; }
+    .pv-tr { display:flex; justify-content:space-between; padding:5px 0; font-size:12px; border-bottom:0.5px solid #F1F5F9; }
+    .pv-tr.grand { border-top:2px solid #1A3B8B; border-bottom:none; margin-top:4px; padding-top:8px; font-size:14px; font-weight:800; color:#1A3B8B; }
+    .pv-words { padding:0 36px 12px; }
+    .pv-words p { font-size:11px; font-style:italic; color:#475569; padding:6px 12px; background:#FFFBEB; border-radius:4px; border-left:3px solid #F59E0B; }
+    .pv-bank-rem { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:0 36px 16px; }
+    .pv-bank h4, .pv-sig h4 { font-size:9px; font-weight:700; color:#1A3B8B; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+    .pv-bank p { font-size:11px; color:#1A2333; line-height:1.8; }
+    .pv-sig { text-align:center; padding-top:8px; }
+    .pv-sig-line { border-top:1px solid #1A3B8B; margin:30px auto 4px; width:140px; }
+    .pv-sig p { font-size:10px; color:#64748B; }
+    .pv-ft { background:#1A3B8B; color:rgba(255,255,255,0.85); padding:10px 36px; font-size:10px; display:flex; justify-content:space-between; align-items:center; }
     .pv-close { position:fixed; top:14px; right:22px; z-index:1001; background:#fff; border:none; width:38px; height:38px; border-radius:50%; font-size:18px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; }
     .pv-btns { position:fixed; bottom:22px; right:22px; z-index:1001; display:flex; gap:8px; }
     @media print { body * { visibility:hidden; } .pv-overlay,.pv-overlay * { visibility:visible; } .pv-overlay { position:static; background:none; padding:0; } .pv-paper { box-shadow:none; width:100%; } .pv-close,.pv-btns,.topbar,.nav { display:none!important; } }
-    @media (max-width:768px) { .inv-row.c2,.inv-row.c3 { grid-template-columns:1fr; } .pv-paper { width:100%; min-height:auto; } }
+    @media (max-width:768px) { .inv-row.c2,.inv-row.c3,.inv-row.c4 { grid-template-columns:1fr; } .pv-paper { width:100%; } }
   </style>
 </head>
 <body>
@@ -101,55 +124,98 @@
   <div class="container inv-gen">
     {% with messages = get_flashed_messages() %}{% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <h2 style="font-size:22px;color:#0F2660;">Invoice / Quotation Generator</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div class="page-head-title">Invoice / Quotation Generator</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Create professional invoices and quotations</div>
+      </div>
       <div class="inv-tabs">
-        <button class="active" onclick="setDocType('INVOICE',this)">Invoice</button>
-        <button onclick="setDocType('QUOTATION',this)">Quotation</button>
+        <button class="active" onclick="setDocType('INVOICE',this)">📄 Invoice</button>
+        <button onclick="setDocType('QUOTATION',this)">📋 Quotation</button>
       </div>
     </div>
 
+    <!-- Document Details -->
     <div class="inv-card">
       <h3>Document Details</h3>
       <div class="inv-row c3">
-        <div class="inv-ff"><label>Document Type</label><input type="text" id="docType" value="INVOICE" readonly style="background:#F1F5F9;font-weight:700;color:#133E87;"></div>
-        <div class="inv-ff"><label>Date</label><input type="date" id="docDate"></div>
-        <div class="inv-ff"><label>Document No.</label><input type="text" id="docNo"></div>
+        <div class="inv-ff">
+          <label>Document Type</label>
+          <input type="text" id="docType" value="INVOICE" readonly style="background:#F1F5F9;font-weight:700;color:#1A3B8B;">
+        </div>
+        <div class="inv-ff">
+          <label>Date</label>
+          <input type="date" id="docDate">
+        </div>
+        <div class="inv-ff">
+          <label>Document No.</label>
+          <input type="text" id="docNo">
+        </div>
       </div>
     </div>
 
-    <div class="inv-card">
+    <!-- Bill To -->
+    <div class="inv-card bto-card">
       <h3>Bill To — Customer Details</h3>
       <div class="inv-row c2">
-        <div class="inv-ff"><label>Customer Name <span class="req">*</span></label><input type="text" id="custName" placeholder="Enter customer / company name"></div>
-        <div class="inv-ff"><label>Phone Number <span class="req">*</span></label><input type="text" id="custPhone" placeholder="+971 XX XXX XXXX"></div>
+        <div class="inv-ff">
+          <label>Customer Name <span class="req">*</span></label>
+          <input type="text" id="custName" placeholder="Full name">
+        </div>
+        <div class="inv-ff">
+          <label>Company Name <span class="opt">(optional)</span></label>
+          <input type="text" id="custCompany" placeholder="Company or business name">
+        </div>
       </div>
-      <div class="inv-row"><div class="inv-ff"><label>Address</label><input type="text" id="custAddress" placeholder="Customer address (optional)"></div></div>
+      <div class="inv-row c2">
+        <div class="inv-ff">
+          <label>Phone Number <span class="req">*</span></label>
+          <input type="text" id="custPhone" placeholder="+971 XX XXX XXXX">
+        </div>
+        <div class="inv-ff">
+          <label>Email <span class="opt">(optional)</span></label>
+          <input type="email" id="custEmail" placeholder="customer@email.com">
+        </div>
+      </div>
+      <div class="inv-row">
+        <div class="inv-ff">
+          <label>Address <span class="opt">(optional)</span></label>
+          <input type="text" id="custAddress" placeholder="Customer address">
+        </div>
+      </div>
     </div>
 
-    <div class="inv-card">
+    <!-- Services -->
+    <div class="inv-card svc-card">
       <h3>Services / Items</h3>
       <table class="inv-tbl">
         <thead><tr>
-          <th style="width:32px;">#</th><th>Description</th>
-          <th class="r" style="width:60px;">Qty</th><th class="r" style="width:120px;">Service Charge</th>
-          <th class="r" style="width:120px;">Govt. Charge</th><th class="r" style="width:110px;">Total (AED)</th>
+          <th style="width:32px;text-align:center;">#</th>
+          <th>Description</th>
+          <th class="r" style="width:60px;">Qty</th>
+          <th class="r" style="width:130px;">Service Charge</th>
+          <th class="r" style="width:130px;">Govt. Charge</th>
+          <th class="r" style="width:110px;">Total (AED)</th>
           <th style="width:36px;"></th>
         </tr></thead>
         <tbody id="itemsBody"></tbody>
       </table>
       <button class="inv-add-btn" onclick="addRow()"><span style="font-size:16px;">+</span> Add Service Line</button>
-      <div class="inv-totals-wrap"><div class="inv-totals-box">
-        <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="subtotal">AED 0.00</span></div>
-        <div class="inv-tot-row"><span class="lbl">VAT (5% on service charges)</span><span class="val" id="vatAmount">AED 0.00</span></div>
-        <div class="inv-tot-row grand"><span class="lbl">TOTAL</span><span class="val" id="grandTotal">AED 0.00</span></div>
-        <div class="inv-words" id="amountWords">AED Zero Only</div>
-      </div></div>
+      <div class="inv-totals-wrap">
+        <div class="inv-totals-box">
+          <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="subtotal">AED 0.00</span></div>
+          <div class="inv-tot-row"><span class="lbl">VAT (5% on service charges)</span><span class="val" id="vatAmount">AED 0.00</span></div>
+          <div class="inv-tot-row grand"><span class="lbl">TOTAL</span><span class="val" id="grandTotal">AED 0.00</span></div>
+          <div class="inv-words" id="amountWords">AED Zero Only</div>
+        </div>
+      </div>
     </div>
 
-    <div class="inv-card">
-      <h3>Remarks / Payment Instructions</h3>
-      <div class="inv-ff"><textarea id="remarks" rows="3">Government receipt will be provided for all government charges; no tax is applicable on govt fees.</textarea></div>
+    <!-- Remarks -->
+    <div class="inv-card rem-card">
+      <h3>Remarks / Notes <span style="font-size:10px;color:#94A3B8;font-weight:400;text-transform:none;letter-spacing:0;">(optional — each line becomes a bullet point)</span></h3>
+      <ul class="rem-list" id="remList"></ul>
+      <button class="rem-add-btn" onclick="addRemark()">+ Add Remark</button>
     </div>
 
     <div class="inv-actions">
@@ -159,6 +225,7 @@
     </div>
   </div>
 
+  <!-- Preview Overlay -->
   <div class="pv-overlay" id="pvOverlay">
     <button class="pv-close" onclick="closePv()">✕</button>
     <div class="pv-paper" id="pvPaper"></div>
@@ -171,17 +238,21 @@
 <script>
 const LOGO_URL = '/static/img/logo.jpg';
 const services = {{ services|tojson }};
-let docType = 'INVOICE', rowN = 0;
+let docType = 'INVOICE', rowN = 0, remN = 0;
 
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('docDate').value = new Date().toISOString().split('T')[0];
-  genNo(); addRow(); addRow(); addRow();
+  genNo();
+  addRow(); addRow(); addRow();
+  addRemark('Government receipt will be provided for all government charges; no tax is applicable on govt fees.');
 });
 
 function setDocType(t, btn) {
-  docType = t; document.getElementById('docType').value = t;
+  docType = t;
+  document.getElementById('docType').value = t;
   document.querySelectorAll('.inv-tabs button').forEach(function(b) { b.classList.remove('active'); });
-  btn.classList.add('active'); genNo();
+  btn.classList.add('active');
+  genNo();
 }
 
 function genNo() {
@@ -195,25 +266,44 @@ function addRow() {
   var tr = document.createElement('tr');
   var rid = 'r' + rowN;
   tr.id = rid;
-  var opts = '';
+  var opts = '<option value="">— Select service —</option>';
   for (var i = 0; i < services.length; i++) {
     opts += '<option value="' + services[i] + '">' + services[i] + '</option>';
   }
-  tr.innerHTML = '<td style="text-align:center;font-weight:600;color:#94A3B8;font-size:12px;">' + (tb.children.length + 1) + '</td>' +
-    '<td><select onchange="svcSel(this)" style="margin-bottom:3px;"><option value="">— Select or type —</option>' + opts + '</select>' +
-    '<input type="text" placeholder="Service description" class="di" oninput="calc()"></td>' +
-    '<td class="r"><input type="number" value="1" min="1" class="qi" oninput="calc()"></td>' +
-    '<td class="r"><input type="number" value="0" min="0" step="0.01" class="si" oninput="calc()"></td>' +
-    '<td class="r"><input type="number" value="0" min="0" step="0.01" class="gi" oninput="calc()"></td>' +
-    '<td><div class="total-cell rt">0.00</div></td>' +
+  opts += '<option value="__other__">Other (type below)</option>';
+  tr.innerHTML =
+    '<td style="text-align:center;font-weight:600;color:#94A3B8;font-size:12px;">' + (tb.children.length + 1) + '</td>' +
+    '<td>' +
+      '<select onchange="svcSel(this)" style="margin-bottom:4px;">' + opts + '</select>' +
+      '<textarea placeholder="Description (no character limit)" class="di" oninput="calc()" rows="2" style="resize:vertical;font-size:12px;"></textarea>' +
+    '</td>' +
+    '<td class="r"><input type="number" value="1" min="1" class="qi" oninput="calc()" style="text-align:right;"></td>' +
+    '<td class="r"><input type="number" value="0" min="0" step="0.01" class="si" oninput="calc()" style="text-align:right;"></td>' +
+    '<td class="r"><input type="number" value="0" min="0" step="0.01" class="gi" oninput="calc()" style="text-align:right;"></td>' +
+    '<td><div class="total-cell rt" style="text-align:right;padding-right:4px;">0.00</div></td>' +
     '<td><button class="rm-btn" onclick="rmRow(\'' + rid + '\')">×</button></td>';
   tb.appendChild(tr);
   renum();
 }
 
+function addRemark(text) {
+  remN++;
+  var ul = document.getElementById('remList');
+  var li = document.createElement('li');
+  li.className = 'rem-item';
+  li.id = 'rem' + remN;
+  var rid = 'rem' + remN;
+  li.innerHTML =
+    '<span style="color:#F59E0B;font-size:16px;padding-top:8px;">•</span>' +
+    '<input type="text" placeholder="Enter remark..." value="' + (text || '') + '">' +
+    '<button class="rem-rm" onclick="document.getElementById(\'' + rid + '\').remove()">×</button>';
+  ul.appendChild(li);
+}
+
 function svcSel(s) {
-  var inp = s.parentElement.querySelector('.di');
-  if (s.value && s.value !== 'Other') { inp.value = s.value; } else { inp.value = ''; inp.focus(); }
+  var ta = s.parentElement.querySelector('.di');
+  if (s.value && s.value !== '__other__') { ta.value = s.value; }
+  else { ta.value = ''; ta.focus(); }
   calc();
 }
 
@@ -230,8 +320,7 @@ function renum() {
 
 function calc() {
   var sub = 0, svcT = 0;
-  var rows = document.getElementById('itemsBody').querySelectorAll('tr');
-  rows.forEach(function(r) {
+  document.getElementById('itemsBody').querySelectorAll('tr').forEach(function(r) {
     var q = parseFloat(r.querySelector('.qi').value) || 0;
     var s = parseFloat(r.querySelector('.si').value) || 0;
     var g = parseFloat(r.querySelector('.gi').value) || 0;
@@ -253,14 +342,22 @@ function n2w(n) {
   function c(n) {
     n = Math.floor(n);
     if (n < 20) return o[n];
-    if (n < 100) return t[Math.floor(n/10)] + (n%10 ? ' ' + o[n%10] : '');
-    if (n < 1000) return o[Math.floor(n/100)] + ' Hundred' + (n%100 ? ' ' + c(n%100) : '');
-    if (n < 100000) return c(Math.floor(n/1000)) + ' Thousand' + (n%1000 ? ' ' + c(n%1000) : '');
-    if (n < 10000000) return c(Math.floor(n/100000)) + ' Lakh' + (n%100000 ? ' ' + c(n%100000) : '');
-    return c(Math.floor(n/10000000)) + ' Crore' + (n%10000000 ? ' ' + c(n%10000000) : '');
+    if (n < 100) return t[Math.floor(n/10)] + (n%10?' '+o[n%10]:'');
+    if (n < 1000) return o[Math.floor(n/100)]+' Hundred'+(n%100?' '+c(n%100):'');
+    if (n < 100000) return c(Math.floor(n/1000))+' Thousand'+(n%1000?' '+c(n%1000):'');
+    if (n < 10000000) return c(Math.floor(n/100000))+' Lakh'+(n%100000?' '+c(n%100000):'');
+    return c(Math.floor(n/10000000))+' Crore'+(n%10000000?' '+c(n%10000000):'');
   }
   var w = Math.floor(n), d = Math.round((n - w) * 100);
   return c(w) + (d > 0 ? ' and ' + c(d) + ' Fils' : '');
+}
+
+function getRemarks() {
+  var items = [];
+  document.getElementById('remList').querySelectorAll('.rem-item input').forEach(function(inp) {
+    if (inp.value.trim()) items.push(inp.value.trim());
+  });
+  return items;
 }
 
 function getData() {
@@ -280,10 +377,12 @@ function getData() {
     date: document.getElementById('docDate').value,
     no: document.getElementById('docNo').value,
     cn: document.getElementById('custName').value || '',
+    cco: document.getElementById('custCompany').value || '',
     cp: document.getElementById('custPhone').value || '',
+    ce: document.getElementById('custEmail').value || '',
     ca: document.getElementById('custAddress').value || '',
     items: items, sub: sub, vat: vat, grand: sub + vat,
-    rem: document.getElementById('remarks').value
+    remarks: getRemarks()
   };
 }
 
@@ -301,58 +400,91 @@ function previewDoc() {
   var rows = '';
   for (var i = 0; i < d.items.length; i++) {
     var it = d.items[i];
-    rows += '<tr><td style="text-align:center;color:#888;">' + (i+1) + '</td>' +
-      '<td>' + (it.desc || '—') + '</td><td class="r">' + it.q + '</td>' +
-      '<td class="r">' + it.s.toFixed(2) + '</td><td class="r">' + it.g.toFixed(2) + '</td>' +
-      '<td class="r" style="font-weight:600;">' + it.t.toFixed(2) + '</td></tr>';
+    rows += '<tr>' +
+      '<td style="text-align:center;color:#888;font-size:11px;">' + (i+1) + '</td>' +
+      '<td style="white-space:pre-wrap;">' + (it.desc || '—') + '</td>' +
+      '<td class="r">' + it.q + '</td>' +
+      '<td class="r">' + it.s.toFixed(2) + '</td>' +
+      '<td class="r">' + it.g.toFixed(2) + '</td>' +
+      '<td class="r" style="font-weight:700;">' + it.t.toFixed(2) + '</td></tr>';
   }
 
-  var html = '<div class="pv-hdr">' +
-    '<img src="' + LOGO_URL + '" alt="Tahfeel" style="height:60px;">' +
-    '<div class="pv-dtype">' + d.type + '</div></div>' +
+  var billTo = '<strong>' + d.cn + '</strong>';
+  if (d.cco) billTo += '<br>' + d.cco;
+  if (d.cp) billTo += '<br>' + d.cp;
+  if (d.ce) billTo += '<br>' + d.ce;
+  if (d.ca) billTo += '<br>' + d.ca;
 
-    '<div class="pv-cbar"><div>' +
-    '<span><strong>Tahfeel Business Setup Services LLC</strong></span>' +
-    '<span>Wasl Ivory, Shop No.7, Al Karama, Dubai - UAE</span>' +
-    '<span>+971 50 394 5656</span>' +
-    '<span>Info@tahfeel.ae</span></div>' +
-    '<div><strong>TRN:</strong> 104627774300003</div></div>' +
+  var remHtml = '';
+  if (d.remarks.length > 0) {
+    remHtml = '<div class="pv-rem"><h4>Remarks / Notes</h4><ul>';
+    for (var i = 0; i < d.remarks.length; i++) {
+      remHtml += '<li>' + d.remarks[i] + '</li>';
+    }
+    remHtml += '</ul></div>';
+  }
 
-    '<div class="pv-meta"><div class="pv-bto"><h4>Bill To</h4><p>' +
-    '<strong>' + d.cn + '</strong><br>' +
-    (d.cp ? d.cp + '<br>' : '') +
-    d.ca + '</p></div>' +
-    '<div class="pv-dd"><p><strong>' + d.type + ' No:</strong> ' + d.no + '</p>' +
-    '<p><strong>Date:</strong> ' + fmtDate(d.date) + '</p></div></div>' +
+  var html =
+    '<div class="pv-hdr">' +
+      '<img src="' + LOGO_URL + '" alt="Tahfeel" onerror="this.style.display=\'none\'">' +
+      '<div class="pv-hdr-right">' +
+        '<div class="pv-dtype">' + d.type + '</div>' +
+        '<div class="pv-company-info">' +
+          'TRN: 104627774300003<br>' +
+          'Wasl Ivory, Shop No.7, Al Karama, Dubai - UAE<br>' +
+          '+971 50 394 5656 | Info@tahfeel.ae' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="pv-divider"></div>' +
+
+    '<div class="pv-meta">' +
+      '<div class="pv-bto"><h4>Bill To</h4><p>' + billTo + '</p></div>' +
+      '<div class="pv-dd">' +
+        '<div class="pv-dd-row"><span class="k">' + d.type + ' No:</span><span class="v">' + d.no + '</span></div>' +
+        '<div class="pv-dd-row"><span class="k">Date:</span><span class="v">' + fmtDate(d.date) + '</span></div>' +
+      '</div>' +
+    '</div>' +
 
     '<table class="pv-tbl"><thead><tr>' +
-    '<th style="width:32px;text-align:center;">#</th><th>Description</th>' +
-    '<th class="r" style="width:50px;">Qty</th>' +
-    '<th class="r" style="width:105px;">Service Charge</th>' +
-    '<th class="r" style="width:105px;">Govt. Charge</th>' +
-    '<th class="r" style="width:95px;">Total (AED)</th>' +
+      '<th style="width:32px;text-align:center;">#</th>' +
+      '<th>Description</th>' +
+      '<th class="r" style="width:40px;">Qty</th>' +
+      '<th class="r" style="width:100px;">Svc Charge</th>' +
+      '<th class="r" style="width:100px;">Govt. Charge</th>' +
+      '<th class="r" style="width:90px;">Total (AED)</th>' +
     '</tr></thead><tbody>' + rows + '</tbody></table>' +
 
-    '<div class="pv-bot"><div class="pv-rem">' +
-    (d.rem ? '<h4>Remarks / Payment Instructions</h4><p>' + d.rem + '</p>' : '') +
-    '</div><div class="pv-tots">' +
-    '<div class="pv-tr"><span>Subtotal</span><span>' + d.sub.toFixed(2) + '</span></div>' +
-    '<div class="pv-tr"><span>VAT (5% on service)</span><span>' + d.vat.toFixed(2) + '</span></div>' +
-    '<div class="pv-tr grand"><span>TOTAL</span><span>AED ' + d.grand.toFixed(2) + '</span></div>' +
-    '</div></div>' +
+    '<div class="pv-bot">' +
+      remHtml +
+      '<div class="pv-tots">' +
+        '<div class="pv-tr"><span>Subtotal</span><span>AED ' + d.sub.toFixed(2) + '</span></div>' +
+        '<div class="pv-tr"><span>VAT (5% on service)</span><span>AED ' + d.vat.toFixed(2) + '</span></div>' +
+        '<div class="pv-tr grand"><span>TOTAL</span><span>AED ' + d.grand.toFixed(2) + '</span></div>' +
+      '</div>' +
+    '</div>' +
 
     '<div class="pv-words"><p><strong>Amount in Words:</strong> AED ' + n2w(d.grand) + ' Only</p></div>' +
 
-    '<div class="pv-bank"><h4>Bank Details</h4><p>' +
-    '<strong>Tahfeel Business Setup Services</strong><br>' +
-    'Account No: 12204966920001<br>' +
-    'IBAN: AE520030012204966920001<br>' +
-    'Swift Code: ADCBAEAA</p></div>' +
+    '<div class="pv-bank-rem">' +
+      '<div class="pv-bank"><h4>Bank Details</h4><p>' +
+        '<strong>Tahfeel Business Setup Services</strong><br>' +
+        'Account No: 12204966920001<br>' +
+        'IBAN: AE520030012204966920001<br>' +
+        'Swift Code: ADCBAEAA' +
+      '</p></div>' +
+      '<div class="pv-sig">' +
+        '<div class="pv-sig-line"></div>' +
+        '<p>Authorised Signature</p>' +
+        '<p style="font-weight:700;color:#1A3B8B;margin-top:2px;">Tahfeel Business Setup Services</p>' +
+      '</div>' +
+    '</div>' +
 
     '<div class="pv-ft">' +
-    '<span>www.tahfeel.ae</span>' +
-    '<span>Tahfeel Business Setup Services LLC</span>' +
-    '<span>Info@tahfeel.ae | +971 50 394 5656</span></div>';
+      '<span>www.tahfeel.ae</span>' +
+      '<span>Thank you for your business!</span>' +
+      '<span>Info@tahfeel.ae | +971 50 394 5656</span>' +
+    '</div>';
 
   document.getElementById('pvPaper').innerHTML = html;
   document.getElementById('pvOverlay').classList.add('show');
@@ -365,21 +497,22 @@ function closePv() {
 }
 
 function printDoc() {
-  if (!document.getElementById('pvOverlay').classList.contains('show')) { previewDoc(); }
+  if (!document.getElementById('pvOverlay').classList.contains('show')) { previewDoc(); return; }
   setTimeout(function() { window.print(); }, 300);
 }
 
 function resetForm() {
   if (!confirm('Clear all fields?')) return;
-  document.getElementById('custName').value = '';
-  document.getElementById('custPhone').value = '';
-  document.getElementById('custAddress').value = '';
-  document.getElementById('remarks').value = 'Government receipt will be provided for all government charges; no tax is applicable on govt fees.';
+  ['custName','custCompany','custPhone','custEmail','custAddress'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
   document.getElementById('docDate').value = new Date().toISOString().split('T')[0];
-  genNo();
   document.getElementById('itemsBody').innerHTML = '';
-  rowN = 0;
+  document.getElementById('remList').innerHTML = '';
+  rowN = 0; remN = 0;
+  genNo();
   addRow(); addRow(); addRow();
+  addRemark('Government receipt will be provided for all government charges; no tax is applicable on govt fees.');
   calc();
 }
 </script>
