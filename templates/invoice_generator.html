@@ -407,6 +407,132 @@ function fmtDate(s) {
   return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
 }
 
+
+function getStandardPages(d) {
+  if (d.type !== 'QUOTATION') return '';
+
+  // Page 2 - Terms & Conditions
+  var pg2 = '<div style="page-break-before:always;padding:32px 36px;font-family:Arial,sans-serif;">' +
+    '<div style="border-bottom:3px solid #1A3B8B;margin-bottom:20px;padding-bottom:10px;">' +
+      '<div style="font-size:9px;color:#1A3B8B;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Terms & Conditions</div>' +
+    '</div>' +
+
+    '<div style="margin-bottom:16px;">' +
+      '<div style="font-size:11px;font-weight:700;color:#1A3B8B;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">General Terms</div>' +
+      '<ul style="margin:0;padding-left:18px;font-size:11px;color:#333;line-height:1.9;">' +
+        '<li>Co Tax Registration is provided as complimentary service.</li>' +
+        '<li>All prices quoted are in AED (United Arab Emirates Dirham).</li>' +
+        '<li>Ejari is available; associated fees depend on the current date.</li>' +
+        '<li>DED will charge AED 2,000 if the trade name is not in Arabic.</li>' +
+        '<li>License fees can be paid online.</li>' +
+        '<li>All fees are included; there are no additional charges except for the marketing fee.</li>' +
+        '<li>NOC is required from the employer for any individual who wishes to be included in the license.</li>' +
+      '</ul>' +
+    '</div>' +
+
+    '<div style="margin-bottom:16px;">' +
+      '<div style="font-size:11px;font-weight:700;color:#1A3B8B;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Required Documents for Visa Processing</div>' +
+      '<div style="font-size:11px;color:#333;line-height:1.8;">Applicant\'s photo, passport copy, passport cover page, degree certificate (if applicable), visit visa or visa cancellation copy (if applicable), Emirates ID (for renewal), and entry stamp.</div>' +
+    '</div>' +
+
+    '<div style="margin-bottom:16px;">' +
+      '<div style="font-size:11px;font-weight:700;color:#1A3B8B;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Additional Information</div>' +
+      '<ul style="margin:0;padding-left:18px;font-size:11px;color:#333;line-height:1.9;">' +
+        '<li>Visa charges vary for internal (within the country) and external (outside the country) applications.</li>' +
+        '<li>Health insurance is not included in the visa charges.</li>' +
+        '<li>ILOE insurance is mandatory and must be paid by the employee — AED 63/year.</li>' +
+        '<li>Refunds are subject to deductions for any expenses already incurred.</li>' +
+        '<li>Government fees (e.g., immigration, economic departments, notary, etc.) are variable and beyond our control. Any changes will be communicated and documented.</li>' +
+      '</ul>' +
+    '</div>' +
+
+    '<div style="margin-bottom:16px;">' +
+      '<div style="font-size:11px;font-weight:700;color:#1A3B8B;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">📌 Notes & Compliance</div>' +
+      '<ul style="margin:0;padding-left:18px;font-size:11px;color:#333;line-height:1.9;">' +
+        '<li>All amounts in AED and inclusive of government fees at current rates.</li>' +
+        '<li>Any variation in DED, immigration, or notary charges will reflect in final billing.</li>' +
+        '<li>The timeline is subject to complete document submission and authority processing.</li>' +
+        '<li>Refunds (if any) will deduct actual costs incurred.</li>' +
+        '<li>The client is responsible for providing complete and accurate documents as listed. Incomplete or delayed submissions may affect timelines.</li>' +
+        '<li>All payments must be made in AED, either directly to Tahfeel\'s official bank account, or in cash to the authorized account representative.</li>' +
+        '<li>Payment voucher can be paid direct to Department of Economy.</li>' +
+      '</ul>' +
+    '</div>' +
+
+    '<div style="background:#F8FAFC;border-radius:8px;padding:14px 18px;margin-bottom:16px;border-left:4px solid #1A3B8B;">' +
+      '<div style="font-size:11px;font-weight:700;color:#1A3B8B;margin-bottom:6px;">🏦 Bank Account Support (Optional)</div>' +
+      '<div style="font-size:11px;color:#475569;">We assist in corporate bank account opening. Charges may vary based on the bank, business activity, and documentation requirements.</div>' +
+    '</div>' +
+
+    '<div style="background:#F8FAFC;border-radius:8px;padding:14px 18px;border-left:4px solid #10B981;">' +
+      '<div style="font-size:11px;font-weight:700;color:#10B981;margin-bottom:8px;">Bank Details</div>' +
+      '<div style="font-size:11px;color:#1A2333;line-height:1.9;">' +
+        '<strong>Tahfeel Business Setup Services</strong><br>' +
+        'Bank: ADCB — Karama Branch<br>' +
+        'PO Box 61743, Dubai, United Arab Emirates<br>' +
+        'Account No: 12204966920001<br>' +
+        'IBAN: AE520030012204966920001<br>' +
+        'Swift Code: ADCBAEAA<br>' +
+        'TRN: 10023550300003' +
+      '</div>' +
+    '</div>' +
+
+    '</div>';
+
+  // Page 3 - Why Choose Tahfeel + Contact
+  var pg3 = '<div style="page-break-before:always;padding:32px 36px;font-family:Arial,sans-serif;">' +
+    '<div style="border-bottom:3px solid #1A3B8B;margin-bottom:20px;padding-bottom:10px;">' +
+      '<div style="font-size:9px;color:#1A3B8B;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Why Choose Tahfeel</div>' +
+    '</div>' +
+
+    '<div style="background:linear-gradient(135deg,#EBF2FF,#F5F3FF);border-radius:10px;padding:20px 24px;margin-bottom:20px;">' +
+      '<div style="font-size:13px;font-weight:700;color:#1A3B8B;margin-bottom:12px;">🤝 Why Choose Tahfeel?</div>' +
+      '<div style="font-size:11px;color:#1A2333;line-height:2;">' +
+        '✔ Proven experience in setting up mainland and free zone companies<br>' +
+        '✔ End-to-end PRO & document clearance support<br>' +
+        '✔ Transparent pricing with no hidden charges<br>' +
+        '✔ Dedicated relationship manager for every client<br>' +
+        '✔ Fast processing with regular status updates<br>' +
+        '✔ Trusted by hundreds of businesses in Dubai' +
+      '</div>' +
+    '</div>' +
+
+    '<div style="background:#F0FDF4;border-radius:10px;padding:20px 24px;margin-bottom:20px;border-left:4px solid #10B981;">' +
+      '<div style="font-size:13px;font-weight:700;color:#15803D;margin-bottom:10px;">✅ Confirmation & Next Step</div>' +
+      '<div style="font-size:11px;color:#1A2333;line-height:1.9;">Kindly share your confirmation with passport copy & chosen activity. Once confirmed, trade name will be reserved, and documents will be processed immediately.</div>' +
+    '</div>' +
+
+    '<div style="background:#1A3B8B;border-radius:10px;padding:20px 24px;color:white;">' +
+      '<div style="font-size:13px;font-weight:700;margin-bottom:12px;">📩 Contact Us</div>' +
+      '<div style="font-size:11px;line-height:2;opacity:0.9;">' +
+        '<strong>Tahfeel Business Setup Services</strong><br>' +
+        'Wasl Ivory, Shop No.7, Al Karama, Dubai — UAE<br>' +
+        '📞 +971 50 394 5656<br>' +
+        '📞 +971 50 772 8946 (Anfal) | +91 92070 78555 (Luquman)<br>' +
+        '📧 info@tahfeel.ae | tahfeeldxb@gmail.com<br>' +
+        '🌐 www.tahfeel.ae' +
+      '</div>' +
+    '</div>' +
+
+    '<div style="margin-top:30px;display:flex;justify-content:space-between;align-items:flex-end;">' +
+      '<div style="text-align:center;">' +
+        '<div style="border-top:1px solid #1A3B8B;width:160px;margin-bottom:6px;"></div>' +
+        '<div style="font-size:10px;color:#64748B;">Client Signature</div>' +
+        '<div style="font-size:10px;color:#94A3B8;margin-top:2px;">Name: ________________</div>' +
+        '<div style="font-size:10px;color:#94A3B8;">Date: ________________</div>' +
+      '</div>' +
+      '<div style="text-align:center;">' +
+        '<div style="border-top:1px solid #1A3B8B;width:160px;margin-bottom:6px;"></div>' +
+        '<div style="font-size:10px;color:#64748B;">Authorised Signature</div>' +
+        '<div style="font-size:11px;font-weight:700;color:#1A3B8B;margin-top:2px;">Tahfeel Business Setup Services</div>' +
+      '</div>' +
+    '</div>' +
+
+    '</div>';
+
+  return pg2 + pg3;
+}
+
 function previewDoc() {
   var d = getData();
   if (!d.cn) { alert('Please enter Customer Name'); return; }
@@ -506,7 +632,7 @@ function previewDoc() {
       '<span>Info@tahfeel.ae | +971 50 394 5656</span>' +
     '</div>';
 
-  document.getElementById('pvPaper').innerHTML = html;
+  document.getElementById('pvPaper').innerHTML = html + getStandardPages(d);
   document.getElementById('pvOverlay').classList.add('show');
   document.body.style.overflow = 'hidden';
 }
