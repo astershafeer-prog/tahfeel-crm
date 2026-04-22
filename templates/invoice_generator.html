@@ -331,20 +331,24 @@ function renum() {
 }
 
 function calc() {
-  var sub = 0, svcT = 0;
+  var grandTotal = 0, totalVat = 0;
   document.getElementById('itemsBody').querySelectorAll('tr').forEach(function(r) {
     var q = parseFloat(r.querySelector('.qi').value) || 0;
     var s = parseFloat(r.querySelector('.si').value) || 0;
     var g = parseFloat(r.querySelector('.gi').value) || 0;
-    var t = q * (s + g);
-    r.querySelector('.rt').textContent = t.toFixed(2);
-    sub += t; svcT += q * s;
+    // VAT extracted from service charge (inclusive)
+    var vatPerUnit = s - (s / 1.05);
+    var netSvc = s / 1.05;
+    var rowTotal = q * (s + g);
+    r.querySelector('.rt').textContent = rowTotal.toFixed(2);
+    grandTotal += rowTotal;
+    totalVat += q * vatPerUnit;
   });
-  var vat = svcT * 0.05, grand = sub + vat;
-  document.getElementById('subtotal').textContent = 'AED ' + sub.toFixed(2);
-  document.getElementById('vatAmount').textContent = 'AED ' + vat.toFixed(2);
-  document.getElementById('grandTotal').textContent = 'AED ' + grand.toFixed(2);
-  document.getElementById('amountWords').textContent = 'AED ' + n2w(grand) + ' Only';
+  var subtotal = grandTotal - totalVat;
+  document.getElementById('subtotal').textContent = 'AED ' + subtotal.toFixed(2);
+  document.getElementById('vatAmount').textContent = 'AED ' + totalVat.toFixed(2);
+  document.getElementById('grandTotal').textContent = 'AED ' + grandTotal.toFixed(2);
+  document.getElementById('amountWords').textContent = 'AED ' + n2w(grandTotal) + ' Only';
 }
 
 function n2w(n) {
@@ -374,18 +378,21 @@ function getRemarks() {
 
 function getData() {
   var items = [], sub = 0, svcT = 0;
+  var totalVat2 = 0;
   document.getElementById('itemsBody').querySelectorAll('tr').forEach(function(r) {
     var desc = r.querySelector('.di').value || '';
     var q = parseFloat(r.querySelector('.qi').value) || 0;
     var s = parseFloat(r.querySelector('.si').value) || 0;
     var g = parseFloat(r.querySelector('.gi').value) || 0;
     var t = q * (s + g);
-    sub += t; svcT += q * s;
+    var rowVat = q * (s - s/1.05);
+    totalVat2 += rowVat;
+    sub += t;
     var piEl = r.querySelector('.pi');
     var primaryVal = piEl ? piEl.value.trim() : '';
     if (desc || s > 0 || g > 0 || primaryVal) items.push({primary:primaryVal, desc:desc, q:q, s:s, g:g, t:t});
   });
-  var vat = svcT * 0.05;
+  var vat = totalVat2;
   return {
     type: docType,
     date: document.getElementById('docDate').value,
