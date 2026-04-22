@@ -415,13 +415,17 @@ function previewDoc() {
   var rows = '';
   for (var i = 0; i < d.items.length; i++) {
     var it = d.items[i];
+    var dHtml = '';
+    if (it.primary) dHtml += '<div style="font-weight:700;font-size:12px;color:#1A2333;">' + it.primary + '</div>';
+    if (it.desc && it.desc.trim()) dHtml += '<div style="font-size:11px;color:#64748B;margin-top:2px;white-space:pre-wrap;word-break:break-word;">' + it.desc + '</div>';
+    if (!dHtml) dHtml = '<span style="color:#999;">—</span>';
     rows += '<tr>' +
-      '<td style="text-align:center;color:#888;font-size:11px;">' + (i+1) + '</td>' +
-      '<td style="word-break:break-word;white-space:pre-wrap;max-width:200px;">' + (it.desc || '—') + '</td>' +
-      '<td class="r">' + it.q + '</td>' +
-      '<td class="r">' + it.s.toFixed(2) + '</td>' +
-      '<td class="r">' + it.g.toFixed(2) + '</td>' +
-      '<td class="r" style="font-weight:700;">' + it.t.toFixed(2) + '</td></tr>';
+      '<td style="text-align:center;color:#888;font-size:11px;vertical-align:top;padding-top:10px;">' + (i+1) + '</td>' +
+      '<td style="vertical-align:top;">' + dHtml + '</td>' +
+      '<td class="r" style="vertical-align:top;padding-top:10px;">' + it.q + '</td>' +
+      '<td class="r" style="vertical-align:top;padding-top:10px;">' + it.s.toFixed(2) + '</td>' +
+      '<td class="r" style="vertical-align:top;padding-top:10px;">' + it.g.toFixed(2) + '</td>' +
+      '<td class="r" style="font-weight:700;vertical-align:top;padding-top:10px;">' + it.t.toFixed(2) + '</td></tr>';
   }
 
   var billTo = '<strong>' + d.cn + '</strong>';
