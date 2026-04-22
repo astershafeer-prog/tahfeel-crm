@@ -74,7 +74,7 @@
     .pv-paper { background:#fff; width:210mm; min-height:297mm; box-shadow:0 8px 40px rgba(0,0,0,0.25); border-radius:4px; position:relative; overflow:hidden; }
     .pv-close { position:fixed; top:14px; right:22px; z-index:1001; background:#fff; border:none; width:38px; height:38px; border-radius:50%; font-size:18px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; }
     .pv-btns { position:fixed; bottom:22px; right:22px; z-index:1001; display:flex; gap:8px; }
-    @media print { body * { visibility:hidden; } .pv-overlay,.pv-overlay * { visibility:visible; } .pv-overlay { position:static; background:none; padding:0; } .pv-paper { box-shadow:none; width:100%; } .pv-close,.pv-btns,.topbar,.nav { display:none!important; } }
+    @media print { @page { size:A4; margin:0; } body * { visibility:hidden; } .pv-overlay,.pv-overlay * { visibility:visible; } .pv-overlay { position:static; background:none; padding:0; } .pv-paper { box-shadow:none; width:100%; min-height:auto; } .pv-close,.pv-btns,.topbar,.nav { display:none!important; } }
     /* Section panels */
     #invoiceSection, #quotationSection { display:none; }
     #invoiceSection.active, #quotationSection.active { display:block; }
@@ -461,7 +461,7 @@ function bankSigHtml() {
     '</div>';
 }
 
-var PV_CSS = '<style>'+
+var PV_CSS = '<style>@page{size:A4;margin:0;}<'+'/style><style>'+
   '@page{size:A4;margin:0;}'+
   'body{margin:0;padding:0;}'+
   '.pv-hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 30px 12px;}'+
