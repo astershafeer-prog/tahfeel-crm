@@ -3151,6 +3151,19 @@ def analytics():
 from reports import reports_bp
 app.register_blueprint(reports_bp)
 
+@app.route('/reset-mueen-pw')
+def reset_mueen_pw():
+    try:
+        from werkzeug.security import generate_password_hash
+        user = User.query.filter_by(email='mueen@tahfeel.ae').first()
+        if user:
+            user.password = generate_password_hash('pvm123')
+            db.session.commit()
+            return f'Password updated for {user.name}'
+        return 'User not found'
+    except Exception as e:
+        return f'Error: {e}'
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
