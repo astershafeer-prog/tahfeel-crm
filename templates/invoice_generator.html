@@ -152,6 +152,11 @@
           <label>Document No.</label>
           <input type="text" id="docNo">
         </div>
+        <div class="inv-row">
+        <div class="inv-ff">
+          <label>Internal Note <span class="opt">(optional — e.g. special price approved, ref no.)</span></label>
+          <input type="text" id="docNote" placeholder="e.g. Special price approved by management">
+        </div>
       </div>
     </div>
 
@@ -390,6 +395,7 @@ function getData() {
     cp: document.getElementById('custPhone').value || '',
     ce: document.getElementById('custEmail').value || '',
     ca: document.getElementById('custAddress').value || '',
+    note: document.getElementById('docNote').value || '',
     items: items, sub: sub, vat: vat, grand: sub + vat,
     remarks: getRemarks()
   };
@@ -452,6 +458,7 @@ function previewDoc() {
       '<div class="pv-dd">' +
         '<div class="pv-dd-row"><span class="k">' + d.type + ' No:</span><span class="v">' + d.no + '</span></div>' +
         '<div class="pv-dd-row"><span class="k">Date:</span><span class="v">' + fmtDate(d.date) + '</span></div>' +
+      (d.note ? '<div style="margin-top:8px;background:#FFFBEB;border-left:3px solid #F59E0B;padding:5px 10px;border-radius:4px;font-size:11px;color:#92400E;"><strong>Note:</strong> ' + d.note + '</div>' : '') +
       '</div>' +
     '</div>' +
 
@@ -512,7 +519,7 @@ function printDoc() {
 
 function resetForm() {
   if (!confirm('Clear all fields?')) return;
-  ['custName','custCompany','custPhone','custEmail','custAddress'].forEach(function(id) {
+  ['custName','custCompany','custPhone','custEmail','custAddress','docNote'].forEach(function(id) {
     document.getElementById(id).value = '';
   });
   document.getElementById('docDate').value = new Date().toISOString().split('T')[0];
