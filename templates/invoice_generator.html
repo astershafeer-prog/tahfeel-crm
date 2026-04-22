@@ -87,7 +87,7 @@
     .pv-dd-row { display:flex; justify-content:flex-end; gap:8px; margin-bottom:3px; font-size:12px; }
     .pv-dd-row .k { color:#64748B; }
     .pv-dd-row .v { font-weight:700; color:#1A2333; min-width:120px; text-align:right; }
-    .pv-tbl { width:calc(100% - 72px); margin:6px 36px; border-collapse:collapse; }
+    .pv-tbl { width:calc(100% - 72px); margin:6px 36px; border-collapse:collapse; table-layout:fixed; }
     .pv-tbl thead th { background:#1A3B8B; color:#fff; padding:9px 12px; font-size:10px; text-transform:uppercase; letter-spacing:0.7px; font-weight:700; text-align:left; }
     .pv-tbl thead th.r { text-align:right; }
     .pv-tbl tbody td { padding:9px 12px; border-bottom:1px solid #F1F5F9; font-size:12px; color:#1A2333; }
@@ -369,7 +369,9 @@ function getData() {
     var g = parseFloat(r.querySelector('.gi').value) || 0;
     var t = q * (s + g);
     sub += t; svcT += q * s;
-    if (desc || s > 0 || g > 0) items.push({desc:desc, q:q, s:s, g:g, t:t});
+    var selEl = r.querySelector('select');
+    var selVal = selEl ? (selEl.options[selEl.selectedIndex] && selEl.options[selEl.selectedIndex].value !== '__other__' && selEl.options[selEl.selectedIndex].value ? selEl.options[selEl.selectedIndex].text : '') : '';
+    if (desc || s > 0 || g > 0) items.push({primary:selVal, desc:desc, q:q, s:s, g:g, t:t});
   });
   var vat = svcT * 0.05;
   return {
@@ -402,7 +404,7 @@ function previewDoc() {
     var it = d.items[i];
     rows += '<tr>' +
       '<td style="text-align:center;color:#888;font-size:11px;">' + (i+1) + '</td>' +
-      '<td style="white-space:pre-wrap;">' + (it.desc || '—') + '</td>' +
+      '<td style="word-break:break-word;white-space:pre-wrap;max-width:200px;">' + (it.desc || '—') + '</td>' +
       '<td class="r">' + it.q + '</td>' +
       '<td class="r">' + it.s.toFixed(2) + '</td>' +
       '<td class="r">' + it.g.toFixed(2) + '</td>' +
