@@ -56,8 +56,8 @@
             </div>
           </div>
           <div class="form-row-3">
-            <div class="form-group"><label>Assign To</label>
-              <select name="assigned_to">
+            <div class="form-group"><label>Assign To <span style="color:#DC2626;">*</span></label>
+              <select name="assigned_to" required>
                 <option value="">— Select staff —</option>
                 {% for user in users %}<option value="{{ user.id }}">{{ user.name }}</option>{% endfor %}
               </select>

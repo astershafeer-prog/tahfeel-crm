@@ -1015,7 +1015,7 @@ def delete_lead(lead_id):
 def bulk_delete_leads():
     ids = request.form.getlist('lead_ids')
     if not ids:
-        flash('No leads selected')
+        flash('No leads selected', 'error')
         return redirect(url_for('all_leads'))
     count = 0
     for lead_id in ids:

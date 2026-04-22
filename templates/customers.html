@@ -24,8 +24,8 @@
   </div>
   {% endif %}
   <div class="container">
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
     <div class="page-header">
@@ -103,7 +103,7 @@
                 <a href="/customers/{{ c.id }}/edit" class="ib" title="Edit">✏</a>
                 <a href="/documents?customer_id={{ c.id }}" class="ib" title="Documents">📄</a>
                 {% if session.role == 'admin' %}<a href="/customers/{{ c.id }}/delete" class="ib ib-del" onclick="return confirm('Delete {{ c.name }}?')" title="Delete">🗑</a>{% endif %}
-                {% if c.phone %}<a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ c.name.split()[0]|replace(' ','%20') }}%2C%20" target="_blank" class="ib" title="WhatsApp" style="background:#25D366;color:white;">💬</a>{% endif %}
+                {% if c.phone %}<a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ c.name.split()[0]|replace(' ','%20') }}%2C%0A%0AThank%20you%20for%20choosing%20Tahfeel%20Business%20Setup%20Services.%20How%20can%20we%20assist%20you%20today%3F%0A%0AWarm%20regards%2C%0ATahfeel%20Business%20Solutions%0ADubai%2C%20UAE" target="_blank" class="ib" title="WhatsApp" style="background:#25D366;color:white;">💬</a>{% endif %}
               </div>
             </td>
           </tr>

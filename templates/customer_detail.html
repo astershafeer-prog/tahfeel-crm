@@ -12,8 +12,8 @@
   {{ topbar() }}
   {{ nav('customers') }}
   <div class="container" style="max-width:960px;">
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
     <a href="javascript:history.back()" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back</a>

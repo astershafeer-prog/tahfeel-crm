@@ -12,8 +12,8 @@
   {{ topbar() }}
   {{ nav('admin') }}
   <div class="container">
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
     <div class="page-head" style="margin-bottom:14px;">
