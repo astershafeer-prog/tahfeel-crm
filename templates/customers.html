@@ -34,8 +34,10 @@
         {% if birthdays_today %}
         <a href="/customers?birthday=today" class="btn-sm" style="background:#FDF2F8;border:1px solid #FBCFE8;color:#9D174D;display:flex;align-items:center;gap:4px;">🎂 Birthdays <span style="background:#EC4899;color:white;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;">{{ birthdays_today|length }}</span></a>
         {% endif %}
+        {% if session.role == 'admin' %}
         <a href="/customers/import" class="btn-sm">📥 Import</a>
         <a href="/customers/export" class="btn-sm" style="background:var(--success-bg);border-color:var(--success);color:var(--success);">⬇ Export</a>
+        {% endif %}
         <a href="/customers/add" class="btn-add">+ Add Customer</a>
       </div>
     </div>

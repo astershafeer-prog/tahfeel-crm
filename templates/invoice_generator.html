@@ -164,7 +164,10 @@
           <div class="inv-ff"><label>Quotation No.</label><input type="text" id="qtNo"></div>
           <div class="inv-ff"><label>Valid Until <span class="opt">(optional)</span></label><input type="date" id="qtValid"></div>
         </div>
-        <div class="inv-row"><div class="inv-ff"><label>Note <span class="opt">(optional)</span></label><input type="text" id="qtNote" placeholder="e.g. Special price approved"></div></div>
+      <div class="inv-row c2">
+        <div class="inv-ff"><label>Remarks <span class="opt">(optional — shows on quotation)</span></label><input type="text" id="qtNote" placeholder="e.g. Special price approved by management"></div>
+        <div></div>
+      </div>
       </div>
       <div class="inv-card purple">
         <h3>Bill To</h3>
@@ -406,7 +409,7 @@ function docHeader(type, no, date, note, billTo, validUntil) {
     '<div class="pv-meta">'+
     '<div class="pv-bto"><h4>Bill To</h4><p>'+billTo+'</p></div>'+
     '<div class="pv-dd">'+metaRight+'</div></div>'+
-    (note?'<div class="pv-note"><strong>Note:</strong> '+note+'</div>':'');
+    (note?'<div class="pv-note"><strong>Remarks:</strong> '+note+'</div>':'');
 }
 
 function itemsTable(items) {

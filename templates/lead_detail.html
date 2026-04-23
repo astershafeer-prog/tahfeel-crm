@@ -216,9 +216,21 @@
     const NO_FOLLOWUP_STATUSES = ['Converted', 'Lost'];
     const today = '{{ now.strftime("%Y-%m-%d") }}';
 
+    // Calculate tomorrow's date
+    function getTomorrow() {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      return d.toISOString().split('T')[0];
+    }
+
     function handleStageChange() {
       const stage = document.getElementById('stageSelect').value;
       document.getElementById('lostFields').style.display = stage === 'Lost' ? 'block' : 'none';
+      // Auto-set followup date to tomorrow when stage changes
+      const followupDate = document.getElementById('followupDate');
+      if (followupDate && !followupDate.value) {
+        followupDate.value = getTomorrow();
+      }
       const potentialField = document.getElementById('potentialField');
       if (potentialField) {
         const show = POSITIVE_STATUSES.includes(stage);
