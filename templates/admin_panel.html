@@ -36,6 +36,7 @@
           <div class="form-row-2" style="align-items:flex-end;">
             <div class="form-group"><label>Full Name</label><input type="text" name="name" required placeholder="Staff name"></div>
             <div class="form-group"><label>Email</label><input type="email" name="email" required placeholder="email@tahfeel.ae"></div>
+            <div class="form-group"><label>Mobile Number <span style="color:#94A3B8;font-weight:400;">(optional)</span></label><input type="text" name="phone" placeholder="+971 XX XXX XXXX"></div>
             <div class="form-group"><label>Password</label><input type="password" name="password" required placeholder="Password"></div>
             <div class="form-group">
               <label>Role</label>
@@ -87,6 +88,7 @@
                   <div class="form-row-2" style="align-items:flex-end;">
                     <div class="form-group"><label>Name</label><input type="text" name="name" value="{{ user.name }}" required></div>
                     <div class="form-group"><label>Email</label><input type="email" name="email" value="{{ user.email }}" required></div>
+                    <div class="form-group"><label>Mobile Number <span style="color:#94A3B8;font-weight:400;">(optional)</span></label><input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="+971 XX XXX XXXX"></div>
                     <div class="form-group">
                       <label>Role</label>
                       <select name="role">

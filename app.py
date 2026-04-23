@@ -62,6 +62,7 @@ class User(db.Model):
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(20), default='staff')
     active = db.Column(db.Boolean, default=True)
+    phone = db.Column(db.String(20), nullable=True)
 
 class Lead(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1055,7 +1056,8 @@ def admin_add_staff():
             name=request.form['name'],
             email=email,
             password=generate_password_hash(request.form['password']),
-            role=request.form.get('role', 'staff')
+            role=request.form.get('role', 'staff'),
+            phone=request.form.get('phone', '').strip() or None
         )
         db.session.add(user)
         db.session.commit()
@@ -1086,6 +1088,7 @@ def admin_edit_staff(user_id):
         user.role = new_role
     if new_password:
         user.password = generate_password_hash(new_password)
+    user.phone = request.form.get('phone', '').strip() or None
     db.session.commit()
     flash('Staff member updated successfully')
     return redirect(url_for('admin_panel'))
@@ -2597,6 +2600,7 @@ def init_db():
                 """))
                 conn.execute(db.text('ALTER TABLE monthly_target ADD COLUMN IF NOT EXISTS amount_target FLOAT DEFAULT 0'))
                 conn.execute(db.text('ALTER TABLE customer ADD COLUMN IF NOT EXISTS date_of_birth DATE'))
+                conn.execute(db.text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone VARCHAR(20)'))
                 conn.execute(db.text('ALTER TABLE customer ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)'))
                 conn.execute(db.text('ALTER TABLE monthly_target ADD COLUMN IF NOT EXISTS lead_target INTEGER DEFAULT 0'))
                 conn.execute(db.text('ALTER TABLE monthly_target ADD COLUMN IF NOT EXISTS conversion_target INTEGER DEFAULT 0'))

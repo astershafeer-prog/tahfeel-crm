@@ -524,6 +524,7 @@
     const status = "{{ job.status }}";
     const due = "{{ job.due_date.strftime('%d %b %Y') if job.due_date else 'TBD' }}";
     const rep = "{{ job.assignee.name if job.assignee else 'Tahfeel Team' }}";
+    const repPhone = "{{ job.assignee.phone if job.assignee and job.assignee.phone else '+971 50 394 5656' }}";
     const isDone = {{ 'true' if job.status in ['Done','Closed'] else 'false' }};
     const closing = isDone
       ? "✅ Your application has been completed successfully. Please contact us if you need anything further."
@@ -538,6 +539,7 @@ Here is the latest update on your application:
 📌 *Status:* ${status}
 📅 *Expected Completion:* ${due}
 👤 *Your Representative:* ${rep}
+📞 ${repPhone}
 
 ${closing}
 

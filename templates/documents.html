@@ -98,7 +98,10 @@
             <td>
               <div style="display:flex;gap:5px;align-items:center;">
                 {% if doc.customer and doc.customer.phone and days <= 30 %}
-                {% if doc.customer.phone and doc.expiry_date %}<a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ doc.customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0AKindly%20note%20that%20your%20*{{ doc.doc_type|replace(' ','%20') }}*%20is%20due%20to%20expire%20on%20*{{ doc.expiry_date.strftime('%d%20%b%20%Y') }}*.%20To%20avoid%20any%20fines%20or%20complications%2C%20please%20confirm%20at%20your%20earliest%20so%20we%20can%20proceed%20with%20renewal.%0A%0AWarm%20regards%2C%0ATahfeel%20Business%20Solutions%0ADubai%2C%20UAE" target="_blank" class="btn-sm" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>{% endif %}
+                {% if doc.customer.phone and doc.expiry_date %}
+{% set doc_rep = (doc.customer.rep.name + '%0A📞 ' + doc.customer.rep.phone|replace(' ','')|replace('+','%2B') + '%0ATahfeel Business Setup Services%0A📞 +971 50 394 5656') if doc.customer.rep and doc.customer.rep.phone else 'Tahfeel Business Setup Services%0A📞 +971 50 394 5656' %}
+<a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ doc.customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0AWe%20would%20like%20to%20remind%20you%20that%20your%20*{{ doc.doc_type|replace(' ','%20') }}*%20is%20due%20to%20expire%20on%20*{{ doc.expiry_date.strftime('%d %b %Y')|replace(' ','%20') }}*.%0A%0ATo%20avoid%20any%20penalties%20or%20service%20disruptions%2C%20kindly%20get%20in%20touch%20with%20us%20at%20your%20earliest%20convenience%20so%20we%20can%20assist%20with%20the%20renewal%20process.%0A%0AWarm%20regards%2C%0A{{ doc_rep }}" target="_blank" class="btn-sm" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+{% endif %}
                 {% endif %}
                 {% if doc.file_url %}
                 <a href="{{ doc.file_url }}" target="_blank" download class="ib" title="Download File">⬇</a>
