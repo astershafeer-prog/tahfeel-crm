@@ -50,7 +50,7 @@
     <a href="/users" class="active">Manage Staff</a>
   </div>
   <div class="container">
-    {% with messages = get_flashed_messages() %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}{% for msg in messages %}
         <div class="flash">{{ msg }}</div>
       {% endfor %}{% endif %}

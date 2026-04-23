@@ -12,7 +12,7 @@
   {{ topbar() }}
   {{ nav('documents') }}
   <div class="container" style="max-width:780px;">
-    {% with messages = get_flashed_messages() %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}{% for msg in messages %}
       <div class="flash" style="display:flex;justify-content:space-between;align-items:center;">
         <span>✓ {{ msg }}</span>

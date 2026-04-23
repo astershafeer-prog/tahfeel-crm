@@ -113,7 +113,7 @@
     <div class="welcome">Welcome back</div>
     <div class="sub">Sign in to your CRM</div>
 
-    {% with messages = get_flashed_messages() %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}{% for msg in messages %}
         <div class="flash-msg">{{ msg }}</div>
       {% endfor %}{% endif %}

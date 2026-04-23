@@ -85,7 +85,7 @@
   {{ topbar() }}
   {{ nav('invoice') }}
   <div class="container" style="max-width:1100px;">
-    {% with messages = get_flashed_messages() %}{% if messages %}{% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <div>
