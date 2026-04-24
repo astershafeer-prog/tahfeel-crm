@@ -78,19 +78,10 @@
       @page { size:A4; margin:0; } 
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       body { margin:0; padding:0; }
-      html { margin:0; padding:0; }
-      .pv-overlay { position:static !important; background:none !important; padding:0 !important; width:100% !important; height:auto !important; }
-      .pv-paper { box-shadow:none !important; width:100% !important; min-height:auto !important; margin:0 !important; }
-      .pv-close,.pv-btns,.topbar,.nav,body>*:not(.pv-overlay) { display:none !important; }
-      .pv-overlay, .pv-overlay * { display:block !important; }
-      .pv-overlay table, .pv-overlay tbody, .pv-overlay tr, .pv-overlay td, .pv-overlay th { display:table !important; }
-      .pv-overlay table { display:table !important; }
-      .pv-overlay tbody { display:table-row-group !important; }
-      .pv-overlay thead { display:table-header-group !important; }
-      .pv-overlay tr { display:table-row !important; }
-      .pv-overlay td, .pv-overlay th { display:table-cell !important; }
-      div[style*="page-break-after:always"] { page-break-after:always; }
-      div[style*="page-break-before:always"] { page-break-before:always; }
+      body > *:not(.pv-overlay) { display:none !important; }
+      .pv-overlay { display:block !important; position:static !important; background:white !important; padding:0 !important; }
+      .pv-paper { display:block !important; box-shadow:none !important; margin:0 !important; }
+      .pv-close, .pv-btns { display:none !important; }
     }
     /* Section panels */
     #invoiceSection, #quotationSection { display:none; }
