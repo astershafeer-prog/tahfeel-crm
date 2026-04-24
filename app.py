@@ -491,17 +491,19 @@ def dashboard():
                 jobs = all_jobs
             active_jobs = [j for j in jobs if j.status not in ['Done', 'Closed']]
             done_jobs = [j for j in jobs if j.status == 'Done']
+            closed_jobs = [j for j in jobs if j.status == 'Closed']
             total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
             total_received = sum((j.amount_received or 0) for j in active_jobs)
             total_pending = total_invoiced - total_received
             completed_value = sum((j.amount_received or 0) for j in done_jobs)
+            total_revenue = sum((j.revenue or 0) for j in closed_jobs)
             overdue_jobs = [j for j in jobs if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
             pending_approval = [j for j in jobs if j.status == 'Pending Finance Approval']
             pending_close = [j for j in jobs if j.status == 'Pending Finance Close']
             recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Closed', 'Pending Finance Approval']][:10]
         except:
-            jobs = all_jobs = active_jobs = done_jobs = overdue_jobs = pending_approval = pending_close = recent_jobs = []
-            total_invoiced = total_received = total_pending = completed_value = 0
+            jobs = all_jobs = active_jobs = done_jobs = closed_jobs = overdue_jobs = pending_approval = pending_close = recent_jobs = []
+            total_invoiced = total_received = total_pending = completed_value = total_revenue = 0
 
         # Lead stats
         total = len(leads)
@@ -583,6 +585,7 @@ def dashboard():
                                total_received=total_received,
                                total_pending=total_pending,
                                completed_value=completed_value,
+                               total_revenue=total_revenue,
                                staff_stats=staff_stats,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                now=now, date_filter=date_filter,
@@ -1989,8 +1992,10 @@ def close_job(job_id):
     try:
         ai = request.form.get('amount_invoiced')
         ar = request.form.get('amount_received')
+        rev = request.form.get('revenue')
         if ai: job.amount_invoiced = float(ai)
         if ar: job.amount_received = float(ar)
+        if rev: job.revenue = float(rev)
     except:
         pass
     notes = request.form.get('finance_notes', '').strip()
@@ -1998,7 +2003,7 @@ def close_job(job_id):
         existing = job.finance_notes or ''
         job.finance_notes = (existing + '\n' + notes).strip()
     job.status = 'Closed'
-    remark = f'Task CLOSED by Finance. Final — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}'
+    remark = f'Task CLOSED by Finance. Final — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue or 0:,.0f}'
     if notes:
         remark += f'. Notes: {notes}'
     update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
@@ -2643,6 +2648,16 @@ def init_db():
                 conn.commit()
         except Exception as e:
             print(f'desk_note table: {e}')
+        
+        # Add revenue column to job table
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS revenue FLOAT DEFAULT 0'))
+                conn.commit()
+                print('✓ Revenue column migration completed')
+        except Exception as e:
+            print(f'Revenue column migration error: {e}')
+        
         migrations = [
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0',
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)',
