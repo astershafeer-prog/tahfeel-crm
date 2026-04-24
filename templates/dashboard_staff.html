@@ -52,17 +52,17 @@
         <a href="/leads" style="text-decoration:none;">
           <div class="stat-row"><span class="stat-name" style="color:#1A3B8B;font-weight:500;">My Leads</span><span class="stat-val" style="color:#1A3B8B;">{{ leads|length }}</span></div>
         </a>
+        <a href="/leads?status=Initiated" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#3B82F6;font-weight:500;">Initiated</span><span class="stat-val" style="color:#3B82F6;">{{ initiated|length }}</span></div>
+        </a>
+        <a href="/leads?status=New" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#F59E0B;font-weight:500;">New</span><span class="stat-val" style="color:#F59E0B;">{{ new_leads|length }}</span></div>
+        </a>
         <a href="/leads?status=Converted" style="text-decoration:none;">
           <div class="stat-row"><span class="stat-name" style="color:#10B981;font-weight:500;">Converted</span><span class="stat-val" style="color:#10B981;">{{ converted|length }}</span></div>
         </a>
         <a href="/leads?status=Lost" style="text-decoration:none;">
           <div class="stat-row"><span class="stat-name" style="color:#EF4444;font-weight:500;">Lost</span><span class="stat-val" style="color:#EF4444;">{{ lost|length }}</span></div>
-        </a>
-        <a href="/leads?status=Overdue" style="text-decoration:none;">
-          <div class="stat-row"><span class="stat-name" style="color:#EF4444;font-weight:500;">Overdue</span><span class="stat-val" style="color:#EF4444;">{{ overdue|length }}</span></div>
-        </a>
-        <a href="/leads?status=Pending" style="text-decoration:none;">
-          <div class="stat-row"><span class="stat-name" style="color:#F59E0B;font-weight:500;">Pending</span><span class="stat-val" style="color:#F59E0B;">{{ pending|length }}</span></div>
         </a>
       </div>
 

@@ -508,7 +508,8 @@ def dashboard():
         overdue_leads = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
         converted = [l for l in leads if l.status == 'Converted']
         lost = [l for l in leads if l.status == 'Lost']
-        pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
+        new_leads = [l for l in leads if l.status == 'New']
+        initiated = [l for l in leads if l.status == 'Initiated']
 
         users = User.query.filter_by(active=True).filter(User.role != 'admin').all()
         # Workload — always this month
@@ -571,7 +572,7 @@ def dashboard():
                                birthdays_today=birthdays_today,
                                wl_filter=wl_filter, wl_from=wl_from, wl_to=wl_to,
                                total=total, overdue_leads=overdue_leads,
-                               converted=converted, lost=lost, pending=pending,
+                               converted=converted, lost=lost, new_leads=new_leads, initiated=initiated,
                                jobs=jobs, active_jobs=active_jobs,
                                overdue_jobs=overdue_jobs, done_jobs=done_jobs,
                                pending_approval=pending_approval,
@@ -601,7 +602,8 @@ def dashboard():
     overdue = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
     converted = [l for l in leads if l.status == 'Converted']
     lost = [l for l in leads if l.status == 'Lost']
-    pending = [l for l in leads if l.status not in ['Converted', 'Lost', 'New']]
+    new_leads = [l for l in leads if l.status == 'New']
+    initiated = [l for l in leads if l.status == 'Initiated']
     try:
         my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status.notin_(['Done','Closed'])).order_by(Job.due_date).all()
         pending_approval_jobs = [j for j in my_jobs if j.status == 'Pending Finance Approval']
@@ -637,7 +639,7 @@ def dashboard():
         birthdays_today = []
     return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
                            birthdays_today=birthdays_today,
-                           converted=converted, lost=lost, pending=pending,
+                           converted=converted, lost=lost, new_leads=new_leads, initiated=initiated,
                            my_jobs=my_jobs, overdue_jobs=overdue_jobs,
                            total_invoiced=total_invoiced,
                            total_received=total_received,

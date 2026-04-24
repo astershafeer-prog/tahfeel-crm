@@ -119,6 +119,7 @@
               <label>Stage / Status <span style="color:var(--danger);">*</span></label>
               <select name="stage" id="stageSelect" onchange="handleStageChange()">
                 <option value="New" {% if lead.status == 'New' %}selected{% endif %}>New</option>
+                <option value="Initiated" {% if lead.status == 'Initiated' %}selected{% endif %}>Initiated</option>
                 <option value="Called — No Answer" {% if lead.status == 'Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
                 <option value="Customer Not Responding" {% if lead.status == 'Customer Not Responding' %}selected{% endif %}>Customer Not Responding</option>
                 <option value="Call Connected" {% if lead.status == 'Call Connected' %}selected{% endif %}>Call Connected</option>
