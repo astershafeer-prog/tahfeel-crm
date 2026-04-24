@@ -461,17 +461,19 @@ function itemsTable(items) {
 function totalsHtml(d, remarks) {
   var remHtml='';
   if(remarks&&remarks.length>0){
-    remHtml='<div class="pv-rem"><h4>Remarks</h4><ul>';
+    remHtml='<div class="pv-rem-below"><h4>REMARKS</h4><ul>';
     remarks.forEach(function(r){remHtml+='<li>'+r+'</li>';});
     remHtml+='</ul></div>';
   }
-  return '<div class="pv-bot">'+remHtml+
+  return '<div style="display:flex;justify-content:flex-end;padding:0 30px;">'+
     '<div class="pv-tots">'+
     '<div class="pv-tr"><span>Subtotal</span><span>AED '+d.sub.toFixed(2)+'</span></div>'+
     '<div class="pv-tr"><span>VAT (5% on service)</span><span>AED '+d.vat.toFixed(2)+'</span></div>'+
     '<div class="pv-tr grand"><span>TOTAL</span><span>AED '+d.grand.toFixed(2)+'</span></div>'+
     '</div></div>'+
-    '<div class="pv-words"><p><strong>Amount in Words:</strong> AED '+n2w(d.grand)+' Only</p></div>';
+    '<div class="pv-words"><p><strong>Amount in Words:</strong> AED '+n2w(d.grand)+' Only</p></div>'+
+    '<div class="pv-div" style="margin:16px 30px;"></div>'+
+    remHtml;
 }
 
 function bankSigHtml() {
@@ -510,7 +512,9 @@ var PV_CSS = '<style>@page{size:A4;margin:0;}<'+'/style><style>'+
   '.pv-bot{display:grid;grid-template-columns:1fr 200px;gap:16px;padding:12px 30px;}'+
   '.pv-rem h4{font-size:8px;font-weight:700;color:#1A3B8B;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}'+
   '.pv-rem ul{padding-left:14px;margin:0;}.pv-rem ul li{font-size:10px;color:#475569;line-height:1.8;}'+
-  '.pv-tots .pv-tr{display:flex;justify-content:space-between;padding:4px 0;font-size:11px;border-bottom:0.5px solid #F1F5F9;}'+
+  '.pv-rem-below{padding:0 30px 16px;}.pv-rem-below h4{font-size:8px;font-weight:700;color:#1A3B8B;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}'+
+  '.pv-rem-below ul{padding-left:14px;margin:0;list-style:disc;}.pv-rem-below ul li{font-size:10px;color:#475569;line-height:1.8;}'+
+  '.pv-tots{min-width:250px;}.pv-tots .pv-tr{display:flex;justify-content:space-between;padding:4px 0;font-size:11px;border-bottom:0.5px solid #F1F5F9;}'+
   '.pv-tots .pv-tr.grand{border-top:2px solid #1A3B8B;border-bottom:none;margin-top:4px;padding-top:6px;font-size:13px;font-weight:800;color:#1A3B8B;}'+
   '.pv-words{padding:0 30px 10px;}.pv-words p{font-size:10px;font-style:italic;color:#475569;padding:5px 10px;background:#FFFBEB;border-radius:4px;border-left:3px solid #F59E0B;}'+
   '.pv-bank-sig{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 30px 12px;}'+
