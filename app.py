@@ -509,7 +509,8 @@ def dashboard():
         converted = [l for l in leads if l.status == 'Converted']
         lost = [l for l in leads if l.status == 'Lost']
         new_leads = [l for l in leads if l.status == 'New']
-        initiated = [l for l in leads if l.status == 'Initiated']
+        # Initiated = any action taken (not New, Converted, or Lost)
+        initiated = [l for l in leads if l.status not in ['New', 'Converted', 'Lost']]
 
         users = User.query.filter_by(active=True).filter(User.role != 'admin').all()
         # Workload — always this month
