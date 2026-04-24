@@ -1,0 +1,29 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Pending Revenue Report</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Job ID</th>
+        <th>Customer</th>
+        <th>Pending Revenue</th>
+        <th>Closed Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+        <tr>
+          <td>{{ job.id }}</td>
+          <td>{{ job.customer.name }}</td>
+          <td>{{ job.pending_revenue }}</td>
+          <td>{{ job.closed_at }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h4>Total Pending Revenue: {{ jobs|sum(attribute='pending_revenue') }}</h4>
+  <h4>Total Invoice Balance: {{ jobs|sum(attribute='amount_invoiced') - jobs|sum(attribute='amount_received') }}</h4>
+{% endblock %}

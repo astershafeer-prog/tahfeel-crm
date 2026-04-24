@@ -1,0 +1,14 @@
+
+
+{% block content %}
+  <!-- ... -->
+  <div class="mt-4">
+    <h5>Invoiced (This Month): {{ invoiced_month }}</h5>
+    <h5>Closed (This Month): {{ closed_month }}</h5>
+    <h5>Revenue (This Month): {{ revenue_month }}</h5>
+    <h5>Pending to Get (This Month): {{ pending_month }}</h5>
+    <h5>Pending to Get (Total): {{ pending_total }}</h5>
+    <h5>Target: {{ target }}</h5>
+  </div>
+  <!-- ... -->  
+{% endblock %}

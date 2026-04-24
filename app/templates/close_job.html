@@ -1,0 +1,16 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Close Job</h2>
+  <form method="POST">
+    {{ form.csrf_token }}
+    
+    <div class="form-group">
+      {{ form.revenue.label }}
+      {{ form.revenue(class="form-control") }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Close Job</button>
+  </form>
+{% endblock %}

@@ -1,0 +1,9 @@
+
+# ... 
+class Job(db.Model):
+  # ...
+
+  revenue = db.Column(db.Float)
+  pending_revenue = db.Column(db.Float)
+
+  # ...

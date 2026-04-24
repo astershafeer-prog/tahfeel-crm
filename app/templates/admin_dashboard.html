@@ -1,0 +1,11 @@
+
+{% block content %}
+  <!-- ... -->
+
+  <div class="mt-4">
+    <h5>Total Revenue: {{ total_revenue }}</h5>
+    <h5>Pending Revenue: {{ total_pending_revenue }}</h5>
+    <h5>Revenue vs Target: {{ (total_revenue / total_target * 100)|round(2) }}%</h5>
+  </div>
+  <!-- ... -->
+{% endblock %}

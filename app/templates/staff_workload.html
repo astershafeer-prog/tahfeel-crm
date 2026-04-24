@@ -1,0 +1,21 @@
+
+{% block content %}
+  <table>
+    <thead>
+      <!-- ... -->
+      <th>Closed Value (Revenue)</th>
+      <th>Target Achievement</th>
+      <!-- ... -->
+    </thead>
+    <tbody>
+      {% for staff in staff_list %}
+        <tr>
+          <!-- ... -->
+          <td>{{ staff.revenue }}</td>
+          <td>{{ calculate_target_achievement(staff.id, staff.revenue) }}%</td>
+          <!-- ... -->
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}  
