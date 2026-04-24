@@ -163,6 +163,7 @@ class Job(db.Model):
     service_note = db.Column(db.String(200))
     amount_invoiced = db.Column(db.Float, default=0)
     amount_received = db.Column(db.Float, default=0)
+    revenue = db.Column(db.Float, default=0)
     num_persons = db.Column(db.Integer, default=1)
     finance_approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     finance_approved_at = db.Column(db.DateTime, nullable=True)
@@ -491,17 +492,22 @@ def dashboard():
                 jobs = all_jobs
             active_jobs = [j for j in jobs if j.status not in ['Done', 'Closed']]
             done_jobs = [j for j in jobs if j.status == 'Done']
-            total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
-            total_received = sum((j.amount_received or 0) for j in active_jobs)
-            total_pending = total_invoiced - total_received
-            completed_value = sum((j.amount_received or 0) for j in done_jobs)
+            closed_jobs = [j for j in jobs if j.status == 'Closed']
+            
+            # Finance metrics
+            total_invoiced = sum((j.amount_invoiced or 0) for j in jobs)  # All jobs
+            total_received = sum((j.amount_received or 0) for j in jobs)  # All jobs
+            balance_open = sum((j.amount_invoiced or 0) - (j.amount_received or 0) for j in active_jobs)  # Open works
+            total_revenue = sum((j.revenue or 0) for j in closed_jobs)  # Revenue only from closed jobs
+            balance_closed = sum((j.amount_invoiced or 0) - (j.amount_received or 0) for j in done_jobs + closed_jobs)  # Closed/Done works
+            
             overdue_jobs = [j for j in jobs if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
             pending_approval = [j for j in jobs if j.status == 'Pending Finance Approval']
             pending_close = [j for j in jobs if j.status == 'Pending Finance Close']
             recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Closed', 'Pending Finance Approval']][:10]
         except:
-            jobs = all_jobs = active_jobs = done_jobs = overdue_jobs = pending_approval = pending_close = recent_jobs = []
-            total_invoiced = total_received = total_pending = completed_value = 0
+            jobs = all_jobs = active_jobs = done_jobs = closed_jobs = overdue_jobs = pending_approval = pending_close = recent_jobs = []
+            total_invoiced = total_received = balance_open = total_revenue = balance_closed = 0
 
         # Lead stats
         total = len(leads)
@@ -523,6 +529,7 @@ def dashboard():
             return d.month == now.month and d.year == now.year
         # Targets
         staff_targets = {t.user_id: t for t in MonthlyTarget.query.filter_by(month=now.month, year=now.year).all()}
+        total_staff_target = sum((t.amount_target or 0) for t in staff_targets.values())
         staff_stats = []
         for u in users:
             u_leads = [l for l in all_leads_db if l.assigned_to == u.id and in_period(l.created_at, wl_filter)]
@@ -532,8 +539,8 @@ def dashboard():
             # Sales value: credited to the customer's representative (assigned_to on customer)
             u_sales_jobs = [j for j in all_jobs_db if j.customer and j.customer.assigned_to == u.id and in_period(j.created_at, wl_filter)]
             u_sales_closed = [j for j in all_jobs_db if j.customer and j.customer.assigned_to == u.id and j.status == 'Closed']
-            u_invoiced = sum((j.amount_invoiced or 0) for j in u_sales_jobs if j.status not in ['Pending Finance Approval'])
-            u_closed_val = sum((j.amount_received or 0) for j in u_sales_closed)
+            u_received = sum((j.amount_received or 0) for j in u_sales_jobs)
+            u_revenue = sum((j.revenue or 0) for j in u_sales_closed)
             t = staff_targets.get(u.id)
             amount_target = (t.amount_target or 0) if t else 0
             staff_stats.append({
@@ -545,8 +552,8 @@ def dashboard():
                 'lost': len([l for l in u_leads if l.status == 'Lost']),
                 'active_jobs': len([j for j in u_jobs_all if j.status not in ['Done','Closed','Pending Finance Approval']]),
                 'overdue_jobs': len([j for j in u_jobs_all if j.due_date and j.due_date < now and j.status not in ['Done','Closed','Pending Finance Approval']]),
-                'invoiced': u_invoiced,
-                'closed_val': u_closed_val,
+                'received': u_received,
+                'revenue': u_revenue,
                 'amount_target': amount_target,
                 'leads_this_month': len(u_leads),
             })
@@ -580,8 +587,10 @@ def dashboard():
                                recent_jobs=recent_jobs,
                                total_invoiced=total_invoiced,
                                total_received=total_received,
-                               total_pending=total_pending,
-                               completed_value=completed_value,
+                               balance_open=balance_open,
+                               total_revenue=total_revenue,
+                               balance_closed=balance_closed,
+                               total_staff_target=total_staff_target,
                                staff_stats=staff_stats,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                now=now, date_filter=date_filter,
@@ -605,19 +614,26 @@ def dashboard():
     new_leads = [l for l in leads if l.status == 'New']
     initiated = [l for l in leads if l.status == 'Initiated']
     try:
-        my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status.notin_(['Done','Closed'])).order_by(Job.due_date).all()
+        # Get all jobs for this staff (sales rep based on customer.assigned_to)
+        all_my_jobs = Job.query.join(Customer).filter(Customer.assigned_to == session['user_id']).all()
+        my_jobs = [j for j in all_my_jobs if j.status not in ['Done', 'Closed']]  # Active jobs
         pending_approval_jobs = [j for j in my_jobs if j.status == 'Pending Finance Approval']
         overdue_jobs = [j for j in my_jobs if j.due_date and j.due_date < now and j.status != 'Pending Finance Approval']
-        active_jobs = [j for j in my_jobs if j.status != 'Pending Finance Approval']
-        total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
-        total_received = sum((j.amount_received or 0) for j in active_jobs)
-        total_pending = total_invoiced - total_received
-        done_jobs = Job.query.filter_by(assigned_to=session['user_id'], status='Done').all()
-        completed_value = sum((j.amount_received or 0) for j in done_jobs)
+        
+        # Finance metrics - based on customer's representative (sales value attribution)
+        staff_invoiced = sum((j.amount_invoiced or 0) for j in all_my_jobs)
+        staff_received = sum((j.amount_received or 0) for j in all_my_jobs)
+        staff_balance = staff_invoiced - staff_received  # Both open and closed works
+        staff_revenue = sum((j.revenue or 0) for j in all_my_jobs if j.status == 'Closed')
+        
+        # Get staff target
+        staff_target_obj = MonthlyTarget.query.filter_by(user_id=session['user_id'], month=now.month, year=now.year).first()
+        staff_target = (staff_target_obj.amount_target or 0) if staff_target_obj else 0
     except:
         my_jobs = []
         overdue_jobs = []
-        total_invoiced = total_received = total_pending = completed_value = 0
+        pending_approval_jobs = []
+        staff_invoiced = staff_received = staff_balance = staff_revenue = staff_target = 0
     followups = LeadUpdate.query.filter(
         LeadUpdate.staff_name == session['user_name'],
         LeadUpdate.followup_date <= now + timedelta(days=1),
@@ -641,10 +657,11 @@ def dashboard():
                            birthdays_today=birthdays_today,
                            converted=converted, lost=lost, new_leads=new_leads, initiated=initiated,
                            my_jobs=my_jobs, overdue_jobs=overdue_jobs,
-                           total_invoiced=total_invoiced,
-                           total_received=total_received,
-                           total_pending=total_pending,
-                           completed_value=completed_value,
+                           staff_invoiced=staff_invoiced,
+                           staff_received=staff_received,
+                           staff_balance=staff_balance,
+                           staff_revenue=staff_revenue,
+                           staff_target=staff_target,
                            docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                            pending_approval_jobs=pending_approval_jobs,
                            followups=followups, now=now, period=period)
@@ -1969,6 +1986,23 @@ def update_payment(job_id):
 @finance_required
 def close_job(job_id):
     job = Job.query.get_or_404(job_id)
+    
+    # Revenue is mandatory when closing
+    revenue_str = request.form.get('revenue', '').strip()
+    if not revenue_str:
+        flash('Revenue is mandatory when closing a task.', 'error')
+        return redirect(request.referrer or url_for('job_detail', job_id=job_id))
+    
+    try:
+        revenue = float(revenue_str)
+        if revenue < 0:
+            flash('Revenue cannot be negative.', 'error')
+            return redirect(request.referrer or url_for('job_detail', job_id=job_id))
+        job.revenue = revenue
+    except ValueError:
+        flash('Invalid revenue amount.', 'error')
+        return redirect(request.referrer or url_for('job_detail', job_id=job_id))
+    
     try:
         ai = request.form.get('amount_invoiced')
         ar = request.form.get('amount_received')
@@ -1981,7 +2015,8 @@ def close_job(job_id):
         existing = job.finance_notes or ''
         job.finance_notes = (existing + '\n' + notes).strip()
     job.status = 'Closed'
-    remark = f'Task CLOSED by Finance. Final — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}'
+    job.completed_at = now_dubai()
+    remark = f'Task CLOSED by Finance. Final — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue or 0:,.0f}'
     if notes:
         remark += f'. Notes: {notes}'
     update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
@@ -2631,6 +2666,7 @@ def init_db():
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS amount_invoiced FLOAT DEFAULT 0',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS amount_received FLOAT DEFAULT 0',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS revenue FLOAT DEFAULT 0',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_by INTEGER',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS finance_approved_at TIMESTAMP',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS num_persons INTEGER DEFAULT 1',

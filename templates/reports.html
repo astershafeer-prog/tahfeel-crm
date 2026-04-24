@@ -161,6 +161,44 @@
         <button class="btn-add" style="width:100%;text-align:center;background:#006666;" onclick="exportReport('staff')">⬇ Export to Excel</button>
       </div>
 
+      <!-- 7. Revenue Report -->
+      <div class="card" style="border-top:4px solid #10B981;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">💰</span>
+          <div>
+            <div style="font-weight:700;color:#10B981;font-size:15px;">Revenue Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Profit & revenue from closed tasks</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Customer name & task/job type</li>
+          <li>Sales representative assigned</li>
+          <li>Invoiced, received & pending amounts</li>
+          <li>Revenue/profit earned (AED)</li>
+          <li>Closed date with totals</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#10B981;" onclick="exportReport('revenue')">⬇ Export to Excel</button>
+      </div>
+
+      <!-- 8. Staff Receivables Report -->
+      <div class="card" style="border-top:4px solid #8B5CF6;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">📋</span>
+          <div>
+            <div style="font-weight:700;color:#8B5CF6;font-size:15px;">Staff Receivables Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Customer payments tracking per staff</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Grouped by staff member</li>
+          <li>Customer name & task type</li>
+          <li>Invoiced & received amounts</li>
+          <li>Pending balance (customer payable)</li>
+          <li>Status & created date</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#8B5CF6;" onclick="exportReport('staff_receivables')">⬇ Export to Excel</button>
+      </div>
+
     </div><!-- /grid -->
   </div><!-- /container -->
 
@@ -204,6 +242,8 @@
         tasks: '/reports/tasks/export',
         documents: '/reports/documents/export',
         staff: '/reports/staff/export',
+        revenue: '/reports/revenue/export',
+        staff_receivables: '/reports/staff-receivables/export',
       };
       document.getElementById('loadingOverlay').style.display = 'flex';
       const a = document.createElement('a');

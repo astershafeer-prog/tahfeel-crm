@@ -524,3 +524,192 @@ def export_staff_report():
     _freeze(ws2); _filter(ws2, len(cols2))
 
     return _respond(wb, f"Staff_Performance_{df}_{dt}.xlsx")
+
+# ── Revenue Report ───────────────────────────────────────────────────────────
+@reports_bp.route('/reports/revenue/export')
+def export_revenue():
+    """Revenue Report - Shows revenue/profit earned from closed tasks"""
+    if 'user_id' not in session or session.get('role') not in ['admin', 'finance']:
+        return redirect(url_for('login'))
+    
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
+    
+    df_str = request.args.get('from', '')
+    dt_str = request.args.get('to', '')
+    df = datetime.strptime(df_str, '%Y-%m-%d').date() if df_str else date.today().replace(day=1)
+    dt = datetime.strptime(dt_str, '%Y-%m-%d').date() if dt_str else date.today()
+    
+    # Get all closed jobs within date range
+    jobs = Job.query.filter(
+        Job.status == 'Closed',
+        Job.completed_at != None
+    ).all()
+    
+    # Filter by date
+    jobs = [j for j in jobs if j.completed_at and df <= j.completed_at.date() <= dt]
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Revenue Report"
+    
+    cols = ['Customer Name', 'Task/Job Type', 'Representative', 'Invoiced (AED)', 
+            'Received (AED)', 'Pending (AED)', 'Revenue (AED)', 'Status', 'Closed Date']
+    _title_block(ws, "REVENUE REPORT", df.strftime('%d %b %Y'), dt.strftime('%d %b %Y'), len(cols))
+    
+    for i, h in enumerate(cols, 1):
+        _hdr(ws.cell(row=5, column=i, value=h))
+    
+    rows = []
+    total_invoiced = total_received = total_pending = total_revenue = 0
+    
+    for job in jobs:
+        customer_name = job.customer.name if job.customer else 'N/A'
+        rep_name = job.customer.rep.name if job.customer and job.customer.rep else 'N/A'
+        invoiced = job.amount_invoiced or 0
+        received = job.amount_received or 0
+        pending = invoiced - received
+        revenue = job.revenue or 0
+        
+        total_invoiced += invoiced
+        total_received += received
+        total_pending += pending
+        total_revenue += revenue
+        
+        rows.append([
+            customer_name,
+            job.job_type,
+            rep_name,
+            invoiced,
+            received,
+            pending,
+            revenue,
+            'Closed',
+            job.completed_at.strftime('%d %b %Y') if job.completed_at else ''
+        ])
+    
+    # Write data rows
+    for ridx, row in enumerate(rows, 1):
+        for cidx, val in enumerate(row, 1):
+            c = ws.cell(row=ridx + 5, column=cidx, value=val)
+            _dat(c, ridx, right=(cidx in {4, 5, 6, 7}))
+            if cidx in {4, 5, 6, 7} and isinstance(val, (int, float)):
+                c.number_format = '#,##0'
+    
+    # Totals row
+    tr = len(rows) + 6
+    _tot(ws.cell(row=tr, column=1, value='TOTAL'))
+    _tot(ws.cell(row=tr, column=2))
+    _tot(ws.cell(row=tr, column=3))
+    _tot(ws.cell(row=tr, column=4, value=total_invoiced), right=True)
+    _tot(ws.cell(row=tr, column=5, value=total_received), right=True)
+    _tot(ws.cell(row=tr, column=6, value=total_pending), right=True)
+    _tot(ws.cell(row=tr, column=7, value=total_revenue), right=True)
+    _tot(ws.cell(row=tr, column=8))
+    _tot(ws.cell(row=tr, column=9))
+    
+    for i in [4, 5, 6, 7]:
+        ws.cell(row=tr, column=i).number_format = '#,##0'
+    
+    _col_widths(ws, [25, 25, 20, 15, 15, 15, 15, 12, 15])
+    _freeze(ws)
+    _filter(ws, len(cols))
+    
+    return _respond(wb, f"Revenue_Report_{df.strftime('%d%b%Y')}_{dt.strftime('%d%b%Y')}.xlsx")
+
+
+# ── Staff Receivables Report ─────────────────────────────────────────────────
+@reports_bp.route('/reports/staff-receivables/export')
+def export_staff_receivables():
+    """Staff Receivables Report - Shows pending amounts from customers per staff"""
+    if 'user_id' not in session or session.get('role') not in ['admin', 'finance']:
+        return redirect(url_for('login'))
+    
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
+    
+    df_str = request.args.get('from', '')
+    dt_str = request.args.get('to', '')
+    df = datetime.strptime(df_str, '%Y-%m-%d').date() if df_str else date.today().replace(day=1)
+    dt = datetime.strptime(dt_str, '%Y-%m-%d').date() if dt_str else date.today()
+    
+    # Get all jobs (open, done, closed)
+    jobs = Job.query.join(Customer).all()
+    
+    # Filter by date (created date)
+    jobs = [j for j in jobs if j.created_at and df <= j.created_at.date() <= dt]
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Staff Receivables"
+    
+    cols = ['Staff Name', 'Customer Name', 'Task/Job Type', 'Invoiced (AED)', 
+            'Received (AED)', 'Pending Balance (AED)', 'Status', 'Created Date']
+    _title_block(ws, "STAFF RECEIVABLES REPORT", df.strftime('%d %b %Y'), dt.strftime('%d %b %Y'), len(cols))
+    
+    for i, h in enumerate(cols, 1):
+        _hdr(ws.cell(row=5, column=i, value=h))
+    
+    rows = []
+    total_invoiced = total_received = total_pending = 0
+    
+    # Group by staff
+    from collections import defaultdict
+    staff_jobs = defaultdict(list)
+    
+    for job in jobs:
+        if job.customer and job.customer.assigned_to:
+            staff_jobs[job.customer.assigned_to].append(job)
+    
+    for staff_id in sorted(staff_jobs.keys()):
+        staff_user = User.query.get(staff_id)
+        staff_name = staff_user.name if staff_user else 'Unknown'
+        
+        for job in staff_jobs[staff_id]:
+            customer_name = job.customer.name if job.customer else 'N/A'
+            invoiced = job.amount_invoiced or 0
+            received = job.amount_received or 0
+            pending = invoiced - received
+            
+            # Only include if there's a pending balance
+            if pending > 0:
+                total_invoiced += invoiced
+                total_received += received
+                total_pending += pending
+                
+                rows.append([
+                    staff_name,
+                    customer_name,
+                    job.job_type,
+                    invoiced,
+                    received,
+                    pending,
+                    job.status,
+                    job.created_at.strftime('%d %b %Y') if job.created_at else ''
+                ])
+    
+    # Write data rows
+    for ridx, row in enumerate(rows, 1):
+        for cidx, val in enumerate(row, 1):
+            c = ws.cell(row=ridx + 5, column=cidx, value=val)
+            _dat(c, ridx, right=(cidx in {4, 5, 6}))
+            if cidx in {4, 5, 6} and isinstance(val, (int, float)):
+                c.number_format = '#,##0'
+    
+    # Totals row
+    tr = len(rows) + 6
+    _tot(ws.cell(row=tr, column=1, value='TOTAL'))
+    _tot(ws.cell(row=tr, column=2))
+    _tot(ws.cell(row=tr, column=3))
+    _tot(ws.cell(row=tr, column=4, value=total_invoiced), right=True)
+    _tot(ws.cell(row=tr, column=5, value=total_received), right=True)
+    _tot(ws.cell(row=tr, column=6, value=total_pending), right=True)
+    _tot(ws.cell(row=tr, column=7))
+    _tot(ws.cell(row=tr, column=8))
+    
+    for i in [4, 5, 6]:
+        ws.cell(row=tr, column=i).number_format = '#,##0'
+    
+    _col_widths(ws, [20, 25, 25, 15, 15, 18, 15, 15])
+    _freeze(ws)
+    _filter(ws, len(cols))
+    
+    return _respond(wb, f"Staff_Receivables_{df.strftime('%d%b%Y')}_{dt.strftime('%d%b%Y')}.xlsx")
