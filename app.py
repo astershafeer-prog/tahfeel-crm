@@ -526,6 +526,7 @@ def dashboard():
             return d.month == now.month and d.year == now.year
         # Targets
         staff_targets = {t.user_id: t for t in MonthlyTarget.query.filter_by(month=now.month, year=now.year).all()}
+        total_monthly_target = sum((t.amount_target or 0) for t in staff_targets.values())
         staff_stats = []
         for u in users:
             u_leads = [l for l in all_leads_db if l.assigned_to == u.id and in_period(l.created_at, wl_filter)]
@@ -586,6 +587,7 @@ def dashboard():
                                total_pending=total_pending,
                                completed_value=completed_value,
                                total_revenue=total_revenue,
+                               total_monthly_target=total_monthly_target,
                                staff_stats=staff_stats,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                now=now, date_filter=date_filter,
@@ -617,11 +619,13 @@ def dashboard():
         total_received = sum((j.amount_received or 0) for j in active_jobs)
         total_pending = total_invoiced - total_received
         done_jobs = Job.query.filter_by(assigned_to=session['user_id'], status='Done').all()
+        closed_jobs = Job.query.filter_by(assigned_to=session['user_id'], status='Closed').all()
         completed_value = sum((j.amount_received or 0) for j in done_jobs)
+        total_revenue = sum((j.revenue or 0) for j in closed_jobs)
     except:
         my_jobs = []
         overdue_jobs = []
-        total_invoiced = total_received = total_pending = completed_value = 0
+        total_invoiced = total_received = total_pending = completed_value = total_revenue = 0
     followups = LeadUpdate.query.filter(
         LeadUpdate.staff_name == session['user_name'],
         LeadUpdate.followup_date <= now + timedelta(days=1),
@@ -649,6 +653,7 @@ def dashboard():
                            total_received=total_received,
                            total_pending=total_pending,
                            completed_value=completed_value,
+                           total_revenue=total_revenue,
                            docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                            pending_approval_jobs=pending_approval_jobs,
                            followups=followups, now=now, period=period)

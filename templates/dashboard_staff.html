@@ -91,8 +91,9 @@
         <div class="block-title">Finance</div>
         <div class="stat-row"><span class="stat-name">Invoiced</span><span style="font-size:16px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(total_invoiced) }}</span></div>
         <div class="stat-row"><span class="stat-name">Received</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</span></div>
-        <div class="stat-row"><span class="stat-name">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
+        <div class="stat-row"><span class="stat-name">Revenue (Closed)</span><span style="font-size:16px;font-weight:700;color:#8B5CF6;">AED {{ '{:,.0f}'.format(total_revenue or 0) }}</span></div>
         <div class="stat-row"><span class="stat-name">Closed Value</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(completed_value) }}</span></div>
+        <div class="stat-row"><span class="stat-name">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
         {% if total_invoiced > 0 %}
         <div style="margin-top:10px;">
           {% set crate = [(total_received / total_invoiced * 100)|int, 100]|min %}
