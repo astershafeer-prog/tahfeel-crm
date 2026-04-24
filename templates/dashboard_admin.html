@@ -110,7 +110,7 @@
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Target</span>
       </div>
       {% for s in staff_stats %}
-      {% set amt_pct = [(s.invoiced / s.amount_target * 100)|int, 100]|min if s.amount_target > 0 else 0 %}
+      {% set amt_pct = [(s.closed_val / s.amount_target * 100)|int, 100]|min if s.amount_target > 0 else 0 %}
       <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.9fr;gap:8px;padding:10px 14px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
         <div class="av-wrap">
           <div class="av" style="background:{% if loop.index%4==1 %}#1A3B8B{% elif loop.index%4==2 %}#10B981{% elif loop.index%4==3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ s.name[:2].upper() }}</div>
@@ -129,7 +129,7 @@
         <span style="font-size:11px;color:#10B981;font-weight:600;">{{ '{:,.0f}'.format(s.closed_val) }}</span>
         <div>
           {% if s.amount_target > 0 %}
-          <div style="font-size:10px;color:#94A3B8;margin-bottom:3px;">{{ '{:,.0f}'.format(s.invoiced) }} / {{ '{:,.0f}'.format(s.amount_target) }}</div>
+          <div style="font-size:10px;color:#94A3B8;margin-bottom:3px;">{{ '{:,.0f}'.format(s.closed_val) }} / {{ '{:,.0f}'.format(s.amount_target) }}</div>
           <div style="height:5px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
             <div style="width:{{ amt_pct }}%;height:100%;background:{% if amt_pct>=100 %}#10B981{% elif amt_pct>=60 %}#1A3B8B{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
           </div>
