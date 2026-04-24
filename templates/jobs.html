@@ -50,7 +50,7 @@
           <input type="text" name="customer" value="{{ request.args.get('customer','') }}" placeholder="Search by customer name or company...">
         </div>
         <!-- Filter grid -->
-        <div class="filter-grid-4" style="align-items:start;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:start;">
           <div class="ff">
             <label>Due Date</label>
             <select name="date" onchange="toggleCustom(this.value)">
@@ -88,6 +88,15 @@
               <option value="">All Staff</option>
               {% for u in users %}
               <option value="{{ u.id }}" {% if assigned_filter==u.id|string %}selected{% endif %}>{{ u.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="ff">
+            <label>Representative</label>
+            <select name="representative">
+              <option value="">All Representatives</option>
+              {% for u in users %}
+              <option value="{{ u.id }}" {% if request.args.get('representative')==u.id|string %}selected{% endif %}>{{ u.name }}</option>
               {% endfor %}
             </select>
           </div>

@@ -1217,6 +1217,17 @@ def add_customer():
     converted_leads = Lead.query.filter_by(status='Converted').order_by(Lead.name).all()
     sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
+        # Validate required fields
+        if not request.form.get('lead_id'):
+            if not request.form.get('source'):
+                flash('Source is required', 'error')
+                users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
+                return render_template('add_customer.html', users=users, sources=sources, converted_leads=converted_leads)
+            if not request.form.get('assigned_to'):
+                flash('Primary Representative is required', 'error')
+                users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
+                return render_template('add_customer.html', users=users, sources=sources, converted_leads=converted_leads)
+        
         lead_id = request.form.get('lead_id') or None
         if lead_id:
             lead = Lead.query.get(int(lead_id))
@@ -1537,6 +1548,11 @@ def jobs():
         if assigned_filter:
             try:
                 job_list = [j for j in job_list if j.assigned_to == int(assigned_filter)]
+            except: pass
+        representative_filter = request.args.get('representative', '')
+        if representative_filter:
+            try:
+                job_list = [j for j in job_list if j.customer and j.customer.assigned_to == int(representative_filter)]
             except: pass
         # Due date filters
         if date_filter == 'today':

@@ -82,15 +82,15 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Source</label>
-              <select name="source">
+              <label>Source *</label>
+              <select name="source" required>
                 <option value="">— Select source —</option>
                 {% for s in sources %}<option value="{{ s.name }}">{{ s.name }}</option>{% endfor %}
               </select>
             </div>
             <div class="form-group">
-              <label>Primary Representative</label>
-              <select name="assigned_to">
+              <label>Primary Representative *</label>
+              <select name="assigned_to" required>
                 <option value="">— Select staff —</option>
                 {% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
               </select>
