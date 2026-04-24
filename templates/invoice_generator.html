@@ -76,14 +76,19 @@
     .pv-btns { position:fixed; bottom:22px; right:22px; z-index:1001; display:flex; gap:8px; }
     @media print { 
       @page { size:A4; margin:0; } 
-      body * { visibility:hidden; } 
-      .pv-overlay,.pv-overlay * { visibility:visible; } 
-      .pv-overlay { position:static; background:none; padding:0; } 
-      .pv-paper { box-shadow:none; width:100%; min-height:auto; page-break-after:auto; } 
-      .pv-close,.pv-btns,.topbar,.nav { display:none!important; } 
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       body { margin:0; padding:0; }
       html { margin:0; padding:0; }
-      * { orphans:3; widows:3; }
+      .pv-overlay { position:static !important; background:none !important; padding:0 !important; width:100% !important; height:auto !important; }
+      .pv-paper { box-shadow:none !important; width:100% !important; min-height:auto !important; margin:0 !important; }
+      .pv-close,.pv-btns,.topbar,.nav,body>*:not(.pv-overlay) { display:none !important; }
+      .pv-overlay, .pv-overlay * { display:block !important; }
+      .pv-overlay table, .pv-overlay tbody, .pv-overlay tr, .pv-overlay td, .pv-overlay th { display:table !important; }
+      .pv-overlay table { display:table !important; }
+      .pv-overlay tbody { display:table-row-group !important; }
+      .pv-overlay thead { display:table-header-group !important; }
+      .pv-overlay tr { display:table-row !important; }
+      .pv-overlay td, .pv-overlay th { display:table-cell !important; }
       div[style*="page-break-after:always"] { page-break-after:always; }
       div[style*="page-break-before:always"] { page-break-before:always; }
     }
@@ -280,10 +285,16 @@ document.addEventListener('DOMContentLoaded', function() {
   addRow('inv'); addRow('inv'); addRow('inv');
   addRow('qt'); addRow('qt'); addRow('qt');
   addItem('invRemList','Government receipt will be provided for all government charges; no tax is applicable on govt fees.');
+  addItem('invRemList','Payments made for government fees and third-party charges are non-refundable once processing has started.');
+  addItem('invRemList','Processing timelines are subject to approval from relevant UAE authorities.');
+  addItem('invRemList','Client is responsible for providing accurate and complete documents/access on time.');
   addItem('qtTcList','Co Tax Registration is provided as complimentary service.');
   addItem('qtTcList','All prices quoted are in AED (United Arab Emirates Dirham).');
   addItem('qtTcList','All fees are included; there are no additional charges except for the marketing fee.');
   addItem('qtTcList','Refunds are subject to deductions for any expenses already incurred.');
+  addItem('qtTcList','Payments made for government fees and third-party charges are non-refundable once processing has started.');
+  addItem('qtTcList','Processing timelines are subject to approval from relevant UAE authorities.');
+  addItem('qtTcList','Client is responsible for providing accurate and complete documents/access on time.');
   addItem('qtDocList','Passport copy');
   addItem('qtDocList','Passport size photo');
   addItem('qtDocList','Emirates ID copy (for renewal)');
@@ -667,6 +678,9 @@ function resetInv() {
   genNos();
   addRow('inv');addRow('inv');addRow('inv');
   addItem('invRemList','Government receipt will be provided for all government charges; no tax is applicable on govt fees.');
+  addItem('invRemList','Payments made for government fees and third-party charges are non-refundable once processing has started.');
+  addItem('invRemList','Processing timelines are subject to approval from relevant UAE authorities.');
+  addItem('invRemList','Client is responsible for providing accurate and complete documents/access on time.');
   calcAll('inv');
 }
 
@@ -682,6 +696,11 @@ function resetQt() {
   addRow('qt');addRow('qt');addRow('qt');
   addItem('qtTcList','Co Tax Registration is provided as complimentary service.');
   addItem('qtTcList','All prices quoted are in AED (United Arab Emirates Dirham).');
+  addItem('qtTcList','All fees are included; there are no additional charges except for the marketing fee.');
+  addItem('qtTcList','Refunds are subject to deductions for any expenses already incurred.');
+  addItem('qtTcList','Payments made for government fees and third-party charges are non-refundable once processing has started.');
+  addItem('qtTcList','Processing timelines are subject to approval from relevant UAE authorities.');
+  addItem('qtTcList','Client is responsible for providing accurate and complete documents/access on time.');
   addItem('qtDocList','Passport copy');
   addItem('qtDocList','Passport size photo');
   calcAll('qt');
