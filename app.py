@@ -2027,6 +2027,45 @@ def close_job(job_id):
     flash('Task closed successfully.')
     return redirect(url_for('dashboard'))
 
+@app.route('/jobs/<int:job_id>/edit_finance', methods=['POST'])
+@login_required
+@finance_required
+def edit_finance(job_id):
+    job = Job.query.get_or_404(job_id)
+    if job.status != 'Closed':
+        flash('Can only edit finance details for closed tasks.')
+        return redirect(url_for('job_detail', job_id=job_id))
+    
+    old_invoiced = job.amount_invoiced or 0
+    old_received = job.amount_received or 0
+    old_revenue = job.revenue or 0
+    
+    try:
+        ai = request.form.get('amount_invoiced')
+        ar = request.form.get('amount_received')
+        rev = request.form.get('revenue')
+        if ai: job.amount_invoiced = float(ai)
+        if ar: job.amount_received = float(ar)
+        if rev: job.revenue = float(rev)
+    except:
+        flash('Invalid finance values.')
+        return redirect(url_for('job_detail', job_id=job_id))
+    
+    notes = request.form.get('finance_notes', '').strip()
+    if notes:
+        existing = job.finance_notes or ''
+        job.finance_notes = (existing + '\n' + notes).strip()
+    
+    remark = f'Finance details EDITED by {session["user_name"]}. Previous — Invoiced: AED {old_invoiced:,.0f} / Received: AED {old_received:,.0f} / Revenue: AED {old_revenue:,.0f}. Updated — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue or 0:,.0f}'
+    if notes:
+        remark += f'. Notes: {notes}'
+    
+    update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
+    db.session.add(update)
+    db.session.commit()
+    flash('Finance details updated successfully.')
+    return redirect(url_for('job_detail', job_id=job_id))
+
 # ── Daily Activity Log ────────────────────────────────────────────────────────
 
 # ACTIVITIES loaded from DB — see get_activities()

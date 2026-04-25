@@ -114,6 +114,30 @@
         </div>
         {% endif %}
 
+        <!-- Edit Finance Details for Closed Tasks -->
+        {% if job.status == 'Closed' and session.role in ['finance','admin'] %}
+        <div id="edit-finance-section" style="margin-top:12px;">
+          <button type="button" onclick="document.getElementById('finance-edit-form').style.display='block'; this.style.display='none';" class="btn-secondary" style="width:100%;">
+            📝 Edit Finance Details
+          </button>
+          <div id="finance-edit-form" style="display:none;margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;">
+            <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">Edit Finance Details</div>
+            <form method="post" action="/jobs/{{ job.id }}/edit_finance">
+              <div class="form-row-2">
+                <div class="form-group"><label>Final Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
+                <div class="form-group"><label>Total Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
+              </div>
+              <div class="form-group"><label>Revenue/Profit (AED)</label><input type="number" name="revenue" value="{{ job.revenue or '' }}" min="0" step="0.01"></div>
+              <div class="form-group"><label>Additional Finance Notes (optional)</label><input type="text" name="finance_notes" maxlength="30" placeholder="Max 30 characters..."></div>
+              <div style="display:flex;gap:8px;">
+                <button type="submit" class="btn-primary">Save Changes</button>
+                <button type="button" onclick="document.getElementById('finance-edit-form').style.display='none'; document.querySelector('#edit-finance-section button').style.display='block';" class="btn-secondary">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+
         <!-- Notes -->
         {% if job.finance_notes %}
         <div style="background:#FFF8F0;border:1px solid #F0D9B8;border-radius:var(--radius-md);padding:12px 14px;margin-top:10px;">
