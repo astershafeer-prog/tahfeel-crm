@@ -377,12 +377,12 @@
         <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Leads</span>
         <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Conv.</span>
         <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Rate</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Invoiced (AED)</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Performance</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Revenue (AED)</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Target Achievement</span>
       </div>
       {% set colors = ['#1A3B8B','#10B981','#8B5CF6','#F59E0B','#EF4444','#06B6D4','#EC4899'] %}
       {% for s in staff_stats %}
-      {% set bar_pct = ((s.invoiced / max_invoiced) * 100)|int if max_invoiced > 0 else 0 %}
+      {% set bar_pct = [(s.revenue / s.target * 100)|int, 100]|min if s.target > 0 else 0 %}
       <div class="staff-row">
         <div style="display:flex;align-items:center;gap:8px;">
           <div class="av" style="background:{{ colors[loop.index0 % 7] }};">{{ s.name[:2].upper() }}</div>
@@ -394,12 +394,16 @@
         <span style="font-size:13px;color:#475569;">{{ s.leads }}</span>
         <span style="font-size:13px;color:#10B981;font-weight:700;">{{ s.converted }}</span>
         <span style="font-size:12px;font-weight:700;color:{% if s.conv_rate >= 50 %}#10B981{% elif s.conv_rate >= 25 %}#F59E0B{% else %}#EF4444{% endif %};">{{ s.conv_rate }}%</span>
-        <span style="font-size:12px;font-weight:700;color:#133E87;">{{ '{:,.0f}'.format(s.invoiced) }}</span>
+        <span style="font-size:12px;font-weight:700;color:#8B5CF6;">{{ '{:,.0f}'.format(s.revenue) }}</span>
         <div>
+          {% if s.target > 0 %}
           <div style="height:6px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
-            <div style="width:{{ bar_pct }}%;height:100%;background:{% if bar_pct >= 70 %}#10B981{% elif bar_pct >= 40 %}#133E87{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
+            <div style="width:{{ bar_pct }}%;height:100%;background:{% if bar_pct >= 100 %}#10B981{% elif bar_pct >= 60 %}#8B5CF6{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
           </div>
-          <div style="font-size:9px;color:#94A3B8;margin-top:2px;">{{ bar_pct }}% of top performer</div>
+          <div style="font-size:9px;color:#94A3B8;margin-top:2px;">{{ '{:,.0f}'.format(s.revenue) }} / {{ '{:,.0f}'.format(s.target) }} ({{ bar_pct }}%)</div>
+          {% else %}
+          <div style="font-size:9px;color:#CBD5E1;">No target set</div>
+          {% endif %}
         </div>
       </div>
       {% endfor %}

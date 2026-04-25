@@ -3148,6 +3148,11 @@ def analytics():
 
     # ── Staff performance
     staff_stats = []
+    # Get monthly targets
+    month = int(request.args.get('month', now.month))
+    year = int(request.args.get('year', now.year))
+    targets = {t.user_id: t.amount_target or 0 for t in MonthlyTarget.query.filter_by(month=month, year=year).all()}
+    
     for u in all_users:
         if u.role not in ['sales', 'operations', 'admin']:
             continue
@@ -3156,6 +3161,13 @@ def analytics():
         u_inv = sum(j.amount_invoiced or 0 for j in u_sales if j.status not in ['Pending Finance Approval'])
         u_conv = len([l for l in u_leads if l.status in won_s])
         conv_rate = round(u_conv / len(u_leads) * 100) if u_leads else 0
+        
+        # Calculate revenue from closed jobs
+        try:
+            u_revenue = sum(j.revenue or 0 for j in u_sales if j.status == 'Closed')
+        except:
+            u_revenue = 0
+        
         staff_stats.append({
             'name': u.name,
             'role': u.role,
@@ -3163,11 +3175,12 @@ def analytics():
             'converted': u_conv,
             'conv_rate': conv_rate,
             'invoiced': u_inv,
+            'revenue': u_revenue,
+            'target': targets.get(u.id, 0),
         })
-    staff_stats.sort(key=lambda x: x['invoiced'], reverse=True)
+    staff_stats.sort(key=lambda x: x['revenue'], reverse=True)
 
-    # Max invoiced for bar scaling
-    max_invoiced = max((s['invoiced'] for s in staff_stats), default=1) or 1
+    # Max values for bar scaling
     max_service = top_services[0][1] if top_services else 1
     max_source = top_sources[0][1] if top_sources else 1
     max_pipeline = max(pipeline.values()) if pipeline else 1
@@ -3224,7 +3237,7 @@ def analytics():
         total_outstanding=total_outstanding,
         pipeline=pipeline, top_services=top_services, top_sources=top_sources,
         top_campaigns=top_campaigns, monthly_revenue=monthly_revenue,
-        staff_stats=staff_stats, max_invoiced=max_invoiced,
+        staff_stats=staff_stats,
         max_service=max_service, max_source=max_source,
         max_pipeline=max_pipeline, max_rev=max_rev,
         users_map=users_map,
