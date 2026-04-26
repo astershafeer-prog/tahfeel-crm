@@ -45,6 +45,16 @@
 
     </div>
 
+    <!-- Leads Block -->
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:12px;border-top:6px solid #3B82F6;">
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Leads <a href="/leads" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>
+      <a href="/leads" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Total</span><span style="font-size:22px;font-weight:700;color:#1A2333;">{{ all_leads|length }}</span></a>
+      <a href="/leads?status=Initiated" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#3B82F6;font-weight:500;">Initiated</span><span style="font-size:22px;font-weight:700;color:#3B82F6;">{{ initiated|length }}</span></a>
+      <a href="/leads?status=New" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">New</span><span style="font-size:22px;font-weight:700;color:#94A3B8;">{{ new_leads|length }}</span></a>
+      <a href="/leads?status=Converted" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Converted</span><span style="font-size:22px;font-weight:700;color:#10B981;">{{ converted|length }}</span></a>
+      <a href="/leads?status=Lost" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;"><span style="font-size:13px;color:#475569;">Lost</span><span style="font-size:22px;font-weight:700;color:#EF4444;">{{ lost|length }}</span></a>
+    </div>
+
     <!-- Documents Block -->
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:14px;">
       <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Documents <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>

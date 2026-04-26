@@ -421,6 +421,16 @@ def dashboard():
 
     # ── Finance dashboard ────────────────────────────────────────────────────
     if role == 'finance':
+        # Lead stats
+        try:
+            all_leads = Lead.query.order_by(Lead.created_at.desc()).all()
+            converted = [l for l in all_leads if l.status == 'Converted']
+            lost = [l for l in all_leads if l.status == 'Lost']
+            new_leads = [l for l in all_leads if l.status == 'New']
+            initiated = [l for l in all_leads if l.status not in ['New', 'Converted', 'Lost']]
+        except:
+            all_leads = converted = lost = new_leads = initiated = []
+        
         try:
             all_jobs = Job.query.order_by(Job.created_at.desc()).all()
             active_jobs = [j for j in all_jobs if j.status != 'Done']
@@ -447,6 +457,11 @@ def dashboard():
         tasks_processing = len([j for j in all_active_jobs if j.status == 'Processing'])
         tasks_pending_approval = len(pending_approval)
         return render_template('dashboard_finance.html',
+                               all_leads=all_leads,
+                               converted=converted,
+                               lost=lost,
+                               new_leads=new_leads,
+                               initiated=initiated,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
@@ -616,7 +631,7 @@ def dashboard():
     converted = [l for l in leads if l.status == 'Converted']
     lost = [l for l in leads if l.status == 'Lost']
     new_leads = [l for l in leads if l.status == 'New']
-    initiated = [l for l in leads if l.status == 'Initiated']
+    initiated = [l for l in leads if l.status not in ['New', 'Converted', 'Lost']]
     try:
         my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status.notin_(['Done','Closed'])).order_by(Job.due_date).all()
         pending_approval_jobs = [j for j in my_jobs if j.status == 'Pending Finance Approval']
