@@ -91,7 +91,7 @@
         <div class="block-title">Finance</div>
         <div class="stat-row"><span class="stat-name">Invoiced</span><span style="font-size:16px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(total_invoiced) }}</span></div>
         <div class="stat-row"><span class="stat-name">Received</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</span></div>
-        <div class="stat-row"><span class="stat-name">Revenue (Closed)</span><span style="font-size:16px;font-weight:700;color:#8B5CF6;">AED {{ '{:,.0f}'.format(total_revenue or 0) }}</span></div>
+        <div class="stat-row" style="background:#F9F5FF;margin:0 -20px;padding:10px 20px;"><span class="stat-name" style="color:#6B21A8;font-weight:600;">Revenue (Closed)</span><span style="font-size:18px;font-weight:800;color:#8B5CF6;">AED {{ '{:,.0f}'.format(total_revenue or 0) }}</span></div>
         <div class="stat-row"><span class="stat-name">Closed Value</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(completed_value) }}</span></div>
         <div class="stat-row"><span class="stat-name">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
         {% if total_invoiced > 0 %}

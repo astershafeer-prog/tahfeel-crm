@@ -219,7 +219,6 @@
         followupDate.value = getTomorrow();
       }
       const followupField = document.getElementById('followupField');
-      const followupDate = document.getElementById('followupDate');
       if (NO_FOLLOWUP_STATUSES.includes(stage)) {
         followupField.style.display = 'none';
         followupDate.required = false;

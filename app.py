@@ -563,6 +563,10 @@ def dashboard():
             u_sales_closed = [j for j in all_jobs_db if j.customer and j.customer.assigned_to == u.id and j.status == 'Closed']
             u_invoiced = sum((j.amount_invoiced or 0) for j in u_sales_jobs if j.status not in ['Pending Finance Approval'])
             u_closed_val = sum((j.amount_received or 0) for j in u_sales_closed)
+            try:
+                u_revenue = sum((j.revenue or 0) for j in u_sales_closed)
+            except:
+                u_revenue = 0
             t = staff_targets.get(u.id)
             amount_target = (t.amount_target or 0) if t else 0
             staff_stats.append({
@@ -576,6 +580,7 @@ def dashboard():
                 'overdue_jobs': len([j for j in u_jobs_all if j.due_date and j.due_date < now and j.status not in ['Done','Closed','Pending Finance Approval']]),
                 'invoiced': u_invoiced,
                 'closed_val': u_closed_val,
+                'revenue': u_revenue,
                 'amount_target': amount_target,
                 'leads_this_month': len(u_leads),
             })
