@@ -2656,11 +2656,15 @@ def documents():
         if d.customer_id:
             customer_doc_count[d.customer_id] += 1
     
-    # Get all documents grouped by customer for popup
+    # Get all documents grouped by customer for popup (convert to dicts for JSON)
     customer_docs = defaultdict(list)
     for d in all_docs:
-        if d.customer_id:
-            customer_docs[d.customer_id].append(d)
+        if d.customer_id and d.file_url:
+            customer_docs[d.customer_id].append({
+                'doc_type': d.doc_type or 'Document',
+                'file_name': d.file_name or 'Unnamed file',
+                'file_url': d.file_url
+            })
     
     return render_template('documents.html',
                            documents=paginated, customers=customers, doc_types=doc_types,
@@ -2672,8 +2676,8 @@ def documents():
                            expiry_filter=expiry_filter,
                            total=total, page=page, total_pages=total_pages,
                            now=now,
-                           customer_doc_count=customer_doc_count,
-                           customer_docs=customer_docs)
+                           customer_doc_count=dict(customer_doc_count),
+                           customer_docs=dict(customer_docs))
 
 
 @app.route('/documents/export')
