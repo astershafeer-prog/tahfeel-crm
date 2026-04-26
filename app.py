@@ -47,6 +47,9 @@ db = SQLAlchemy(app)
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
+    print(f"500 ERROR: {error}")
+    import traceback
+    traceback.print_exc()
     return "<h2>Something went wrong. Please <a href='/'>try again</a> or <a href='/logout'>logout and login</a>.</h2>", 500
 
 @app.errorhandler(404)
@@ -3518,20 +3521,28 @@ def partner_commissions():
         flash('Access denied.')
         return redirect(url_for('dashboard'))
     
-    # Get all jobs with pending partner commissions
-    all_pending = Job.query.filter_by(partner_commission_expected=True, partner_status='Pending').all()
+    try:
+        # Get all jobs with pending partner commissions
+        all_pending = Job.query.filter_by(partner_commission_expected=True, partner_status='Pending').all()
+    except Exception as e:
+        print(f"Error querying pending jobs: {e}")
+        all_pending = []
     
     # Filter options
     partner_filter = request.args.get('partner', '')
     status_filter = request.args.get('status', 'pending')
     
     # Apply filters
-    if status_filter == 'pending':
-        jobs = all_pending
-    elif status_filter == 'received':
-        jobs = Job.query.filter_by(partner_commission_expected=True, partner_status='Received').all()
-    else:  # all
-        jobs = Job.query.filter_by(partner_commission_expected=True).all()
+    try:
+        if status_filter == 'pending':
+            jobs = all_pending
+        elif status_filter == 'received':
+            jobs = Job.query.filter_by(partner_commission_expected=True, partner_status='Received').all()
+        else:  # all
+            jobs = Job.query.filter_by(partner_commission_expected=True).all()
+    except Exception as e:
+        print(f"Error filtering jobs: {e}")
+        jobs = []
     
     if partner_filter:
         jobs = [j for j in jobs if j.partner_name == partner_filter]
@@ -3539,12 +3550,18 @@ def partner_commissions():
     # Get unique partners for filter dropdown
     try:
         all_partners = Partner.query.filter_by(active=True).order_by(Partner.name).all()
-    except:
+    except Exception as e:
+        print(f"Error querying partners: {e}")
         all_partners = []
     
     # Calculate totals
-    total_pending = sum((j.partner_amount or 0) for j in all_pending)
-    total_received = sum((j.partner_amount or 0) for j in Job.query.filter_by(partner_commission_expected=True, partner_status='Received').all())
+    try:
+        total_pending = sum((j.partner_amount or 0) for j in all_pending)
+        total_received = sum((j.partner_amount or 0) for j in Job.query.filter_by(partner_commission_expected=True, partner_status='Received').all())
+    except Exception as e:
+        print(f"Error calculating totals: {e}")
+        total_pending = 0
+        total_received = 0
     
     now = now_dubai()
     
