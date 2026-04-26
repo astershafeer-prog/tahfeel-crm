@@ -2647,6 +2647,21 @@ def documents():
 
     customers = Customer.query.order_by(Customer.name).all()
     doc_types = DocType.query.order_by(DocType.name).all()
+    
+    # Count documents per customer (for showing multiple file indicator)
+    from collections import defaultdict
+    customer_doc_count = defaultdict(int)
+    all_docs = Document.query.all()
+    for d in all_docs:
+        if d.customer_id:
+            customer_doc_count[d.customer_id] += 1
+    
+    # Get all documents grouped by customer for popup
+    customer_docs = defaultdict(list)
+    for d in all_docs:
+        if d.customer_id:
+            customer_docs[d.customer_id].append(d)
+    
     return render_template('documents.html',
                            documents=paginated, customers=customers, doc_types=doc_types,
                            total_docs=total_docs, expiring_30=len(expiring_30),
@@ -2656,7 +2671,9 @@ def documents():
                            doc_type_filter=doc_type_filter, customer_filter=customer_filter,
                            expiry_filter=expiry_filter,
                            total=total, page=page, total_pages=total_pages,
-                           now=now)
+                           now=now,
+                           customer_doc_count=customer_doc_count,
+                           customer_docs=customer_docs)
 
 
 @app.route('/documents/export')

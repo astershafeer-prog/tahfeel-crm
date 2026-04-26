@@ -86,7 +86,11 @@
               {% else %}—{% endif %}
             </td>
             <td>
-              {% if doc.file_url %}
+              {% if doc.customer_id and customer_doc_count[doc.customer_id] > 1 %}
+              {# Multiple documents for this customer - show attachments button #}
+              <button onclick="showCustomerDocs({{ doc.customer_id }})" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1A3B8B;font-weight:600;background:#EBF2FF;padding:3px 9px;border-radius:6px;border:none;cursor:pointer;">📎📎 {{ customer_doc_count[doc.customer_id] }} files</button>
+              {% elif doc.file_url %}
+              {# Single document - show view file button #}
               <a href="{{ doc.file_url }}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1A3B8B;font-weight:600;text-decoration:none;background:#EBF2FF;padding:3px 9px;border-radius:6px;">📎 View File</a>
               {% elif doc.file_name %}
               <span style="color:#94A3B8;font-size:11px;">📎 {{ doc.file_name[:20] }}{% if doc.file_name|length > 20 %}…{% endif %}</span>
@@ -146,5 +150,62 @@
     </div>
     {% endif %}
   </div>
+
+  <!-- Popup Modal for Multiple Documents -->
+  <div id="docsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #E2E8F0;padding-bottom:12px;">
+        <h3 style="margin:0;font-size:18px;color:#1A3B8B;">Customer Documents</h3>
+        <button onclick="closeDocsModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#94A3B8;">&times;</button>
+      </div>
+      <div id="docsModalContent"></div>
+    </div>
+  </div>
+
+  <script>
+  const customerDocsData = {{ customer_docs|tojson|safe }};
+  
+  function showCustomerDocs(customerId) {
+    const docs = customerDocsData[customerId];
+    if (!docs || docs.length === 0) {
+      alert('No documents found');
+      return;
+    }
+    
+    let html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+    docs.forEach(doc => {
+      const docType = doc.doc_type || 'Document';
+      const fileName = doc.file_name || 'Unnamed file';
+      const fileUrl = doc.file_url;
+      
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0;">';
+      html += '<div>';
+      html += '<div style="font-weight:600;color:#1A3B8B;font-size:14px;">' + docType + '</div>';
+      html += '<div style="font-size:12px;color:#64748B;margin-top:2px;">' + fileName + '</div>';
+      html += '</div>';
+      
+      if (fileUrl) {
+        html += '<a href="' + fileUrl + '" target="_blank" download style="background:#1A3B8B;color:white;padding:6px 16px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">⬇ Download</a>';
+      } else {
+        html += '<span style="color:#CBD5E1;font-size:11px;">No file</span>';
+      }
+      
+      html += '</div>';
+    });
+    html += '</div>';
+    
+    document.getElementById('docsModalContent').innerHTML = html;
+    document.getElementById('docsModal').style.display = 'flex';
+  }
+  
+  function closeDocsModal() {
+    document.getElementById('docsModal').style.display = 'none';
+  }
+  
+  // Close on background click
+  document.getElementById('docsModal').onclick = function(e) {
+    if (e.target === this) closeDocsModal();
+  };
+  </script>
 </body>
 </html>
