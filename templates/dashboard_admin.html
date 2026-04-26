@@ -106,7 +106,7 @@
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Tasks</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Invoiced</span>
-        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Closed Val.</span>
+        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Revenue</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Target</span>
       </div>
       {% for s in staff_stats %}
@@ -126,7 +126,7 @@
         <span style="font-size:13px;color:#475569;">{{ s.active_jobs }}</span>
         <span>{% if s.overdue_jobs > 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600;">{{ s.overdue_jobs }}</span>{% else %}<span style="color:#CBD5E1;font-size:12px;">0</span>{% endif %}</span>
         <span style="font-size:11px;color:#1A3B8B;font-weight:600;">{{ '{:,.0f}'.format(s.invoiced) }}</span>
-        <span style="font-size:11px;color:#10B981;font-weight:600;">{{ '{:,.0f}'.format(s.closed_val) }}</span>
+        <span style="font-size:11px;color:#8B5CF6;font-weight:700;">{{ '{:,.0f}'.format(s.revenue) }}</span>
         <div>
           {% if s.amount_target > 0 %}
           <div style="font-size:10px;color:#94A3B8;margin-bottom:3px;">{{ '{:,.0f}'.format(s.revenue) }} / {{ '{:,.0f}'.format(s.amount_target) }}</div>
