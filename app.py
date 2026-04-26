@@ -746,7 +746,7 @@ def export_leads():
     ws = wb.active
     ws.title = "Leads"
     headers = ['Name', 'Company', 'Phone', 'Phone 2', 'Email', 'Address', 'Source',
-               'Service', 'Lead Type', 'Assigned To', 'Due Date', 'Status', 'Remarks', 'Created', 'Potential Value']
+               'Service', 'Lead Type', 'Assigned To', 'Due Date', 'Status', 'Remarks', 'Created']
     ws.append(headers)
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
@@ -761,7 +761,6 @@ def export_leads():
             lead.due_date.strftime('%d %b %Y') if lead.due_date else '',
             lead.status or '', lead.remarks or '',
             lead.created_at.strftime('%d %b %Y') if lead.created_at else '',
-            lead.potential_value or 0,
         ])
     for col in ws.columns:
         max_length = max(len(str(cell.value or '')) for cell in col)
@@ -830,12 +829,6 @@ def lead_detail(lead_id):
         lead.status = stage
         if request.form.get('customer_story'):
             lead.customer_story = request.form.get('customer_story')
-        potential_value = request.form.get('potential_value')
-        if potential_value and not lead.potential_value:
-            try:
-                lead.potential_value = float(potential_value)
-            except:
-                pass
         db.session.add(update)
         db.session.commit()
         flash('Update saved')
@@ -3017,13 +3010,12 @@ def export_full_backup():
     ws1.title = "Leads"
     users_map = {u.id: u.name for u in User.query.all()}
     style_headers(ws1, ['ID','Name','Company','Phone','Email','Service','Source','Campaign',
-                         'Status','Assigned To','Potential Value','Created Date','Due Date','Remarks'])
+                         'Status','Assigned To','Created Date','Due Date','Remarks'])
     for l in Lead.query.order_by(Lead.created_at.desc()).all():
         ws1.append([
             l.id, l.name or '', l.company or '', l.phone or '', l.email or '',
             l.service or '', l.source or '', l.campaign or '',
             l.status or '', users_map.get(l.assigned_to, ''),
-            float(l.potential_value or 0),
             l.created_at.strftime('%d/%m/%Y %H:%M') if l.created_at else '',
             l.due_date.strftime('%d/%m/%Y') if l.due_date else '',
             l.remarks or ''
