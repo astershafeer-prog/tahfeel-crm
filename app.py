@@ -2037,26 +2037,100 @@ def update_payment(job_id):
 @finance_required
 def close_job(job_id):
     job = Job.query.get_or_404(job_id)
+    
+    # Update invoice and received amounts
     try:
         ai = request.form.get('amount_invoiced')
         ar = request.form.get('amount_received')
-        rev = request.form.get('revenue')
         if ai: job.amount_invoiced = float(ai)
         if ar: job.amount_received = float(ar)
-        if rev: job.revenue = float(rev)
     except:
         pass
+    
+    # Handle partner commission choice (mandatory)
+    partner_choice = request.form.get('partner_commission_expected')
+    
+    if partner_choice == 'no':
+        # REGULAR TASK - Revenue counted immediately
+        try:
+            rev = request.form.get('revenue')
+            if rev:
+                job.revenue = float(rev)
+            else:
+                flash('Revenue is required for regular tasks.', 'error')
+                return redirect(url_for('job_detail', job_id=job_id))
+        except:
+            flash('Invalid revenue amount.', 'error')
+            return redirect(url_for('job_detail', job_id=job_id))
+        
+        job.partner_commission_expected = False
+        job.partner_name = None
+        job.partner_amount = None
+        job.partner_due_date = None
+        job.partner_status = None
+        job.status = 'Closed'
+        
+        remark = f'Task CLOSED by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue:,.0f}'
+        
+    elif partner_choice == 'yes':
+        # PARTNER COMMISSION TASK - Revenue = 0 until partner pays
+        partner_name = request.form.get('partner_name')
+        new_partner_name = request.form.get('new_partner_name', '').strip()
+        
+        # Handle new partner creation
+        if partner_name == '__ADD_NEW__':
+            if not new_partner_name:
+                flash('Please enter new partner name.', 'error')
+                return redirect(url_for('job_detail', job_id=job_id))
+            # Create new partner
+            try:
+                new_partner = Partner(name=new_partner_name)
+                db.session.add(new_partner)
+                db.session.flush()  # Get the ID without committing
+                partner_name = new_partner_name
+            except:
+                flash('Partner name already exists or invalid.', 'error')
+                return redirect(url_for('job_detail', job_id=job_id))
+        
+        if not partner_name or partner_name == '__ADD_NEW__':
+            flash('Please select a partner.', 'error')
+            return redirect(url_for('job_detail', job_id=job_id))
+        
+        try:
+            partner_amount = float(request.form.get('partner_amount'))
+            partner_due_date = request.form.get('partner_due_date')
+            if not partner_due_date:
+                raise ValueError("Due date required")
+            partner_due_date = datetime.strptime(partner_due_date, '%Y-%m-%d').date()
+        except:
+            flash('Partner commission amount and due date are required.', 'error')
+            return redirect(url_for('job_detail', job_id=job_id))
+        
+        job.partner_commission_expected = True
+        job.partner_name = partner_name
+        job.partner_amount = partner_amount
+        job.partner_due_date = partner_due_date
+        job.partner_status = 'Pending'
+        job.revenue = 0  # Revenue NOT counted yet
+        job.status = 'Closed - Pending Partner Commission'
+        
+        remark = f'Task CLOSED by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Partner Commission: {partner_name} - AED {partner_amount:,.0f} (pending). Revenue will be counted when partner pays.'
+    
+    else:
+        flash('Please select whether partner commission is expected.', 'error')
+        return redirect(url_for('job_detail', job_id=job_id))
+    
+    # Finance notes
     notes = request.form.get('finance_notes', '').strip()
     if notes:
-        # Replace finance notes (don't append)
         job.finance_notes = notes
-    job.status = 'Closed'
-    remark = f'Task CLOSED by Finance. Final — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue or 0:,.0f}'
-    if notes:
-        remark += f'. Notes: {notes}'
-    update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
+        remark += f' Notes: {notes}'
+    
+    # Create update record
+    update = JobUpdate(job_id=job.id, status=job.status, remark=remark, staff_name=session['user_name'])
     db.session.add(update)
     db.session.commit()
+    
     flash('Task closed successfully.')
     return redirect(url_for('dashboard'))
 
