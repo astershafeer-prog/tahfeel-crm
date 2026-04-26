@@ -113,7 +113,7 @@
               </td>
               <td style="text-align:right;">
                 {% if job.partner_status == 'Pending' %}
-                <form method="post" action="/partner-commissions/{{ job.id }}/mark-received" style="display:inline;" onsubmit="return confirm('Mark AED {{ \'{:,.0f}\'.format(job.partner_amount or 0) }} from {{ job.partner_name }} as received? Revenue will be added to totals.');">
+                <form method="post" action="/partner-commissions/{{ job.id }}/mark-received" style="display:inline;" onsubmit="return confirm('Mark AED {{ '{:,.0f}'.format(job.partner_amount or 0) }} from {{ job.partner_name }} as received? Revenue will be added to totals.');">
                   <button type="submit" class="btn-sm" style="background:#10B981;color:white;">✓ Mark Received</button>
                 </form>
                 {% else %}
