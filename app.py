@@ -1886,10 +1886,11 @@ def job_detail(job_id):
     service_types = ServiceType.query.order_by(ServiceType.name).all()
     # All jobs for same customer (for multi-task timeline)
     sibling_jobs = Job.query.filter_by(customer_id=job.customer_id).order_by(Job.created_at.asc()).all()
+    partners = Partner.query.filter_by(active=True).order_by(Partner.name).all()
     return render_template('job_detail.html', job=job, now=now,
                            statuses=JOB_STATUSES, users=users,
                            service_types=service_types, timedelta=timedelta,
-                           sibling_jobs=sibling_jobs)
+                           sibling_jobs=sibling_jobs, partners=partners)
 
 @app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
 @login_required

@@ -186,7 +186,7 @@
     {% endif %}
 
     <!-- Finance: Close form -->
-    {% if session.role in ['finance','admin'] and job.status == 'Pending Finance Close' %}
+    {% if session.role in ['finance','admin'] and job.status in ['Done', 'Pending Finance Close'] %}
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header"><h2 style="color:var(--primary);">✓ Finance Close — Final Step</h2></div>
       <div class="card-body">
@@ -196,21 +196,117 @@
           <strong style="font-size:10px;text-transform:uppercase;color:var(--text-muted);">Staff Final Remarks:</strong><br>{{ job.final_remarks }}
         </div>
         {% endif %}
-        <form method="post" action="/jobs/{{ job.id }}/close">
-          <div class="form-row-2">
-            <div class="form-group"><label>Final Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
-            <div class="form-group"><label>Total Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
+        <form method="post" action="/jobs/{{ job.id }}/close" id="closeTaskForm">
+          <div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:#0369A1;text-transform:uppercase;margin-bottom:8px;">Customer Payment</div>
+            <div class="form-row-2">
+              <div class="form-group"><label>Final Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
+              <div class="form-group"><label>Total Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
+            </div>
+            {% set balance = (job.amount_invoiced or 0) - (job.amount_received or 0) %}
+            {% if balance > 0 %}
+            <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:#991B1B;font-weight:600;margin-top:8px;">
+              ⚠ Outstanding customer balance: AED {{ '{:,.0f}'.format(balance) }}
+            </div>
+            {% endif %}
           </div>
-          <div class="form-group"><label>Revenue/Profit (AED) <span style="color:#EF4444;font-weight:700;">* REQUIRED</span></label><input type="number" name="revenue" value="{{ job.revenue or '' }}" min="0" step="0.01" required placeholder="Enter profit amount"></div>
+
+          <div style="background:#F9F5FF;border:1px solid #E9D5FF;border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:#6B21A8;text-transform:uppercase;margin-bottom:8px;">Revenue & Partner Commission</div>
+            <div class="form-group">
+              <label style="font-weight:600;">Partner Commission Expected? <span style="color:#EF4444;">*</span></label>
+              <select name="partner_commission_expected" id="partnerCommissionSelect" required style="width:100%;">
+                <option value="">— Select —</option>
+                <option value="no">No - Regular task (enter revenue now)</option>
+                <option value="yes">Yes - Partner will pay commission later</option>
+              </select>
+            </div>
+
+            <div id="regularRevenueFields" style="display:none;">
+              <div class="form-group">
+                <label>Revenue/Profit (AED) <span style="color:#EF4444;font-weight:700;">* REQUIRED</span></label>
+                <input type="number" name="revenue" id="revenueInput" min="0" step="0.01" placeholder="Enter profit amount">
+                <small style="color:#059669;display:block;margin-top:4px;">✓ Revenue will be counted immediately when task closes</small>
+              </div>
+            </div>
+
+            <div id="partnerCommissionFields" style="display:none;">
+              <div class="form-group">
+                <label>Partner Name <span style="color:#EF4444;">*</span></label>
+                <select name="partner_name" id="partnerNameSelect" style="width:100%;">
+                  <option value="">— Select Partner —</option>
+                  {% for partner in partners %}
+                  <option value="{{ partner.name }}">{{ partner.name }}</option>
+                  {% endfor %}
+                  <option value="__ADD_NEW__">+ Add New Partner</option>
+                </select>
+              </div>
+              <div class="form-group" id="newPartnerField" style="display:none;">
+                <label>New Partner Name</label>
+                <input type="text" name="new_partner_name" id="newPartnerInput" placeholder="Enter partner name">
+              </div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Commission Amount (AED) <span style="color:#EF4444;">*</span></label>
+                  <input type="number" name="partner_amount" id="partnerAmount" min="0" step="0.01" placeholder="e.g. 1500">
+                </div>
+                <div class="form-group">
+                  <label>Expected Payment Date <span style="color:#EF4444;">*</span></label>
+                  <input type="date" name="partner_due_date" id="partnerDueDate">
+                </div>
+              </div>
+              <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:#92400E;margin-top:8px;">
+                ℹ Revenue will be AED 0 until partner commission is marked as received
+              </div>
+            </div>
+          </div>
+
           <div class="form-group"><label>Finance Closing Notes (optional)</label><input type="text" name="finance_notes" maxlength="30" placeholder="Max 30 characters..."></div>
-          {% set balance = (job.amount_invoiced or 0) - (job.amount_received or 0) %}
-          {% if balance > 0 %}
-          <div style="background:var(--danger-bg);border:1px solid #F7C1C1;border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--danger);font-weight:600;">
-            ⚠ Outstanding balance: AED {{ '{:,.0f}'.format(balance) }} — confirm before closing
-          </div>
-          {% endif %}
           <button type="submit" class="btn-primary">Close Task (Final)</button>
         </form>
+
+        <script>
+        const partnerSelect = document.getElementById('partnerCommissionSelect');
+        const regularFields = document.getElementById('regularRevenueFields');
+        const partnerFields = document.getElementById('partnerCommissionFields');
+        const revenueInput = document.getElementById('revenueInput');
+        const partnerNameSelect = document.getElementById('partnerNameSelect');
+        const partnerAmount = document.getElementById('partnerAmount');
+        const partnerDueDate = document.getElementById('partnerDueDate');
+        const newPartnerField = document.getElementById('newPartnerField');
+        const newPartnerInput = document.getElementById('newPartnerInput');
+
+        partnerSelect.addEventListener('change', function() {
+          if (this.value === 'no') {
+            regularFields.style.display = 'block';
+            partnerFields.style.display = 'none';
+            revenueInput.required = true;
+            partnerNameSelect.required = false;
+            partnerAmount.required = false;
+            partnerDueDate.required = false;
+          } else if (this.value === 'yes') {
+            regularFields.style.display = 'none';
+            partnerFields.style.display = 'block';
+            revenueInput.required = false;
+            partnerNameSelect.required = true;
+            partnerAmount.required = true;
+            partnerDueDate.required = true;
+          } else {
+            regularFields.style.display = 'none';
+            partnerFields.style.display = 'none';
+          }
+        });
+
+        partnerNameSelect.addEventListener('change', function() {
+          if (this.value === '__ADD_NEW__') {
+            newPartnerField.style.display = 'block';
+            newPartnerInput.required = true;
+          } else {
+            newPartnerField.style.display = 'none';
+            newPartnerInput.required = false;
+          }
+        });
+        </script>
       </div>
     </div>
     {% endif %}
