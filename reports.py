@@ -108,7 +108,8 @@ def _dates(req):
     except: dt_d = datetime(today.year, today.month, today.day, 23, 59, 59)
     return df_d, dt_d, df, dt
 
-def _guard():
+def _guard_admin_finance_only():
+    """Admin + Finance only"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     if session.get('role') not in ('admin', 'finance'):
@@ -116,23 +117,58 @@ def _guard():
         return redirect(url_for('dashboard'))
     return None
 
+def _guard_sales():
+    """Admin + Finance + Sales"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if session.get('role') not in ('admin', 'finance', 'sales'):
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
+    return None
+
+def _guard_operations():
+    """Admin + Finance + Operations"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if session.get('role') not in ('admin', 'finance', 'operations'):
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
+    return None
+
+def _guard_sales_operations():
+    """Admin + Finance + Sales + Operations"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if session.get('role') not in ('admin', 'finance', 'sales', 'operations'):
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
+    return None
+
+def _guard_all_staff():
+    """All roles (Admin, Finance, Sales, Operations, Staff)"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    # All logged-in users can access
+    return None
+
 # ── Reports index page
 @reports_bp.route('/reports')
 def reports_index():
-    g = _guard()
+    g = _guard_all_staff()  # All roles can see reports page
     if g: return g
     today = date.today()
     defaults = {
         'date_from': today.replace(day=1).strftime('%Y-%m-%d'),
         'date_to':   today.strftime('%Y-%m-%d'),
     }
-    return render_template('reports.html', defaults=defaults)
+    role = session.get('role')
+    return render_template('reports.html', defaults=defaults, role=role)
 
 
 # ── 1. Lead Detail Report
 @reports_bp.route('/reports/leads/export')
 def export_lead_report():
-    g = _guard()
+    g = _guard_sales()  # Sales + Admin + Finance
     if g: return g
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
@@ -187,7 +223,7 @@ def export_lead_report():
 # ── 2. Sales Report
 @reports_bp.route('/reports/sales/export')
 def export_sales_report():
-    g = _guard()
+    g = _guard_sales()  # Sales + Admin + Finance
     if g: return g
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
@@ -239,7 +275,7 @@ def export_sales_report():
 # ── 3. Finance Report
 @reports_bp.route('/reports/finance/export')
 def export_finance_report():
-    g = _guard()
+    g = _guard_admin_finance_only()  # Admin + Finance only
     if g: return g
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
@@ -322,7 +358,7 @@ def export_finance_report():
 # ── 4. Task Report
 @reports_bp.route('/reports/tasks/export')
 def export_task_report():
-    g = _guard()
+    g = _guard_sales_operations()  # Sales + Operations + Admin + Finance
     if g: return g
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
@@ -376,7 +412,7 @@ def export_task_report():
 # ── 5. Document Expiry Report
 @reports_bp.route('/reports/documents/export')
 def export_document_report():
-    g = _guard()
+    g = _guard_all_staff()  # ALL roles can access
     if g: return g
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
@@ -439,7 +475,7 @@ def export_document_report():
 # ── 6. Staff Performance Report
 @reports_bp.route('/reports/staff/export')
 def export_staff_report():
-    g = _guard()
+    g = _guard_admin_finance_only()  # Admin + Finance only
     if g: return g
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
@@ -528,7 +564,7 @@ def export_staff_report():
 # ── 7. Partner Commission Report
 @reports_bp.route('/reports/partner-commissions/export')
 def export_partner_report():
-    g = _guard()
+    g = _guard_admin_finance_only()  # Admin + Finance only
     if g: return g
     wb = openpyxl.Workbook()
     ws1 = wb.active

@@ -47,7 +47,8 @@
     <!-- Report Cards -->
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
 
-      <!-- 1. Lead Detail -->
+      <!-- 1. Lead Detail Report - Sales + Admin + Finance -->
+      {% if role in ['admin', 'finance', 'sales'] %}
       <div class="card" style="border-top:4px solid #133E87;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:22px;">◉</span>
@@ -65,8 +66,10 @@
         </ul>
         <button class="btn-add" style="width:100%;text-align:center;" onclick="exportReport('leads')">⬇ Export to Excel</button>
       </div>
+      {% endif %}
 
-      <!-- 2. Sales -->
+      <!-- 2. Sales Report - Sales + Admin + Finance -->
+      {% if role in ['admin', 'finance', 'sales'] %}
       <div class="card" style="border-top:4px solid #1a6e3c;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:22px;">💼</span>
@@ -84,8 +87,10 @@
         </ul>
         <button class="btn-add" style="width:100%;text-align:center;background:#1a6e3c;" onclick="exportReport('sales')">⬇ Export to Excel</button>
       </div>
+      {% endif %}
 
-      <!-- 3. Finance -->
+      <!-- 3. Finance Report - Admin + Finance only -->
+      {% if role in ['admin', 'finance'] %}
       <div class="card" style="border-top:4px solid #6a3d9a;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:22px;">💰</span>
@@ -103,8 +108,10 @@
         </ul>
         <button class="btn-add" style="width:100%;text-align:center;background:#6a3d9a;" onclick="exportReport('finance')">⬇ Export to Excel</button>
       </div>
+      {% endif %}
 
-      <!-- 4. Task -->
+      <!-- 4. Task Report - Sales + Operations + Admin + Finance -->
+      {% if role in ['admin', 'finance', 'sales', 'operations'] %}
       <div class="card" style="border-top:4px solid #c45c00;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:22px;">✓</span>
@@ -122,8 +129,9 @@
         </ul>
         <button class="btn-add" style="width:100%;text-align:center;background:#c45c00;" onclick="exportReport('tasks')">⬇ Export to Excel</button>
       </div>
+      {% endif %}
 
-      <!-- 5. Document Expiry -->
+      <!-- 5. Document Expiry Report - ALL ROLES -->
       <div class="card" style="border-top:4px solid #b5000f;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:22px;">📄</span>
@@ -142,7 +150,8 @@
         <button class="btn-add" style="width:100%;text-align:center;background:#b5000f;" onclick="exportReport('documents')">⬇ Export to Excel</button>
       </div>
 
-      <!-- 6. Staff Performance -->
+      <!-- 6. Staff Performance Report - Admin + Finance only -->
+      {% if role in ['admin', 'finance'] %}
       <div class="card" style="border-top:4px solid #006666;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:22px;">👤</span>
@@ -160,8 +169,10 @@
         </ul>
         <button class="btn-add" style="width:100%;text-align:center;background:#006666;" onclick="exportReport('staff')">⬇ Export to Excel</button>
       </div>
+      {% endif %}
 
-      <!-- 7. Partner Commission Report -->
+      <!-- 7. Partner Commission Report - Admin + Finance only -->
+      {% if role in ['admin', 'finance'] %}
       <div class="card">
         <ul style="list-style:none;padding:0;margin:0;">
           <li style="padding:8px 0;border-bottom:1px solid #f1f1f1;">
@@ -175,6 +186,7 @@
         </ul>
         <button class="btn-add" style="width:100%;text-align:center;background:#8B5CF6;" onclick="exportReport('partner-commissions')">⬇ Export to Excel</button>
       </div>
+      {% endif %}
 
     </div><!-- /grid -->
   </div><!-- /container -->
