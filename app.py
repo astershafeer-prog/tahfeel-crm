@@ -1040,6 +1040,14 @@ def edit_lead(lead_id):
 @admin_required
 def delete_lead(lead_id):
     lead = Lead.query.get_or_404(lead_id)
+    
+    # Check if lead is converted (has associated customer)
+    if lead.status == 'Converted':
+        customer = Customer.query.filter_by(lead_id=lead_id).first()
+        if customer:
+            flash('Cannot delete converted leads. This lead has been converted to a customer and has associated records.', 'error')
+            return redirect(url_for('lead_detail', lead_id=lead_id))
+    
     LeadUpdate.query.filter_by(lead_id=lead_id).delete()
     db.session.delete(lead)
     db.session.commit()
@@ -1058,14 +1066,24 @@ def bulk_delete_leads():
         flash('No leads selected', 'error')
         return redirect(url_for('all_leads'))
     count = 0
+    skipped = 0
     for lead_id in ids:
         lead = Lead.query.get(int(lead_id))
         if lead:
+            # Skip converted leads
+            if lead.status == 'Converted':
+                customer = Customer.query.filter_by(lead_id=lead.id).first()
+                if customer:
+                    skipped += 1
+                    continue
             LeadUpdate.query.filter_by(lead_id=lead.id).delete()
             db.session.delete(lead)
             count += 1
     db.session.commit()
-    flash(f'{count} lead(s) deleted successfully')
+    if count > 0:
+        flash(f'{count} lead(s) deleted successfully')
+    if skipped > 0:
+        flash(f'{skipped} converted lead(s) skipped (cannot delete converted leads)', 'warning')
     return redirect(url_for('all_leads'))
 
 @app.route('/admin', methods=['GET', 'POST'])
