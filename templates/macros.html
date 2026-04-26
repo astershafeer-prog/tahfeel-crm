@@ -60,6 +60,7 @@
   {% if session.role in ['admin', 'finance'] %}
   <a href="/reports" {% if active=='reports' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📊 Reports</a>
   <a href="/analytics" {% if active=='analytics' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📈 Analytics</a>
+  <a href="/partner-commissions" {% if active=='partner-commissions' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">💰 Commissions</a>
   {% endif %}
   <div style="flex:1;"></div>
   {% if session.role == 'admin' %}

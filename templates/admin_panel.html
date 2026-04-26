@@ -13,13 +13,7 @@
   {{ nav('admin') }}
 
   <div class="container">
-    <div style="margin-bottom:14px;display:flex;gap:10px;">
-      <a href="/admin/targets" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;">🎯 Monthly Targets</a>
-      {% if session.role in ['admin', 'finance'] %}
-      <a href="/partners" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;background:#8B5CF6;border-color:#8B5CF6;">🤝 Partners</a>
-      <a href="/partner-commissions" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;background:#F59E0B;border-color:#F59E0B;">💰 Commissions</a>
-      {% endif %}
-    </div>
+    <div style="margin-bottom:14px;"><a href="/admin/targets" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;">🎯 Monthly Targets</a></div>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}{% for msg in messages %}
         <div class="flash">{{ msg }}</div>
@@ -119,8 +113,8 @@
       </div>
     </div>
 
-    <!-- 2x2 Grid for dropdown lists -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <!-- 3-Column Grid for dropdown lists -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
 
       <!-- Services (Leads) -->
       <div class="card" id="services">
@@ -329,6 +323,46 @@
         </div>
       </div>
 
+      <!-- Partners -->
+      <div class="card" id="partners">
+        <div class="card-header">
+          <h2>🤝 Partners <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:#F3E8FF;padding:2px 8px;border-radius:10px;margin-left:6px;">Finance</span></h2>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="/admin/partner/add">
+            <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;">
+              <div class="form-group" style="margin:0;flex:1;">
+                <input type="text" name="name" required placeholder="e.g. Ajman Freezone">
+              </div>
+              <button type="submit" class="btn-primary" style="white-space:nowrap;">+ Add</button>
+            </div>
+          </form>
+          <hr class="divider">
+          <input type="text" oninput="filterList(this,'pa-view')" placeholder="Filter partners..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
+          {% if partners %}
+            {% for partner in partners %}
+            <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
+              <div id="pa-view-{{ partner.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
+                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
+                <span style="font-size:13px;">{{ partner.name }}</span>
+                <div style="display:flex;gap:5px;">
+                  <button onclick="paEdit({{ partner.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
+                  <a href="/admin/partner/{{ partner.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ partner.name }}?')" title="Remove">🗑</a>
+                </div>
+              </div>
+              <form id="pa-form-{{ partner.id }}" method="POST" action="/admin/partner/{{ partner.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
+                <input type="text" name="name" value="{{ partner.name }}" required style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
+                <button type="button" onclick="paCancel({{ partner.id }})" class="btn-sm">Cancel</button>
+              </form>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No partners yet.</div>
+          {% endif %}
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -356,6 +390,8 @@
     function caCancel(id) { document.getElementById('ca-view-'+id).style.display='flex'; document.getElementById('ca-form-'+id).style.display='none'; }
     function dtEdit(id) { document.getElementById('dt-view-'+id).style.display='none'; document.getElementById('dt-form-'+id).style.display='flex'; }
     function dtCancel(id) { document.getElementById('dt-view-'+id).style.display='flex'; document.getElementById('dt-form-'+id).style.display='none'; }
+    function paEdit(id) { document.getElementById('pa-view-'+id).style.display='none'; document.getElementById('pa-form-'+id).style.display='flex'; }
+    function paCancel(id) { document.getElementById('pa-view-'+id).style.display='flex'; document.getElementById('pa-form-'+id).style.display='none'; }
   </script>
 </body>
 </html>

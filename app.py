@@ -1114,8 +1114,9 @@ def admin_panel():
     campaigns = Campaign.query.order_by(Campaign.name).all()
     job_types = ServiceType.query.order_by(ServiceType.name).all()
     doc_types = DocType.query.order_by(DocType.name).all()
+    partners = Partner.query.order_by(Partner.name).all()
     return render_template('admin_panel.html', users=users, services=services,
-                           sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types)
+                           sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners)
 
 @app.route('/admin/staff/add', methods=['POST'])
 @login_required
@@ -3583,3 +3584,50 @@ def mark_partner_received(job_id):
     
     flash(f'Partner commission of AED {job.partner_amount:,.0f} from {job.partner_name} marked as received. Revenue added to totals.')
     return redirect(url_for('partner_commissions'))
+
+# ── Admin Panel Partner Routes (simpler pattern)
+@app.route('/admin/partner/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_partner():
+    name = request.form.get('name', '').strip()
+    if name:
+        existing = Partner.query.filter_by(name=name).first()
+        if not existing:
+            partner = Partner(name=name)
+            db.session.add(partner)
+            db.session.commit()
+            flash(f'Partner "{name}" added.')
+        else:
+            flash('Partner already exists.', 'error')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/partner/<int:partner_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_partner(partner_id):
+    partner = Partner.query.get_or_404(partner_id)
+    new_name = request.form.get('name', '').strip()
+    if new_name:
+        existing = Partner.query.filter(Partner.name == new_name, Partner.id != partner_id).first()
+        if not existing:
+            partner.name = new_name
+            db.session.commit()
+            flash(f'Partner updated.')
+        else:
+            flash('Partner name already exists.', 'error')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/partner/<int:partner_id>/delete')
+@login_required
+@admin_required
+def admin_delete_partner(partner_id):
+    partner = Partner.query.get_or_404(partner_id)
+    jobs_with_partner = Job.query.filter_by(partner_name=partner.name).first()
+    if not jobs_with_partner:
+        db.session.delete(partner)
+        db.session.commit()
+        flash(f'Partner "{partner.name}" deleted.')
+    else:
+        flash('Cannot delete - has associated tasks.', 'error')
+    return redirect(url_for('admin_panel'))
