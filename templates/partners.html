@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Partners</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('partners') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-head">
+      <div class="page-head-title">Partner Management</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Manage partners who pay commissions for referrals and services</div>
+    </div>
+
+    <!-- Add Partner Form -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-header"><h2>➕ Add New Partner</h2></div>
+      <div class="card-body">
+        <form method="post" action="/partners/add" style="display:flex;gap:10px;align-items:flex-end;">
+          <div class="form-group" style="flex:1;margin:0;">
+            <label>Partner Name</label>
+            <input type="text" name="name" required placeholder="e.g. Ajman Freezone, DAFZA, DMCC...">
+          </div>
+          <button type="submit" class="btn-primary" style="margin-bottom:0;">Add Partner</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Partners List -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📋 All Partners ({{ partners|length }})</h2>
+      </div>
+      <div class="card-body" style="padding:0;">
+        {% if partners %}
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Partner Name</th>
+              <th style="width:100px;">Status</th>
+              <th style="width:200px;text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for partner in partners %}
+            <tr>
+              <td>
+                <span id="name-{{ partner.id }}" style="font-weight:600;">{{ partner.name }}</span>
+                <input type="text" id="edit-{{ partner.id }}" value="{{ partner.name }}" style="display:none;width:100%;">
+              </td>
+              <td>
+                {% if partner.active %}
+                <span style="background:#D1FAE5;color:#065F46;font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;">Active</span>
+                {% else %}
+                <span style="background:#FEE2E2;color:#991B1B;font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;">Inactive</span>
+                {% endif %}
+              </td>
+              <td style="text-align:right;">
+                <button onclick="toggleEdit({{ partner.id }})" id="btn-edit-{{ partner.id }}" class="btn-sm" style="background:#3B82F6;color:white;margin-right:4px;">Edit</button>
+                <button onclick="saveEdit({{ partner.id }})" id="btn-save-{{ partner.id }}" class="btn-sm" style="background:#10B981;color:white;display:none;margin-right:4px;">Save</button>
+                <button onclick="cancelEdit({{ partner.id }})" id="btn-cancel-{{ partner.id }}" class="btn-sm" style="background:#64748B;color:white;display:none;margin-right:4px;">Cancel</button>
+                <form method="post" action="/partners/{{ partner.id }}/toggle" style="display:inline;">
+                  <button type="submit" class="btn-sm" style="background:{% if partner.active %}#F59E0B{% else %}#10B981{% endif %};color:white;margin-right:4px;">{% if partner.active %}Deactivate{% else %}Activate{% endif %}</button>
+                </form>
+                <form method="post" action="/partners/{{ partner.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete {{ partner.name }}? This cannot be undone.');">
+                  <button type="submit" class="btn-sm" style="background:#EF4444;color:white;">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div style="padding:40px;text-align:center;color:var(--text-muted);">
+          <div style="font-size:48px;margin-bottom:12px;">📋</div>
+          <div style="font-size:14px;">No partners yet. Add your first partner above.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+  function toggleEdit(id) {
+    document.getElementById('name-' + id).style.display = 'none';
+    document.getElementById('edit-' + id).style.display = 'block';
+    document.getElementById('btn-edit-' + id).style.display = 'none';
+    document.getElementById('btn-save-' + id).style.display = 'inline-block';
+    document.getElementById('btn-cancel-' + id).style.display = 'inline-block';
+  }
+
+  function cancelEdit(id) {
+    document.getElementById('name-' + id).style.display = 'inline';
+    document.getElementById('edit-' + id).style.display = 'none';
+    document.getElementById('btn-edit-' + id).style.display = 'inline-block';
+    document.getElementById('btn-save-' + id).style.display = 'none';
+    document.getElementById('btn-cancel-' + id).style.display = 'none';
+    // Reset input value
+    document.getElementById('edit-' + id).value = document.getElementById('name-' + id).textContent;
+  }
+
+  function saveEdit(id) {
+    const newName = document.getElementById('edit-' + id).value.trim();
+    if (!newName) {
+      alert('Partner name cannot be empty');
+      return;
+    }
+    // Create form and submit
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/partners/' + id + '/edit';
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'name';
+    input.value = newName;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+  }
+  </script>
+</body>
+</html>

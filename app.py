@@ -3415,3 +3415,97 @@ if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 else:
     init_db()
+
+@app.route('/partners')
+@login_required
+def partners():
+    if session['role'] not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('dashboard'))
+    
+    partners = Partner.query.order_by(Partner.name).all()
+    return render_template('partners.html', partners=partners)
+
+@app.route('/partners/add', methods=['POST'])
+@login_required
+def add_partner():
+    if session['role'] not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('partners'))
+    
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('Partner name is required.', 'error')
+        return redirect(url_for('partners'))
+    
+    existing = Partner.query.filter_by(name=name).first()
+    if existing:
+        flash('Partner already exists.', 'error')
+        return redirect(url_for('partners'))
+    
+    partner = Partner(name=name)
+    db.session.add(partner)
+    db.session.commit()
+    flash(f'Partner "{name}" added successfully.')
+    return redirect(url_for('partners'))
+
+@app.route('/partners/<int:partner_id>/edit', methods=['POST'])
+@login_required
+def edit_partner(partner_id):
+    if session['role'] not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('partners'))
+    
+    partner = Partner.query.get_or_404(partner_id)
+    new_name = request.form.get('name', '').strip()
+    
+    if not new_name:
+        flash('Partner name cannot be empty.', 'error')
+        return redirect(url_for('partners'))
+    
+    # Check if new name already exists (excluding current partner)
+    existing = Partner.query.filter(Partner.name == new_name, Partner.id != partner_id).first()
+    if existing:
+        flash('Partner name already exists.', 'error')
+        return redirect(url_for('partners'))
+    
+    old_name = partner.name
+    partner.name = new_name
+    db.session.commit()
+    flash(f'Partner renamed from "{old_name}" to "{new_name}".')
+    return redirect(url_for('partners'))
+
+@app.route('/partners/<int:partner_id>/delete', methods=['POST'])
+@login_required
+def delete_partner(partner_id):
+    if session['role'] not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('partners'))
+    
+    partner = Partner.query.get_or_404(partner_id)
+    
+    # Check if partner has any jobs associated
+    jobs_with_partner = Job.query.filter_by(partner_name=partner.name).first()
+    if jobs_with_partner:
+        flash(f'Cannot delete "{partner.name}" - has associated transactions. Deactivate instead.', 'error')
+        return redirect(url_for('partners'))
+    
+    name = partner.name
+    db.session.delete(partner)
+    db.session.commit()
+    flash(f'Partner "{name}" deleted successfully.')
+    return redirect(url_for('partners'))
+
+@app.route('/partners/<int:partner_id>/toggle', methods=['POST'])
+@login_required
+def toggle_partner(partner_id):
+    if session['role'] not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('partners'))
+    
+    partner = Partner.query.get_or_404(partner_id)
+    partner.active = not partner.active
+    db.session.commit()
+    status = 'activated' if partner.active else 'deactivated'
+    flash(f'Partner "{partner.name}" {status}.')
+    return redirect(url_for('partners'))
