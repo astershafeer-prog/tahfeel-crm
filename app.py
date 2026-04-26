@@ -3509,3 +3509,74 @@ def toggle_partner(partner_id):
     status = 'activated' if partner.active else 'deactivated'
     flash(f'Partner "{partner.name}" {status}.')
     return redirect(url_for('partners'))
+
+@app.route('/partner-commissions')
+@login_required
+def partner_commissions():
+    if session['role'] not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('dashboard'))
+    
+    # Get all jobs with pending partner commissions
+    all_pending = Job.query.filter_by(partner_commission_expected=True, partner_status='Pending').order_by(Job.partner_due_date).all()
+    
+    # Filter options
+    partner_filter = request.args.get('partner', '')
+    status_filter = request.args.get('status', 'pending')
+    
+    # Apply filters
+    if status_filter == 'pending':
+        jobs = all_pending
+    elif status_filter == 'received':
+        jobs = Job.query.filter_by(partner_commission_expected=True, partner_status='Received').order_by(Job.partner_received_date.desc()).all()
+    else:  # all
+        jobs = Job.query.filter_by(partner_commission_expected=True).order_by(Job.partner_due_date).all()
+    
+    if partner_filter:
+        jobs = [j for j in jobs if j.partner_name == partner_filter]
+    
+    # Get unique partners for filter dropdown
+    all_partners = Partner.query.filter_by(active=True).order_by(Partner.name).all()
+    
+    # Calculate totals
+    total_pending = sum((j.partner_amount or 0) for j in all_pending)
+    total_received = sum((j.partner_amount or 0) for j in Job.query.filter_by(partner_commission_expected=True, partner_status='Received').all())
+    
+    now = now_dubai()
+    
+    return render_template('partner_commissions.html', 
+                          jobs=jobs, 
+                          all_partners=all_partners,
+                          partner_filter=partner_filter,
+                          status_filter=status_filter,
+                          total_pending=total_pending,
+                          total_received=total_received,
+                          now=now)
+
+@app.route('/partner-commissions/<int:job_id>/mark-received', methods=['POST'])
+@login_required
+def mark_partner_received(job_id):
+    if session['role'] not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('partner_commissions'))
+    
+    job = Job.query.get_or_404(job_id)
+    
+    if not job.partner_commission_expected or job.partner_status != 'Pending':
+        flash('This task does not have a pending partner commission.', 'error')
+        return redirect(url_for('partner_commissions'))
+    
+    # Mark as received
+    job.partner_status = 'Received'
+    job.partner_received_date = now_dubai().date()
+    job.revenue = job.partner_amount  # NOW count the revenue!
+    job.status = 'Closed'  # Remove "Pending Partner Commission" from status
+    
+    # Add timeline update
+    remark = f'Partner commission RECEIVED from {job.partner_name}: AED {job.partner_amount:,.0f}. Revenue now counted. Marked by {session["user_name"]}.'
+    update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
+    db.session.add(update)
+    db.session.commit()
+    
+    flash(f'Partner commission of AED {job.partner_amount:,.0f} from {job.partner_name} marked as received. Revenue added to totals.')
+    return redirect(url_for('partner_commissions'))
