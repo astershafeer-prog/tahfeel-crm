@@ -524,3 +524,71 @@ def export_staff_report():
     _freeze(ws2); _filter(ws2, len(cols2))
 
     return _respond(wb, f"Staff_Performance_{df}_{dt}.xlsx")
+
+# ── 7. Partner Commission Report
+@reports_bp.route('/reports/partner-commissions/export')
+def export_partner_report():
+    g = _guard()
+    if g: return g
+    wb = openpyxl.Workbook()
+    ws1 = wb.active
+    ws1.title = "Partner Commissions"
+    df = request.args.get('date_from', '')
+    dt = request.args.get('date_to', '')
+    from_date = datetime.strptime(df, '%Y-%m-%d').date() if df else None
+    to_date = datetime.strptime(dt, '%Y-%m-%d').date() if dt else None
+
+    # Query jobs with partner commissions
+    jobs = Job.query.filter_by(partner_commission_expected=True).all()
+
+    # Filter by date if provided
+    if from_date and to_date:
+        jobs = [j for j in jobs if j.created_at and from_date <= j.created_at.date() <= to_date]
+
+    # Define columns
+    cols1 = [
+        ("Customer", 30),
+        ("Company", 25),
+        ("Service", 20),
+        ("Partner Name", 25),
+        ("Commission Amount", 18),
+        ("Due Date", 15),
+        ("Status", 15),
+        ("Received Date", 15),
+        ("Task Closed Date", 15),
+    ]
+
+    _title_block(ws1, "PARTNER COMMISSION REPORT", df, dt, len(cols1))
+    row = ws1.max_row + 2
+    _header_row(ws1, row, cols1)
+
+    # Data rows
+    for job in jobs:
+        row += 1
+        customer = job.customer
+        ws1.cell(row, 1, customer.name if customer else "")
+        ws1.cell(row, 2, customer.company if customer and customer.company else "")
+        ws1.cell(row, 3, job.job_type)
+        ws1.cell(row, 4, job.partner_name or "")
+        ws1.cell(row, 5, job.partner_amount or 0).number_format = '#,##0'
+        ws1.cell(row, 6, job.partner_due_date.strftime('%Y-%m-%d') if job.partner_due_date else "")
+        ws1.cell(row, 7, job.partner_status or "Pending")
+        ws1.cell(row, 8, job.partner_received_date.strftime('%Y-%m-%d') if job.partner_received_date else "")
+        ws1.cell(row, 9, job.completed_at.strftime('%Y-%m-%d') if job.completed_at else "")
+
+    # Summary
+    total_pending = sum((j.partner_amount or 0) for j in jobs if j.partner_status == 'Pending')
+    total_received = sum((j.partner_amount or 0) for j in jobs if j.partner_status == 'Received')
+
+    row += 2
+    summary_cell = ws1.cell(row, 1, "SUMMARY")
+    summary_cell.font = Font(bold=True, size=12)
+    summary_cell.fill = PatternFill(start_color="E5E7EB", end_color="E5E7EB", fill_type="solid")
+    row += 1
+    ws1.cell(row, 1, "Total Pending:").font = Font(bold=True)
+    ws1.cell(row, 2, total_pending).number_format = '#,##0'
+    row += 1
+    ws1.cell(row, 1, "Total Received:").font = Font(bold=True)
+    ws1.cell(row, 2, total_received).number_format = '#,##0'
+
+    return _respond(wb, f"Partner_Commissions_{df}_{dt}.xlsx")
