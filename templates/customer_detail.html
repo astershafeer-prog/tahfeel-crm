@@ -42,7 +42,13 @@
             <div style="font-size:13px;">
               {% if customer.phone %}
                 {{ customer.phone }}
-                <a href="https://wa.me/{{ customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WhatsApp</a>
+                {% set is_birthday = customer.date_of_birth and customer.date_of_birth.month == now.month and customer.date_of_birth.day == now.day %}
+                {% set rep_sig = (customer.rep.name + '%0A📞 ' + customer.rep.phone|replace(' ','')|replace('+','%2B') + '%0ATahfeel Business Setup Services') if customer.rep and customer.rep.phone else 'Tahfeel Business Setup Services' %}
+                {% if is_birthday %}
+                <a href="https://wa.me/{{ customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0A🎂%20Warmest%20birthday%20wishes%20from%20all%20of%20us%20at%20Tahfeel%20Business%20Setup%20Services!%0A%0AWe%20hope%20your%20special%20day%20is%20filled%20with%20joy%2C%20success%2C%20and%20wonderful%20moments.%20Thank%20you%20for%20being%20a%20valued%20partner%20with%20us.%0A%0AWishing%20you%20a%20fantastic%20year%20ahead!%0A%0ABest%20regards%2C%0A{{ rep_sig }}" target="_blank" style="background:#EC4899;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">🎂 Birthday</a>
+                {% else %}
+                <a href="https://wa.me/{{ customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0AThank%20you%20for%20choosing%20Tahfeel%20Business%20Setup%20Services.%20How%20can%20we%20assist%20you%20today%3F%0A%0AWarm%20regards%2C%0A{{ rep_sig }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WhatsApp</a>
+                {% endif %}
               {% else %}—{% endif %}
             </div>
           </div>
