@@ -174,6 +174,14 @@ class Job(db.Model):
     final_remarks = db.Column(db.Text, nullable=True)
     future_work_notes = db.Column(db.Text, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
+    # Partner commission fields
+    partner_commission_expected = db.Column(db.Boolean, default=False)
+    partner_name = db.Column(db.String(100))
+    partner_amount = db.Column(db.Float)
+    partner_due_date = db.Column(db.Date)
+    partner_status = db.Column(db.String(20), default='Pending')  # Pending/Received/Written Off
+    partner_received_date = db.Column(db.Date)
+    revenue = db.Column(db.Float, default=0)  # Revenue counted when no partner OR when partner pays
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     assignee = db.relationship('User', foreign_keys=[assigned_to])
@@ -181,6 +189,12 @@ class Job(db.Model):
     finance_approver = db.relationship('User', foreign_keys=[finance_approved_by])
     updates = db.relationship('JobUpdate', backref='job', lazy=True, order_by='JobUpdate.created_at.desc()')
     subtasks = db.relationship('SubTask', backref='job', lazy=True, order_by='SubTask.created_at')
+
+class Partner(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
 class SubTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -2729,6 +2743,36 @@ def init_db():
                 print('✓ Revenue column migration completed')
         except Exception as e:
             print(f'Revenue column migration error: {e}')
+        
+        # Add partner commission columns to job table
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS partner_commission_expected BOOLEAN DEFAULT FALSE'))
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS partner_name VARCHAR(100)'))
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS partner_amount FLOAT'))
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS partner_due_date DATE'))
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS partner_status VARCHAR(20) DEFAULT \'Pending\''))
+                conn.execute(db.text('ALTER TABLE job ADD COLUMN IF NOT EXISTS partner_received_date DATE'))
+                conn.commit()
+                print('✓ Partner commission columns migration completed')
+        except Exception as e:
+            print(f'Partner commission migration error: {e}')
+        
+        # Create partner table
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text("""
+                    CREATE TABLE IF NOT EXISTS partner (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(100) NOT NULL UNIQUE,
+                        active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+                conn.commit()
+                print('✓ Partner table created')
+        except Exception as e:
+            print(f'Partner table creation error: {e}')
         
         migrations = [
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0',
