@@ -424,16 +424,6 @@ def dashboard():
 
     # ── Finance dashboard ────────────────────────────────────────────────────
     if role == 'finance':
-        # Lead stats
-        try:
-            all_leads = Lead.query.order_by(Lead.created_at.desc()).all()
-            converted = [l for l in all_leads if l.status == 'Converted']
-            lost = [l for l in all_leads if l.status == 'Lost']
-            new_leads = [l for l in all_leads if l.status == 'New']
-            initiated = [l for l in all_leads if l.status not in ['New', 'Converted', 'Lost']]
-        except:
-            all_leads = converted = lost = new_leads = initiated = []
-        
         try:
             all_jobs = Job.query.order_by(Job.created_at.desc()).all()
             active_jobs = [j for j in all_jobs if j.status != 'Done']
@@ -460,11 +450,6 @@ def dashboard():
         tasks_processing = len([j for j in all_active_jobs if j.status == 'Processing'])
         tasks_pending_approval = len(pending_approval)
         return render_template('dashboard_finance.html',
-                               all_leads=all_leads,
-                               converted=converted,
-                               lost=lost,
-                               new_leads=new_leads,
-                               initiated=initiated,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
@@ -2020,9 +2005,8 @@ def update_payment(job_id):
         pass
     notes = request.form.get('finance_notes', '').strip()
     if notes:
-        # Append to existing finance notes
-        existing = job.finance_notes or ''
-        job.finance_notes = (existing + '\n' + notes).strip()
+        # Replace finance notes (don't append)
+        job.finance_notes = notes
     remark = f'Payment updated. Invoiced: AED {job.amount_invoiced:,.0f} / Received: AED {job.amount_received:,.0f}'
     if notes:
         remark += f'. Notes: {notes}'
@@ -2049,8 +2033,8 @@ def close_job(job_id):
         pass
     notes = request.form.get('finance_notes', '').strip()
     if notes:
-        existing = job.finance_notes or ''
-        job.finance_notes = (existing + '\n' + notes).strip()
+        # Replace finance notes (don't append)
+        job.finance_notes = notes
     job.status = 'Closed'
     remark = f'Task CLOSED by Finance. Final — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue or 0:,.0f}'
     if notes:
@@ -2087,8 +2071,8 @@ def edit_finance(job_id):
     
     notes = request.form.get('finance_notes', '').strip()
     if notes:
-        existing = job.finance_notes or ''
-        job.finance_notes = (existing + '\n' + notes).strip()
+        # Replace finance notes (don't append)
+        job.finance_notes = notes
     
     remark = f'Finance details EDITED by {session["user_name"]}. Previous — Invoiced: AED {old_invoiced:,.0f} / Received: AED {old_received:,.0f} / Revenue: AED {old_revenue:,.0f}. Updated — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue or 0:,.0f}'
     if notes:
