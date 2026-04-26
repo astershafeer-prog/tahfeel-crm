@@ -13,7 +13,13 @@
   {{ nav('admin') }}
 
   <div class="container">
-    <div style="margin-bottom:14px;"><a href="/admin/targets" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;">🎯 Monthly Targets</a></div>
+    <div style="margin-bottom:14px;display:flex;gap:10px;">
+      <a href="/admin/targets" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;">🎯 Monthly Targets</a>
+      {% if session.role in ['admin', 'finance'] %}
+      <a href="/partners" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;background:#8B5CF6;border-color:#8B5CF6;">🤝 Partners</a>
+      <a href="/partner-commissions" class="btn-primary" style="height:34px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;background:#F59E0B;border-color:#F59E0B;">💰 Commissions</a>
+      {% endif %}
+    </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}{% for msg in messages %}
         <div class="flash">{{ msg }}</div>

@@ -3518,7 +3518,7 @@ def partner_commissions():
         return redirect(url_for('dashboard'))
     
     # Get all jobs with pending partner commissions
-    all_pending = Job.query.filter_by(partner_commission_expected=True, partner_status='Pending').order_by(Job.partner_due_date).all()
+    all_pending = Job.query.filter_by(partner_commission_expected=True, partner_status='Pending').all()
     
     # Filter options
     partner_filter = request.args.get('partner', '')
@@ -3528,15 +3528,18 @@ def partner_commissions():
     if status_filter == 'pending':
         jobs = all_pending
     elif status_filter == 'received':
-        jobs = Job.query.filter_by(partner_commission_expected=True, partner_status='Received').order_by(Job.partner_received_date.desc()).all()
+        jobs = Job.query.filter_by(partner_commission_expected=True, partner_status='Received').all()
     else:  # all
-        jobs = Job.query.filter_by(partner_commission_expected=True).order_by(Job.partner_due_date).all()
+        jobs = Job.query.filter_by(partner_commission_expected=True).all()
     
     if partner_filter:
         jobs = [j for j in jobs if j.partner_name == partner_filter]
     
     # Get unique partners for filter dropdown
-    all_partners = Partner.query.filter_by(active=True).order_by(Partner.name).all()
+    try:
+        all_partners = Partner.query.filter_by(active=True).order_by(Partner.name).all()
+    except:
+        all_partners = []
     
     # Calculate totals
     total_pending = sum((j.partner_amount or 0) for j in all_pending)
