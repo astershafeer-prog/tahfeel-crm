@@ -43,8 +43,8 @@
       <a href="?period=all" style="height:30px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;{% if period=='all' %}background:#1A3B8B;color:white;{% else %}background:white;color:#475569;border:1px solid #E2E8F0;{% endif %}">All Time</a>
     </div>
 
-    <!-- 3 blocks: Leads | Tasks | Finance -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+    <!-- 4 blocks: Leads | Tasks | Finance | Revenue -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
 
       <!-- Leads Block -->
       <div class="block" style="border-top:5px solid #1A3B8B;">
@@ -91,7 +91,6 @@
         <div class="block-title">Finance</div>
         <div class="stat-row"><span class="stat-name">Invoiced</span><span style="font-size:16px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(total_invoiced) }}</span></div>
         <div class="stat-row"><span class="stat-name">Received</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</span></div>
-        <div class="stat-row" style="background:#F9F5FF;margin:0 -20px;padding:10px 20px;"><span class="stat-name" style="color:#6B21A8;font-weight:600;">Revenue (Closed)</span><span style="font-size:18px;font-weight:800;color:#8B5CF6;">AED {{ '{:,.0f}'.format(total_revenue or 0) }}</span></div>
         <div class="stat-row"><span class="stat-name">Closed Value</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(completed_value) }}</span></div>
         <div class="stat-row"><span class="stat-name">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
         {% if total_invoiced > 0 %}
@@ -104,6 +103,16 @@
           <div class="bar-track"><div class="bar-fill" style="width:{{ crate }}%;background:#1A3B8B;"></div></div>
         </div>
         {% endif %}
+      </div>
+
+      <!-- Revenue Block -->
+      <div class="block" style="border-top:5px solid #8B5CF6;">
+        <div class="block-title">My Revenue</div>
+        <div class="stat-row" style="background:#F5F3FF;margin:0 -20px;padding:10px 20px;border-radius:6px;"><span class="stat-name" style="color:#6B21A8;font-weight:600;">Revenue (Closed)</span><span style="font-size:20px;font-weight:800;color:#8B5CF6;">AED {{ '{:,.0f}'.format(total_revenue or 0) }}</span></div>
+        <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid #F8FAFC;">
+          <div style="font-size:11px;color:#94A3B8;margin-bottom:6px;">From your closed tasks</div>
+          <div style="font-size:12px;color:#64748B;">Only revenue from tasks you closed is counted here.</div>
+        </div>
       </div>
 
     </div>

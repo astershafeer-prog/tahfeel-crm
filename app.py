@@ -672,7 +672,7 @@ def dashboard():
         total_received = sum((j.amount_received or 0) for j in active_jobs)
         total_pending = total_invoiced - total_received
         done_jobs = Job.query.filter_by(assigned_to=session['user_id'], status='Done').all()
-        closed_jobs = Job.query.filter_by(assigned_to=session['user_id'], status='Closed').all()
+        closed_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status.in_(['Closed', 'Closed - Pending Partner Commission'])).all()
         completed_value = sum((j.amount_received or 0) for j in done_jobs)
         try:
             total_revenue = sum((j.revenue or 0) for j in closed_jobs)
