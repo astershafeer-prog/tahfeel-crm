@@ -1121,6 +1121,41 @@ def admin_panel():
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners)
 
+@app.route('/admin/fix-cloudinary-access')
+@login_required
+@admin_required
+def fix_cloudinary_access():
+    """One-time fix to update all Cloudinary documents to public access"""
+    try:
+        import cloudinary.api
+        # Get all documents with Cloudinary URLs
+        documents = Document.query.filter(Document.file_url.like('%cloudinary.com%')).all()
+        fixed = 0
+        errors = []
+        
+        for doc in documents:
+            if doc.cloudinary_public_id:
+                try:
+                    # Update access mode to public
+                    cloudinary.uploader.explicit(
+                        doc.cloudinary_public_id,
+                        type='upload',
+                        access_mode='public'
+                    )
+                    fixed += 1
+                except Exception as e:
+                    errors.append(f"{doc.id}: {str(e)}")
+        
+        if errors:
+            flash(f'Fixed {fixed} documents. Errors: {len(errors)}', 'warning')
+        else:
+            flash(f'Successfully updated {fixed} documents to public access!', 'success')
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+    
+    return redirect(url_for('admin_panel'))
+
+
 @app.route('/admin/staff/add', methods=['POST'])
 @login_required
 @admin_required
