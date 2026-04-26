@@ -20,7 +20,17 @@
         <span style="font-size:12px;color:#BE185D;margin-left:8px;">— {% for c in birthdays_today %}{{ c['name'] if c is mapping else c.name }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
       </div>
     </div>
-    <a href="/customers?birthday=today" style="font-size:12px;font-weight:600;color:#9D174D;text-decoration:none;background:white;padding:5px 14px;border-radius:20px;border:1px solid #FBCFE8;">View Only →</a>
+    <div style="display:flex;gap:6px;align-items:center;">
+      {% for c in birthdays_today %}
+      {% if c.phone %}
+      {% set rep_sig = (c.rep.name + '%0A📞 ' + c.rep.phone|replace(' ','')|replace('+','%2B') + '%0ATahfeel Business Setup Services') if c.rep and c.rep.phone else 'Tahfeel Business Setup Services' %}
+      <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ c.name.split()[0]|replace(' ','%20') }}%2C%0A%0A🎂%20Warmest%20birthday%20wishes%20from%20all%20of%20us%20at%20Tahfeel%20Business%20Setup%20Services!%0A%0AWe%20hope%20your%20special%20day%20is%20filled%20with%20joy%2C%20success%2C%20and%20wonderful%20moments.%20Thank%20you%20for%20being%20a%20valued%20partner%20with%20us.%0A%0AWishing%20you%20a%20fantastic%20year%20ahead!%0A%0ABest%20regards%2C%0A{{ rep_sig }}" target="_blank" style="background:#EC4899;color:white;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:4px;border:1px solid #DB2777;" title="Send birthday wishes to {{ c.name.split()[0] }}">
+        🎂 {{ c.name.split()[0] }}
+      </a>
+      {% endif %}
+      {% endfor %}
+      <a href="/customers?birthday=today" style="font-size:12px;font-weight:600;color:#9D174D;text-decoration:none;background:white;padding:5px 14px;border-radius:20px;border:1px solid #FBCFE8;">View Only →</a>
+    </div>
   </div>
   {% endif %}
   <div class="container">
@@ -107,12 +117,7 @@
                 {% if session.role == 'admin' %}<a href="/customers/{{ c.id }}/delete" class="ib ib-del" onclick="return confirm('Delete {{ c.name }}?')" title="Delete">🗑</a>{% endif %}
                 {% if c.phone %}
 {% set rep_sig = (c.rep.name + '%0A📞 ' + c.rep.phone|replace(' ','')|replace('+','%2B') + '%0ATahfeel Business Setup Services') if c.rep and c.rep.phone else 'Tahfeel Business Setup Services' %}
-{% set is_birthday = c.date_of_birth and c.date_of_birth.month == now.month and c.date_of_birth.day == now.day %}
-{% if is_birthday %}
-<a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ c.name.split()[0]|replace(' ','%20') }}%2C%0A%0A🎂%20Warmest%20birthday%20wishes%20from%20all%20of%20us%20at%20Tahfeel%20Business%20Setup%20Services!%0A%0AWe%20hope%20your%20special%20day%20is%20filled%20with%20joy%2C%20success%2C%20and%20wonderful%20moments.%20Thank%20you%20for%20being%20a%20valued%20partner%20with%20us.%0A%0AWishing%20you%20a%20fantastic%20year%20ahead!%0A%0ABest%20regards%2C%0A{{ rep_sig }}" target="_blank" class="ib" title="Birthday WhatsApp" style="background:#EC4899;color:white;">🎂</a>
-{% else %}
 <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ c.name.split()[0]|replace(' ','%20') }}%2C%0A%0AThank%20you%20for%20choosing%20Tahfeel%20Business%20Setup%20Services.%20How%20can%20we%20assist%20you%20today%3F%0A%0AWarm%20regards%2C%0A{{ rep_sig }}" target="_blank" class="ib" title="WhatsApp" style="background:#25D366;color:white;">💬</a>
-{% endif %}
 {% endif %}
               </div>
             </td>
