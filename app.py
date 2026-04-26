@@ -376,6 +376,9 @@ def apply_lead_filters(leads, args, now):
     if status_filter:
         if status_filter == 'Overdue':
             leads = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
+        elif status_filter == 'Initiated':
+            # Initiated = any action taken (not New, Converted, or Lost)
+            leads = [l for l in leads if l.status not in ['New', 'Converted', 'Lost']]
         else:
             leads = [l for l in leads if l.status == status_filter]
     if staff_filter:
