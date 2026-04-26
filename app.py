@@ -447,9 +447,22 @@ def dashboard():
             total_received = sum((j.amount_received or 0) for j in active_jobs)
             total_pending = total_invoiced - total_received
             completed_value = sum((j.amount_received or 0) for j in all_jobs if j.status == 'Done')
+            
+            # Revenue calculations
+            closed_jobs = [j for j in all_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
+            total_revenue = sum((j.revenue or 0) for j in closed_jobs)
+            
+            # Partner commission calculations
+            partner_jobs = [j for j in all_jobs if j.partner_commission_expected and j.partner_status == 'Pending']
+            total_partner_pending = sum((j.partner_amount or 0) for j in partner_jobs)
+            
+            # Monthly target
+            targets = MonthlyTarget.query.filter_by(month=now.month, year=now.year).all()
+            total_monthly_target = sum((t.amount_target or 0) for t in targets)
         except:
             active_jobs = pending_approval = pending_close = []
             total_invoiced = total_received = total_pending = completed_value = 0
+            total_revenue = total_partner_pending = total_monthly_target = 0
         try:
             all_docs = Document.query.all()
             docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
@@ -477,7 +490,10 @@ def dashboard():
                                total_pending=total_pending,
                                completed_value=completed_value,
                                now=now,
-                               birthdays_today=[])
+                               birthdays_today=[],
+                               total_revenue=total_revenue,
+                               total_partner_pending=total_partner_pending,
+                               total_monthly_target=total_monthly_target)
 
     # ── Admin dashboard ──────────────────────────────────────────────────────
     if role == 'admin':
@@ -506,17 +522,21 @@ def dashboard():
                 jobs = [j for j in all_jobs if j.created_at and from_dt <= j.created_at.date() <= to_dt]
             else:
                 jobs = all_jobs
-            active_jobs = [j for j in jobs if j.status not in ['Done', 'Closed']]
+            active_jobs = [j for j in jobs if j.status not in ['Done', 'Closed', 'Closed - Pending Partner Commission']]
             done_jobs = [j for j in jobs if j.status == 'Done']
-            closed_jobs = [j for j in jobs if j.status == 'Closed']
+            closed_jobs = [j for j in jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
             total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
             total_received = sum((j.amount_received or 0) for j in active_jobs)
             total_pending = total_invoiced - total_received
             completed_value = sum((j.amount_received or 0) for j in done_jobs)
             try:
                 total_revenue = sum((j.revenue or 0) for j in closed_jobs)
+                # Partner commission pending
+                partner_jobs = [j for j in all_jobs if j.partner_commission_expected and j.partner_status == 'Pending']
+                total_partner_pending = sum((j.partner_amount or 0) for j in partner_jobs)
             except:
                 total_revenue = 0
+                total_partner_pending = 0
             overdue_jobs = [j for j in jobs if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
             pending_approval = [j for j in jobs if j.status == 'Pending Finance Approval']
             pending_close = [j for j in jobs if j.status == 'Pending Finance Close']
@@ -616,6 +636,7 @@ def dashboard():
                                total_pending=total_pending,
                                completed_value=completed_value,
                                total_revenue=total_revenue,
+                               total_partner_pending=total_partner_pending,
                                total_monthly_target=total_monthly_target,
                                staff_stats=staff_stats,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,

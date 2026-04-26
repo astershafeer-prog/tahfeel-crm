@@ -45,6 +45,35 @@
 
     </div>
 
+    <!-- Revenue Card -->
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:12px;border-top:6px solid #8B5CF6;">
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Revenue</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #F8FAFC;background:#F5F3FF;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:6px;">
+        <span style="font-size:14px;color:#6B21A8;font-weight:600;">Revenue (Closed)</span>
+        <span style="font-size:24px;font-weight:700;color:#6B21A8;">AED {{ '{:,.0f}'.format(total_revenue) }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;margin-top:10px;">
+        <span style="font-size:13px;color:#475569;">Monthly Target</span>
+        <span style="font-size:16px;font-weight:700;color:#64748B;">AED {{ '{:,.0f}'.format(total_monthly_target) }}</span>
+      </div>
+      {% if total_monthly_target > 0 %}
+      {% set rev_progress = [(total_revenue / total_monthly_target * 100)|int, 100]|min %}
+      <div style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:11px;color:#475569;">Revenue vs Target</span>
+          <span style="font-size:11px;font-weight:700;color:#6B21A8;">{{ rev_progress }}%</span>
+        </div>
+        <div style="height:8px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
+          <div style="width:{{ rev_progress }}%;height:100%;background:#8B5CF6;border-radius:10px;"></div>
+        </div>
+      </div>
+      {% endif %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;margin-top:10px;border-top:1px solid #F8FAFC;">
+        <span style="font-size:13px;color:#475569;">Partner Commissions Due</span>
+        <span style="font-size:16px;font-weight:700;color:#F59E0B;">AED {{ '{:,.0f}'.format(total_partner_pending) }}</span>
+      </div>
+    </div>
+
     <!-- Documents Block -->
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:14px;">
       <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;justify-content:space-between;">Documents <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;">View all →</a></div>
