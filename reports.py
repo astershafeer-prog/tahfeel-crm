@@ -239,7 +239,7 @@ def export_sales_report():
     ws.title = "Sales Report"
 
     cols = ['#', 'Customer Name', 'Company', 'Phone', 'Email',
-            'Job Type', 'Source', 'Assigned To', 'Created By',
+            'Job Type', 'Source', 'Representative', 'Assigned To', 'Created By',
             'Status', 'Created Date', 'Due Date',
             'Invoiced (AED)', 'Received (AED)', 'Outstanding (AED)']
     _title_block(ws, "SALES REPORT", df, dt, len(cols))
@@ -252,7 +252,8 @@ def export_sales_report():
         rows.append([
             i, cust.name or '', cust.company or '', cust.phone or '', cust.email or '',
             job.job_type or '', cust.source or '',
-            users.get(job.assigned_to, '—'),
+            users.get(cust.assigned_to, '—'),  # Representative (Sales)
+            users.get(job.assigned_to, '—'),    # Assigned To (Operations)
             users.get(job.created_by, '—'),
             job.status or '',
             job.created_at.strftime('%d/%m/%Y') if job.created_at else '',
@@ -373,7 +374,7 @@ def export_task_report():
     ws = wb.active
     ws.title = "Task Report"
 
-    cols = ['#', 'Customer', 'Company', 'Job Type', 'Assigned To',
+    cols = ['#', 'Customer', 'Company', 'Job Type', 'Representative', 'Assigned To',
             'Status', 'Priority', 'Created Date', 'Due Date', 'Completed At',
             'Days to Complete', 'Interactions', 'Status History']
     _title_block(ws, "TASK REPORT", df, dt, len(cols))
@@ -395,7 +396,8 @@ def export_task_report():
         rows.append([
             i, cust.name or '', cust.company or '',
             job.job_type or '',
-            users.get(job.assigned_to, '—'),
+            users.get(cust.assigned_to, '—'),  # Representative (Sales)
+            users.get(job.assigned_to, '—'),   # Assigned To (Operations)
             job.status or '', job.priority or '',
             job.created_at.strftime('%d/%m/%Y') if job.created_at else '',
             job.due_date.strftime('%d/%m/%Y') if job.due_date else '',
