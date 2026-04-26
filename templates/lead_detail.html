@@ -45,7 +45,7 @@
               <div style="font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
                 {{ lead.phone or '—' }}
                 {% if lead.phone %}
-                <a href="https://wa.me/{{ lead.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+                <a href="https://wa.me/{{ lead.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ lead.name.split()[0]|replace(' ','%20') }}%2C%0A%0AThis%20is%20{{ session.user_name|replace(' ','%20') }}%20from%20Tahfeel%20Business%20Setup%20Services%2C%20contacting%20you%20regarding%20your%20enquiry.%0A%0A" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
                 {% endif %}
               </div>
             </div>
@@ -54,7 +54,7 @@
               <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Phone 2</div>
               <div style="font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
                 {{ lead.phone2 }}
-                <a href="https://wa.me/{{ lead.phone2|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+                <a href="https://wa.me/{{ lead.phone2|replace(' ','')|replace('+','') }}?text=Dear%20{{ lead.name.split()[0]|replace(' ','%20') }}%2C%0A%0AThis%20is%20{{ session.user_name|replace(' ','%20') }}%20from%20Tahfeel%20Business%20Setup%20Services%2C%20contacting%20you%20regarding%20your%20enquiry.%0A%0A" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
               </div>
             </div>
             {% endif %}

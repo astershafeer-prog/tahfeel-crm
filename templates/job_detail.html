@@ -76,7 +76,7 @@
             <div style="font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
               {{ job.customer.phone or '—' }}
               {% if job.customer.phone %}
-              <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
+              <a href="https://wa.me/{{ job.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ job.customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0AYour%20task%20*{{ job.job_type|replace(' ','%20') }}*%20status%20is%3A%20*{{ job.status|replace(' ','%20') }}*%0A%0A" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
               {% endif %}
             </div>
           </div>
