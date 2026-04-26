@@ -144,24 +144,29 @@ def _guard_sales_operations():
         return redirect(url_for('dashboard'))
     return None
 
-def _guard_all_staff():
-    """All roles (Admin, Finance, Sales, Operations, Staff)"""
+def _guard_all_roles():
+    """Admin + Finance + Sales + Operations (no staff)"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    # All logged-in users can access
+    if session.get('role') not in ('admin', 'finance', 'sales', 'operations'):
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
     return None
 
 # ── Reports index page
 @reports_bp.route('/reports')
 def reports_index():
-    g = _guard_all_staff()  # All roles can see reports page
-    if g: return g
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    role = session.get('role')
+    if role not in ('admin', 'finance', 'sales', 'operations'):
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
     today = date.today()
     defaults = {
         'date_from': today.replace(day=1).strftime('%Y-%m-%d'),
         'date_to':   today.strftime('%Y-%m-%d'),
     }
-    role = session.get('role')
     return render_template('reports.html', defaults=defaults, role=role)
 
 
@@ -414,8 +419,11 @@ def export_task_report():
 # ── 5. Document Expiry Report
 @reports_bp.route('/reports/documents/export')
 def export_document_report():
-    g = _guard_all_staff()  # ALL roles can access
-    if g: return g
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if session.get('role') not in ('admin', 'finance', 'sales', 'operations'):
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
 
@@ -477,8 +485,11 @@ def export_document_report():
 # ── 6. Staff Performance Report
 @reports_bp.route('/reports/staff/export')
 def export_staff_report():
-    g = _guard_admin_finance_only()  # Admin + Finance only
-    if g: return g
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if session.get('role') != 'admin':  # Admin ONLY
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
 

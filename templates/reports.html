@@ -131,7 +131,7 @@
       </div>
       {% endif %}
 
-      <!-- 5. Document Expiry Report - ALL ROLES -->
+      <!-- 5. Document Expiry Report - Admin, Finance, Sales, Operations -->
       <div class="card" style="border-top:4px solid #b5000f;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:22px;">📄</span>
@@ -150,8 +150,8 @@
         <button class="btn-add" style="width:100%;text-align:center;background:#b5000f;" onclick="exportReport('documents')">⬇ Export to Excel</button>
       </div>
 
-      <!-- 6. Staff Performance Report - Admin + Finance only -->
-      {% if role in ['admin', 'finance'] %}
+      <!-- 6. Staff Performance Report - Admin ONLY -->
+      {% if role == 'admin' %}
       <div class="card" style="border-top:4px solid #006666;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:22px;">👤</span>
