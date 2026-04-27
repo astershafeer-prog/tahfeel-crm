@@ -1152,6 +1152,7 @@ def admin_panel():
 @admin_required
 def import_data_page():
     """Temporary page for importing historical Jan-March data"""
+    # Import tool for historical data
     return render_template('import_data.html')
 
 @app.route('/admin/import-customers', methods=['POST'])
