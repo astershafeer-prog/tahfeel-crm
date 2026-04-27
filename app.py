@@ -3032,8 +3032,8 @@ def set_targets():
     if request.method == 'POST':
         month = int(request.form.get('month', now.month))
         year = int(request.form.get('year', now.year))
-        # Get all active non-admin users fresh for POST
-        all_users = User.query.filter_by(active=True).filter(User.role != 'admin').all()
+        # Get all active users (including admin)
+        all_users = User.query.filter_by(active=True).all()
         saved = 0
         for u in all_users:
             val = request.form.get(f'amount_{u.id}', '').strip()
@@ -3057,7 +3057,7 @@ def set_targets():
             db.session.rollback()
             flash(f'Save failed: {e}')
         return redirect(url_for('set_targets', month=month, year=year))
-    users = User.query.filter_by(active=True).filter(User.role != 'admin').order_by(User.name).all()
+    users = User.query.filter_by(active=True).order_by(User.name).all()
     targets = {t.user_id: t for t in MonthlyTarget.query.filter_by(month=month, year=year).all()}
     return render_template('targets.html', users=users, targets=targets, month=month, year=year, now=now)
 
