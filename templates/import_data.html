@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Import Historical Data</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('admin') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>📥 Import Historical Data (Jan-March 2025)</h2>
+      <p style="color:#64748B;font-size:13px;margin-top:8px;">Import customers and tasks from Excel files with original dates preserved</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px;">
+      
+      <!-- Step 1: Customers Import -->
+      <div class="card">
+        <h3 style="color:#1A3B8B;margin-bottom:16px;">Step 1: Import Customers</h3>
+        <form method="post" enctype="multipart/form-data" action="/admin/import-customers">
+          <div class="form-group">
+            <label>Upload Customers Excel File</label>
+            <input type="file" name="customers_file" accept=".xlsx,.xls" required>
+            <div style="font-size:11px;color:#94A3B8;margin-top:4px;">Required columns: Name, Company, Phone, Email, Assigned To, Customer Type</div>
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%;margin-top:12px;">📤 Upload & Preview Customers</button>
+        </form>
+        
+        <div style="margin-top:16px;padding:12px;background:#F0F9FF;border-radius:8px;border-left:4px solid #0EA5E9;">
+          <div style="font-size:12px;font-weight:600;color:#0369A1;margin-bottom:6px;">Excel Template Format:</div>
+          <div style="font-size:11px;color:#075985;line-height:1.6;">
+            Column A: Customer Name<br>
+            Column B: Company<br>
+            Column C: Phone<br>
+            Column D: Email<br>
+            Column E: Assigned To (staff name)<br>
+            Column F: Customer Type (Individual/Company)
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Tasks Import -->
+      <div class="card">
+        <h3 style="color:#10B981;margin-bottom:16px;">Step 2: Import Tasks</h3>
+        <form method="post" enctype="multipart/form-data" action="/admin/import-tasks">
+          <div class="form-group">
+            <label>Upload Tasks Excel File</label>
+            <input type="file" name="tasks_file" accept=".xlsx,.xls" required>
+            <div style="font-size:11px;color:#94A3B8;margin-top:4px;">Required columns: Customer Name, Job Type, Status, Created Date, Amount Invoiced, Amount Received</div>
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%;margin-top:12px;background:#10B981;">📤 Upload & Preview Tasks</button>
+        </form>
+        
+        <div style="margin-top:16px;padding:12px;background:#F0FDF4;border-radius:8px;border-left:4px solid #10B981;">
+          <div style="font-size:12px;font-weight:600;color:#15803D;margin-bottom:6px;">Excel Template Format:</div>
+          <div style="font-size:11px;color:#166534;line-height:1.6;">
+            Column A: Customer Name<br>
+            Column B: Job Type<br>
+            Column C: Status<br>
+            Column D: Created Date (DD/MM/YYYY)<br>
+            Column E: Due Date (DD/MM/YYYY)<br>
+            Column F: Completed Date (DD/MM/YYYY)<br>
+            Column G: Assigned To (staff name)<br>
+            Column H: Invoiced (AED)<br>
+            Column I: Received (AED)<br>
+            Column J: Priority<br>
+            Column K: Remarks
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Instructions -->
+    <div class="card" style="margin-top:20px;background:#FFFBEB;border-left:4px solid #F59E0B;">
+      <h3 style="color:#92400E;margin-bottom:12px;">⚠️ Important Instructions</h3>
+      <ol style="color:#78350F;font-size:13px;line-height:2;margin:0;padding-left:20px;">
+        <li><strong>Import customers FIRST</strong>, then import tasks (tasks need customers to exist)</li>
+        <li><strong>Staff names</strong> in Excel must match existing staff names in the system</li>
+        <li><strong>Customer names</strong> in tasks file must exactly match customer names from Step 1</li>
+        <li><strong>Dates</strong> will be preserved as-is from your Excel (historical dates maintained)</li>
+        <li><strong>Review preview</strong> carefully before confirming import</li>
+        <li>This is a <strong>ONE-TIME</strong> import - after completion, this page will be removed</li>
+      </ol>
+    </div>
+
+  </div>
+</body>
+</html>
