@@ -227,6 +227,7 @@ class Document(db.Model):
     notes = db.Column(db.Text)
     file_name = db.Column(db.String(255), nullable=True)
     file_url = db.Column(db.Text, nullable=True)
+    cloudinary_public_id = db.Column(db.String(255), nullable=True)
     added_by = db.Column(db.String(100), nullable=True)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -1405,10 +1406,10 @@ def add_customer():
                 if i < len(doc_expiries) and doc_expiries[i]:
                     expiry = datetime.strptime(doc_expiries[i], '%Y-%m-%d')
             except: pass
-            file_url, file_name = None, None
+            file_url, file_name, public_id = None, None, None
             doc_file = request.files.get(f'doc_file_{i+1}')
             if doc_file and doc_file.filename:
-                file_url, _ = upload_to_cloudinary(doc_file)
+                file_url, public_id = upload_to_cloudinary(doc_file)
                 file_name = doc_file.filename
             doc = Document(
                 customer_id=customer.id,
@@ -1420,6 +1421,7 @@ def add_customer():
                 added_by=session['user_name'],
                 file_url=file_url,
                 file_name=file_name,
+                cloudinary_public_id=public_id,
                 uploaded_by=session.get('user_id')
             )
             db.session.add(doc)
@@ -1484,11 +1486,12 @@ def edit_customer(customer_id):
             doc_file_key = f'doc_file_{i+1}'
             file_name = None
             file_url = None
+            public_id = None
             if doc_file_key in request.files:
                 f = request.files[doc_file_key]
                 if f and f.filename:
                     file_name = f.filename
-                    file_url, _ = upload_to_cloudinary(f)
+                    file_url, public_id = upload_to_cloudinary(f)
             doc = Document(
                 customer_id=customer_id,
                 doc_type=dt,
@@ -1498,6 +1501,7 @@ def edit_customer(customer_id):
                 notes=doc_notes_list[i] if i < len(doc_notes_list) else None,
                 file_name=file_name,
                 file_url=file_url,
+                cloudinary_public_id=public_id,
                 added_by=session['user_name']
             )
             db.session.add(doc)
@@ -2766,11 +2770,12 @@ def add_document():
         # Handle file upload (dummy — store filename only for now)
         file_name = None
         file_url = None
+        public_id = None
         if 'document_file' in request.files:
             f = request.files['document_file']
             if f and f.filename:
                 file_name = f.filename
-                file_url, _ = upload_to_cloudinary(f)
+                file_url, public_id = upload_to_cloudinary(f)
                 if not file_url:
                     flash('⚠️ File could not be uploaded — document saved without attachment. Please check Cloudinary settings.', 'warning')
         doc = Document(
@@ -2782,6 +2787,7 @@ def add_document():
             notes=request.form.get('notes'),
             file_name=file_name,
             file_url=file_url,
+            cloudinary_public_id=public_id,
             uploaded_by=session['user_id'],
             added_by=session['user_name'],
         )
@@ -2823,9 +2829,10 @@ def edit_document(doc_id):
             f = request.files['document_file']
             if f and f.filename:
                 doc.file_name = f.filename
-                url, _ = upload_to_cloudinary(f)
+                url, public_id = upload_to_cloudinary(f)
                 if url:
                     doc.file_url = url
+                    doc.cloudinary_public_id = public_id
         db.session.commit()
         flash('Document updated')
         if request.form.get('add_another'):
@@ -2984,6 +2991,7 @@ def init_db():
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'Assigned\'',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_url TEXT',
+            'ALTER TABLE document ADD COLUMN IF NOT EXISTS cloudinary_public_id VARCHAR(255)',
             'ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)',
             'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS default_days INTEGER DEFAULT 1',
             '''CREATE TABLE IF NOT EXISTS activity_type (
