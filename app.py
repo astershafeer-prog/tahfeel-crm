@@ -1147,194 +1147,196 @@ def admin_panel():
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners)
 
-@app.route('/admin/import-data')
-@login_required
-@admin_required
-def import_data_page():
-    """Temporary page for importing historical Jan-March data"""
-    # Import tool for historical data
-    return render_template('import_data.html')
+# TEMPORARILY DISABLED - WILL RE-ADD AFTER FIXING
+# @app.route('/admin/import-data')
+# @login_required
+# @admin_required
+# def import_data_page():
+#     """Temporary page for importing historical Jan-March data"""
+#     # Import tool for historical data
+#     return render_template('import_data.html')
 
-@app.route('/admin/import-customers', methods=['POST'])
-@login_required
-@admin_required
-def import_customers():
-    """Import customers from Excel"""
-    from openpyxl import load_workbook
-    import io
-    
-    file = request.files.get('customers_file')
-    if not file:
-        flash('No file uploaded', 'error')
-        return redirect(url_for('import_data_page'))
-    
-    try:
-        wb = load_workbook(io.BytesIO(file.read()))
-        ws = wb.active
-        
-        # Get staff mapping
-        users = User.query.all()
-        staff_map = {u.name.lower(): u.id for u in users}
-        
-        imported = 0
-        skipped = 0
-        errors = []
-        
-        # Skip header row, start from row 2
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row[0]:  # Skip empty rows
-                continue
-            
-            name = str(row[0]).strip() if row[0] else None
-            company = str(row[1]).strip() if row[1] else None
-            phone = str(row[2]).strip() if row[2] else None
-            email = str(row[3]).strip() if row[3] else None
-            assigned_to_name = str(row[4]).strip().lower() if row[4] else None
-            customer_type = str(row[5]).strip() if row[5] else 'Individual'
-            
-            if not name:
-                skipped += 1
-                continue
-            
-            # Check if customer already exists
-            existing = Customer.query.filter_by(phone=phone).first() if phone else None
-            if existing:
-                skipped += 1
-                continue
-            
-            # Map assigned_to
-            assigned_to_id = staff_map.get(assigned_to_name) if assigned_to_name else None
-            
-            customer = Customer(
-                name=name,
-                company=company,
-                phone=phone,
-                email=email,
-                assigned_to=assigned_to_id,
-                customer_type=customer_type,
-                created_at=now_dubai()  # Will be backdated in tasks
-            )
-            db.session.add(customer)
-            imported += 1
-        
-        db.session.commit()
-        flash(f'✅ Imported {imported} customers. Skipped {skipped} (already exist or invalid).', 'success')
-    
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
-    
-    return redirect(url_for('import_data_page'))
+# @app.route('/admin/import-customers', methods=['POST'])
+# @login_required
+# @admin_required
+# def import_customers():
+#     """Import customers from Excel"""
+#     from openpyxl import load_workbook
+#     import io
+#     
+#     file = request.files.get('customers_file')
+#     if not file:
+#         flash('No file uploaded', 'error')
+#         return redirect(url_for('import_data_page'))
+#     
+#     try:
+#         wb = load_workbook(io.BytesIO(file.read()))
+#         ws = wb.active
+#         
+#         # Get staff mapping
+#         users = User.query.all()
+#         staff_map = {u.name.lower(): u.id for u in users}
+#         
+#         imported = 0
+#         skipped = 0
+#         errors = []
+#         
+#         # Skip header row, start from row 2
+#         for row in ws.iter_rows(min_row=2, values_only=True):
+#             if not row[0]:  # Skip empty rows
+#                 continue
+#             
+#             name = str(row[0]).strip() if row[0] else None
+#             company = str(row[1]).strip() if row[1] else None
+#             phone = str(row[2]).strip() if row[2] else None
+#             email = str(row[3]).strip() if row[3] else None
+#             assigned_to_name = str(row[4]).strip().lower() if row[4] else None
+#             customer_type = str(row[5]).strip() if row[5] else 'Individual'
+#             
+#             if not name:
+#                 skipped += 1
+#                 continue
+#             
+#             # Check if customer already exists
+#             existing = Customer.query.filter_by(phone=phone).first() if phone else None
+#             if existing:
+#                 skipped += 1
+#                 continue
+#             
+#             # Map assigned_to
+#             assigned_to_id = staff_map.get(assigned_to_name) if assigned_to_name else None
+#             
+#             customer = Customer(
+#                 name=name,
+#                 company=company,
+#                 phone=phone,
+#                 email=email,
+#                 assigned_to=assigned_to_id,
+#                 customer_type=customer_type,
+#                 created_at=now_dubai()  # Will be backdated in tasks
+#             )
+#             db.session.add(customer)
+#             imported += 1
+#         
+#         db.session.commit()
+#         flash(f'✅ Imported {imported} customers. Skipped {skipped} (already exist or invalid).', 'success')
+#     
+#     except Exception as e:
+#         db.session.rollback()
+#         flash(f'Error: {str(e)}', 'error')
+#     
+#     return redirect(url_for('import_data_page'))
 
-@app.route('/admin/import-tasks', methods=['POST'])
-@login_required
-@admin_required  
-def import_tasks():
-    """Import tasks from Excel with historical dates"""
-    from openpyxl import load_workbook
-    import io
-    
-    file = request.files.get('tasks_file')
-    if not file:
-        flash('No file uploaded', 'error')
-        return redirect(url_for('import_data_page'))
-    
-    try:
-        wb = load_workbook(io.BytesIO(file.read()))
-        ws = wb.active
-        
-        # Get mappings
-        users = User.query.all()
-        staff_map = {u.name.lower(): u.id for u in users}
-        
-        customers = Customer.query.all()
-        customer_map = {c.name.lower(): c.id for c in customers}
-        
-        imported = 0
-        skipped = 0
-        
-        # Skip header row
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row[0]:
-                continue
-            
-            customer_name = str(row[0]).strip().lower() if row[0] else None
-            job_type = str(row[1]).strip() if row[1] else None
-            status = str(row[2]).strip() if row[2] else 'Closed'
-            created_date = row[3] if row[3] else None
-            due_date = row[4] if row[4] else None
-            completed_date = row[5] if row[5] else None
-            assigned_to_name = str(row[6]).strip().lower() if row[6] else None
-            invoiced = float(row[7]) if row[7] else 0
-            received = float(row[8]) if row[8] else 0
-            priority = str(row[9]).strip() if row[9] else 'Medium'
-            remarks = str(row[10]).strip() if row[10] else None
-            
-            if not customer_name or not job_type:
-                skipped += 1
-                continue
-            
-            customer_id = customer_map.get(customer_name)
-            if not customer_id:
-                skipped += 1
-                continue
-            
-            assigned_to_id = staff_map.get(assigned_to_name) if assigned_to_name else None
-            
-            # Parse dates
-            try:
-                if isinstance(created_date, str):
-                    created_dt = datetime.strptime(created_date, '%d/%m/%Y')
-                else:
-                    created_dt = created_date
-            except:
-                created_dt = now_dubai()
-            
-            try:
-                if isinstance(due_date, str):
-                    due_dt = datetime.strptime(due_date, '%d/%m/%Y')
-                else:
-                    due_dt = due_date
-            except:
-                due_dt = None
-            
-            try:
-                if isinstance(completed_date, str):
-                    completed_dt = datetime.strptime(completed_date, '%d/%m/%Y')
-                else:
-                    completed_dt = completed_date
-            except:
-                completed_dt = None
-            
-            # Calculate revenue (cash-basis)
-            revenue = received if status == 'Closed' else 0
-            
-            job = Job(
-                customer_id=customer_id,
-                job_type=job_type,
-                status=status,
-                assigned_to=assigned_to_id,
-                created_by=assigned_to_id,
-                priority=priority,
-                created_at=created_dt,
-                due_date=due_dt,
-                completed_at=completed_dt,
-                amount_invoiced=invoiced,
-                amount_received=received,
-                revenue=revenue,
-                remarks=remarks
-            )
-            db.session.add(job)
-            imported += 1
-        
-        db.session.commit()
-        flash(f'✅ Imported {imported} tasks. Skipped {skipped} (missing customer or invalid data).', 'success')
-    
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
-    
-    return redirect(url_for('import_data_page'))
+# @app.route('/admin/import-tasks', methods=['POST'])
+# @login_required
+# @admin_required  
+# def import_tasks():
+#     """Import tasks from Excel with historical dates"""
+#     from openpyxl import load_workbook
+#     import io
+#     
+#     file = request.files.get('tasks_file')
+#     if not file:
+#         flash('No file uploaded', 'error')
+#         return redirect(url_for('import_data_page'))
+#     
+#     try:
+#         wb = load_workbook(io.BytesIO(file.read()))
+#         ws = wb.active
+#         
+#         # Get mappings
+#         users = User.query.all()
+#         staff_map = {u.name.lower(): u.id for u in users}
+#         
+#         customers = Customer.query.all()
+#         customer_map = {c.name.lower(): c.id for c in customers}
+#         
+#         imported = 0
+#         skipped = 0
+#         
+#         # Skip header row
+#         for row in ws.iter_rows(min_row=2, values_only=True):
+#             if not row[0]:
+#                 continue
+#             
+#             customer_name = str(row[0]).strip().lower() if row[0] else None
+#             job_type = str(row[1]).strip() if row[1] else None
+#             status = str(row[2]).strip() if row[2] else 'Closed'
+#             created_date = row[3] if row[3] else None
+#             due_date = row[4] if row[4] else None
+#             completed_date = row[5] if row[5] else None
+#             assigned_to_name = str(row[6]).strip().lower() if row[6] else None
+#             invoiced = float(row[7]) if row[7] else 0
+#             received = float(row[8]) if row[8] else 0
+#             priority = str(row[9]).strip() if row[9] else 'Medium'
+#             remarks = str(row[10]).strip() if row[10] else None
+#             
+#             if not customer_name or not job_type:
+#                 skipped += 1
+#                 continue
+#             
+#             customer_id = customer_map.get(customer_name)
+#             if not customer_id:
+#                 skipped += 1
+#                 continue
+#             
+#             assigned_to_id = staff_map.get(assigned_to_name) if assigned_to_name else None
+#             
+#             # Parse dates
+#             try:
+#                 if isinstance(created_date, str):
+#                     created_dt = datetime.strptime(created_date, '%d/%m/%Y')
+#                 else:
+#                     created_dt = created_date
+#             except:
+#                 created_dt = now_dubai()
+#             
+#             try:
+#                 if isinstance(due_date, str):
+#                     due_dt = datetime.strptime(due_date, '%d/%m/%Y')
+#                 else:
+#                     due_dt = due_date
+#             except:
+#                 due_dt = None
+#             
+#             try:
+#                 if isinstance(completed_date, str):
+#                     completed_dt = datetime.strptime(completed_date, '%d/%m/%Y')
+#                 else:
+#                     completed_dt = completed_date
+#             except:
+#                 completed_dt = None
+#             
+#             # Calculate revenue (cash-basis)
+#             revenue = received if status == 'Closed' else 0
+#             
+#             job = Job(
+#                 customer_id=customer_id,
+#                 job_type=job_type,
+#                 status=status,
+#                 assigned_to=assigned_to_id,
+#                 created_by=assigned_to_id,
+#                 priority=priority,
+#                 created_at=created_dt,
+#                 due_date=due_dt,
+#                 completed_at=completed_dt,
+#                 amount_invoiced=invoiced,
+#                 amount_received=received,
+#                 revenue=revenue,
+#                 remarks=remarks
+#             )
+#             db.session.add(job)
+#             imported += 1
+#         
+#         db.session.commit()
+#         flash(f'✅ Imported {imported} tasks. Skipped {skipped} (missing customer or invalid data).', 'success')
+#     
+#     except Exception as e:
+#         db.session.rollback()
+#         flash(f'Error: {str(e)}', 'error')
+#     
+#     return redirect(url_for('import_data_page'))
+
 
 
 @app.route('/admin/fix-cloudinary-access')
