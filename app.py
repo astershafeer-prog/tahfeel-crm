@@ -369,6 +369,8 @@ def apply_lead_filters(leads, args, now):
     date_filter = args.get('date')
     status_filter = args.get('status')
     staff_filter = args.get('staff')
+    due_filter = args.get('due')  # NEW: Due Date filter
+    
     if date_filter == 'today':
         leads = [l for l in leads if l.created_at and l.created_at.date() == now.date()]
     elif date_filter == 'week':
@@ -390,6 +392,7 @@ def apply_lead_filters(leads, args, now):
                 to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
                 leads = [l for l in leads if l.created_at and l.created_at.date() <= to_dt]
             except: pass
+    
     if status_filter:
         if status_filter == 'Overdue':
             leads = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
@@ -398,11 +401,30 @@ def apply_lead_filters(leads, args, now):
             leads = [l for l in leads if l.status not in ['New', 'Converted', 'Lost']]
         else:
             leads = [l for l in leads if l.status == status_filter]
+    
     if staff_filter:
         try:
             sf = int(staff_filter)
             leads = [l for l in leads if l.assigned_to == sf]
         except: pass
+    
+    # NEW: Due Date filter
+    if due_filter:
+        if due_filter == 'overdue':
+            leads = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
+        elif due_filter == 'today':
+            leads = [l for l in leads if l.due_date and l.due_date.date() == now.date()]
+        elif due_filter == 'tomorrow':
+            tomorrow = now.date() + timedelta(days=1)
+            leads = [l for l in leads if l.due_date and l.due_date.date() == tomorrow]
+        elif due_filter == 'this_week':
+            week_end = now.date() + timedelta(days=7)
+            leads = [l for l in leads if l.due_date and now.date() <= l.due_date.date() <= week_end]
+        elif due_filter == 'next_week':
+            next_week_start = now.date() + timedelta(days=7)
+            next_week_end = next_week_start + timedelta(days=7)
+            leads = [l for l in leads if l.due_date and next_week_start <= l.due_date.date() <= next_week_end]
+    
     return leads
 
 @app.route('/')
@@ -855,6 +877,9 @@ def lead_detail(lead_id):
             future_potential=request.form.get('future_potential')
         )
         lead.status = stage
+        # Update lead's due_date with new followup date
+        if followup_dt:
+            lead.due_date = followup_dt
         if request.form.get('customer_story'):
             lead.customer_story = request.form.get('customer_story')
         db.session.add(update)

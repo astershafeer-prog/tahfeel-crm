@@ -99,6 +99,17 @@
           </select>
         </div>
         <div class="filter-group">
+          <label>Due Date</label>
+          <select name="due">
+            <option value="">All</option>
+            <option value="overdue" {% if request.args.get('due') == 'overdue' %}selected{% endif %}>⚠ Overdue</option>
+            <option value="today" {% if request.args.get('due') == 'today' %}selected{% endif %}>Today</option>
+            <option value="tomorrow" {% if request.args.get('due') == 'tomorrow' %}selected{% endif %}>Tomorrow</option>
+            <option value="this_week" {% if request.args.get('due') == 'this_week' %}selected{% endif %}>This Week</option>
+            <option value="next_week" {% if request.args.get('due') == 'next_week' %}selected{% endif %}>Next Week</option>
+          </select>
+        </div>
+        <div class="filter-group">
           <label>&nbsp;</label>
           <div style="display:flex;gap:6px;">
             <button type="submit" class="btn-filter">Filter</button>
