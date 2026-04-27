@@ -1793,7 +1793,7 @@ def customer_import_template():
     ws = wb.active
     ws.title = 'Customers'
     from openpyxl.worksheet.datavalidation import DataValidation
-    headers = ['Name *', 'Phone *', 'Company', 'Phone 2', 'Email', 'Address', 'Source', 'Nationality', 'Type', 'Notes']
+    headers = ['Name *', 'Phone *', 'Company', 'Phone 2', 'Email', 'Address', 'Nationality', 'Date of Birth', 'Type', 'Source', 'Primary Representative *', 'Notes']
     for i, h in enumerate(headers, 1):
         cell = ws.cell(1, i, h)
         cell.font = Font(bold=True, color='FFFFFF')
@@ -1802,9 +1802,9 @@ def customer_import_template():
         ws.column_dimensions[cell.column_letter].width = max(len(h) + 4, 18)
     # Sample rows
     samples = [
-        ['Ahmed Al Mansoori', '+971501234567', 'Al Mansoori Trading LLC', '+971551234567', 'ahmed@example.com', 'Dubai, UAE', 'Referral', 'Emirati', 'Company', 'VIP client'],
-        ['Priya Sharma', '+971507654321', '', '', 'priya@gmail.com', 'Sharjah, UAE', 'WhatsApp', 'Indian', 'Individual', ''],
-        ['XYZ Investments', '+971509876543', 'XYZ Investments LLC', '', '', 'Abu Dhabi, UAE', 'Website', 'British', 'Investor', 'Golden visa interested'],
+        ['Ahmed Al Mansoori', '+971501234567', 'Al Mansoori Trading LLC', '+971551234567', 'ahmed@example.com', 'Dubai, UAE', 'Emirati', '15/01/1985', 'Company', 'Referral', 'Aslam', 'VIP client'],
+        ['Priya Sharma', '+971507654321', '', '', 'priya@gmail.com', 'Sharjah, UAE', 'Indian', '20/05/1990', 'Individual', 'WhatsApp', 'Anfal', ''],
+        ['XYZ Investments', '+971509876543', 'XYZ Investments LLC', '', '', 'Abu Dhabi, UAE', 'British', '', 'Company', 'Website', 'Lukman', 'Golden visa interested'],
     ]
     for row in samples:
         ws.append(row)
@@ -1818,15 +1818,25 @@ def customer_import_template():
     types = ['Individual', 'Company', 'Investor']
     for i, t in enumerate(types, 1):
         ref.cell(i, 2, t)
-    # Source dropdown — column G (7)
+    # Get staff names for Primary Representative dropdown
+    users = User.query.filter_by(active=True).order_by(User.name).all()
+    staff_names = [u.name for u in users]
+    for i, name in enumerate(staff_names, 1):
+        ref.cell(i, 3, name)
+    # Source dropdown — column J (10)
     src_range = f'Reference!$A$1:$A${len(src_names)}'
     dv_src = DataValidation(type='list', formula1=src_range, allow_blank=True, showDropDown=False)
     ws.add_data_validation(dv_src)
-    dv_src.add('G2:G1000')
+    dv_src.add('J2:J1000')
     # Type dropdown — column I (9)
     dv_type = DataValidation(type='list', formula1='Reference!$B$1:$B$3', allow_blank=True, showDropDown=False)
     ws.add_data_validation(dv_type)
     dv_type.add('I2:I1000')
+    # Primary Representative dropdown — column K (11)
+    staff_range = f'Reference!$C$1:$C${len(staff_names)}'
+    dv_staff = DataValidation(type='list', formula1=staff_range, allow_blank=False, showDropDown=False)
+    ws.add_data_validation(dv_staff)
+    dv_staff.add('K2:K1000')
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
