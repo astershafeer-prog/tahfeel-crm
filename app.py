@@ -1154,23 +1154,39 @@ def fix_cloudinary_access():
     """One-time fix to update all Cloudinary documents to public access"""
     try:
         import cloudinary.api
+        import re
         # Get all documents with Cloudinary URLs
         documents = Document.query.filter(Document.file_url.like('%cloudinary.com%')).all()
         fixed = 0
         errors = []
         
         for doc in documents:
-            if doc.cloudinary_public_id:
+            public_id = doc.cloudinary_public_id
+            
+            # If no public_id stored, try to extract it from file_url
+            if not public_id and doc.file_url:
+                # Extract public_id from URL like: https://res.cloudinary.com/dzapmosda/image/upload/v1777042402/tahfeel-documents/document_file_nbxoqf.pdf
+                # Public ID would be: tahfeel-documents/document_file_nbxoqf
+                match = re.search(r'/upload/(?:v\d+/)?(.+?)\.', doc.file_url)
+                if match:
+                    public_id = match.group(1)
+                    # Save it to the database for future use
+                    doc.cloudinary_public_id = public_id
+                    db.session.add(doc)
+            
+            if public_id:
                 try:
                     # Update access mode to public
                     cloudinary.uploader.explicit(
-                        doc.cloudinary_public_id,
+                        public_id,
                         type='upload',
                         access_mode='public'
                     )
                     fixed += 1
                 except Exception as e:
-                    errors.append(f"{doc.id}: {str(e)}")
+                    errors.append(f"Doc {doc.id} ({public_id}): {str(e)}")
+        
+        db.session.commit()
         
         if errors:
             flash(f'Fixed {fixed} documents. Errors: {len(errors)}', 'warning')
