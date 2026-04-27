@@ -1747,27 +1747,32 @@ def export_customers():
     wb = Workbook()
     ws = wb.active
     ws.title = 'Customers'
-    headers = ['ID','Name','Company','Phone','Phone 2','Email','Address','Source','Nationality','Type','Primary Rep','Notes','Created','Tasks','Total Invoiced','Total Received']
+    headers = ['Name','Company','Phone','Phone 2','Email','Address','Nationality','Date of Birth','Customer Type','Source','Primary Representative','Notes']
     for i, h in enumerate(headers, 1):
         ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
         ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
     customers = Customer.query.order_by(Customer.created_at.desc()).all()
     for r, c in enumerate(customers, 2):
-        tasks = len(c.jobs)
-        invoiced = sum(j.amount_invoiced or 0 for j in c.jobs)
-        received = sum(j.amount_received or 0 for j in c.jobs)
         # Get assigned representative name
         rep_name = ''
         if c.assigned_to:
             rep_user = User.query.get(c.assigned_to)
             if rep_user:
                 rep_name = rep_user.name
-        ws.append([c.id, c.name, c.company or '', c.phone or '', c.phone2 or '',
-                   c.email or '', c.address or '', c.source or '',
-                   c.nationality or '', c.customer_type or 'Individual',
-                   rep_name, c.notes or '',
-                   c.created_at.strftime('%d/%m/%Y') if c.created_at else '',
-                   tasks, invoiced, received])
+        ws.append([
+            c.name,
+            c.company or '',
+            c.phone or '',
+            c.phone2 or '',
+            c.email or '',
+            c.address or '',
+            c.nationality or '',
+            c.date_of_birth.strftime('%d/%m/%Y') if c.date_of_birth else '',
+            c.customer_type or 'Individual',
+            c.source or '',
+            rep_name,
+            c.notes or ''
+        ])
     for col in ws.columns:
         ws.column_dimensions[col[0].column_letter].width = max(len(str(col[0].value or '')), 12)
     buf = io.BytesIO()
