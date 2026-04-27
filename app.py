@@ -1756,7 +1756,12 @@ def export_customers():
         tasks = len(c.jobs)
         invoiced = sum(j.amount_invoiced or 0 for j in c.jobs)
         received = sum(j.amount_received or 0 for j in c.jobs)
-        rep_name = c.rep.name if hasattr(c, 'rep') and c.rep else ''
+        # Get assigned representative name
+        rep_name = ''
+        if c.assigned_to:
+            rep_user = User.query.get(c.assigned_to)
+            if rep_user:
+                rep_name = rep_user.name
         ws.append([c.id, c.name, c.company or '', c.phone or '', c.phone2 or '',
                    c.email or '', c.address or '', c.source or '',
                    c.nationality or '', c.customer_type or 'Individual',
