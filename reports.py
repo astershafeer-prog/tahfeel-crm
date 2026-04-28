@@ -729,6 +729,24 @@ def export_staff_daily():
         ws.cell(row, len(dates) + 2, total)
         row += 1
     
+    # Set column widths for better printing
+    ws.column_dimensions['A'].width = 20  # Staff Name
+    for idx in range(2, len(dates) + 2):
+        ws.column_dimensions[get_column_letter(idx)].width = 8  # Date columns
+    ws.column_dimensions[get_column_letter(len(dates) + 2)].width = 10  # Total column
+    
+    # Print settings - Landscape, fit to 1 page
+    ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 1
+    ws.print_area = f'A1:{get_column_letter(len(dates) + 2)}{row - 1}'
+    
+    # Print margins (narrow)
+    ws.page_margins.left = 0.25
+    ws.page_margins.right = 0.25
+    ws.page_margins.top = 0.5
+    ws.page_margins.bottom = 0.5
+    
     return _respond(wb, f"Staff_Daily_Initiation_{df}_{dt}.xlsx")
 
 
