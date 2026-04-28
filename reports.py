@@ -179,9 +179,12 @@ def export_lead_report():
     df_d, dt_d, df, dt = _dates(request)
 
     users = {u.id: u.name for u in db.session.query(User).all()}
-    leads = (db.session.query(Lead)
-             .filter(Lead.created_at >= df_d, Lead.created_at <= dt_d)
-             .order_by(Lead.created_at.desc()).all())
+    
+    # Filter by current user if not admin/finance
+    query = db.session.query(Lead).filter(Lead.created_at >= df_d, Lead.created_at <= dt_d)
+    if session.get('role') not in ['admin', 'finance']:
+        query = query.filter(Lead.assigned_to == session.get('user_id'))
+    leads = query.order_by(Lead.created_at.desc()).all()
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -234,10 +237,14 @@ def export_sales_report():
     df_d, dt_d, df, dt = _dates(request)
 
     users = {u.id: u.name for u in db.session.query(User).all()}
-    jobs = (db.session.query(Job, Customer)
+    
+    # Filter by current user if not admin/finance (based on customer representative)
+    query = (db.session.query(Job, Customer)
             .join(Customer, Job.customer_id == Customer.id)
-            .filter(Job.created_at >= df_d, Job.created_at <= dt_d)
-            .order_by(Job.created_at.desc()).all())
+            .filter(Job.created_at >= df_d, Job.created_at <= dt_d))
+    if session.get('role') not in ['admin', 'finance']:
+        query = query.filter(Customer.assigned_to == session.get('user_id'))
+    jobs = query.order_by(Job.created_at.desc()).all()
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -385,6 +392,14 @@ def export_task_report():
     elif status_filter == 'closed':
         query = query.filter(Job.status.in_(['Closed', 'Closed - Pending Partner Commission']))
     # 'all' shows everything
+    
+    # Filter by current user if not admin/finance
+    # Sales: filter by customer representative
+    # Operations: filter by task assignee
+    if session.get('role') == 'sales':
+        query = query.filter(Customer.assigned_to == session.get('user_id'))
+    elif session.get('role') == 'operations':
+        query = query.filter(Job.assigned_to == session.get('user_id'))
     
     jobs = query.order_by(Job.created_at.desc()).all()
 
@@ -662,7 +677,7 @@ def export_partner_report():
 @reports_bp.route('/reports/staff-daily/export')
 def export_staff_daily():
     """Staff Daily Initiation Report - shows lead updates per staff per day"""
-    if session.get('role') not in ['admin', 'finance']:
+    if session.get('role') not in ['admin', 'finance', 'sales']:
         return redirect(url_for('dashboard'))
     
     df = request.args.get('date_from', '')
@@ -681,6 +696,11 @@ def export_staff_daily():
         LeadUpdate.created_at >= from_date,
         LeadUpdate.created_at <= to_date
     ).all()
+    
+    # Filter updates for Sales staff - only their own updates
+    if session.get('role') == 'sales':
+        current_user_name = session.get('user_name')
+        updates = [u for u in updates if u.staff_name == current_user_name]
     
     # Create date range
     from collections import defaultdict
