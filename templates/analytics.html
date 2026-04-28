@@ -77,7 +77,7 @@
     <!-- Tab Navigation -->
     <div class="tab-nav">
       <a href="/analytics?tab=overview&period={{ period }}" class="tab-btn {% if tab=='overview' %}active{% endif %}">⊞ Overview</a>
-      <a href="/analytics?tab=sales&period={{ period }}" class="tab-btn {% if tab=='sales' %}active{% endif %}">💼 Sales</a>
+      <a href="/analytics?tab=sales&period={{ period }}" class="tab-btn {% if tab=='sales' %}active{% endif %}">📋 Leads</a>
       <a href="/analytics?tab=operations&period={{ period }}" class="tab-btn {% if tab=='operations' %}active{% endif %}">✓ Operations</a>
       <a href="/analytics?tab=documents&period={{ period }}" class="tab-btn {% if tab=='documents' %}active{% endif %}">📄 Documents</a>
       <a href="/analytics?tab=staff&period={{ period }}" class="tab-btn {% if tab=='staff' %}active{% endif %}">👤 Staff</a>
@@ -137,16 +137,42 @@
       <!-- Lead Pipeline -->
       <div class="an-card">
         <div class="an-card-title">Lead Pipeline</div>
-        {% set pip_items = [('New','#94A3B8'),('Call Connected','#3B82F6'),('Sent WhatsApp','#8B5CF6'),('Quotation Sent','#F59E0B'),('Potential Lead','#06B6D4'),('Meeting Scheduled','#6366F1'),('Converted','#10B981'),('Lost','#EF4444'),('Customer Not Responding','#F97316')] %}
-        {% for status, color in pip_items %}{% if pipeline.get(status,0) > 0 %}
-        {% set pct = ((pipeline.get(status,0) / max_pipeline) * 100)|int %}
-        <div class="pip-row">
-          <div class="pip-label">{{ status }}</div>
-          <div class="pip-track"><div class="pip-fill" style="width:{{ pct }}%;background:{{ color }};"><span class="pip-text">{% if pct > 15 %}{{ pct }}%{% endif %}</span></div></div>
-          <div class="pip-count">{{ pipeline.get(status,0) }}</div>
-        </div>
-        {% endif %}{% endfor %}
-        {% if not pipeline %}<div class="empty-state">No leads this period</div>{% endif %}
+        {% if pipeline %}
+          {% for status, count in pipeline.most_common() %}
+            {% if count > 0 %}
+              {% set pct = ((count / max_pipeline) * 100)|int %}
+              {# Assign colors based on status type #}
+              {% if status in ['Converted', 'Won', 'Closed-Won'] %}
+                {% set color = '#10B981' %}
+              {% elif status in ['Lost', 'Rejected', 'Closed-Lost'] %}
+                {% set color = '#EF4444' %}
+              {% elif status == 'New' %}
+                {% set color = '#94A3B8' %}
+              {% elif 'Call' in status or 'Called' in status %}
+                {% set color = '#3B82F6' %}
+              {% elif 'WhatsApp' in status or 'Message' in status %}
+                {% set color = '#8B5CF6' %}
+              {% elif 'Quotation' in status or 'Quote' in status %}
+                {% set color = '#F59E0B' %}
+              {% elif 'Potential' in status or 'Lead' in status %}
+                {% set color = '#06B6D4' %}
+              {% elif 'Meeting' in status or 'Scheduled' in status %}
+                {% set color = '#6366F1' %}
+              {% elif 'Not Responding' in status or 'No Response' in status %}
+                {% set color = '#F97316' %}
+              {% else %}
+                {% set color = '#64748B' %}
+              {% endif %}
+              <div class="pip-row">
+                <div class="pip-label">{{ status }}</div>
+                <div class="pip-track"><div class="pip-fill" style="width:{{ pct }}%;background:{{ color }};"><span class="pip-text">{% if pct > 15 %}{{ pct }}%{% endif %}</span></div></div>
+                <div class="pip-count">{{ count }}</div>
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">No leads this period</div>
+        {% endif %}
       </div>
     </div>
 
