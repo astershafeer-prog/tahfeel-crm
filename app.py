@@ -3271,14 +3271,12 @@ def init_db():
                 db.session.add(new_admin)
                 db.session.commit()
                 print('Admin user created')
-            else:
+            elif admin.name == 'Admin':
                 # Update existing admin name if it's still 'Admin'
-                if admin.name == 'Admin':
-                    admin.name = 'Admin-Tahfeel'
-                    db.session.commit()
-                    print('Admin user name updated to Admin-Tahfeel')
-            else:
-                print('Admin already exists — skipping')
+                admin.name = 'Admin-Tahfeel'
+                db.session.commit()
+                print('Admin user name updated to Admin-Tahfeel')
+            
             if Service.query.count() == 0:
                 for s in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(Service(name=s))
