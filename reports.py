@@ -682,9 +682,6 @@ def export_staff_daily():
         LeadUpdate.created_at <= to_date
     ).all()
     
-    # Get all active staff
-    staff = User.query.filter_by(active=True).order_by(User.name).all()
-    
     # Create date range
     from collections import defaultdict
     from datetime import timedelta
@@ -717,13 +714,16 @@ def export_staff_daily():
     ws.cell(1, len(dates) + 2, "Total")
     _hdr(ws.cell(1, len(dates) + 2))
     
-    # Data rows
+    # Data rows - ONLY show staff who have lead updates
     row = 2
-    for s in staff:
-        ws.cell(row, 1, s.name)
+    # Get unique staff names from updates (only staff who actually did something)
+    active_staff_names = sorted(set(daily_counts.keys()))
+    
+    for staff_name in active_staff_names:
+        ws.cell(row, 1, staff_name)
         total = 0
         for idx, d in enumerate(dates, 2):
-            count = daily_counts[s.name][d]
+            count = daily_counts[staff_name][d]
             ws.cell(row, idx, count if count > 0 else "")
             total += count
         ws.cell(row, len(dates) + 2, total)
