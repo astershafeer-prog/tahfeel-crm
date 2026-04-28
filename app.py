@@ -1579,9 +1579,23 @@ def add_customer():
                 users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
                 return render_template('add_customer.html', users=users, sources=sources, converted_leads=converted_leads)
         
+        # Check for duplicate phone number
+        phone_to_check = None
         lead_id = request.form.get('lead_id') or None
         if lead_id:
             lead = Lead.query.get(int(lead_id))
+            phone_to_check = lead.phone
+        else:
+            phone_to_check = request.form.get('phone', '').strip()
+        
+        if phone_to_check:
+            existing_customer = Customer.query.filter_by(phone=phone_to_check).first()
+            if existing_customer:
+                flash(f'⚠️ Duplicate customer! Phone number {phone_to_check} already exists for customer: {existing_customer.name}', 'error')
+                users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
+                return render_template('add_customer.html', users=users, sources=sources, converted_leads=converted_leads)
+        
+        if lead_id:
             customer = Customer(
                 name=lead.name, company=lead.company, phone=lead.phone,
                 phone2=getattr(lead, 'phone2', None),
