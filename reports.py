@@ -692,15 +692,28 @@ def export_staff_daily():
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     
     # Get all lead updates in date range
-    updates = LeadUpdate.query.filter(
-        LeadUpdate.created_at >= from_date,
-        LeadUpdate.created_at <= to_date
-    ).all()
+    # Join with Lead table to filter by assignment
+    from app import Lead
     
-    # Filter updates for Sales staff - only their own updates
     if session.get('role') == 'sales':
-        current_user_name = session.get('user_name')
-        updates = [u for u in updates if u.staff_name == current_user_name]
+        # Sales staff: only their own updates on their assigned leads
+        current_user_id = session.get('user_id')
+        updates = db.session.query(LeadUpdate).join(
+            Lead, LeadUpdate.lead_id == Lead.id
+        ).filter(
+            LeadUpdate.created_at >= from_date,
+            LeadUpdate.created_at <= to_date,
+            Lead.assigned_to == current_user_id
+        ).all()
+    else:
+        # Admin/Finance: all updates, but only on assigned leads (not unassigned)
+        updates = db.session.query(LeadUpdate).join(
+            Lead, LeadUpdate.lead_id == Lead.id
+        ).filter(
+            LeadUpdate.created_at >= from_date,
+            LeadUpdate.created_at <= to_date,
+            Lead.assigned_to.isnot(None)  # Only count leads that are assigned
+        ).all()
     
     # Create date range
     from collections import defaultdict
@@ -714,11 +727,16 @@ def export_staff_daily():
         current_date += timedelta(days=1)
     
     # Count updates per staff per day
+    # Group by the staff WHO OWNS THE LEAD (not who made the update)
     daily_counts = defaultdict(lambda: defaultdict(int))
+    users = {u.id: u.name for u in User.query.all()}
+    
     for update in updates:
-        update_date = update.created_at.date()
-        staff_name = update.staff_name
-        daily_counts[staff_name][update_date] += 1
+        lead = db.session.query(Lead).get(update.lead_id)
+        if lead and lead.assigned_to:
+            update_date = update.created_at.date()
+            staff_name = users.get(lead.assigned_to, 'Unknown')
+            daily_counts[staff_name][update_date] += 1
     
     # Create Excel
     wb = openpyxl.Workbook()
