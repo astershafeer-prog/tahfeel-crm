@@ -185,6 +185,7 @@ class Job(db.Model):
     partner_status = db.Column(db.String(20), default='Pending')  # Pending/Received/Written Off
     partner_received_date = db.Column(db.Date)
     revenue = db.Column(db.Float, default=0)  # Revenue counted when no partner OR when partner pays
+    revenue_date = db.Column(db.Date)  # Date when revenue is counted (for cash-basis accounting)
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     assignee = db.relationship('User', foreign_keys=[assigned_to])
@@ -534,34 +535,47 @@ def dashboard():
             if date_filter == 'today':
                 leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()]
                 jobs = [j for j in all_jobs if j.created_at and j.created_at.date() == now.date()]
+                # For revenue (cash-basis): use revenue_date
+                revenue_jobs = [j for j in all_jobs if j.revenue_date and j.revenue_date == now.date()]
             elif date_filter == 'week':
                 week_start = now.date() - timedelta(days=now.weekday())
                 leads = [l for l in all_leads if l.created_at and l.created_at.date() >= week_start]
                 jobs = [j for j in all_jobs if j.created_at and j.created_at.date() >= week_start]
+                # For revenue (cash-basis): use revenue_date
+                revenue_jobs = [j for j in all_jobs if j.revenue_date and j.revenue_date >= week_start]
             elif date_filter == 'month':
                 leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
                 jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
+                # For revenue (cash-basis): use revenue_date instead of created_at
+                revenue_jobs = [j for j in all_jobs if j.revenue_date and j.revenue_date.year == now.year and j.revenue_date.month == now.month]
             elif date_filter == 'custom' and from_date and to_date:
                 from_dt = datetime.strptime(from_date, '%Y-%m-%d').date()
                 to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
                 leads = [l for l in all_leads if l.created_at and from_dt <= l.created_at.date() <= to_dt]
                 jobs = [j for j in all_jobs if j.created_at and from_dt <= j.created_at.date() <= to_dt]
+                # For revenue (cash-basis): use revenue_date
+                revenue_jobs = [j for j in all_jobs if j.revenue_date and from_dt <= j.revenue_date <= to_dt]
             elif date_filter == 'all':
                 # Show all time only if explicitly selected
                 jobs = all_jobs
+                revenue_jobs = all_jobs
             else:
                 # Default to current month
                 leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
                 jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
+                # For revenue (cash-basis): use revenue_date
+                revenue_jobs = [j for j in all_jobs if j.revenue_date and j.revenue_date.year == now.year and j.revenue_date.month == now.month]
             active_jobs = [j for j in jobs if j.status not in ['Done', 'Closed', 'Closed - Pending Partner Commission']]
             done_jobs = [j for j in jobs if j.status == 'Done']
             closed_jobs = [j for j in jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
+            # Revenue calculations use revenue_jobs (cash-basis)
+            closed_revenue_jobs = [j for j in revenue_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
             total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
             total_received = sum((j.amount_received or 0) for j in active_jobs)
             total_pending = total_invoiced - total_received
             completed_value = sum((j.amount_received or 0) for j in done_jobs)
             try:
-                total_revenue = sum((j.revenue or 0) for j in closed_jobs)
+                total_revenue = sum((j.revenue or 0) for j in closed_revenue_jobs)
                 # Partner commission pending
                 partner_jobs = [j for j in all_jobs if j.partner_commission_expected and j.partner_status == 'Pending']
                 total_partner_pending = sum((j.partner_amount or 0) for j in partner_jobs)
@@ -2392,6 +2406,7 @@ def close_job(job_id):
             rev = request.form.get('revenue')
             if rev:
                 job.revenue = float(rev)
+                job.revenue_date = now_dubai().date()  # Revenue counted today (cash-basis)
             else:
                 flash('Revenue is required for regular tasks.', 'error')
                 return redirect(url_for('job_detail', job_id=job_id))
@@ -2406,7 +2421,7 @@ def close_job(job_id):
         job.partner_status = None
         job.status = 'Closed'
         
-        remark = f'Task CLOSED by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue:,.0f}'
+        remark = f'Task CLOSED by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue:,.0f} (counted for {now_dubai().strftime("%B %Y")})'
         
     elif partner_choice == 'yes':
         # PARTNER COMMISSION TASK - Revenue = 0 until partner pays
@@ -2489,7 +2504,11 @@ def edit_finance(job_id):
         rev = request.form.get('revenue')
         if ai: job.amount_invoiced = float(ai)
         if ar: job.amount_received = float(ar)
-        if rev: job.revenue = float(rev)
+        if rev:
+            job.revenue = float(rev)
+            # Update revenue_date when revenue is edited
+            if not job.revenue_date:
+                job.revenue_date = now_dubai().date()
     except:
         flash('Invalid finance values.')
         return redirect(url_for('job_detail', job_id=job_id))
@@ -3239,6 +3258,7 @@ def init_db():
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS file_url TEXT',
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS cloudinary_public_id VARCHAR(255)',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS revenue_date DATE',
             'ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS off_day VARCHAR(20)',
             'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS default_days INTEGER DEFAULT 1',
             '''CREATE TABLE IF NOT EXISTS activity_type (
@@ -3931,10 +3951,11 @@ def mark_partner_received(job_id):
     job.partner_status = 'Received'
     job.partner_received_date = now_dubai().date()
     job.revenue = job.partner_amount  # NOW count the revenue!
+    job.revenue_date = now_dubai().date()  # Revenue counted TODAY (cash-basis)
     job.status = 'Closed'  # Remove "Pending Partner Commission" from status
     
     # Add timeline update
-    remark = f'Partner commission RECEIVED from {job.partner_name}: AED {job.partner_amount:,.0f}. Revenue now counted. Marked by {session["user_name"]}.'
+    remark = f'Partner commission RECEIVED from {job.partner_name}: AED {job.partner_amount:,.0f}. Revenue now counted for {now_dubai().strftime("%B %Y")} (cash-basis). Marked by {session["user_name"]}.'
     update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
     db.session.add(update)
     db.session.commit()
