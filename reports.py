@@ -368,12 +368,25 @@ def export_task_report():
     if g: return g
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     df_d, dt_d, df, dt = _dates(request)
+    
+    # NEW: Get status filter parameter
+    status_filter = request.args.get('status_filter', 'all')
 
     users = {u.id: u.name for u in db.session.query(User).all()}
-    jobs = (db.session.query(Job, Customer)
+    
+    # Build query with status filter
+    query = (db.session.query(Job, Customer)
             .join(Customer, Job.customer_id == Customer.id)
-            .filter(Job.created_at >= df_d, Job.created_at <= dt_d)
-            .order_by(Job.created_at.desc()).all())
+            .filter(Job.created_at >= df_d, Job.created_at <= dt_d))
+    
+    # Apply status filter
+    if status_filter == 'active':
+        query = query.filter(Job.status.in_(['Assigned', 'Processing', 'Done']))
+    elif status_filter == 'closed':
+        query = query.filter(Job.status.in_(['Closed', 'Closed - Pending Partner Commission']))
+    # 'all' shows everything
+    
+    jobs = query.order_by(Job.created_at.desc()).all()
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -641,3 +654,147 @@ def export_partner_report():
     ws1.cell(row, 2, total_received).number_format = '#,##0'
 
     return _respond(wb, f"Partner_Commissions_{df}_{dt}.xlsx")
+
+# ═══════════════════════════════════════════════════════════════════
+# NEW REPORTS
+# ═══════════════════════════════════════════════════════════════════
+
+@reports_bp.route('/reports/staff-daily/export')
+def export_staff_daily():
+    """Staff Daily Initiation Report - shows lead updates per staff per day"""
+    if session.get('role') not in ['admin', 'finance']:
+        return redirect(url_for('dashboard'))
+    
+    df = request.args.get('date_from', '')
+    dt = request.args.get('date_to', '')
+    if not df or not dt:
+        flash('Date range required')
+        return redirect(url_for('reports.reports_page'))
+    
+    from_date = datetime.strptime(df, '%Y-%m-%d')
+    to_date = datetime.strptime(dt, '%Y-%m-%d')
+    
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
+    
+    # Get all lead updates in date range
+    updates = LeadUpdate.query.filter(
+        LeadUpdate.created_at >= from_date,
+        LeadUpdate.created_at <= to_date
+    ).all()
+    
+    # Get all active staff
+    staff = User.query.filter_by(active=True).order_by(User.name).all()
+    
+    # Create date range
+    from collections import defaultdict
+    from datetime import timedelta
+    
+    current_date = from_date.date()
+    end_date = to_date.date()
+    dates = []
+    while current_date <= end_date:
+        dates.append(current_date)
+        current_date += timedelta(days=1)
+    
+    # Count updates per staff per day
+    daily_counts = defaultdict(lambda: defaultdict(int))
+    for update in updates:
+        update_date = update.created_at.date()
+        staff_name = update.staff_name
+        daily_counts[staff_name][update_date] += 1
+    
+    # Create Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Staff Daily Initiation"
+    
+    # Headers
+    ws.cell(1, 1, "Staff Name")
+    _hdr(ws.cell(1, 1))
+    for idx, d in enumerate(dates, 2):
+        ws.cell(1, idx, d.strftime('%d-%b'))
+        _hdr(ws.cell(1, idx))
+    ws.cell(1, len(dates) + 2, "Total")
+    _hdr(ws.cell(1, len(dates) + 2))
+    
+    # Data rows
+    row = 2
+    for s in staff:
+        ws.cell(row, 1, s.name)
+        total = 0
+        for idx, d in enumerate(dates, 2):
+            count = daily_counts[s.name][d]
+            ws.cell(row, idx, count if count > 0 else "")
+            total += count
+        ws.cell(row, len(dates) + 2, total)
+        row += 1
+    
+    return _respond(wb, f"Staff_Daily_Initiation_{df}_{dt}.xlsx")
+
+
+@reports_bp.route('/reports/revenue/export')
+def export_revenue():
+    """Revenue Report - shows all revenue with customer, task, staff details"""
+    if session.get('role') not in ['admin', 'finance']:
+        return redirect(url_for('dashboard'))
+    
+    df = request.args.get('date_from', '')
+    dt = request.args.get('date_to', '')
+    if not df or not dt:
+        flash('Date range required')
+        return redirect(url_for('reports.reports_page'))
+    
+    from_date = datetime.strptime(df, '%Y-%m-%d')
+    to_date = datetime.strptime(dt, '%Y-%m-%d')
+    
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
+    
+    # Get all jobs with revenue in date range (cash-basis: use revenue_date)
+    jobs = Job.query.filter(
+        Job.revenue_date >= from_date.date(),
+        Job.revenue_date <= to_date.date(),
+        Job.revenue > 0
+    ).order_by(Job.revenue_date.desc()).all()
+    
+    # Create Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Revenue Report"
+    
+    # Headers
+    headers = ["Customer", "Company", "Task Type", "Representative (Sales)", 
+               "Assigned To (Ops)", "Revenue (AED)", "Status", "Revenue Date"]
+    for idx, h in enumerate(headers, 1):
+        ws.cell(1, idx, h)
+        _hdr(ws.cell(1, idx))
+    
+    # Data
+    row = 2
+    total_revenue = 0
+    users_map = {u.id: u.name for u in User.query.all()}
+    
+    for job in jobs:
+        customer = job.customer
+        rep_name = users_map.get(customer.assigned_to, '') if customer and customer.assigned_to else ''
+        assigned_name = users_map.get(job.assigned_to, '') if job.assigned_to else ''
+        
+        ws.cell(row, 1, customer.name if customer else '')
+        ws.cell(row, 2, customer.company if customer else '')
+        ws.cell(row, 3, job.job_type)
+        ws.cell(row, 4, rep_name)
+        ws.cell(row, 5, assigned_name)
+        ws.cell(row, 6, job.revenue or 0)
+        ws.cell(row, 6).number_format = '#,##0.00'
+        ws.cell(row, 7, job.status)
+        ws.cell(row, 8, job.revenue_date.strftime('%Y-%m-%d') if job.revenue_date else '')
+        
+        total_revenue += (job.revenue or 0)
+        row += 1
+    
+    # Total row
+    row += 1
+    ws.cell(row, 5, "TOTAL:").font = Font(bold=True)
+    ws.cell(row, 6, total_revenue).font = Font(bold=True)
+    ws.cell(row, 6).number_format = '#,##0.00'
+    
+    return _respond(wb, f"Revenue_Report_{df}_{dt}.xlsx")

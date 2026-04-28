@@ -120,14 +120,59 @@
             <div style="font-size:12px;color:#94A3B8;">Jobs with full status history</div>
           </div>
         </div>
-        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 10px 0;line-height:2;">
           <li>Customer, company, job type</li>
           <li>Assigned staff, status & priority</li>
           <li>Created, due & completed dates</li>
           <li>Full status history log</li>
-          <li>Days to completion</li>
         </ul>
-        <button class="btn-add" style="width:100%;text-align:center;background:#c45c00;" onclick="exportReport('tasks')">⬇ Export to Excel</button>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;">Filter by Status:</label>
+          <select id="task_status_filter" style="width:100%;padding:6px;font-size:12px;border:1.5px solid #CBD5E1;border-radius:6px;">
+            <option value="all">All Tasks</option>
+            <option value="active">Active Only (Assigned/Processing/Done)</option>
+            <option value="closed">Closed Only</option>
+          </select>
+        </div>
+        <button class="btn-add" style="width:100%;text-align:center;background:#c45c00;" onclick="exportReportWithStatus('tasks')">⬇ Export to Excel</button>
+      </div>
+      {% endif %}
+
+      <!-- NEW: 8. Staff Daily Initiation Report - Admin + Finance -->
+      {% if role in ['admin', 'finance'] %}
+      <div class="card" style="border-top:4px solid #8B5CF6;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">📞</span>
+          <div>
+            <div style="font-weight:700;color:#8B5CF6;font-size:15px;">Staff Daily Initiation Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Lead actions per staff per day</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Shows lead updates by each staff member</li>
+          <li>Columns = dates, rows = staff names</li>
+          <li>Track daily activity and engagement</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#8B5CF6;" onclick="exportReport('staff-daily')">⬇ Export to Excel</button>
+      </div>
+      {% endif %}
+
+      <!-- NEW: 9. Revenue Report - Admin + Finance -->
+      {% if role in ['admin', 'finance'] %}
+      <div class="card" style="border-top:4px solid #10B981;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">💰</span>
+          <div>
+            <div style="font-weight:700;color:#10B981;font-size:15px;">Revenue Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Revenue breakdown by task</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Customer, task type, revenue amount</li>
+          <li>Representative (sales) vs Assigned To (ops)</li>
+          <li>Revenue date (cash-basis accounting)</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#10B981;" onclick="exportReport('revenue')">⬇ Export to Excel</button>
       </div>
       {% endif %}
 
@@ -232,10 +277,29 @@
         documents: '/reports/documents/export',
         staff: '/reports/staff/export',
         'partner-commissions': '/reports/partner-commissions/export',
+        'staff-daily': '/reports/staff-daily/export',
+        'revenue': '/reports/revenue/export',
       };
       document.getElementById('loadingOverlay').style.display = 'flex';
       const a = document.createElement('a');
       a.href = `${urls[type]}?date_from=${from}&date_to=${to}`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => { document.getElementById('loadingOverlay').style.display = 'none'; }, 3000);
+    }
+    
+    function exportReportWithStatus(type) {
+      const from = document.getElementById('date_from').value;
+      const to = document.getElementById('date_to').value;
+      if (!from || !to) { alert('Please select both dates.'); return; }
+      if (new Date(from) > new Date(to)) { alert('"From" date cannot be after "To" date.'); return; }
+      const status = document.getElementById('task_status_filter').value;
+      const url = `/reports/tasks/export?date_from=${from}&date_to=${to}&status_filter=${status}`;
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      const a = document.createElement('a');
+      a.href = url;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
