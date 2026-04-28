@@ -524,7 +524,7 @@ def dashboard():
     # ── Admin dashboard ──────────────────────────────────────────────────────
     if role == 'admin':
         all_leads = Lead.query.order_by(Lead.due_date).all()
-        date_filter = request.args.get('date', '')
+        date_filter = request.args.get('date', 'month')  # DEFAULT TO CURRENT MONTH
         from_date = request.args.get('from', '')
         to_date = request.args.get('to', '')
 
@@ -546,8 +546,13 @@ def dashboard():
                 to_dt = datetime.strptime(to_date, '%Y-%m-%d').date()
                 leads = [l for l in all_leads if l.created_at and from_dt <= l.created_at.date() <= to_dt]
                 jobs = [j for j in all_jobs if j.created_at and from_dt <= j.created_at.date() <= to_dt]
-            else:
+            elif date_filter == 'all':
+                # Show all time only if explicitly selected
                 jobs = all_jobs
+            else:
+                # Default to current month
+                leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
+                jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
             active_jobs = [j for j in jobs if j.status not in ['Done', 'Closed', 'Closed - Pending Partner Commission']]
             done_jobs = [j for j in jobs if j.status == 'Done']
             closed_jobs = [j for j in jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
@@ -3246,12 +3251,18 @@ def init_db():
             admin = User.query.filter_by(email='admin@tahfeel.ae').first()
             if not admin:
                 new_admin = User(
-                    name='Admin', email='admin@tahfeel.ae',
+                    name='Admin-Tahfeel', email='admin@tahfeel.ae',
                     password=generate_password_hash('tahfeel2026'), role='admin'
                 )
                 db.session.add(new_admin)
                 db.session.commit()
                 print('Admin user created')
+            else:
+                # Update existing admin name if it's still 'Admin'
+                if admin.name == 'Admin':
+                    admin.name = 'Admin-Tahfeel'
+                    db.session.commit()
+                    print('Admin user name updated to Admin-Tahfeel')
             else:
                 print('Admin already exists — skipping')
             if Service.query.count() == 0:
