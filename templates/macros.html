@@ -57,8 +57,10 @@
   <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
   {% endif %}
   <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧾 Doc Generator</a>
-  {% if session.role in ['admin', 'finance'] %}
+  {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
   <a href="/reports" {% if active=='reports' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📊 Reports</a>
+  {% endif %}
+  {% if session.role in ['admin', 'finance'] %}
   <a href="/analytics" {% if active=='analytics' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📈 Analytics</a>
   <a href="/partner-commissions" {% if active=='partner-commissions' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">💰 Commissions</a>
   {% endif %}
