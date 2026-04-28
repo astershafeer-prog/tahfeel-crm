@@ -54,12 +54,23 @@
     <div class="page-header" style="margin-bottom:16px;">
       <div>
         <h2 style="color:#133E87;">📈 Analytics</h2>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Live business performance</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">
+          Live business performance — 
+          <span style="font-weight:600;color:#1A3B8B;">
+            {% if period == 'last_month' %}
+              Last Month
+            {% elif period == 'this_year' %}
+              This Year (Jan - {{ now.strftime('%b') }})
+            {% else %}
+              This Month ({{ now.strftime('%B %Y') }})
+            {% endif %}
+          </span>
+        </div>
       </div>
       <div style="display:flex;gap:8px;">
-        <a href="/analytics?tab={{ tab }}&period=this_month" class="btn-sm {% if period=='this_month' %}btn-primary{% endif %}">This Month</a>
-        <a href="/analytics?tab={{ tab }}&period=last_month" class="btn-sm {% if period=='last_month' %}btn-primary{% endif %}">Last Month</a>
-        <a href="/analytics?tab={{ tab }}&period=this_year" class="btn-sm {% if period=='this_year' %}btn-primary{% endif %}">This Year</a>
+        <a href="/analytics?tab={{ tab }}&period=this_month" class="btn-sm {% if period=='this_month' %}btn-primary{% else %}btn-secondary{% endif %}">This Month</a>
+        <a href="/analytics?tab={{ tab }}&period=last_month" class="btn-sm {% if period=='last_month' %}btn-primary{% else %}btn-secondary{% endif %}">Last Month</a>
+        <a href="/analytics?tab={{ tab }}&period=this_year" class="btn-sm {% if period=='this_year' %}btn-primary{% else %}btn-secondary{% endif %}">This Year</a>
       </div>
     </div>
 
