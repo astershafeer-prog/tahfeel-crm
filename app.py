@@ -479,6 +479,11 @@ def dashboard():
             closed_jobs = [j for j in all_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
             total_revenue = sum((j.revenue or 0) for j in closed_jobs)
             
+            # Customer Advances calculation (same as Admin dashboard)
+            all_received = sum((j.amount_received or 0) for j in all_jobs)
+            closed_received = sum((j.amount_received or 0) for j in closed_jobs)
+            customer_advances = all_received - closed_received
+            
             # Partner commission calculations
             partner_jobs = [j for j in all_jobs if j.partner_commission_expected and j.partner_status == 'Pending']
             total_partner_pending = sum((j.partner_amount or 0) for j in partner_jobs)
@@ -488,7 +493,7 @@ def dashboard():
             total_monthly_target = sum((t.amount_target or 0) for t in targets)
         except:
             active_jobs = pending_approval = pending_close = []
-            total_invoiced = total_received = total_pending = completed_value = 0
+            total_invoiced = total_received = total_pending = completed_value = customer_advances = 0
             total_revenue = total_partner_pending = total_monthly_target = 0
         try:
             all_docs = Document.query.all()
