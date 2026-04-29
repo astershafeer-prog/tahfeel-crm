@@ -516,6 +516,7 @@ def dashboard():
                                total_received=total_received,
                                total_pending=total_pending,
                                completed_value=completed_value,
+                               customer_advances=customer_advances,
                                now=now,
                                birthdays_today=[],
                                total_revenue=total_revenue,
@@ -574,6 +575,10 @@ def dashboard():
             total_received = sum((j.amount_received or 0) for j in active_jobs)
             total_pending = total_invoiced - total_received
             completed_value = sum((j.amount_received or 0) for j in done_jobs)
+            
+            # Customer Advances = Money received for work NOT yet completed (active tasks only)
+            customer_advances = sum((j.amount_received or 0) for j in active_jobs if j.status in ['Assigned', 'Processing'])
+            
             try:
                 total_revenue = sum((j.revenue or 0) for j in closed_revenue_jobs)
                 # Partner commission pending
@@ -588,7 +593,7 @@ def dashboard():
             recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Closed', 'Pending Finance Approval']][:10]
         except:
             jobs = all_jobs = active_jobs = done_jobs = closed_jobs = overdue_jobs = pending_approval = pending_close = recent_jobs = []
-            total_invoiced = total_received = total_pending = completed_value = total_revenue = 0
+            total_invoiced = total_received = total_pending = completed_value = customer_advances = total_revenue = 0
 
         # Lead stats
         total = len(leads)
