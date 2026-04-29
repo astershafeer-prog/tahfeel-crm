@@ -572,17 +572,15 @@ def dashboard():
             # Revenue calculations use revenue_jobs (cash-basis)
             closed_revenue_jobs = [j for j in revenue_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
             
-            # Finance totals should include ALL jobs (not just active)
+            # Finance totals: Count ALL jobs (active + done + closed) for consistency
+            all_invoiced = sum((j.amount_invoiced or 0) for j in jobs)
             all_received = sum((j.amount_received or 0) for j in jobs)
             closed_received = sum((j.amount_received or 0) for j in closed_jobs)
             
-            # Active jobs only for invoiced/pending calculation
-            total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
-            active_received = sum((j.amount_received or 0) for j in active_jobs)
-            total_pending = total_invoiced - active_received
-            
-            # Use all_received for the "Received" display
+            # Display values
+            total_invoiced = all_invoiced
             total_received = all_received
+            total_pending = all_invoiced - all_received
             completed_value = sum((j.amount_received or 0) for j in done_jobs)
             
             # Customer Advances = Money received but work not closed yet
