@@ -576,8 +576,11 @@ def dashboard():
             total_pending = total_invoiced - total_received
             completed_value = sum((j.amount_received or 0) for j in done_jobs)
             
-            # Customer Advances = Money received for work NOT yet completed (active tasks only)
-            customer_advances = sum((j.amount_received or 0) for j in active_jobs if j.status in ['Assigned', 'Processing'])
+            # Customer Advances = Money received for work NOT yet completed
+            # = All received - (Closed + Done)
+            all_received = sum((j.amount_received or 0) for j in jobs)
+            closed_received = sum((j.amount_received or 0) for j in closed_jobs)
+            customer_advances = all_received - closed_received - completed_value
             
             try:
                 total_revenue = sum((j.revenue or 0) for j in closed_revenue_jobs)
