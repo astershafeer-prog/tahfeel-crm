@@ -3635,10 +3635,9 @@ def analytics():
     lost = [l for l in all_leads if l.status in lost_s]
     conversion_rate = round(len(converted) / total_leads * 100, 1) if total_leads > 0 else 0
 
-    # ── Revenue stats
-    active_jobs = [j for j in all_jobs if j.status not in ['Pending Finance Approval']]
-    total_invoiced = sum(j.amount_invoiced or 0 for j in active_jobs)
-    total_received = sum(j.amount_received or 0 for j in active_jobs)
+    # ── Revenue stats (match dashboard Finance card - count ALL jobs)
+    total_invoiced = sum(j.amount_invoiced or 0 for j in all_jobs)
+    total_received = sum(j.amount_received or 0 for j in all_jobs)
     total_outstanding = total_invoiced - total_received
 
     # ── Lead pipeline by status
@@ -3766,6 +3765,24 @@ def analytics():
 
     # Tab from request
     tab = request.args.get('tab', 'overview')
+    
+    # ── Lead breakdown by staff and status (for pivot table)
+    # Get all statuses and staff
+    all_statuses = sorted(set(l.status for l in all_leads if l.status))
+    sales_staff = [u for u in all_users if u.role in ['sales', 'admin']]
+    
+    # Create breakdown: {status: {staff_name: count}}
+    lead_breakdown = {}
+    for status in all_statuses:
+        lead_breakdown[status] = {}
+        for staff in sales_staff:
+            count = len([l for l in all_leads if l.status == status and l.assigned_to == staff.id])
+            lead_breakdown[status][staff.name] = count
+    
+    # Calculate totals
+    status_totals = {status: sum(lead_breakdown[status].values()) for status in all_statuses}
+    staff_totals = {staff.name: sum(lead_breakdown[status].get(staff.name, 0) for status in all_statuses) for staff in sales_staff}
+    grand_total = sum(status_totals.values())
 
     return render_template('analytics.html',
         now=now, period=period, tab=tab,
@@ -3779,6 +3796,8 @@ def analytics():
         max_service=max_service, max_source=max_source,
         max_pipeline=max_pipeline, max_rev=max_rev,
         users_map=users_map,
+        lead_breakdown=lead_breakdown, all_statuses=all_statuses, sales_staff=sales_staff,
+        status_totals=status_totals, staff_totals=staff_totals, grand_total=grand_total,
         total_jobs=total_jobs, completed_jobs=len(completed_jobs),
         active_jobs_ops=len(active_jobs_ops), overdue_jobs=len(overdue_jobs),
         avg_completion=avg_completion, top_job_types=top_job_types, avg_by_job_type=avg_by_job_type,

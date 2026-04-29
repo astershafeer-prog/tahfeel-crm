@@ -211,43 +211,41 @@
     </div>
     <div class="grid2">
       <div class="an-card">
-        <div class="an-card-title">Pipeline by Status</div>
-        {% if pipeline %}
-          {% for status, count in pipeline.most_common() %}
-            {% if count > 0 %}
-              {% set pct = ((count / max_pipeline) * 100)|int %}
-              {# Assign colors based on status type #}
-              {% if status in ['Converted', 'Won', 'Closed-Won'] %}
-                {% set color = '#10B981' %}
-              {% elif status in ['Lost', 'Rejected', 'Closed-Lost'] %}
-                {% set color = '#EF4444' %}
-              {% elif status == 'New' %}
-                {% set color = '#94A3B8' %}
-              {% elif 'Call' in status or 'Called' in status %}
-                {% set color = '#3B82F6' %}
-              {% elif 'WhatsApp' in status or 'Message' in status %}
-                {% set color = '#8B5CF6' %}
-              {% elif 'Quotation' in status or 'Quote' in status %}
-                {% set color = '#F59E0B' %}
-              {% elif 'Potential' in status or 'Lead' in status %}
-                {% set color = '#06B6D4' %}
-              {% elif 'Meeting' in status or 'Scheduled' in status %}
-                {% set color = '#6366F1' %}
-              {% elif 'Not Responding' in status or 'No Response' in status %}
-                {% set color = '#F97316' %}
-              {% else %}
-                {% set color = '#64748B' %}
-              {% endif %}
-              <div class="pip-row">
-                <div class="pip-label">{{ status }}</div>
-                <div class="pip-track"><div class="pip-fill" style="width:{{ pct }}%;background:{{ color }};"></div></div>
-                <div class="pip-count">{{ count }}</div>
-              </div>
-            {% endif %}
-          {% endfor %}
-        {% else %}
-          <div class="empty-state">No leads this period</div>
-        {% endif %}
+        <div class="an-card-title">Lead Breakdown by Staff</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;font-size:11px;border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1.5px solid #E2E8F0;">
+                <th style="text-align:left;padding:8px 6px;font-weight:700;color:#64748B;text-transform:uppercase;font-size:10px;">Status</th>
+                {% for staff in sales_staff %}
+                <th style="text-align:center;padding:8px 6px;font-weight:700;color:#64748B;text-transform:uppercase;font-size:10px;">{{ staff.name.split()[0] }}</th>
+                {% endfor %}
+                <th style="text-align:center;padding:8px 6px;font-weight:700;color:#1A3B8B;text-transform:uppercase;font-size:10px;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for status in all_statuses %}
+              <tr style="border-bottom:0.5px solid #F8FAFC;">
+                <td style="padding:6px;color:#475569;font-weight:500;">{{ status }}</td>
+                {% for staff in sales_staff %}
+                  {% set count = lead_breakdown[status].get(staff.name, 0) %}
+                  <td style="text-align:center;padding:6px;color:{% if count > 0 %}#1A3B8B{% else %}#CBD5E1{% endif %};font-weight:{% if count > 0 %}600{% else %}400{% endif %};">{{ count if count > 0 else '—' }}</td>
+                {% endfor %}
+                <td style="text-align:center;padding:6px;color:#1A3B8B;font-weight:700;">{{ status_totals[status] }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr style="border-top:1.5px solid #E2E8F0;background:#F8FAFC;">
+                <td style="padding:8px 6px;font-weight:700;color:#1A3B8B;">Grand Total</td>
+                {% for staff in sales_staff %}
+                <td style="text-align:center;padding:8px 6px;font-weight:700;color:#1A3B8B;">{{ staff_totals.get(staff.name, 0) }}</td>
+                {% endfor %}
+                <td style="text-align:center;padding:8px 6px;font-weight:700;color:#1A3B8B;font-size:12px;">{{ grand_total }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
       <div class="an-card">
         <div class="an-card-title">Revenue — Invoiced vs Received</div>
