@@ -226,12 +226,12 @@
             <tbody>
               {% for status in all_statuses %}
               <tr style="border-bottom:0.5px solid #F8FAFC;">
-                <td style="padding:6px;color:#475569;font-weight:500;">{{ status }}</td>
+                <td style="padding:10px 6px;color:#475569;font-weight:500;">{{ status }}</td>
                 {% for staff in sales_staff %}
                   {% set count = lead_breakdown[status].get(staff.name, 0) %}
-                  <td style="text-align:center;padding:6px;color:{% if count > 0 %}#1A3B8B{% else %}#CBD5E1{% endif %};font-weight:{% if count > 0 %}600{% else %}400{% endif %};">{{ count if count > 0 else '—' }}</td>
+                  <td style="text-align:center;padding:10px 6px;color:{% if count > 0 %}#1A3B8B{% else %}#CBD5E1{% endif %};font-weight:{% if count > 0 %}600{% else %}400{% endif %};">{{ count if count > 0 else '—' }}</td>
                 {% endfor %}
-                <td style="text-align:center;padding:6px;color:#1A3B8B;font-weight:700;">{{ status_totals[status] }}</td>
+                <td style="text-align:center;padding:10px 6px;color:#1A3B8B;font-weight:700;">{{ status_totals[status] }}</td>
               </tr>
               {% endfor %}
             </tbody>
