@@ -3683,6 +3683,9 @@ def analytics():
         u_conv = len([l for l in u_leads if l.status in won_s])
         conv_rate = round(u_conv / len(u_leads) * 100) if u_leads else 0
         
+        # Count pending leads (not contacted yet - status is "New")
+        u_pending = len([l for l in u_leads if l.status == 'New'])
+        
         # Calculate revenue from closed jobs
         try:
             u_revenue = sum(j.revenue or 0 for j in u_sales if j.status == 'Closed')
@@ -3698,6 +3701,7 @@ def analytics():
             'invoiced': u_inv,
             'revenue': u_revenue,
             'target': targets.get(u.id, 0),
+            'pending': u_pending,
         })
     staff_stats.sort(key=lambda x: x['revenue'], reverse=True)
 

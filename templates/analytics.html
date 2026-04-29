@@ -25,7 +25,7 @@
     .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
     .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
-    .staff-row{display:grid;grid-template-columns:2fr 0.8fr 0.8fr 0.8fr 1.2fr 1.4fr;gap:8px;padding:10px 12px;border-bottom:0.5px solid #F8FAFC;align-items:center;}
+    .staff-row{display:grid;grid-template-columns:2fr 0.8fr 0.8fr 0.8fr 0.8fr 1.2fr 1.4fr;gap:8px;padding:10px 12px;border-bottom:0.5px solid #F8FAFC;align-items:center;}
     .staff-hdr{background:#F8FAFC;border-radius:8px;margin-bottom:6px;}
     .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;}
     .doc-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid #F8FAFC;}
@@ -438,6 +438,7 @@
       <div class="staff-row staff-hdr">
         <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Staff</span>
         <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Leads</span>
+        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Pending</span>
         <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Conv.</span>
         <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Rate</span>
         <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Revenue (AED)</span>
@@ -455,6 +456,7 @@
           </div>
         </div>
         <span style="font-size:13px;color:#475569;">{{ s.leads }}</span>
+        <span style="font-size:13px;color:#F59E0B;font-weight:700;">{{ s.pending }}</span>
         <span style="font-size:13px;color:#10B981;font-weight:700;">{{ s.converted }}</span>
         <span style="font-size:12px;font-weight:700;color:{% if s.conv_rate >= 50 %}#10B981{% elif s.conv_rate >= 25 %}#F59E0B{% else %}#EF4444{% endif %};">{{ s.conv_rate }}%</span>
         <span style="font-size:12px;font-weight:700;color:#8B5CF6;">{{ '{:,.0f}'.format(s.revenue) }}</span>
