@@ -16,7 +16,10 @@
       {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
     <div class="page-head" style="margin-bottom:14px;">
-      <div><div class="page-head-title">Finance Dashboard</div><div style="font-size:12px;color:#94A3B8;margin-top:2px;">Welcome back, {{ session.user_name.split()[0] }}</div></div>
+      <div><div class="page-head-title">Finance Dashboard</div><div style="font-size:12px;color:#94A3B8;margin-top:2px;">All-time view</div></div>
+      <div style="display:flex;gap:8px;">
+        <span style="padding:6px 14px;background:#E2E8F0;color:#475569;border-radius:6px;font-size:12px;font-weight:600;cursor:default;">All Time</span>
+      </div>
     </div>
 
     <!-- 4-Card Layout: Tasks | Finance | Revenue | Documents -->
@@ -36,8 +39,9 @@
         <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Finance</div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Invoiced</span><span style="font-size:16px;font-weight:700;color:#1A3B8B;">AED {{ '{:,.0f}'.format(total_invoiced) }}</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Received</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(total_received) }}</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;"><span style="font-size:13px;color:#475569;">Closed Value</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(completed_value) }}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Closed Value</span><span style="font-size:16px;font-weight:700;color:#10B981;">AED {{ '{:,.0f}'.format(completed_value) }}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Customer Advances</span><span style="font-size:16px;font-weight:700;color:#F59E0B;">AED {{ '{:,.0f}'.format(customer_advances or 0) }}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;"><span style="font-size:13px;color:#475569;">Pending</span><span style="font-size:16px;font-weight:700;color:#EF4444;">AED {{ '{:,.0f}'.format(total_pending) }}</span></div>
         {% if total_invoiced > 0 %}{% set crate = [(total_received / total_invoiced * 100)|int, 100]|min %}
         <div style="margin-top:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;color:#475569;">Collection Rate</span><span style="font-size:11px;font-weight:700;color:#1A3B8B;">{{ crate }}%</span></div><div style="height:6px;background:#F1F5F9;border-radius:10px;overflow:hidden;"><div style="width:{{ crate }}%;height:100%;background:#1A3B8B;border-radius:10px;"></div></div></div>
         {% endif %}
