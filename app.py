@@ -3768,7 +3768,7 @@ def analytics():
     
     # ── Lead breakdown by staff and status (for pivot table)
     # Get all statuses and staff
-    all_statuses = sorted(set(l.status for l in all_leads if l.status))
+    all_statuses = sorted(set(l.status for l in all_leads if l.status), key=lambda s: (s != 'New', s))  # "New" first, then alphabetical
     sales_staff = [u for u in all_users if u.role == 'sales']  # Only Sales role, not admin
     
     # Create breakdown: {status: {staff_name: count}}
