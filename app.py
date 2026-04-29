@@ -694,6 +694,7 @@ def dashboard():
                                total_received=total_received,
                                total_pending=total_pending,
                                completed_value=completed_value,
+                               customer_advances=customer_advances,
                                total_revenue=total_revenue,
                                total_partner_pending=total_partner_pending,
                                total_monthly_target=total_monthly_target,
