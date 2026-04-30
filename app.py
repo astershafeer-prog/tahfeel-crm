@@ -586,7 +586,7 @@ def dashboard():
             total_invoiced = all_invoiced
             total_received = all_received
             total_pending = all_invoiced - all_received
-            completed_value = sum((j.amount_received or 0) for j in done_jobs)
+            completed_value = closed_received  # Money from CLOSED tasks (not Done)
             
             # Customer Advances = Money received but work not closed yet
             customer_advances = all_received - closed_received
@@ -3692,7 +3692,7 @@ def analytics():
     targets = {t.user_id: t.amount_target or 0 for t in MonthlyTarget.query.filter_by(month=month, year=year).all()}
     
     for u in all_users:
-        if u.role not in ['sales', 'operations', 'admin']:
+        if u.role != 'sales':  # Only Sales role
             continue
         u_leads = [l for l in all_leads if l.assigned_to == u.id]
         u_sales = [j for j in all_jobs if j.customer and j.customer.assigned_to == u.id]
