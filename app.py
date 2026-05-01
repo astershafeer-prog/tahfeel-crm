@@ -648,13 +648,8 @@ def dashboard():
             u_invoiced = sum((j.amount_invoiced or 0) for j in u_sales_jobs if j.status not in ['Pending Finance Approval'])
             u_closed_val = sum((j.amount_received or 0) for j in u_sales_closed)
             
-            # Initiated = count of lead updates where staff took action
-            try:
-                u_initiated = LeadUpdate.query.filter_by(updated_by=u.id).filter(
-                    LeadUpdate.lead_id.in_([l.id for l in u_leads])
-                ).count()
-            except:
-                u_initiated = 0
+            # Initiated = leads where staff took action (status NOT "New")
+            u_initiated = len([l for l in u_leads if l.status != 'New'])
             
             # New leads = leads with status "New" (not yet contacted)
             u_new_leads = len([l for l in u_leads if l.status == 'New'])
