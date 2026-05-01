@@ -33,7 +33,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, timezone
 DUBAI_TZ = timezone(timedelta(hours=4))
 def now_dubai():
-    return datetime.now(DUBAI_TZ).replace(tzinfo=None)
+    # TEMPORARY OVERRIDE - TODAY ONLY (May 1st treated as April 30th)
+    # Remove this after finishing April work!
+    return datetime(2026, 4, 30, 23, 59, 59)  # April 30, 2026 11:59 PM
+    # Original: return datetime.now(DUBAI_TZ).replace(tzinfo=None)
 from functools import wraps
 import os
 
