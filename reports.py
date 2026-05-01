@@ -805,12 +805,18 @@ def export_revenue():
     
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     
-    # Get all jobs with revenue in date range (cash-basis: use revenue_date)
+    # Get all jobs with revenue in date range
+    # Use revenue_date if available, otherwise fall back to created_at for old tasks
+    from sqlalchemy import or_
     jobs = Job.query.filter(
-        Job.revenue_date >= from_date.date(),
-        Job.revenue_date <= to_date.date(),
-        Job.revenue > 0
-    ).order_by(Job.revenue_date.desc()).all()
+        Job.status.in_(['Closed', 'Closed - Pending Partner Commission']),
+        or_(
+            # Cash-basis: use revenue_date if set
+            (Job.revenue_date >= from_date.date()) & (Job.revenue_date <= to_date.date()),
+            # Fallback: if revenue_date is NULL, use created_at
+            (Job.revenue_date.is_(None)) & (Job.created_at >= from_date) & (Job.created_at <= to_date)
+        )
+    ).order_by(Job.created_at.desc()).all()
     
     # Create Excel
     wb = openpyxl.Workbook()
