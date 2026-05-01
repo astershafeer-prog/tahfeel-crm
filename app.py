@@ -647,6 +647,18 @@ def dashboard():
             u_sales_closed = [j for j in all_jobs_db if j.customer and j.customer.assigned_to == u.id and j.status == 'Closed']
             u_invoiced = sum((j.amount_invoiced or 0) for j in u_sales_jobs if j.status not in ['Pending Finance Approval'])
             u_closed_val = sum((j.amount_received or 0) for j in u_sales_closed)
+            
+            # Initiated = count of lead updates where staff took action
+            try:
+                u_initiated = LeadUpdate.query.filter_by(updated_by=u.id).filter(
+                    LeadUpdate.lead_id.in_([l.id for l in u_leads])
+                ).count()
+            except:
+                u_initiated = 0
+            
+            # New leads = leads with status "New" (not yet contacted)
+            u_new_leads = len([l for l in u_leads if l.status == 'New'])
+            
             try:
                 u_revenue = sum((j.revenue or 0) for j in u_sales_closed)
             except:
@@ -657,6 +669,8 @@ def dashboard():
                 'name': u.name,
                 'role': u.role,
                 'leads': len(u_leads),
+                'initiated': u_initiated,
+                'new_leads': u_new_leads,
                 'overdue_leads': len([l for l in u_leads if l.due_date and l.due_date < now and l.status not in ['Converted','Lost']]),
                 'conversions': len([l for l in u_leads if l.status == 'Converted']),
                 'lost': len([l for l in u_leads if l.status == 'Lost']),

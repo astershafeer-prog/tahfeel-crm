@@ -103,21 +103,22 @@
     </div>
 
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #0F2660;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:20px;overflow:hidden;">
-      <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.9fr;gap:8px;padding:8px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
+      <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.9fr 1fr;gap:8px;padding:8px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Staff</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Leads</span>
-        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue</span>
+        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Initiated</span>
+        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">New</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Conv.</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Lost</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Tasks</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Overdue</span>
-        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Invoiced</span>
         <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Revenue</span>
-        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Target</span>
+        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Target Achievement</span>
       </div>
       {% for s in staff_stats %}
+      {% if s.role in ['sales', 'operations'] %}
       {% set amt_pct = [(s.revenue / s.amount_target * 100)|int, 100]|min if s.amount_target > 0 else 0 %}
-      <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.9fr;gap:8px;padding:10px 14px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
+      <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.9fr 1fr;gap:8px;padding:10px 14px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
         <div class="av-wrap">
           <div class="av" style="background:{% if loop.index%4==1 %}#1A3B8B{% elif loop.index%4==2 %}#10B981{% elif loop.index%4==3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ s.name[:2].upper() }}</div>
           <div>
@@ -126,16 +127,16 @@
           </div>
         </div>
         <span style="font-size:13px;color:#475569;">{{ s.leads }}</span>
-        <span>{% if s.overdue_leads > 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600;">{{ s.overdue_leads }}</span>{% else %}<span style="color:#CBD5E1;font-size:12px;">0</span>{% endif %}</span>
+        <span style="font-size:13px;color:#1A3B8B;font-weight:600;">{{ s.initiated or 0 }}</span>
+        <span style="font-size:13px;color:#EF4444;font-weight:600;">{{ s.new_leads or 0 }}</span>
         <span style="font-size:13px;color:#10B981;font-weight:600;">{{ s.conversions }}</span>
         <span style="font-size:13px;color:#EF4444;">{{ s.lost }}</span>
         <span style="font-size:13px;color:#475569;">{{ s.active_jobs }}</span>
         <span>{% if s.overdue_jobs > 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600;">{{ s.overdue_jobs }}</span>{% else %}<span style="color:#CBD5E1;font-size:12px;">0</span>{% endif %}</span>
-        <span style="font-size:11px;color:#1A3B8B;font-weight:600;">{{ '{:,.0f}'.format(s.invoiced) }}</span>
         <span style="font-size:11px;color:#8B5CF6;font-weight:700;">{{ '{:,.0f}'.format(s.revenue) }}</span>
         <div>
           {% if s.amount_target > 0 %}
-          <div style="font-size:10px;color:#94A3B8;margin-bottom:3px;">{{ '{:,.0f}'.format(s.revenue) }} / {{ '{:,.0f}'.format(s.amount_target) }}</div>
+          <div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">{{ '{:,.0f}'.format(s.revenue) }} / {{ '{:,.0f}'.format(s.amount_target) }}</div>
           <div style="height:5px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
             <div style="width:{{ amt_pct }}%;height:100%;background:{% if amt_pct>=100 %}#10B981{% elif amt_pct>=60 %}#8B5CF6{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
           </div>
@@ -145,6 +146,7 @@
           {% endif %}
         </div>
       </div>
+      {% endif %}
       {% else %}
       <div class="empty">No staff found.</div>
       {% endfor %}
