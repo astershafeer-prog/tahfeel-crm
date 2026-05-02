@@ -2066,13 +2066,16 @@ def jobs():
     role = session['role']
     sort = request.args.get('sort', 'due')
     order = request.args.get('order', 'asc')
-    show_closed = request.args.get('status') == 'Closed'
+    status_filter = request.args.get('status', '')
+    
     try:
-        if show_closed:
+        # Load ALL tasks if no status filter OR if status is Closed
+        # This allows searching across all tasks including closed ones
+        if not status_filter or status_filter == 'Closed':
             job_list = Job.query.all()
         else:
             job_list = Job.query.filter(Job.status != 'Closed').order_by(Job.due_date.asc()).all()
-        status_filter = request.args.get('status', '')
+        
         priority_filter = request.args.get('priority', '')
         assigned_filter = request.args.get('assigned_to', '') or request.args.get('staff', '')
         date_filter = request.args.get('date', '')
