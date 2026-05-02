@@ -4225,3 +4225,70 @@ def admin_delete_partner(partner_id):
     else:
         flash('Cannot delete - has associated tasks.', 'error')
     return redirect(url_for('admin_panel'))
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TEMPORARY ADMIN ROUTE - Fix April 30 Revenue Dates
+# ══════════════════════════════════════════════════════════════════════════════
+@app.route('/admin/fix-april-revenue-dates', methods=['GET', 'POST'])
+@login_required
+def fix_april_revenue_dates():
+    if session['role'] != 'admin':
+        flash('Admin access required')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        # Find all tasks with revenue_date or partial revenue dates that need fixing
+        # Tasks closed "today" during override period should be April 30
+        from datetime import date
+        
+        fixed_count = 0
+        
+        # Fix closed tasks
+        tasks = Job.query.filter(
+            Job.status.in_(['Closed', 'Closed - Pending Partner Commission']),
+            Job.revenue_date.isnot(None)
+        ).all()
+        
+        for task in tasks:
+            # If revenue_date is May 2, 2026, it was actually closed on April 30
+            if task.revenue_date == date(2026, 5, 2):
+                task.revenue_date = date(2026, 4, 30)
+                fixed_count += 1
+        
+        # Fix partial revenues
+        partials = PartialRevenue.query.all()
+        for pr in partials:
+            if pr.revenue_date == date(2026, 5, 2):
+                pr.revenue_date = date(2026, 4, 30)
+                fixed_count += 1
+        
+        db.session.commit()
+        flash(f'Fixed {fixed_count} revenue dates from May 2 → April 30')
+        return redirect(url_for('dashboard'))
+    
+    # GET - Show preview
+    from datetime import date
+    tasks_to_fix = Job.query.filter(
+        Job.status.in_(['Closed', 'Closed - Pending Partner Commission']),
+        Job.revenue_date == date(2026, 5, 2)
+    ).all()
+    
+    partials_to_fix = PartialRevenue.query.filter(
+        PartialRevenue.revenue_date == date(2026, 5, 2)
+    ).all()
+    
+    return f'''
+    <h2>Fix April Revenue Dates</h2>
+    <p>This will change revenue_date from <strong>May 2, 2026</strong> to <strong>April 30, 2026</strong></p>
+    <p>Closed tasks to fix: {len(tasks_to_fix)}</p>
+    <p>Partial revenues to fix: {len(partials_to_fix)}</p>
+    <ul>
+    {''.join(f'<li>{t.customer.name if t.customer else "N/A"} - {t.job_type} - {t.revenue or 0} AED</li>' for t in tasks_to_fix)}
+    </ul>
+    <form method="post">
+        <button type="submit" style="background:red;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;">
+            Fix All Revenue Dates
+        </button>
+        <a href="/dashboard" style="margin-left:10px;">Cancel</a>
+    </form>
+    '''
