@@ -4504,3 +4504,63 @@ def quick_edit_revenue_date(job_id):
         flash(f'Revenue date updated to {job.revenue_date.strftime("%d %b %Y")}')
     
     return redirect(request.referrer or url_for('revenue_breakdown'))
+
+# ══════════════════════════════════════════════════════════════════════════════
+# EMERGENCY FIX - Direct SQL Update for April 30 Dates
+# ══════════════════════════════════════════════════════════════════════════════
+@app.route('/emergency-fix-dates-now', methods=['GET', 'POST'])
+@login_required
+def emergency_fix_dates():
+    if session['role'] != 'admin':
+        flash('Admin only')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        from datetime import date
+        
+        fixed = 0
+        
+        # Fix all closed tasks with revenue_date = May 2, 2026
+        tasks = Job.query.filter(
+            Job.revenue_date == date(2026, 5, 2)
+        ).all()
+        
+        for task in tasks:
+            task.revenue_date = date(2026, 4, 30)
+            # Also fix created_at if it's May 2
+            if task.created_at.date() == date(2026, 5, 2):
+                task.created_at = task.created_at.replace(year=2026, month=4, day=30)
+            fixed += 1
+        
+        # Fix partial revenues
+        partials = PartialRevenue.query.filter(
+            PartialRevenue.revenue_date == date(2026, 5, 2)
+        ).all()
+        
+        for pr in partials:
+            pr.revenue_date = date(2026, 4, 30)
+            fixed += 1
+        
+        db.session.commit()
+        
+        return f'<h1>✅ FIXED!</h1><p>Updated {fixed} records from May 2 → April 30</p><a href="/dashboard">← Back to Dashboard</a>'
+    
+    # GET - Show what will be fixed
+    from datetime import date
+    tasks = Job.query.filter(Job.revenue_date == date(2026, 5, 2)).all()
+    partials = PartialRevenue.query.filter(PartialRevenue.revenue_date == date(2026, 5, 2)).all()
+    
+    html = '<h1>⚠️ Emergency Date Fix</h1>'
+    html += f'<p>This will change ALL dates from <strong>May 2, 2026</strong> to <strong>April 30, 2026</strong></p>'
+    html += f'<p>Tasks to fix: <strong>{len(tasks)}</strong></p>'
+    html += f'<p>Partial revenues to fix: <strong>{len(partials)}</strong></p>'
+    html += '<h3>Tasks:</h3><ul>'
+    
+    for task in tasks:
+        html += f'<li>{task.customer.name if task.customer else "N/A"} - {task.job_type} - {task.revenue or 0} AED</li>'
+    
+    html += '</ul>'
+    html += '<form method="post"><button type="submit" style="background:red;color:white;padding:15px 30px;border:none;font-size:16px;cursor:pointer;">FIX ALL DATES NOW</button></form>'
+    html += '<br><a href="/dashboard">← Cancel</a>'
+    
+    return html
