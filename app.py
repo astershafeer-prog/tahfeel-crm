@@ -486,8 +486,9 @@ def dashboard():
             if date_filter == 'today':
                 jobs = [j for j in all_jobs if j.created_at and j.created_at.date() == now.date()]
             elif date_filter == 'week':
-                week_start = now.date() - timedelta(days=now.weekday())
-                jobs = [j for j in all_jobs if j.created_at and j.created_at.date() >= week_start]
+                week_start = now.date() - timedelta(days=now.weekday())  # Monday
+                week_end = week_start + timedelta(days=6)  # Sunday
+                jobs = [j for j in all_jobs if j.created_at and week_start <= j.created_at.date() <= week_end]
             elif date_filter == 'month':
                 jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
             elif date_filter == 'all':
@@ -583,11 +584,12 @@ def dashboard():
                 # For revenue (cash-basis): use revenue_date
                 revenue_jobs = [j for j in all_jobs if j.revenue_date and j.revenue_date == now.date()]
             elif date_filter == 'week':
-                week_start = now.date() - timedelta(days=now.weekday())
-                leads = [l for l in all_leads if l.created_at and l.created_at.date() >= week_start]
-                jobs = [j for j in all_jobs if j.created_at and j.created_at.date() >= week_start]
+                week_start = now.date() - timedelta(days=now.weekday())  # Monday
+                week_end = week_start + timedelta(days=6)  # Sunday
+                leads = [l for l in all_leads if l.created_at and week_start <= l.created_at.date() <= week_end]
+                jobs = [j for j in all_jobs if j.created_at and week_start <= j.created_at.date() <= week_end]
                 # For revenue (cash-basis): use revenue_date
-                revenue_jobs = [j for j in all_jobs if j.revenue_date and j.revenue_date >= week_start]
+                revenue_jobs = [j for j in all_jobs if j.revenue_date and week_start <= j.revenue_date <= week_end]
             elif date_filter == 'month':
                 leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
                 jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
@@ -772,8 +774,9 @@ def dashboard():
     if period == 'today':
         leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()]
     elif period == 'week':
-        week_start = now.date() - timedelta(days=now.weekday())
-        leads = [l for l in all_leads if l.created_at and l.created_at.date() >= week_start]
+        week_start = now.date() - timedelta(days=now.weekday())  # Monday
+        week_end = week_start + timedelta(days=6)  # Sunday
+        leads = [l for l in all_leads if l.created_at and week_start <= l.created_at.date() <= week_end]
     elif period == 'month':
         leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
     else:
