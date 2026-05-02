@@ -3559,7 +3559,8 @@ def export_full_backup():
     # Sheet 3: Jobs
     ws3 = wb.create_sheet("Jobs")
     style_headers(ws3, ['ID','Customer','Company','Job Type','Assigned To','Created By',
-                         'Status','Invoiced (AED)','Received (AED)','Created Date','Due Date'])
+                         'Status','Invoiced (AED)','Received (AED)','Revenue (AED)',
+                         'Revenue Date','Partner Commission','Partner Received','Created Date','Due Date'])
     for j in Job.query.order_by(Job.created_at.desc()).all():
         ws3.append([
             j.id,
@@ -3571,6 +3572,10 @@ def export_full_backup():
             j.status or '',
             float(j.amount_invoiced or 0),
             float(j.amount_received or 0),
+            float(j.revenue or 0),
+            j.revenue_date.strftime('%d/%m/%Y') if j.revenue_date else '',
+            'Yes' if j.has_partner_commission else 'No',
+            'Yes' if j.partner_commission_received else 'No',
             j.created_at.strftime('%d/%m/%Y %H:%M') if j.created_at else '',
             j.due_date.strftime('%d/%m/%Y') if j.due_date else ''
         ])
