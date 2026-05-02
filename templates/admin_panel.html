@@ -258,6 +258,7 @@
           </form>
           <hr class="divider">
           <input type="text" oninput="filterList(this,'jt-view')" placeholder="Filter service types..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
+          <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border-light);border-radius:6px;padding:4px;">
           {% if job_types %}
             {% for jt in job_types %}
             <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
@@ -283,6 +284,7 @@
           {% else %}
             <div class="empty">No service types yet.</div>
           {% endif %}
+          </div>
         </div>
       </div>
 
@@ -302,6 +304,7 @@
           </form>
           <hr class="divider">
           <input type="text" oninput="filterList(this,'dt-view')" placeholder="Filter document types..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
+          <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border-light);border-radius:6px;padding:4px;">
           {% if doc_types %}
             {% for dt in doc_types %}
             <div style="padding:8px 0;border-bottom:1px solid var(--border-light);">
@@ -323,6 +326,7 @@
           {% else %}
             <div class="empty">No document types yet.</div>
           {% endif %}
+          </div>
         </div>
       </div>
 
