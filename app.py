@@ -562,7 +562,6 @@ def dashboard():
                                total_pending=total_pending,
                                completed_value=completed_value,
                                customer_advances=customer_advances,
-                               now=now,
                                birthdays_today=[],
                                total_revenue=total_revenue,
                                total_partner_pending=total_partner_pending,
