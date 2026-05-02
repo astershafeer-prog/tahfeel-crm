@@ -115,7 +115,7 @@
         {% endif %}
 
         <!-- Edit Finance Details for Closed Tasks -->
-        {% if job.status == 'Closed' and session.role in ['finance','admin'] %}
+        {% if job.status in ['Closed', 'Closed - Pending Partner Commission'] and session.role in ['finance','admin'] %}
         <div id="edit-finance-section" style="margin-top:12px;">
           <button type="button" onclick="document.getElementById('finance-edit-form').style.display='block'; this.style.display='none';" class="btn-secondary" style="width:100%;">
             📝 Edit Finance Details
