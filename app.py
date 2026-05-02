@@ -196,6 +196,18 @@ class Job(db.Model):
     finance_approver = db.relationship('User', foreign_keys=[finance_approved_by])
     updates = db.relationship('JobUpdate', backref='job', lazy=True, order_by='JobUpdate.created_at.desc()')
     subtasks = db.relationship('SubTask', backref='job', lazy=True, order_by='SubTask.created_at')
+    partial_revenues = db.relationship('PartialRevenue', backref='job', lazy=True, order_by='PartialRevenue.revenue_date.desc()')
+
+class PartialRevenue(db.Model):
+    __tablename__ = 'partial_revenue'
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    revenue_date = db.Column(db.Date, nullable=False)
+    notes = db.Column(db.String(500))
+    recorded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    recorder = db.relationship('User', foreign_keys=[recorded_by])
 
 class Partner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
