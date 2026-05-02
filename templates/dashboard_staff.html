@@ -107,7 +107,8 @@
         {% endif %}
       </div>
 
-      <!-- Revenue Block -->
+      <!-- Revenue Block (Sales only) -->
+      {% if session.role == 'sales' %}
       <div class="block" style="border-top:5px solid #8B5CF6;">
         <div class="block-title">My Revenue</div>
         <div class="stat-row" style="background:#F5F3FF;margin:0 -20px;padding:10px 20px;border-radius:6px;"><span class="stat-name" style="color:#6B21A8;font-weight:600;">Revenue (Closed)</span><span style="font-size:20px;font-weight:800;color:#8B5CF6;">AED {{ '{:,.0f}'.format(total_revenue or 0) }}</span></div>
@@ -116,6 +117,7 @@
           <div style="font-size:12px;color:#64748B;">Only revenue from tasks you closed is counted here.</div>
         </div>
       </div>
+      {% endif %}
 
     </div>
 
