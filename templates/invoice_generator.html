@@ -481,7 +481,8 @@ function getRows(prefix) {
     var desc=r.querySelector('.di').value||'';
     var q=parseFloat(r.querySelector('.qi').value)||0;
     var s=parseFloat(r.querySelector('.si').value)||0;
-    var g=parseFloat(r.querySelector('.gi').value)||0;
+    var gInput = r.querySelector('.gi');
+    var g = gInput ? (parseFloat(gInput.value)||0) : 0;
     var t=q*(s+g); var rowVat=q*(s-s/1.05);
     grand+=t; totalVat+=rowVat;
     if(primary||desc||s>0||g>0) items.push({primary:primary,desc:desc,q:q,s:s,g:g,t:t});
@@ -506,27 +507,41 @@ function docHeader(type, no, date, note, billTo, validUntil) {
     (note?'<div class="pv-note"><strong>Remarks:</strong> '+note+'</div>':'');
 }
 
-function itemsTable(items) {
+function itemsTable(items, showGovt) {
+  if(showGovt === undefined) showGovt = true; // Default: show govt column
   var rows='';
   items.forEach(function(it,i){
     var dHtml='';
     if(it.primary) dHtml+='<div style="font-weight:700;font-size:12px;color:#1A2333;">'+it.primary+'</div>';
     if(it.desc&&it.desc.trim()) dHtml+='<div style="font-size:11px;color:#64748B;margin-top:2px;white-space:pre-wrap;">'+it.desc+'</div>';
     if(!dHtml) dHtml='<span style="color:#999;">—</span>';
-    rows+='<tr><td style="text-align:center;color:#888;font-size:11px;vertical-align:top;padding-top:10px;">'+(i+1)+'</td>'+
+    
+    var rowHtml = '<tr><td style="text-align:center;color:#888;font-size:11px;vertical-align:top;padding-top:10px;">'+(i+1)+'</td>'+
       '<td style="vertical-align:top;">'+dHtml+'</td>'+
       '<td class="r" style="vertical-align:top;padding-top:10px;">'+it.q+'</td>'+
-      '<td class="r" style="vertical-align:top;padding-top:10px;">'+it.s.toFixed(2)+'</td>'+
-      '<td class="r" style="vertical-align:top;padding-top:10px;">'+it.g.toFixed(2)+'</td>'+
-      '<td class="r" style="vertical-align:top;padding-top:10px;font-weight:700;">'+it.t.toFixed(2)+'</td></tr>';
+      '<td class="r" style="vertical-align:top;padding-top:10px;">'+it.s.toFixed(2)+'</td>';
+    
+    if(showGovt) {
+      rowHtml += '<td class="r" style="vertical-align:top;padding-top:10px;">'+it.g.toFixed(2)+'</td>';
+    }
+    
+    rowHtml += '<td class="r" style="vertical-align:top;padding-top:10px;font-weight:700;">'+it.t.toFixed(2)+'</td></tr>';
+    rows += rowHtml;
   });
-  return '<table class="pv-tbl"><thead><tr>'+
+  
+  var headerHtml = '<table class="pv-tbl"><thead><tr>'+
     '<th style="width:24px;text-align:center;">#</th><th>Description</th>'+
     '<th class="r" style="width:36px;">Qty</th>'+
-    '<th class="r" style="width:80px;">Svc Charge</th>'+
-    '<th class="r" style="width:80px;">Govt. Charge</th>'+
-    '<th class="r" style="width:80px;">Total (AED)</th>'+
+    '<th class="r" style="width:80px;">Svc Charge</th>';
+  
+  if(showGovt) {
+    headerHtml += '<th class="r" style="width:80px;">Govt. Charge</th>';
+  }
+  
+  headerHtml += '<th class="r" style="width:80px;">Total (AED)</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table>';
+  
+  return headerHtml;
 }
 
 function totalsHtml(d, remarks) {
@@ -648,7 +663,7 @@ function previewInvs() {
   if(ad) billTo+='<br>'+ad;
   var html=PV_CSS+'<div style="width:210mm;min-height:297mm;position:relative;box-sizing:border-box;display:flex;flex-direction:column;">'+
     docHeader('INVOICE',document.getElementById('invsNo').value,document.getElementById('invsDate').value,document.getElementById('invsNote').value,billTo,null)+
-    itemsTable(d.items)+
+    itemsTable(d.items, false)+
     totalsHtml(d,getItems('invsRemList'))+
     bankSigHtml()+
     '<div class="pv-ft" style="position:absolute;bottom:0;left:0;right:0;"><span>www.tahfeel.ae</span><span>Thank you for your business!</span><span>Info@tahfeel.ae | +971 50 394 5656</span></div></div>';
