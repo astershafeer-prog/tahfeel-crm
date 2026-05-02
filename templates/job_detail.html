@@ -328,6 +328,80 @@
     </div>
     {% endif %}
 
+    <!-- Partial Revenue Tracking -->
+    {% if session.role in ['finance','admin'] and job.status not in ['Closed', 'Closed - Pending Partner Commission'] %}
+    <div class="card" style="margin-bottom:12px;border-left:4px solid #8B5CF6;">
+      <div class="card-header" style="background:#F5F3FF;">
+        <h2 style="color:#8B5CF6;">💰 Partial Revenue (Work-in-Progress)</h2>
+      </div>
+      <div class="card-body">
+        <!-- Partial Revenue History -->
+        {% if job.partial_revenues %}
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:#8B5CF6;text-transform:uppercase;margin-bottom:8px;">Revenue Recorded</div>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead style="background:#F9FAFB;border-bottom:2px solid #E5E7EB;">
+              <tr>
+                <th style="text-align:left;padding:8px;font-size:11px;color:#6B7280;">Date</th>
+                <th style="text-align:right;padding:8px;font-size:11px;color:#6B7280;">Amount</th>
+                <th style="text-align:left;padding:8px;font-size:11px;color:#6B7280;">Notes</th>
+                <th style="text-align:left;padding:8px;font-size:11px;color:#6B7280;">Recorded By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pr in job.partial_revenues %}
+              <tr style="border-bottom:1px solid #F3F4F6;">
+                <td style="padding:8px;font-size:12px;color:#374151;">{{ pr.revenue_date.strftime('%d %b %Y') }}</td>
+                <td style="padding:8px;font-size:13px;font-weight:700;color:#8B5CF6;text-align:right;">{{ '{:,.0f}'.format(pr.amount) }} AED</td>
+                <td style="padding:8px;font-size:12px;color:#6B7280;">{{ pr.notes or '—' }}</td>
+                <td style="padding:8px;font-size:12px;color:#6B7280;">{{ pr.recorder.name if pr.recorder else '—' }}</td>
+              </tr>
+              {% endfor %}
+              <tr style="background:#F9FAFB;font-weight:700;">
+                <td style="padding:8px;font-size:12px;color:#374151;">Total Recorded</td>
+                <td style="padding:8px;font-size:14px;color:#8B5CF6;text-align:right;">{{ '{:,.0f}'.format(job.partial_revenues|map(attribute='amount')|sum) }} AED</td>
+                <td colspan="2"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+        <!-- Add Partial Revenue Form -->
+        <details style="border:1.5px solid #E9D5FF;border-radius:8px;padding:12px;background:#FEFBFF;">
+          <summary style="cursor:pointer;font-weight:600;color:#8B5CF6;font-size:13px;">+ Record Partial Revenue</summary>
+          <form method="post" action="/jobs/{{ job.id }}/partial_revenue/add" style="margin-top:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+              <div class="form-group" style="margin:0;">
+                <label>Amount (AED) <span style="color:#EF4444;">*</span></label>
+                <input type="number" name="amount" min="0.01" step="0.01" required placeholder="e.g. 2000">
+                <div style="font-size:10px;color:#6B7280;margin-top:4px;">
+                  Received: {{ '{:,.0f}'.format(job.amount_received or 0) }} AED
+                  {% if job.partial_revenues %}
+                  | Already recorded: {{ '{:,.0f}'.format(job.partial_revenues|map(attribute='amount')|sum) }} AED
+                  {% endif %}
+                </div>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>Revenue Date <span style="color:#EF4444;">*</span></label>
+                <input type="date" name="revenue_date" required value="{{ now_dubai().strftime('%Y-%m-%d') }}">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+              <label>Notes (optional)</label>
+              <input type="text" name="notes" maxlength="500" placeholder="e.g. 2 out of 6 steps completed">
+            </div>
+            <button type="submit" class="btn-primary" style="background:#8B5CF6;border-color:#8B5CF6;">Record Partial Revenue</button>
+          </form>
+        </details>
+
+        <div style="margin-top:12px;padding:10px;background:#FEF3C7;border-radius:6px;font-size:11px;color:#92400E;">
+          <strong>💡 Note:</strong> Partial revenue is for work-in-progress. Total partial revenue cannot exceed amount received. When you close this task, the system will calculate final revenue automatically.
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Feedback update form -->
     {% if job.status in ['Done','Pending Finance Close','Closed'] and session.role not in ['finance'] and not job.final_remarks %}
     <div class="card" style="margin-bottom:12px;">
