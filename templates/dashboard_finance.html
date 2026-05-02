@@ -18,9 +18,7 @@
     <div class="page-head" style="margin-bottom:14px;">
       <div>
         <div class="page-head-title">Finance Dashboard</div>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">
-          Filter by period • System Date: <strong style="color:#1A3B8B;">{{ now.strftime('%d %b %Y') }}</strong>
-        </div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Filter by period</div>
       </div>
       <div style="display:flex;gap:8px;">
         <a href="?date=today" style="padding:6px 14px;background:{% if date_filter=='today' %}#0F2660{% else %}#F1F5F9{% endif %};color:{% if date_filter=='today' %}white{% else %}#475569{% endif %};border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;">Today</a>
