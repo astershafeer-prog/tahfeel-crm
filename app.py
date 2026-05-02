@@ -506,13 +506,51 @@ def dashboard():
             completed_value = sum((j.amount_received or 0) for j in jobs if j.status == 'Done')
             
             # Revenue calculations (closed tasks + partial revenues from in-progress tasks)
-            closed_jobs = [j for j in jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
+            # Revenue filtered by revenue_date (when closed), not created_at
+            if date_filter == 'today':
+                closed_jobs = [j for j in all_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission'] 
+                              and j.revenue_date and j.revenue_date == now.date()]
+                partial_revenue_jobs = all_jobs
+            elif date_filter == 'week':
+                week_start = now.date() - timedelta(days=now.weekday())
+                week_end = week_start + timedelta(days=6)
+                closed_jobs = [j for j in all_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission'] 
+                              and j.revenue_date and week_start <= j.revenue_date <= week_end]
+                partial_revenue_jobs = all_jobs
+            elif date_filter == 'month':
+                closed_jobs = [j for j in all_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission'] 
+                              and j.revenue_date and j.revenue_date.year == now.year and j.revenue_date.month == now.month]
+                partial_revenue_jobs = all_jobs
+            elif date_filter == 'all':
+                closed_jobs = [j for j in all_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
+                partial_revenue_jobs = all_jobs
+            else:
+                # Default to month
+                closed_jobs = [j for j in all_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission'] 
+                              and j.revenue_date and j.revenue_date.year == now.year and j.revenue_date.month == now.month]
+                partial_revenue_jobs = all_jobs
+            
             total_revenue = sum((j.revenue or 0) for j in closed_jobs)
             
-            # Add partial revenues from non-closed tasks
+            # Add partial revenues from period (filter partial revenues by revenue_date too)
             partial_revenue_total = 0
-            for j in jobs:
-                if j.status not in ['Closed', 'Closed - Pending Partner Commission']:
+            if date_filter == 'today':
+                for j in partial_revenue_jobs:
+                    for pr in j.partial_revenues:
+                        if pr.revenue_date == now.date():
+                            partial_revenue_total += pr.amount
+            elif date_filter == 'week':
+                for j in partial_revenue_jobs:
+                    for pr in j.partial_revenues:
+                        if week_start <= pr.revenue_date <= week_end:
+                            partial_revenue_total += pr.amount
+            elif date_filter == 'month':
+                for j in partial_revenue_jobs:
+                    for pr in j.partial_revenues:
+                        if pr.revenue_date.year == now.year and pr.revenue_date.month == now.month:
+                            partial_revenue_total += pr.amount
+            else:  # all
+                for j in partial_revenue_jobs:
                     partial_revenue_total += sum(pr.amount for pr in j.partial_revenues)
             
             total_revenue += partial_revenue_total
@@ -634,11 +672,32 @@ def dashboard():
             try:
                 total_revenue = sum((j.revenue or 0) for j in closed_revenue_jobs)
                 
-                # Add partial revenues from non-closed tasks
+                # Add partial revenues filtered by revenue_date (same period as revenue_jobs)
                 partial_revenue_total = 0
-                for j in jobs:
-                    if j.status not in ['Closed', 'Closed - Pending Partner Commission']:
+                if date_filter == 'today':
+                    for j in all_jobs:
+                        for pr in j.partial_revenues:
+                            if pr.revenue_date == now.date():
+                                partial_revenue_total += pr.amount
+                elif date_filter == 'week':
+                    for j in all_jobs:
+                        for pr in j.partial_revenues:
+                            if week_start <= pr.revenue_date <= week_end:
+                                partial_revenue_total += pr.amount
+                elif date_filter == 'month':
+                    for j in all_jobs:
+                        for pr in j.partial_revenues:
+                            if pr.revenue_date.year == now.year and pr.revenue_date.month == now.month:
+                                partial_revenue_total += pr.amount
+                elif date_filter == 'custom':
+                    for j in all_jobs:
+                        for pr in j.partial_revenues:
+                            if from_dt <= pr.revenue_date <= to_dt:
+                                partial_revenue_total += pr.amount
+                else:  # all
+                    for j in all_jobs:
                         partial_revenue_total += sum(pr.amount for pr in j.partial_revenues)
+                
                 total_revenue += partial_revenue_total
                 
                 # Partner commission pending
