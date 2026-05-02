@@ -546,6 +546,7 @@ def dashboard():
         tasks_processing = len([j for j in all_active_jobs if j.status == 'Processing'])
         tasks_pending_approval = len(pending_approval)
         return render_template('dashboard_finance.html',
+                               now=now,
                                date_filter=date_filter,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                all_jobs=active_jobs,
