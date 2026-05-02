@@ -84,8 +84,8 @@
       .pv-close, .pv-btns { display:none !important; }
     }
     /* Section panels */
-    #invoiceSection, #quotationSection { display:none; }
-    #invoiceSection.active, #quotationSection.active { display:block; }
+    #invoiceSection, #invoice-serviceSection, #quotationSection { display:none; }
+    #invoiceSection.active, #invoice-serviceSection.active, #quotationSection.active { display:block; }
   </style>
 </head>
 <body>
@@ -759,7 +759,9 @@ function closePv() {
 
 function printDoc() {
   if(!document.getElementById('pvOverlay').classList.contains('show')){
-    document.getElementById('invoiceSection').classList.contains('active')?previewInv():previewQt();
+    if(document.getElementById('invoiceSection').classList.contains('active')) previewInv();
+    else if(document.getElementById('invoice-serviceSection').classList.contains('active')) previewInvs();
+    else previewQt();
     return;
   }
   setTimeout(function(){window.print();},300);
