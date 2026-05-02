@@ -490,9 +490,17 @@ def dashboard():
             total_pending = total_invoiced - total_received
             completed_value = sum((j.amount_received or 0) for j in all_jobs if j.status == 'Done')
             
-            # Revenue calculations
+            # Revenue calculations (closed tasks + partial revenues from in-progress tasks)
             closed_jobs = [j for j in all_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
             total_revenue = sum((j.revenue or 0) for j in closed_jobs)
+            
+            # Add partial revenues from non-closed tasks
+            partial_revenue_total = 0
+            for j in all_jobs:
+                if j.status not in ['Closed', 'Closed - Pending Partner Commission']:
+                    partial_revenue_total += sum(pr.amount for pr in j.partial_revenues)
+            
+            total_revenue += partial_revenue_total
             
             # Customer Advances calculation (same as Admin dashboard)
             all_received = sum((j.amount_received or 0) for j in all_jobs)
@@ -608,6 +616,14 @@ def dashboard():
             
             try:
                 total_revenue = sum((j.revenue or 0) for j in closed_revenue_jobs)
+                
+                # Add partial revenues from non-closed tasks
+                partial_revenue_total = 0
+                for j in jobs:
+                    if j.status not in ['Closed', 'Closed - Pending Partner Commission']:
+                        partial_revenue_total += sum(pr.amount for pr in j.partial_revenues)
+                total_revenue += partial_revenue_total
+                
                 # Partner commission pending
                 partner_jobs = [j for j in all_jobs if j.partner_commission_expected and j.partner_status == 'Pending']
                 total_partner_pending = sum((j.partner_amount or 0) for j in partner_jobs)
@@ -2568,6 +2584,51 @@ def edit_finance(job_id):
     db.session.add(update)
     db.session.commit()
     flash('Finance details updated successfully.')
+    return redirect(url_for('job_detail', job_id=job_id))
+
+@app.route('/jobs/<int:job_id>/partial_revenue/add', methods=['POST'])
+@login_required
+def add_partial_revenue(job_id):
+    if session['role'] not in ['finance', 'admin']:
+        flash('Only Finance can record partial revenue')
+        return redirect(url_for('job_detail', job_id=job_id))
+    
+    job = Job.query.get_or_404(job_id)
+    amount = request.form.get('amount', type=float)
+    revenue_date_str = request.form.get('revenue_date')
+    notes = request.form.get('notes', '').strip()
+    
+    if not amount or amount <= 0:
+        flash('Please enter a valid amount')
+        return redirect(url_for('job_detail', job_id=job_id))
+    
+    if not revenue_date_str:
+        flash('Please select a revenue date')
+        return redirect(url_for('job_detail', job_id=job_id))
+    
+    try:
+        revenue_date = datetime.strptime(revenue_date_str, '%Y-%m-%d').date()
+    except:
+        flash('Invalid date format')
+        return redirect(url_for('job_detail', job_id=job_id))
+    
+    # Check total partial revenue doesn't exceed received amount
+    existing_partial = sum(pr.amount for pr in job.partial_revenues)
+    if existing_partial + amount > (job.amount_received or 0):
+        flash(f'Total partial revenue ({existing_partial + amount:,.0f}) cannot exceed received amount ({job.amount_received:,.0f})')
+        return redirect(url_for('job_detail', job_id=job_id))
+    
+    partial = PartialRevenue(
+        job_id=job_id,
+        amount=amount,
+        revenue_date=revenue_date,
+        notes=notes,
+        recorded_by=session['user_id']
+    )
+    db.session.add(partial)
+    db.session.commit()
+    
+    flash(f'Partial revenue of AED {amount:,.0f} recorded successfully')
     return redirect(url_for('job_detail', job_id=job_id))
 
 # ── Daily Activity Log ────────────────────────────────────────────────────────
