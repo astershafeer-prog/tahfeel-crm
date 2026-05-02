@@ -633,6 +633,28 @@ function previewInv() {
   showPreview(html);
 }
 
+// ── INVOICE-SERVICE PREVIEW ────────────────────────────────────
+function previewInvs() {
+  var cn=document.getElementById('invsCustName').value||'';
+  var cp=document.getElementById('invsCustPhone').value||'';
+  if(!cn){alert('Please enter Customer Name');return;}
+  if(!cp){alert('Please enter Phone Number');return;}
+  var d=getRows('invs');
+  var billTo='<strong>'+cn+'</strong>';
+  var em=document.getElementById('invsCustEmail').value;
+  var ad=document.getElementById('invsCustAddr').value;
+  if(cp) billTo+='<br>'+cp;
+  if(em) billTo+='<br>'+em;
+  if(ad) billTo+='<br>'+ad;
+  var html=PV_CSS+'<div style="width:210mm;min-height:297mm;position:relative;box-sizing:border-box;display:flex;flex-direction:column;">'+
+    docHeader('INVOICE',document.getElementById('invsNo').value,document.getElementById('invsDate').value,document.getElementById('invsNote').value,billTo,null)+
+    itemsTable(d.items)+
+    totalsHtml(d,getItems('invsRemList'))+
+    bankSigHtml()+
+    '<div class="pv-ft" style="position:absolute;bottom:0;left:0;right:0;"><span>www.tahfeel.ae</span><span>Thank you for your business!</span><span>Info@tahfeel.ae | +971 50 394 5656</span></div></div>';
+  showPreview(html);
+}
+
 // ── QUOTATION PREVIEW ─────────────────────────────────────────
 function previewQt() {
   var cn=document.getElementById('qtCustName').value||'';
