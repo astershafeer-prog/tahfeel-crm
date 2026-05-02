@@ -2639,6 +2639,8 @@ def edit_finance(job_id):
     old_invoiced = job.amount_invoiced or 0
     old_received = job.amount_received or 0
     old_revenue = job.revenue or 0
+    old_revenue_date = job.revenue_date
+    old_created_at = job.created_at
     
     try:
         ai = request.form.get('amount_invoiced')
@@ -2651,6 +2653,15 @@ def edit_finance(job_id):
             # Update revenue_date when revenue is edited
             if not job.revenue_date:
                 job.revenue_date = now_dubai().date()
+        
+        # TEMPORARY: Allow editing revenue_date and created_at
+        revenue_date_str = request.form.get('revenue_date')
+        if revenue_date_str:
+            job.revenue_date = datetime.strptime(revenue_date_str, '%Y-%m-%d').date()
+        
+        created_date_str = request.form.get('created_date')
+        if created_date_str:
+            job.created_at = datetime.strptime(created_date_str + ' ' + job.created_at.strftime('%H:%M:%S'), '%Y-%m-%d %H:%M:%S')
     except:
         flash('Invalid finance values.')
         return redirect(url_for('job_detail', job_id=job_id))
@@ -2660,7 +2671,18 @@ def edit_finance(job_id):
         # Replace finance notes (don't append)
         job.finance_notes = notes
     
-    remark = f'Finance details EDITED by {session["user_name"]}. Previous — Invoiced: AED {old_invoiced:,.0f} / Received: AED {old_received:,.0f} / Revenue: AED {old_revenue:,.0f}. Updated — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue or 0:,.0f}'
+    remark = f'Finance details EDITED by {session["user_name"]}. Previous — Invoiced: AED {old_invoiced:,.0f} / Received: AED {old_received:,.0f} / Revenue: AED {old_revenue:,.0f}'
+    if old_revenue_date != job.revenue_date:
+        remark += f' / Revenue Date: {old_revenue_date.strftime("%d-%b-%Y") if old_revenue_date else "None"}'
+    if old_created_at.date() != job.created_at.date():
+        remark += f' / Created: {old_created_at.strftime("%d-%b-%Y")}'
+    
+    remark += f'. Updated — Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue or 0:,.0f}'
+    if old_revenue_date != job.revenue_date:
+        remark += f' / Revenue Date: {job.revenue_date.strftime("%d-%b-%Y") if job.revenue_date else "None"}'
+    if old_created_at.date() != job.created_at.date():
+        remark += f' / Created: {job.created_at.strftime("%d-%b-%Y")}'
+    
     if notes:
         remark += f'. Notes: {notes}'
     
