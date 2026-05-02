@@ -477,30 +477,47 @@ def dashboard():
 
     # ── Finance dashboard ────────────────────────────────────────────────────
     if role == 'finance':
+        date_filter = request.args.get('date', 'month')  # Default to current month
+        
         try:
             all_jobs = Job.query.order_by(Job.created_at.desc()).all()
-            active_jobs = [j for j in all_jobs if j.status != 'Done']
-            pending_approval = [j for j in all_jobs if j.status in ['Pending Finance Approval', 'Done']]
-            pending_close = [j for j in all_jobs if j.status == 'Pending Finance Close']
+            
+            # Filter jobs by date
+            if date_filter == 'today':
+                jobs = [j for j in all_jobs if j.created_at and j.created_at.date() == now.date()]
+            elif date_filter == 'week':
+                week_start = now.date() - timedelta(days=now.weekday())
+                jobs = [j for j in all_jobs if j.created_at and j.created_at.date() >= week_start]
+            elif date_filter == 'month':
+                jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
+            elif date_filter == 'all':
+                jobs = all_jobs
+            else:
+                # Default to month
+                jobs = [j for j in all_jobs if j.created_at and j.created_at.year == now.year and j.created_at.month == now.month]
+            
+            active_jobs = [j for j in jobs if j.status != 'Done']
+            pending_approval = [j for j in jobs if j.status in ['Pending Finance Approval', 'Done']]
+            pending_close = [j for j in jobs if j.status == 'Pending Finance Close']
             total_invoiced = sum((j.amount_invoiced or 0) for j in active_jobs)
             total_received = sum((j.amount_received or 0) for j in active_jobs)
             total_pending = total_invoiced - total_received
-            completed_value = sum((j.amount_received or 0) for j in all_jobs if j.status == 'Done')
+            completed_value = sum((j.amount_received or 0) for j in jobs if j.status == 'Done')
             
             # Revenue calculations (closed tasks + partial revenues from in-progress tasks)
-            closed_jobs = [j for j in all_jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
+            closed_jobs = [j for j in jobs if j.status in ['Closed', 'Closed - Pending Partner Commission']]
             total_revenue = sum((j.revenue or 0) for j in closed_jobs)
             
             # Add partial revenues from non-closed tasks
             partial_revenue_total = 0
-            for j in all_jobs:
+            for j in jobs:
                 if j.status not in ['Closed', 'Closed - Pending Partner Commission']:
                     partial_revenue_total += sum(pr.amount for pr in j.partial_revenues)
             
             total_revenue += partial_revenue_total
             
             # Customer Advances calculation (same as Admin dashboard)
-            all_received = sum((j.amount_received or 0) for j in all_jobs)
+            all_received = sum((j.amount_received or 0) for j in jobs)
             closed_received = sum((j.amount_received or 0) for j in closed_jobs)
             customer_advances = all_received - closed_received
             
@@ -529,6 +546,7 @@ def dashboard():
         tasks_processing = len([j for j in all_active_jobs if j.status == 'Processing'])
         tasks_pending_approval = len(pending_approval)
         return render_template('dashboard_finance.html',
+                               date_filter=date_filter,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
