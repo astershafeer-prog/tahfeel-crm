@@ -804,8 +804,9 @@ def export_revenue():
     to_date = datetime.strptime(dt, '%Y-%m-%d')
     
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
+    from app import PartialRevenue  # Import PartialRevenue model
     
-    # Get all closed jobs in date range (including revenue=0 for debugging)
+    # Get all closed jobs in date range
     from sqlalchemy import or_
     jobs = Job.query.filter(
         Job.status.in_(['Closed', 'Closed - Pending Partner Commission']),
@@ -817,8 +818,14 @@ def export_revenue():
         )
     ).order_by(Job.created_at.desc()).all()
     
-    # If no jobs found, try just getting ALL closed jobs (for debugging)
-    if not jobs:
+    # Get partial revenues in date range
+    partial_revenues = PartialRevenue.query.filter(
+        PartialRevenue.revenue_date >= from_date.date(),
+        PartialRevenue.revenue_date <= to_date.date()
+    ).order_by(PartialRevenue.revenue_date.desc()).all()
+    
+    # If no jobs and no partials found, try getting ALL closed jobs (for debugging)
+    if not jobs and not partial_revenues:
         jobs = Job.query.filter(
             Job.status.in_(['Closed', 'Closed - Pending Partner Commission'])
         ).order_by(Job.created_at.desc()).limit(50).all()
@@ -840,6 +847,7 @@ def export_revenue():
     total_revenue = 0
     users_map = {u.id: u.name for u in User.query.all()}
     
+    # Add closed tasks
     for job in jobs:
         customer = job.customer
         rep_name = users_map.get(customer.assigned_to, '') if customer and customer.assigned_to else ''
@@ -856,6 +864,26 @@ def export_revenue():
         ws.cell(row, 8, job.revenue_date.strftime('%Y-%m-%d') if job.revenue_date else '')
         
         total_revenue += (job.revenue or 0)
+        row += 1
+    
+    # Add partial revenues
+    for pr in partial_revenues:
+        job = pr.job
+        customer = job.customer
+        rep_name = users_map.get(customer.assigned_to, '') if customer and customer.assigned_to else ''
+        assigned_name = users_map.get(job.assigned_to, '') if job.assigned_to else ''
+        
+        ws.cell(row, 1, customer.name if customer else '')
+        ws.cell(row, 2, customer.company if customer else '')
+        ws.cell(row, 3, job.job_type)
+        ws.cell(row, 4, rep_name)
+        ws.cell(row, 5, assigned_name)
+        ws.cell(row, 6, pr.amount)
+        ws.cell(row, 6).number_format = '#,##0.00'
+        ws.cell(row, 7, f"Partial Revenue - {job.status}")
+        ws.cell(row, 8, pr.revenue_date.strftime('%Y-%m-%d'))
+        
+        total_revenue += pr.amount
         row += 1
     
     # Total row

@@ -684,6 +684,10 @@ def dashboard():
             
             try:
                 u_revenue = sum((j.revenue or 0) for j in u_sales_closed)
+                # Add partial revenues from non-closed jobs for this staff
+                for j in u_sales_jobs:
+                    if j.status not in ['Closed', 'Closed - Pending Partner Commission']:
+                        u_revenue += sum(pr.amount for pr in j.partial_revenues)
             except:
                 u_revenue = 0
             t = staff_targets.get(u.id)
@@ -3793,9 +3797,13 @@ def analytics():
         # Count pending leads (not contacted yet - status is "New")
         u_pending = len([l for l in u_leads if l.status == 'New'])
         
-        # Calculate revenue from closed jobs
+        # Calculate revenue from closed jobs + partial revenues
         try:
             u_revenue = sum(j.revenue or 0 for j in u_sales if j.status == 'Closed')
+            # Add partial revenues from non-closed jobs
+            for j in u_sales:
+                if j.status != 'Closed':
+                    u_revenue += sum(pr.amount for pr in j.partial_revenues)
         except:
             u_revenue = 0
         
