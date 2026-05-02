@@ -4418,13 +4418,21 @@ def revenue_breakdown():
         rep = task.customer.assignee.name if task.customer and task.customer.assignee else 'N/A'
         
         html += f'''
-                    <tr>
-                        <td>{task.revenue_date.strftime("%d %b %Y")}</td>
+                    <tr id="row-{task.id}">
+                        <td>
+                            <div id="date-display-{task.id}">{task.revenue_date.strftime("%d %b %Y")}</div>
+                            <form id="date-form-{task.id}" method="post" action="/quick-edit-revenue-date/{task.id}" style="display:none;margin:0;">
+                                <input type="date" name="revenue_date" value="{task.revenue_date.strftime('%Y-%m-%d')}" style="padding:4px;font-size:12px;" onchange="this.form.submit()">
+                            </form>
+                        </td>
                         <td>{cust_name}{company}</td>
                         <td>{task.job_type}</td>
                         <td>{rep}</td>
                         <td class="rev-amt">{task.revenue or 0:,.0f}</td>
-                        <td><a href="/jobs/{task.id}" style="color:#1A3B8B;text-decoration:none;font-size:11px;">View →</a></td>
+                        <td>
+                            <button onclick="document.getElementById('date-display-{task.id}').style.display='none';document.getElementById('date-form-{task.id}').style.display='block';" style="background:#8B5CF6;color:white;border:none;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;margin-right:4px;">Edit Date</button>
+                            <a href="/jobs/{task.id}" style="color:#1A3B8B;text-decoration:none;font-size:11px;">View →</a>
+                        </td>
                     </tr>
         '''
     
@@ -4472,3 +4480,27 @@ def revenue_breakdown():
     '''
     
     return html
+
+@app.route('/quick-edit-revenue-date/<int:job_id>', methods=['POST'])
+@login_required
+def quick_edit_revenue_date(job_id):
+    if session['role'] not in ['finance', 'admin']:
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
+    
+    job = Job.query.get_or_404(job_id)
+    revenue_date_str = request.form.get('revenue_date')
+    
+    if revenue_date_str:
+        old_date = job.revenue_date
+        job.revenue_date = datetime.strptime(revenue_date_str, '%Y-%m-%d').date()
+        
+        # Log the change
+        remark = f'Revenue date changed by {session["user_name"]} from {old_date.strftime("%d-%b-%Y") if old_date else "None"} to {job.revenue_date.strftime("%d-%b-%Y")}'
+        update = JobUpdate(job_id=job.id, status=job.status, remark=remark, staff_name=session['user_name'])
+        db.session.add(update)
+        db.session.commit()
+        
+        flash(f'Revenue date updated to {job.revenue_date.strftime("%d %b %Y")}')
+    
+    return redirect(request.referrer or url_for('revenue_breakdown'))
