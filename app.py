@@ -4317,3 +4317,158 @@ def fix_april_revenue_dates():
         <a href="/dashboard" style="margin-left:10px;">Cancel</a>
     </form>
     '''
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TEMPORARY - Revenue Breakdown Page
+# ══════════════════════════════════════════════════════════════════════════════
+@app.route('/revenue-breakdown')
+@login_required
+def revenue_breakdown():
+    if session['role'] not in ['finance', 'admin']:
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
+    
+    now = now_dubai()
+    date_filter = request.args.get('date', 'today')
+    
+    from datetime import timedelta
+    
+    # Calculate date range
+    if date_filter == 'today':
+        start_date = end_date = now.date()
+    elif date_filter == 'week':
+        start_date = now.date() - timedelta(days=now.weekday())
+        end_date = start_date + timedelta(days=6)
+    elif date_filter == 'month':
+        start_date = now.replace(day=1).date()
+        end_date = now.date()
+    else:
+        start_date = end_date = now.date()
+    
+    # Get closed tasks with revenue_date in range
+    closed_tasks = Job.query.filter(
+        Job.status.in_(['Closed', 'Closed - Pending Partner Commission']),
+        Job.revenue_date.isnot(None),
+        Job.revenue_date >= start_date,
+        Job.revenue_date <= end_date
+    ).order_by(Job.revenue_date.desc()).all()
+    
+    # Get partial revenues in range
+    partials = PartialRevenue.query.filter(
+        PartialRevenue.revenue_date >= start_date,
+        PartialRevenue.revenue_date <= end_date
+    ).order_by(PartialRevenue.revenue_date.desc()).all()
+    
+    total_closed = sum(j.revenue or 0 for j in closed_tasks)
+    total_partial = sum(pr.amount for pr in partials)
+    total_revenue = total_closed + total_partial
+    
+    html = f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Revenue Breakdown</title>
+        <link rel="stylesheet" href="/static/css/tahfeel.css">
+        <style>
+            .rev-table {{ width:100%; border-collapse:collapse; margin:20px 0; }}
+            .rev-table th {{ background:#F8FAFC; padding:10px; text-align:left; font-size:11px; color:#64748B; }}
+            .rev-table td {{ padding:10px; border-bottom:1px solid #F1F5F9; font-size:13px; }}
+            .rev-amt {{ font-weight:700; color:#8B5CF6; text-align:right; }}
+        </style>
+    </head>
+    <body>
+        <div class="container" style="max-width:1200px;margin:40px auto;padding:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h1 style="color:#1A3B8B;">💰 Revenue Breakdown</h1>
+                <div style="display:flex;gap:8px;">
+                    <a href="?date=today" style="padding:8px 16px;background:{'#1A3B8B' if date_filter=='today' else '#F1F5F9'};color:{'white' if date_filter=='today' else '#475569'};border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">Today</a>
+                    <a href="?date=week" style="padding:8px 16px;background:{'#1A3B8B' if date_filter=='week' else '#F1F5F9'};color:{'white' if date_filter=='week' else '#475569'};border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">This Week</a>
+                    <a href="?date=month" style="padding:8px 16px;background:{'#1A3B8B' if date_filter=='month' else '#F1F5F9'};color:{'white' if date_filter=='month' else '#475569'};border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">This Month</a>
+                    <a href="/dashboard" style="padding:8px 16px;background:#F1F5F9;color:#475569;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">← Back</a>
+                </div>
+            </div>
+            
+            <div style="background:#F5F3FF;border:2px solid #8B5CF6;border-radius:12px;padding:20px;margin-bottom:24px;">
+                <div style="font-size:13px;color:#6B21A8;margin-bottom:8px;">Period: {start_date.strftime("%d %b")} - {end_date.strftime("%d %b %Y")}</div>
+                <div style="font-size:32px;font-weight:800;color:#8B5CF6;">AED {total_revenue:,.0f}</div>
+                <div style="font-size:12px;color:#64748B;margin-top:8px;">
+                    Closed Revenue: AED {total_closed:,.0f} ({len(closed_tasks)} tasks) | 
+                    Partial Revenue: AED {total_partial:,.0f} ({len(partials)} entries)
+                </div>
+            </div>
+            
+            <h2 style="color:#1A3B8B;margin-top:30px;">Closed Tasks ({len(closed_tasks)})</h2>
+            <table class="rev-table">
+                <thead>
+                    <tr>
+                        <th>Revenue Date</th>
+                        <th>Customer</th>
+                        <th>Service</th>
+                        <th>Representative</th>
+                        <th style="text-align:right;">Revenue (AED)</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+    '''
+    
+    for task in closed_tasks:
+        cust_name = task.customer.name if task.customer else 'N/A'
+        company = f'<br><span style="font-size:11px;color:#94A3B8;">{task.customer.company}</span>' if task.customer and task.customer.company else ''
+        rep = task.customer.assignee.name if task.customer and task.customer.assignee else 'N/A'
+        
+        html += f'''
+                    <tr>
+                        <td>{task.revenue_date.strftime("%d %b %Y")}</td>
+                        <td>{cust_name}{company}</td>
+                        <td>{task.job_type}</td>
+                        <td>{rep}</td>
+                        <td class="rev-amt">{task.revenue or 0:,.0f}</td>
+                        <td><a href="/jobs/{task.id}" style="color:#1A3B8B;text-decoration:none;font-size:11px;">View →</a></td>
+                    </tr>
+        '''
+    
+    html += '''
+                </tbody>
+            </table>
+            
+            <h2 style="color:#1A3B8B;margin-top:40px;">Partial Revenues (%d)</h2>
+            <table class="rev-table">
+                <thead>
+                    <tr>
+                        <th>Revenue Date</th>
+                        <th>Customer</th>
+                        <th>Service</th>
+                        <th>Status</th>
+                        <th style="text-align:right;">Amount (AED)</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+    ''' % len(partials)
+    
+    for pr in partials:
+        task = pr.job
+        cust_name = task.customer.name if task.customer else 'N/A'
+        company = f'<br><span style="font-size:11px;color:#94A3B8;">{task.customer.company}</span>' if task.customer and task.customer.company else ''
+        
+        html += f'''
+                    <tr>
+                        <td>{pr.revenue_date.strftime("%d %b %Y")}</td>
+                        <td>{cust_name}{company}</td>
+                        <td>{task.job_type}</td>
+                        <td><span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:4px;font-size:11px;">{task.status}</span></td>
+                        <td class="rev-amt">{pr.amount:,.0f}</td>
+                        <td><a href="/jobs/{task.id}" style="color:#1A3B8B;text-decoration:none;font-size:11px;">View →</a></td>
+                    </tr>
+        '''
+    
+    html += '''
+                </tbody>
+            </table>
+        </div>
+    </body>
+    </html>
+    '''
+    
+    return html
