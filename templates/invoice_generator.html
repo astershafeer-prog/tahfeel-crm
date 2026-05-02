@@ -102,6 +102,7 @@
       </div>
       <div class="gen-tabs">
         <button class="active" onclick="switchTab('invoice',this)">📄 Invoice</button>
+        <button onclick="switchTab('invoice-service',this)">📄 Invoice - Service</button>
         <button onclick="switchTab('quotation',this)">📋 Quotation</button>
       </div>
     </div>
@@ -159,6 +160,59 @@
       <div class="inv-actions">
         <button class="inv-btn inv-btn-s" onclick="resetInv()">↻ Reset</button>
         <button class="inv-btn inv-btn-g" onclick="previewInv()">👁 Preview</button>
+        <button class="inv-btn inv-btn-p" onclick="printDoc()">🖨 Print / PDF</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════ INVOICE-SERVICE SECTION ═══════════════════ -->
+    <div id="invoice-serviceSection">
+      <div class="inv-card">
+        <h3>Document Details</h3>
+        <div class="inv-row c3">
+          <div class="inv-ff"><label>Type</label><input type="text" id="invsType" value="INVOICE" readonly style="background:#F1F5F9;font-weight:700;color:#1A3B8B;"></div>
+          <div class="inv-ff"><label>Date</label><input type="date" id="invsDate"></div>
+          <div class="inv-ff"><label>Invoice No.</label><input type="text" id="invsNo"></div>
+        </div>
+        <div class="inv-row"><div class="inv-ff"><label>Internal Note <span class="opt">(optional)</span></label><input type="text" id="invsNote" placeholder="e.g. Special price approved"></div></div>
+      </div>
+      <div class="inv-card purple">
+        <h3>Customer Details</h3>
+        <div class="inv-row"><div class="inv-ff"><label>Customer Name</label><input type="text" id="invsCustName" placeholder="Full name or company name"></div></div>
+        <div class="inv-row c2">
+          <div class="inv-ff"><label>Email <span class="opt">(optional)</span></label><input type="email" id="invsCustEmail" placeholder="customer@email.com"></div>
+          <div class="inv-ff"><label>Phone <span class="opt">(optional)</span></label><input type="text" id="invsCustPhone" placeholder="+971 XX XXX XXXX"></div>
+        </div>
+        <div class="inv-row"><div class="inv-ff"><label>Address <span class="opt">(optional)</span></label><input type="text" id="invsCustAddr" placeholder="Customer address"></div></div>
+      </div>
+      <div class="inv-card green">
+        <h3>Services / Items</h3>
+        <table class="inv-tbl">
+          <thead><tr>
+            <th style="width:24px;text-align:center;">#</th>
+            <th style="width:50%;">Description</th>
+            <th class="r" style="width:60px;">Qty</th>
+            <th class="r" style="width:120px;">Service Charge</th>
+            <th class="r" style="width:120px;">Total (AED)</th>
+            <th style="width:30px;"></th>
+          </tr></thead>
+          <tbody id="invsItemsBody"></tbody>
+        </table>
+        <button class="inv-add-btn green" onclick="addRow('invs')">+ Add Line</button>
+        <div class="inv-totals-wrap"><div class="inv-totals-box">
+          <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="invsSubtotal">AED 0.00</span></div>
+          <div class="inv-tot-row"><span class="lbl">VAT (5% on service)</span><span class="val" id="invsVat">AED 0.00</span></div>
+          <div class="inv-tot-row grand"><span class="lbl">TOTAL</span><span class="val" id="invsTotal">AED 0.00</span></div>
+          <div class="inv-words" id="invsWords">AED Zero Only</div>
+        </div></div>
+      </div>
+      <div class="inv-card amber">
+        <h3>Remarks <span style="font-size:10px;color:#94A3B8;font-weight:400;text-transform:none;">(each line = bullet point)</span></h3>
+        <ul class="addable-list" id="invsRemList"></ul>
+        <button class="inv-add-btn amber" onclick="addItem('invsRemList','Remark...')">+ Add Remark</button>
+      </div>
+      <div class="inv-actions">
+        <button class="inv-btn inv-btn-s" onclick="resetInvs()">↻ Reset</button>
+        <button class="inv-btn inv-btn-g" onclick="previewInvs()">👁 Preview</button>
         <button class="inv-btn inv-btn-p" onclick="printDoc()">🖨 Print / PDF</button>
       </div>
     </div>
@@ -253,7 +307,7 @@
 
 <script>
 const services = {{ services|tojson }};
-let invRowN=0, qtRowN=0, remN=0;
+let invRowN=0, invsRowN=0, qtRowN=0, remN=0;
 const LOGO='/static/img/logo.jpg';
 const COVER='/static/img/quotation/cover.jpeg';
 const PROFILE='/static/img/quotation/profile.png';
@@ -264,6 +318,7 @@ function switchTab(tab, btn) {
   document.querySelectorAll('.gen-tabs button').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('invoiceSection').classList.toggle('active', tab==='invoice');
+  document.getElementById('invoice-serviceSection').classList.toggle('active', tab==='invoice-service');
   document.getElementById('quotationSection').classList.toggle('active', tab==='quotation');
 }
 
@@ -271,14 +326,19 @@ function switchTab(tab, btn) {
 document.addEventListener('DOMContentLoaded', function() {
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('invDate').value = today;
+  document.getElementById('invsDate').value = today;
   document.getElementById('qtDate').value = today;
   genNos();
   addRow('inv'); addRow('inv'); addRow('inv');
+  addRow('invs'); addRow('invs'); addRow('invs');
   addRow('qt'); addRow('qt'); addRow('qt');
   addItem('invRemList','Remark...','Government receipt will be provided for all government charges; no tax is applicable on govt fees.');
   addItem('invRemList','Remark...','Payments made for government fees and third-party charges are non-refundable once processing has started.');
   addItem('invRemList','Remark...','Processing timelines are subject to approval from relevant UAE authorities.');
   addItem('invRemList','Remark...','Client is responsible for providing accurate and complete documents/access on time.');
+  addItem('invsRemList','Remark...','Payments made for services are non-refundable once processing has started.');
+  addItem('invsRemList','Remark...','Processing timelines are subject to approval from relevant UAE authorities.');
+  addItem('invsRemList','Remark...','Client is responsible for providing accurate and complete documents/access on time.');
   addItem('qtTcList','Enter term...','Co Tax Registration is provided as complimentary service.');
   addItem('qtTcList','Enter term...','All prices quoted are in AED (United Arab Emirates Dirham).');
   addItem('qtTcList','Enter term...','All fees are included; there are no additional charges except for the marketing fee.');
@@ -296,6 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function genNos() {
   var n = Math.floor(10000 + Math.random()*90000);
   document.getElementById('invNo').value = 'INV-'+n;
+  document.getElementById('invsNo').value = 'INV-'+(n+2);
   document.getElementById('qtNo').value = 'QTN-'+(n+1);
 }
 
@@ -323,25 +384,42 @@ function getItems(listId) {
 // ── Service rows ────────────────────────────────────────────
 function addRow(prefix) {
   var tb = document.getElementById(prefix+'ItemsBody');
-  var n = prefix==='inv' ? ++invRowN : ++qtRowN;
+  var n = prefix==='inv' ? ++invRowN : (prefix==='invs' ? ++invsRowN : ++qtRowN);
   var rid = prefix+'r'+n;
   var tr = document.createElement('tr');
   tr.id = rid;
   var opts = '<option value="">— Select service —</option>';
   services.forEach(function(s){ opts+='<option value="'+s+'">'+s+'</option>'; });
   opts += '<option value="__other__">Other (type below)</option>';
-  tr.innerHTML =
-    '<td style="text-align:center;color:#94A3B8;font-size:12px;vertical-align:middle;">'+(tb.children.length+1)+'</td>'+
-    '<td>'+
-      '<input type="hidden" class="pi" value="">'+
-      '<select onchange="svcSel(this,\''+prefix+'\')" style="font-weight:700;font-size:13px;color:#1A2333;width:100%;border:1.5px solid #E2E8F0;border-radius:6px;padding:7px 8px;margin-bottom:5px;background:#F8FAFC;">'+opts+'</select>'+
-      '<textarea placeholder="Additional details (optional)" class="di" oninput="calcAll(\''+prefix+'\')" rows="3" style="font-size:11px;color:#475569;width:100%;min-height:70px;border:1.5px solid #E2E8F0;border-radius:6px;padding:7px 8px;resize:vertical;"></textarea>'+
-    '</td>'+
-    '<td class="r"><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="text-align:right;"></td>'+
-    '<td class="r"><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="text-align:right;"></td>'+
-    '<td class="r"><input type="number" value="0" min="0" step="0.01" class="gi" oninput="calcAll(\''+prefix+'\')" style="text-align:right;"></td>'+
-    '<td><div class="total-cell rt" style="text-align:right;">0.00</div></td>'+
-    '<td><button class="rm-btn" onclick="rmRow(\''+rid+'\',\''+prefix+'\')">×</button></td>';
+  
+  if (prefix === 'invs') {
+    // Invoice-Service: Simplified (no govt charge column)
+    tr.innerHTML =
+      '<td style="text-align:center;color:#94A3B8;font-size:12px;vertical-align:middle;">'+(tb.children.length+1)+'</td>'+
+      '<td>'+
+        '<input type="hidden" class="pi" value="">'+
+        '<select onchange="svcSel(this,\''+prefix+'\')" style="font-weight:700;font-size:13px;color:#1A2333;width:100%;border:1.5px solid #E2E8F0;border-radius:6px;padding:7px 8px;margin-bottom:5px;background:#F8FAFC;">'+opts+'</select>'+
+        '<textarea placeholder="Additional details (optional)" class="di" oninput="calcAll(\''+prefix+'\')" rows="3" style="font-size:11px;color:#475569;width:100%;min-height:70px;border:1.5px solid #E2E8F0;border-radius:6px;padding:7px 8px;resize:vertical;"></textarea>'+
+      '</td>'+
+      '<td class="r"><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="text-align:right;"></td>'+
+      '<td class="r"><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="text-align:right;"></td>'+
+      '<td><div class="total-cell rt" style="text-align:right;">0.00</div></td>'+
+      '<td><button class="rm-btn" onclick="rmRow(\''+rid+'\',\''+prefix+'\')">×</button></td>';
+  } else {
+    // Regular invoice or quotation
+    tr.innerHTML =
+      '<td style="text-align:center;color:#94A3B8;font-size:12px;vertical-align:middle;">'+(tb.children.length+1)+'</td>'+
+      '<td>'+
+        '<input type="hidden" class="pi" value="">'+
+        '<select onchange="svcSel(this,\''+prefix+'\')" style="font-weight:700;font-size:13px;color:#1A2333;width:100%;border:1.5px solid #E2E8F0;border-radius:6px;padding:7px 8px;margin-bottom:5px;background:#F8FAFC;">'+opts+'</select>'+
+        '<textarea placeholder="Additional details (optional)" class="di" oninput="calcAll(\''+prefix+'\')" rows="3" style="font-size:11px;color:#475569;width:100%;min-height:70px;border:1.5px solid #E2E8F0;border-radius:6px;padding:7px 8px;resize:vertical;"></textarea>'+
+      '</td>'+
+      '<td class="r"><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="text-align:right;"></td>'+
+      '<td class="r"><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="text-align:right;"></td>'+
+      '<td class="r"><input type="number" value="0" min="0" step="0.01" class="gi" oninput="calcAll(\''+prefix+'\')" style="text-align:right;"></td>'+
+      '<td><div class="total-cell rt" style="text-align:right;">0.00</div></td>'+
+      '<td><button class="rm-btn" onclick="rmRow(\''+rid+'\',\''+prefix+'\')">×</button></td>';
+  }
   tb.appendChild(tr);
   renum(prefix);
 }
@@ -370,7 +448,7 @@ function calcAll(prefix) {
   document.getElementById(prefix+'ItemsBody').querySelectorAll('tr').forEach(function(r) {
     var q=parseFloat(r.querySelector('.qi').value)||0;
     var s=parseFloat(r.querySelector('.si').value)||0;
-    var g=parseFloat(r.querySelector('.gi').value)||0;
+    var g = prefix === 'invs' ? 0 : (parseFloat(r.querySelector('.gi').value)||0);
     var rowTotal=q*(s+g);
     var rowVat=q*(s-s/1.05);
     r.querySelector('.rt').textContent=rowTotal.toFixed(2);
@@ -679,6 +757,22 @@ function resetInv() {
   addItem('invRemList','Remark...','Processing timelines are subject to approval from relevant UAE authorities.');
   addItem('invRemList','Remark...','Client is responsible for providing accurate and complete documents/access on time.');
   calcAll('inv');
+}
+
+function resetInvs() {
+  if(!confirm('Clear invoice?')) return;
+  ['invsType','invsNo','invsNote','invsCustName','invsCustEmail','invsCustPhone','invsCustAddr'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('invsType').value='INVOICE';
+  document.getElementById('invsItemsBody').innerHTML='';
+  document.getElementById('invsRemList').innerHTML='';
+  invsRowN=0;
+  document.getElementById('invsDate').value=new Date().toISOString().split('T')[0];
+  genNos();
+  addRow('invs');addRow('invs');addRow('invs');
+  addItem('invsRemList','Remark...','Payments made for services are non-refundable once processing has started.');
+  addItem('invsRemList','Remark...','Processing timelines are subject to approval from relevant UAE authorities.');
+  addItem('invsRemList','Remark...','Client is responsible for providing accurate and complete documents/access on time.');
+  calcAll('invs');
 }
 
 function resetQt() {
