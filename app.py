@@ -84,7 +84,6 @@ class Lead(db.Model):
     status = db.Column(db.String(50), default='New')
     created_at = db.Column(db.DateTime, default=datetime.now)
     customer_story = db.Column(db.Text)
-    potential_value = db.Column(db.Float, default=0)
     phone2 = db.Column(db.String(20))
     campaign = db.Column(db.String(100))
     assignee = db.relationship('User', foreign_keys=[assigned_to])
@@ -171,9 +170,6 @@ class Job(db.Model):
     finance_approved_at = db.Column(db.DateTime, nullable=True)
     finance_notes = db.Column(db.Text)
     # Completion fields
-    customer_rating = db.Column(db.Integer, nullable=True)  # 1-5
-    google_review = db.Column(db.String(30), nullable=True)  # Requested/Received/Not Applicable
-    testimonial = db.Column(db.String(30), nullable=True)    # Collected/Not Collected
     final_remarks = db.Column(db.Text, nullable=True)
     future_work_notes = db.Column(db.Text, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
@@ -2316,17 +2312,9 @@ def job_detail(job_id):
         if job.status == 'Closed' and role not in ['admin', 'finance']:
             flash('This task is closed. No further updates allowed.')
             return redirect(url_for('job_detail', job_id=job_id))
-        # Done/Pending Finance Close — only allow saving rating/review/testimonial
+        # Done/Pending Finance Close — no further updates from non-admin/finance
         if job.status in ['Done', 'Pending Finance Close'] and role not in ['admin', 'finance']:
-            # Allow only completion field updates (no status change, no remark required)
-            rating = request.form.get('customer_rating')
-            if rating:
-                try: job.customer_rating = int(rating)
-                except: pass
-            job.google_review = request.form.get('google_review') or job.google_review
-            job.testimonial = request.form.get('testimonial') or job.testimonial
-            db.session.commit()
-            flash('Updated successfully.')
+            flash('Task is already marked Done. Contact Finance/Admin for changes.')
             return redirect(url_for('job_detail', job_id=job_id))
         # Block sales/staff from updating if pending finance approval
         if job.status == 'Pending Finance Approval' and role in ['staff', 'sales']:
@@ -2352,18 +2340,10 @@ def job_detail(job_id):
         if new_status in ['Done', 'Pending Finance Close']:
             if not job.completed_at:
                 job.completed_at = now_dubai()
-            rating = request.form.get('customer_rating')
-            if rating:
-                try: job.customer_rating = int(rating)
-                except: pass
-            job.google_review = request.form.get('google_review') or None
-            job.testimonial = request.form.get('testimonial') or None
             job.final_remarks = request.form.get('final_remarks') or None
             job.future_work_notes = request.form.get('future_work_notes') or None
-            # Also log completion details to timeline
-            completion_note = f'Task completed. Rating: {job.customer_rating}/5.' if job.customer_rating else 'Task completed.'
-            if job.google_review: completion_note += f' Google review: {job.google_review}.'
-            if job.testimonial: completion_note += f' Testimonial: {job.testimonial}.'
+            # Log completion to timeline
+            completion_note = 'Task completed.'
             if job.final_remarks: completion_note += f' Remarks: {job.final_remarks}'
             update_completion = JobUpdate(job_id=job.id, status=new_status, remark=completion_note, staff_name=session['user_name'])
             db.session.add(update_completion)
@@ -3421,7 +3401,6 @@ def init_db():
             print(f'Partner table creation error: {e}')
         
         migrations = [
-            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS potential_value FLOAT DEFAULT 0',
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS amount_invoiced FLOAT DEFAULT 0',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS amount_received FLOAT DEFAULT 0',
@@ -3432,9 +3411,6 @@ def init_db():
             'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS service_type VARCHAR(100)',
             'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS due_date TIMESTAMP',
             'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT \'Medium\'',
-            'ALTER TABLE job ADD COLUMN IF NOT EXISTS customer_rating INTEGER',
-            'ALTER TABLE job ADD COLUMN IF NOT EXISTS google_review VARCHAR(30)',
-            'ALTER TABLE job ADD COLUMN IF NOT EXISTS testimonial VARCHAR(30)',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS final_remarks TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS future_work_notes TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',

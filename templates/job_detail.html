@@ -104,11 +104,6 @@
         {% if job.status in ['Done','Pending Finance Close','Closed'] and job.final_remarks %}
         <div style="background:var(--success-bg);border:1px solid #b8ddb0;border-radius:var(--radius-md);padding:14px 16px;margin-top:12px;">
           <div style="font-size:10px;font-weight:700;color:var(--success);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;">Completion Summary</div>
-          <div class="form-row-2" style="gap:10px;margin-bottom:8px;">
-            {% if job.customer_rating %}<div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">Rating</div><div>{{ '⭐' * job.customer_rating }}</div></div>{% endif %}
-            {% if job.google_review %}<div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">Google Review</div><div style="font-size:13px;font-weight:600;">{{ job.google_review }}</div></div>{% endif %}
-            {% if job.testimonial %}<div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">Testimonial</div><div style="font-size:13px;font-weight:600;">{{ job.testimonial }}</div></div>{% endif %}
-          </div>
           {% if job.final_remarks %}<div style="font-size:13px;margin-bottom:4px;"><strong style="color:var(--text-muted);font-size:10px;text-transform:uppercase;">Final: </strong>{{ job.final_remarks }}</div>{% endif %}
           {% if job.future_work_notes %}<div style="font-size:13px;color:var(--text-secondary);"><strong style="color:var(--text-muted);font-size:10px;text-transform:uppercase;">Future Work: </strong>{{ job.future_work_notes }}</div>{% endif %}
         </div>
@@ -403,51 +398,6 @@
     </div>
     {% endif %}
 
-    <!-- Feedback update form -->
-    {% if job.status in ['Done','Pending Finance Close','Closed'] and session.role not in ['finance'] and not job.final_remarks %}
-    <div class="card" style="margin-bottom:12px;">
-      <div class="card-header"><h2>Update Customer Feedback</h2></div>
-      <div class="card-body">
-        <form method="post">
-          <input type="hidden" name="remark" value="Feedback updated">
-          <input type="hidden" name="status" value="{{ job.status }}">
-          <div class="form-row-2" style="margin-bottom:12px;">
-            <div class="form-group">
-              <label>Customer Rating</label>
-              <select name="customer_rating">
-                <option value="">— Optional —</option>
-                <option value="5" {% if job.customer_rating==5 %}selected{% endif %}>⭐⭐⭐⭐⭐ Excellent</option>
-                <option value="4" {% if job.customer_rating==4 %}selected{% endif %}>⭐⭐⭐⭐ Good</option>
-                <option value="3" {% if job.customer_rating==3 %}selected{% endif %}>⭐⭐⭐ Average</option>
-                <option value="2" {% if job.customer_rating==2 %}selected{% endif %}>⭐⭐ Below Average</option>
-                <option value="1" {% if job.customer_rating==1 %}selected{% endif %}>⭐ Poor</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Google Review</label>
-              <select name="google_review">
-                <option value="">— Optional —</option>
-                <option value="Received" {% if job.google_review=='Received' %}selected{% endif %}>✓ Received</option>
-                <option value="Requested" {% if job.google_review=='Requested' %}selected{% endif %}>Requested</option>
-                <option value="Not Applicable" {% if job.google_review=='Not Applicable' %}selected{% endif %}>Not Applicable</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Testimonial</label>
-              <select name="testimonial">
-                <option value="">— Optional —</option>
-                <option value="Requested" {% if job.testimonial=='Requested' %}selected{% endif %}>Requested</option>
-                <option value="Collected" {% if job.testimonial=='Collected' %}selected{% endif %}>✓ Collected</option>
-                <option value="Not Collected" {% if job.testimonial=='Not Collected' %}selected{% endif %}>Not Collected</option>
-              </select>
-            </div>
-          </div>
-          <button type="submit" class="btn-primary" style="font-size:12px;padding:8px 18px;">Update Feedback</button>
-        </form>
-      </div>
-    </div>
-    {% endif %}
-
     <!-- Status Update form -->
     {% if session.role in ['admin','sales','operations'] and job.status not in ['Pending Finance Approval','Closed'] %}
     <div class="card" style="margin-bottom:12px;">
@@ -475,36 +425,6 @@
           <!-- Completion fields -->
           <div id="completionFields" style="display:none;background:var(--success-bg);border:1px solid #b8ddb0;border-radius:var(--radius-md);padding:14px;margin-top:10px;">
             <div class="section-label" style="color:var(--success);margin-bottom:10px;">Task Completion Details</div>
-            <div class="form-row-2" style="margin-bottom:10px;">
-              <div class="form-group">
-                <label>Customer Rating</label>
-                <select name="customer_rating">
-                  <option value="">— Optional —</option>
-                  <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
-                  <option value="4">⭐⭐⭐⭐ Good</option>
-                  <option value="3">⭐⭐⭐ Average</option>
-                  <option value="2">⭐⭐ Below Average</option>
-                  <option value="1">⭐ Poor</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Google Review</label>
-                <select name="google_review">
-                  <option value="">— Optional —</option>
-                  <option value="Received">✓ Received</option>
-                  <option value="Requested">Requested</option>
-                  <option value="Not Applicable">Not Applicable</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Testimonial</label>
-                <select name="testimonial">
-                  <option value="">— Optional —</option>
-                  <option value="Collected">✓ Collected</option>
-                  <option value="Not Collected">Not Collected</option>
-                </select>
-              </div>
-            </div>
             <div class="form-group">
               <label>Final Remarks</label>
               <textarea name="final_remarks" placeholder="Summary of outcome..." style="min-height:60px;"></textarea>
