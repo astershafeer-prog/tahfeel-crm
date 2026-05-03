@@ -39,6 +39,11 @@ import os
 
 app = Flask(__name__)
 app.secret_key = 'tahfeel2026secretkey'
+# Session configuration for custom domain support
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS only
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tahfeel.db')).replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -448,6 +453,7 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(email=email, active=True).first()
         if user and check_password_hash(user.password, password):
+            session.permanent = True  # Enable persistent session
             session['user_id'] = user.id
             session['user_name'] = user.name
             session['role'] = user.role
