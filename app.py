@@ -1503,32 +1503,83 @@ def admin_panel():
 @login_required
 @admin_required
 def fix_cloudinary_access():
-    """Diagnostic: Show all document URLs to verify what's in database"""
+    """Fix Cloudinary document access - set all to public"""
     try:
+        import cloudinary.uploader
+        import cloudinary.api
         import re
         
         # Get all documents with Cloudinary URLs
         documents = Document.query.filter(Document.file_url.like('%cloudinary.com%')).all()
-        
-        # Show diagnostic info
-        diagnostic_html = '<div style="padding:20px;font-family:monospace;font-size:12px;">'
-        diagnostic_html += f'<h3>Found {len(documents)} documents with Cloudinary URLs:</h3>'
+        fixed = 0
+        errors = []
         
         for doc in documents:
-            diagnostic_html += f'<div style="margin:10px 0;padding:10px;background:#f5f5f5;border-left:3px solid #1A3B8B;">'
-            diagnostic_html += f'<strong>Doc #{doc.id}</strong> - {doc.doc_type or "Unknown"}<br>'
-            diagnostic_html += f'URL: <a href="{doc.file_url}" target="_blank">{doc.file_url}</a><br>'
-            diagnostic_html += f'Public ID: {doc.cloudinary_public_id or "Not set"}'
-            diagnostic_html += '</div>'
+            try:
+                # Extract public_id from URL
+                public_id = doc.cloudinary_public_id
+                
+                if not public_id and doc.file_url:
+                    # Extract from URL: https://res.cloudinary.com/.../tahfeel-documents/document_file_nbxoqf.pdf
+                    match = re.search(r'tahfeel-documents/[^.?]+', doc.file_url)
+                    if match:
+                        public_id = match.group(0)
+                        doc.cloudinary_public_id = public_id
+                        db.session.add(doc)
+                
+                if public_id:
+                    try:
+                        # Use Cloudinary API to update access control to public
+                        # Try as image first (most common)
+                        try:
+                            result = cloudinary.uploader.explicit(
+                                public_id,
+                                type='upload',
+                                resource_type='image',
+                                access_control=[{"access_type": "anonymous"}]
+                            )
+                            fixed += 1
+                            print(f"✓ Fixed Doc {doc.id}: {public_id}")
+                        except Exception as e1:
+                            # If image fails, try as raw (PDF)
+                            if 'not found' in str(e1).lower():
+                                result = cloudinary.uploader.explicit(
+                                    public_id,
+                                    type='upload',
+                                    resource_type='raw',
+                                    access_control=[{"access_type": "anonymous"}]
+                                )
+                                fixed += 1
+                                print(f"✓ Fixed Doc {doc.id} as raw: {public_id}")
+                            else:
+                                raise e1
+                    except Exception as e:
+                        error_msg = f"Doc {doc.id} - {doc.doc_type or 'Unknown'}: {str(e)}"
+                        errors.append(error_msg)
+                        print(f"✗ Error: {error_msg}")
+            
+            except Exception as e:
+                errors.append(f"Doc {doc.id}: {str(e)}")
         
-        diagnostic_html += '</div>'
-        diagnostic_html += '<br><a href="/admin" style="padding:8px 16px;background:#1A3B8B;color:white;text-decoration:none;border-radius:6px;">← Back to Admin</a>'
+        db.session.commit()
         
-        return diagnostic_html
+        if errors:
+            error_summary = '<br>'.join(errors[:3])
+            if len(errors) > 3:
+                error_summary += f'<br>...and {len(errors)-3} more'
+            flash(f'✓ Fixed {fixed} documents | ✗ {len(errors)} errors:<br>{error_summary}', 'warning')
+        elif fixed > 0:
+            flash(f'✓ Successfully set {fixed} documents to public access!', 'success')
+        else:
+            flash('No documents found to fix.', 'info')
             
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
-        return redirect(url_for('admin_panel'))
+        print(f"Critical Error: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    return redirect(url_for('admin_panel'))
 
 
 @app.route('/admin/staff/add', methods=['POST'])
