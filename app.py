@@ -2071,13 +2071,18 @@ def jobs():
     status_filter = request.args.get('status', '')
     
     try:
-        # For sales and operations roles, exclude Done and Closed by default (unless they explicitly filter)
-        if not status_filter and role in ['sales', 'operations']:
-            job_list = Job.query.filter(Job.status.notin_(['Done', 'Closed', 'Closed - Pending Partner Commission'])).order_by(Job.due_date.asc()).all()
-        elif not status_filter or status_filter == 'Closed':
-            job_list = Job.query.all()
+        # Exclude Done and Closed by default unless explicitly filtered
+        if not status_filter:
+            if role in ['admin', 'finance']:
+                job_list = Job.query.all()
+            else:
+                job_list = Job.query.filter(Job.status.notin_(['Done', 'Closed', 'Closed - Pending Partner Commission'])).order_by(Job.due_date.asc()).all()
+        elif status_filter == 'Closed':
+            job_list = Job.query.filter(Job.status.in_(['Closed', 'Closed - Pending Partner Commission'])).all()
+        elif status_filter == 'Done':
+            job_list = Job.query.filter(Job.status == 'Done').all()
         else:
-            job_list = Job.query.filter(Job.status != 'Closed').order_by(Job.due_date.asc()).all()
+            job_list = Job.query.filter(Job.status == status_filter).order_by(Job.due_date.asc()).all()
         
         priority_filter = request.args.get('priority', '')
         assigned_filter = request.args.get('assigned_to', '') or request.args.get('staff', '')
@@ -2088,7 +2093,7 @@ def jobs():
         customer_search = request.args.get('customer', '').strip().lower()
         if customer_search:
             job_list = [j for j in job_list if customer_search in (j.customer.name or '').lower() or customer_search in (j.customer.company or '').lower()]
-        if status_filter:
+        if status_filter and status_filter not in ["Closed", "Done"]:
             job_list = [j for j in job_list if j.status == status_filter]
         if priority_filter:
             job_list = [j for j in job_list if j.priority == priority_filter]
