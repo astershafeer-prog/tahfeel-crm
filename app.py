@@ -1537,7 +1537,7 @@ def fix_cloudinary_access():
                         resource_type = 'image'
                     
                     # Update access mode to public
-                    cloudinary.uploader.explicit(
+                    result = cloudinary.uploader.explicit(
                         public_id,
                         type='upload',
                         resource_type=resource_type,
@@ -1545,20 +1545,29 @@ def fix_cloudinary_access():
                     )
                     fixed += 1
                 except Exception as e:
-                    errors.append(f"Doc {doc.id} ({public_id}): {str(e)}")
+                    error_msg = f"Doc {doc.id} - {doc.doc_type or 'Unknown'} ({public_id}): {str(e)}"
+                    errors.append(error_msg)
+                    print(f"Cloudinary Fix Error: {error_msg}")
         
         db.session.commit()
         
         if errors:
-            flash(f'Fixed {fixed} documents. Errors: {len(errors)}. Check logs for details.', 'warning')
-            # Log errors to console
+            # Show detailed errors to admin
+            error_summary = '<br>'.join(errors[:5])  # Show first 5 errors
+            if len(errors) > 5:
+                error_summary += f'<br>...and {len(errors)-5} more errors'
+            flash(f'Fixed {fixed} documents. {len(errors)} errors:<br>{error_summary}', 'warning')
+            # Log all errors to console
             for err in errors:
                 print(f"Cloudinary Fix Error: {err}")
         else:
             flash(f'Successfully updated {fixed} documents to public access!', 'success')
     except Exception as e:
-        flash(f'Error: {str(e)}', 'error')
+        error_detail = str(e)
+        flash(f'Error: {error_detail}', 'error')
         print(f"Cloudinary Fix Critical Error: {e}")
+        import traceback
+        traceback.print_exc()
     
     return redirect(url_for('admin_panel'))
 
