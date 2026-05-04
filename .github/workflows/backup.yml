@@ -34,7 +34,7 @@ jobs:
           echo "✅ Backup completed successfully"
       
       - name: Upload backup as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tahfeel-backup-${{ github.run_number }}
           path: backups/*.sql.gz
