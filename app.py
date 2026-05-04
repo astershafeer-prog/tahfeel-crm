@@ -1506,6 +1506,7 @@ def fix_cloudinary_access():
     """One-time fix to update all Cloudinary documents to public access"""
     try:
         import cloudinary.api
+        import cloudinary.uploader
         import re
         # Get all documents with Cloudinary URLs
         documents = Document.query.filter(Document.file_url.like('%cloudinary.com%')).all()
@@ -1519,19 +1520,27 @@ def fix_cloudinary_access():
             if not public_id and doc.file_url:
                 # Extract public_id from URL like: https://res.cloudinary.com/dzapmosda/image/upload/v1777042402/tahfeel-documents/document_file_nbxoqf.pdf
                 # Public ID would be: tahfeel-documents/document_file_nbxoqf
-                match = re.search(r'/upload/(?:v\d+/)?(.+?)\.', doc.file_url)
+                match = re.search(r'/upload/(?:v\d+/)?(.+?)(?:\.[a-zA-Z0-9]+)?$', doc.file_url)
                 if match:
                     public_id = match.group(1)
+                    # Remove file extension if present
+                    public_id = re.sub(r'\.[a-zA-Z0-9]+$', '', public_id)
                     # Save it to the database for future use
                     doc.cloudinary_public_id = public_id
                     db.session.add(doc)
             
             if public_id:
                 try:
+                    # Determine resource type based on file extension
+                    resource_type = 'raw'  # Default for PDFs, docs, etc.
+                    if doc.file_url and any(ext in doc.file_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
+                        resource_type = 'image'
+                    
                     # Update access mode to public
                     cloudinary.uploader.explicit(
                         public_id,
                         type='upload',
+                        resource_type=resource_type,
                         access_mode='public'
                     )
                     fixed += 1
@@ -1541,11 +1550,15 @@ def fix_cloudinary_access():
         db.session.commit()
         
         if errors:
-            flash(f'Fixed {fixed} documents. Errors: {len(errors)}', 'warning')
+            flash(f'Fixed {fixed} documents. Errors: {len(errors)}. Check logs for details.', 'warning')
+            # Log errors to console
+            for err in errors:
+                print(f"Cloudinary Fix Error: {err}")
         else:
             flash(f'Successfully updated {fixed} documents to public access!', 'success')
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
+        print(f"Cloudinary Fix Critical Error: {e}")
     
     return redirect(url_for('admin_panel'))
 
