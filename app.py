@@ -2071,9 +2071,10 @@ def jobs():
     status_filter = request.args.get('status', '')
     
     try:
-        # Load ALL tasks if no status filter OR if status is Closed
-        # This allows searching across all tasks including closed ones
-        if not status_filter or status_filter == 'Closed':
+        # For sales and operations roles, exclude Done and Closed by default (unless they explicitly filter)
+        if not status_filter and role in ['sales', 'operations']:
+            job_list = Job.query.filter(Job.status.notin_(['Done', 'Closed', 'Closed - Pending Partner Commission'])).order_by(Job.due_date.asc()).all()
+        elif not status_filter or status_filter == 'Closed':
             job_list = Job.query.all()
         else:
             job_list = Job.query.filter(Job.status != 'Closed').order_by(Job.due_date.asc()).all()
