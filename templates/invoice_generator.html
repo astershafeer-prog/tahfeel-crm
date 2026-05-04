@@ -116,6 +116,22 @@
           <div class="inv-ff"><label>Date</label><input type="date" id="invDate"></div>
           <div class="inv-ff"><label>Invoice No.</label><input type="text" id="invNo"></div>
         </div>
+        <!-- VAT Toggle -->
+        <div class="inv-row">
+          <div class="inv-ff">
+            <label>Include VAT?</label>
+            <div style="display:flex;gap:16px;align-items:center;margin-top:8px;">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-weight:500;font-size:13px;color:#0F2660;margin:0;">
+                <input type="radio" name="invVatToggle" value="yes" checked style="width:auto;margin:0;cursor:pointer;">
+                <span>Yes (5% VAT)</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-weight:500;font-size:13px;color:#0F2660;margin:0;">
+                <input type="radio" name="invVatToggle" value="no" style="width:auto;margin:0;cursor:pointer;">
+                <span>No VAT</span>
+              </label>
+            </div>
+          </div>
+        </div>
         <div class="inv-row"><div class="inv-ff"><label>Internal Note <span class="opt">(optional)</span></label><input type="text" id="invNote" placeholder="e.g. Special price approved"></div></div>
       </div>
       <div class="inv-card purple">
@@ -172,6 +188,22 @@
           <div class="inv-ff"><label>Type</label><input type="text" id="invsType" value="INVOICE" readonly style="background:#F1F5F9;font-weight:700;color:#1A3B8B;"></div>
           <div class="inv-ff"><label>Date</label><input type="date" id="invsDate"></div>
           <div class="inv-ff"><label>Invoice No.</label><input type="text" id="invsNo"></div>
+        </div>
+        <!-- VAT Toggle -->
+        <div class="inv-row">
+          <div class="inv-ff">
+            <label>Include VAT?</label>
+            <div style="display:flex;gap:16px;align-items:center;margin-top:8px;">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-weight:500;font-size:13px;color:#0F2660;margin:0;">
+                <input type="radio" name="invsVatToggle" value="yes" checked style="width:auto;margin:0;cursor:pointer;">
+                <span>Yes (5% VAT)</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-weight:500;font-size:13px;color:#0F2660;margin:0;">
+                <input type="radio" name="invsVatToggle" value="no" style="width:auto;margin:0;cursor:pointer;">
+                <span>No VAT</span>
+              </label>
+            </div>
+          </div>
         </div>
         <div class="inv-row"><div class="inv-ff"><label>Internal Note <span class="opt">(optional)</span></label><input type="text" id="invsNote" placeholder="e.g. Special price approved"></div></div>
       </div>
@@ -351,6 +383,14 @@ document.addEventListener('DOMContentLoaded', function() {
   addItem('qtDocList','Document name...','Emirates ID copy (for renewal)');
   addItem('qtNoteList','Note...','Payment terms: 50% advance, remaining while processing.');
   addItem('qtNoteList','Note...','Service delivery timeline will be confirmed upon receipt of all required documents.');
+  
+  // Add event listeners to VAT toggle buttons
+  document.querySelectorAll('input[name="invVatToggle"]').forEach(function(radio) {
+    radio.addEventListener('change', function() { calcAll('inv'); });
+  });
+  document.querySelectorAll('input[name="invsVatToggle"]').forEach(function(radio) {
+    radio.addEventListener('change', function() { calcAll('invs'); });
+  });
 });
 
 function genNos() {
@@ -444,19 +484,36 @@ function renum(prefix) {
 }
 
 function calcAll(prefix) {
+  // Check if VAT is enabled
+  var vatEnabled = true;
+  var vatToggle = document.querySelector('input[name="'+prefix+'VatToggle"]:checked');
+  if (vatToggle) {
+    vatEnabled = (vatToggle.value === 'yes');
+  }
+  
   var grand=0, totalVat=0;
   document.getElementById(prefix+'ItemsBody').querySelectorAll('tr').forEach(function(r) {
     var q=parseFloat(r.querySelector('.qi').value)||0;
     var s=parseFloat(r.querySelector('.si').value)||0;
     var g = prefix === 'invs' ? 0 : (parseFloat(r.querySelector('.gi').value)||0);
     var rowTotal=q*(s+g);
-    var rowVat=q*(s-s/1.05);
+    var rowVat = vatEnabled ? q*(s-s/1.05) : 0;
     r.querySelector('.rt').textContent=rowTotal.toFixed(2);
     grand+=rowTotal; totalVat+=rowVat;
   });
-  var sub=grand-totalVat;
+  
+  var sub = vatEnabled ? (grand-totalVat) : grand;
   document.getElementById(prefix+'Subtotal').textContent='AED '+sub.toFixed(2);
-  document.getElementById(prefix+'Vat').textContent='AED '+totalVat.toFixed(2);
+  
+  // Show/hide VAT row
+  var vatRow = document.getElementById(prefix+'Vat').closest('.inv-tot-row');
+  if (vatEnabled) {
+    vatRow.style.display = 'flex';
+    document.getElementById(prefix+'Vat').textContent='AED '+totalVat.toFixed(2);
+  } else {
+    vatRow.style.display = 'none';
+  }
+  
   document.getElementById(prefix+'Total').textContent='AED '+grand.toFixed(2);
   document.getElementById(prefix+'Words').textContent='AED '+n2w(grand)+' Only';
 }
@@ -475,6 +532,13 @@ function fmtDate(s){if(!s)return '';var d=new Date(s+'T00:00:00');return d.toLoc
 
 // ── Get row data ─────────────────────────────────────────────
 function getRows(prefix) {
+  // Check if VAT is enabled
+  var vatEnabled = true;
+  var vatToggle = document.querySelector('input[name="'+prefix+'VatToggle"]:checked');
+  if (vatToggle) {
+    vatEnabled = (vatToggle.value === 'yes');
+  }
+  
   var items=[],grand=0,totalVat=0;
   document.getElementById(prefix+'ItemsBody').querySelectorAll('tr').forEach(function(r){
     var pi=r.querySelector('.pi'); var primary=pi?pi.value.trim():'';
@@ -483,11 +547,12 @@ function getRows(prefix) {
     var s=parseFloat(r.querySelector('.si').value)||0;
     var gInput = r.querySelector('.gi');
     var g = gInput ? (parseFloat(gInput.value)||0) : 0;
-    var t=q*(s+g); var rowVat=q*(s-s/1.05);
+    var t=q*(s+g);
+    var rowVat = vatEnabled ? q*(s-s/1.05) : 0;
     grand+=t; totalVat+=rowVat;
     if(primary||desc||s>0||g>0) items.push({primary:primary,desc:desc,q:q,s:s,g:g,t:t});
   });
-  return {items:items,grand:grand,vat:totalVat,sub:grand-totalVat};
+  return {items:items,grand:grand,vat:totalVat,sub:(vatEnabled ? grand-totalVat : grand),vatEnabled:vatEnabled};
 }
 
 // ── Common HTML helpers ───────────────────────────────────────
@@ -551,10 +616,14 @@ function totalsHtml(d, remarks) {
     remarks.forEach(function(r){remHtml+='<li>'+r+'</li>';});
     remHtml+='</ul></div>';
   }
+  
+  // Conditionally show VAT row based on vatEnabled flag
+  var vatRowHtml = d.vatEnabled ? '<div class="pv-tr"><span>VAT (5% on service)</span><span>AED '+d.vat.toFixed(2)+'</span></div>' : '';
+  
   return '<div style="display:flex;justify-content:flex-end;padding:0 30px;">'+
     '<div class="pv-tots">'+
     '<div class="pv-tr"><span>Subtotal</span><span>AED '+d.sub.toFixed(2)+'</span></div>'+
-    '<div class="pv-tr"><span>VAT (5% on service)</span><span>AED '+d.vat.toFixed(2)+'</span></div>'+
+    vatRowHtml+
     '<div class="pv-tr grand"><span>TOTAL</span><span>AED '+d.grand.toFixed(2)+'</span></div>'+
     '</div></div>'+
     '<div class="pv-words"><p><strong>Amount in Words:</strong> AED '+n2w(d.grand)+' Only</p></div>'+
