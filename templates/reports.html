@@ -254,8 +254,12 @@
         from = new Date(today.getFullYear(), today.getMonth(), 1);
         to = today;
       } else if (preset === 'last_month') {
-        from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        to = new Date(today.getFullYear(), today.getMonth(), 0);
+        // Get first day of last month
+        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        // Get last day of last month (day 0 of current month = last day of previous month)
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        from = lastMonthStart;
+        to = lastMonthEnd;
       } else if (preset === 'this_year') {
         from = new Date(today.getFullYear(), 0, 1);
         to = today;

@@ -192,7 +192,7 @@ def export_lead_report():
 
     cols = ['#', 'Lead Name', 'Company', 'Phone', 'Service', 'Source',
             'Assigned To', 'Status', 'Created Date', 'Due Date',
-            'Potential Value (AED)', 'Days Open', 'Interactions', 'Status History']
+            'Days Open', 'Interactions', 'Status History']
     _title_block(ws, "LEAD DETAIL REPORT", df, dt, len(cols))
     _headers(ws, cols)
 
@@ -213,17 +213,14 @@ def export_lead_report():
             lead.status or '',
             lead.created_at.strftime('%d/%m/%Y') if lead.created_at else '',
             lead.due_date.strftime('%d/%m/%Y') if lead.due_date else '',
-            float(lead.potential_value or 0),
             days_open, len(updates),
             " | ".join(hist),
         ])
 
-    nr = _write_rows(ws, rows, num_cols={11})
-    ws.cell(row=nr, column=1, value='TOTAL'); _tot(ws.cell(row=nr, column=1))
-    c = ws.cell(row=nr, column=11, value=f'=SUM(K5:K{nr-1})')
-    _tot(c, right=True); c.number_format = '#,##0.00'
+    nr = _write_rows(ws, rows)
+    # No total row needed (removed potential_value column)
 
-    _col_widths(ws, [4, 22, 22, 15, 18, 14, 18, 14, 13, 13, 18, 10, 12, 70])
+    _col_widths(ws, [4, 22, 22, 15, 18, 14, 18, 14, 13, 13, 10, 12, 70])
     _freeze(ws); _filter(ws, len(cols))
     return _respond(wb, f"Lead_Detail_{df}_{dt}.xlsx")
 
