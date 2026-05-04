@@ -1503,41 +1503,32 @@ def admin_panel():
 @login_required
 @admin_required
 def fix_cloudinary_access():
-    """Fix Cloudinary document URLs - revert PDFs back to /image/upload/ path"""
+    """Diagnostic: Show all document URLs to verify what's in database"""
     try:
         import re
         
         # Get all documents with Cloudinary URLs
         documents = Document.query.filter(Document.file_url.like('%cloudinary.com%')).all()
-        url_fixes = 0
+        
+        # Show diagnostic info
+        diagnostic_html = '<div style="padding:20px;font-family:monospace;font-size:12px;">'
+        diagnostic_html += f'<h3>Found {len(documents)} documents with Cloudinary URLs:</h3>'
         
         for doc in documents:
-            try:
-                # Revert PDFs back to /image/upload/ if they were changed to /raw/upload/
-                if doc.file_url and doc.file_url.endswith('.pdf') and '/raw/upload/' in doc.file_url:
-                    old_url = doc.file_url
-                    doc.file_url = doc.file_url.replace('/raw/upload/', '/image/upload/')
-                    db.session.add(doc)
-                    url_fixes += 1
-                    print(f"Reverted URL for Doc {doc.id}: {old_url} → {doc.file_url}")
-            
-            except Exception as e:
-                print(f"Error processing document {doc.id}: {e}")
+            diagnostic_html += f'<div style="margin:10px 0;padding:10px;background:#f5f5f5;border-left:3px solid #1A3B8B;">'
+            diagnostic_html += f'<strong>Doc #{doc.id}</strong> - {doc.doc_type or "Unknown"}<br>'
+            diagnostic_html += f'URL: <a href="{doc.file_url}" target="_blank">{doc.file_url}</a><br>'
+            diagnostic_html += f'Public ID: {doc.cloudinary_public_id or "Not set"}'
+            diagnostic_html += '</div>'
         
-        db.session.commit()
+        diagnostic_html += '</div>'
+        diagnostic_html += '<br><a href="/admin" style="padding:8px 16px;background:#1A3B8B;color:white;text-decoration:none;border-radius:6px;">← Back to Admin</a>'
         
-        if url_fixes > 0:
-            flash(f'Fixed {url_fixes} PDF URLs. Documents should now be viewable!', 'success')
-        else:
-            flash('No documents needed fixing. All URLs are correct.', 'info')
+        return diagnostic_html
             
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
-        print(f"Fix Error: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    return redirect(url_for('admin_panel'))
+        return redirect(url_for('admin_panel'))
 
 
 @app.route('/admin/staff/add', methods=['POST'])
