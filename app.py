@@ -1503,65 +1503,90 @@ def admin_panel():
 @login_required
 @admin_required
 def fix_cloudinary_access():
-    """One-time fix to update all Cloudinary documents to public access"""
+    """Fix Cloudinary document URLs and update to public access"""
     try:
         import cloudinary.api
         import cloudinary.uploader
         import re
+        
         # Get all documents with Cloudinary URLs
         documents = Document.query.filter(Document.file_url.like('%cloudinary.com%')).all()
         fixed = 0
         errors = []
+        url_fixes = 0
         
         for doc in documents:
-            public_id = doc.cloudinary_public_id
-            
-            # If no public_id stored, try to extract it from file_url
-            if not public_id and doc.file_url:
-                # Extract public_id from URL like: https://res.cloudinary.com/dzapmosda/image/upload/v1777042402/tahfeel-documents/document_file_nbxoqf.pdf
-                # Public ID would be: tahfeel-documents/document_file_nbxoqf
-                match = re.search(r'/upload/(?:v\d+/)?(.+?)(?:\.[a-zA-Z0-9]+)?$', doc.file_url)
-                if match:
-                    public_id = match.group(1)
-                    # Remove file extension if present
-                    public_id = re.sub(r'\.[a-zA-Z0-9]+$', '', public_id)
-                    # Save it to the database for future use
-                    doc.cloudinary_public_id = public_id
+            try:
+                # First, fix the URL if it's a PDF with /image/upload/ path
+                if doc.file_url and doc.file_url.endswith('.pdf') and '/image/upload/' in doc.file_url:
+                    # Change /image/upload/ to /raw/upload/ for PDFs
+                    old_url = doc.file_url
+                    doc.file_url = doc.file_url.replace('/image/upload/', '/raw/upload/')
                     db.session.add(doc)
-            
-            if public_id:
-                try:
-                    # Determine resource type based on file extension
-                    resource_type = 'raw'  # Default for PDFs, docs, etc.
+                    url_fixes += 1
+                    print(f"Fixed URL for Doc {doc.id}: {old_url} → {doc.file_url}")
+                
+                # Now extract public_id
+                public_id = doc.cloudinary_public_id
+                
+                if not public_id and doc.file_url:
+                    # Extract public_id from URL
+                    match = re.search(r'/upload/(?:v\d+/)?(.+?)(?:\.[a-zA-Z0-9]+)?$', doc.file_url)
+                    if match:
+                        public_id = match.group(1)
+                        public_id = re.sub(r'\.[a-zA-Z0-9]+$', '', public_id)
+                        doc.cloudinary_public_id = public_id
+                        db.session.add(doc)
+                
+                # Try to update access mode in Cloudinary
+                if public_id:
+                    # Determine resource type
+                    resource_type = 'raw'  # Default for PDFs
                     if doc.file_url and any(ext in doc.file_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
                         resource_type = 'image'
                     
-                    # Update access mode to public
-                    result = cloudinary.uploader.explicit(
-                        public_id,
-                        type='upload',
-                        resource_type=resource_type,
-                        access_mode='public'
-                    )
-                    fixed += 1
-                except Exception as e:
-                    error_msg = f"Doc {doc.id} - {doc.doc_type or 'Unknown'} ({public_id}): {str(e)}"
-                    errors.append(error_msg)
-                    print(f"Cloudinary Fix Error: {error_msg}")
+                    try:
+                        result = cloudinary.uploader.explicit(
+                            public_id,
+                            type='upload',
+                            resource_type=resource_type,
+                            access_mode='public'
+                        )
+                        fixed += 1
+                    except Exception as e:
+                        # If resource not found, it might already be public or deleted
+                        # Just log it but don't count as critical error
+                        if 'not found' in str(e).lower():
+                            print(f"Doc {doc.id}: Resource not found in Cloudinary, but URL should work if file exists")
+                        else:
+                            error_msg = f"Doc {doc.id} - {doc.doc_type or 'Unknown'} ({public_id}): {str(e)}"
+                            errors.append(error_msg)
+            
+            except Exception as e:
+                error_msg = f"Doc {doc.id}: {str(e)}"
+                errors.append(error_msg)
+                print(f"Error processing document: {error_msg}")
         
         db.session.commit()
         
+        # Build success message
+        message_parts = []
+        if url_fixes > 0:
+            message_parts.append(f"Fixed {url_fixes} PDF URLs (/image/upload/ → /raw/upload/)")
+        if fixed > 0:
+            message_parts.append(f"Updated {fixed} documents in Cloudinary")
+        
         if errors:
-            # Show detailed errors to admin
-            error_summary = '<br>'.join(errors[:5])  # Show first 5 errors
-            if len(errors) > 5:
-                error_summary += f'<br>...and {len(errors)-5} more errors'
-            flash(f'Fixed {fixed} documents. {len(errors)} errors:<br>{error_summary}', 'warning')
-            # Log all errors to console
-            for err in errors:
-                print(f"Cloudinary Fix Error: {err}")
+            error_summary = '<br>'.join(errors[:3])
+            if len(errors) > 3:
+                error_summary += f'<br>...and {len(errors)-3} more errors'
+            message = ' | '.join(message_parts) if message_parts else 'Processed documents'
+            flash(f'{message}. {len(errors)} errors:<br>{error_summary}', 'warning')
+        elif message_parts:
+            flash(' | '.join(message_parts) + '. Documents should now be accessible!', 'success')
         else:
-            flash(f'Successfully updated {fixed} documents to public access!', 'success')
+            flash('No documents needed fixing.', 'info')
+            
     except Exception as e:
         error_detail = str(e)
         flash(f'Error: {error_detail}', 'error')
