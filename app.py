@@ -3654,107 +3654,143 @@ def invoice_generator():
 @login_required
 @admin_required
 def export_full_backup():
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
-    from flask import make_response
-    import io
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+        from flask import make_response
+        import io
 
-    wb = Workbook()
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
+        wb = Workbook()
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
 
-    def style_headers(ws, headers):
-        ws.append(headers)
-        for cell in ws[1]:
-            cell.font = header_font
-            cell.fill = header_fill
-        for col in ws.columns:
-            max_len = max((len(str(cell.value or '')) for cell in col), default=10)
-            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+        def style_headers(ws, headers):
+            ws.append(headers)
+            for cell in ws[1]:
+                cell.font = header_font
+                cell.fill = header_fill
+            for col in ws.columns:
+                max_len = max((len(str(cell.value or '')) for cell in col), default=10)
+                ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
 
-    # Sheet 1: Leads
-    ws1 = wb.active
-    ws1.title = "Leads"
-    users_map = {u.id: u.name for u in User.query.all()}
-    style_headers(ws1, ['ID','Name','Company','Phone','Email','Service','Source','Campaign',
-                         'Status','Assigned To','Created Date','Due Date','Remarks'])
-    for l in Lead.query.order_by(Lead.created_at.desc()).all():
-        ws1.append([
-            l.id, l.name or '', l.company or '', l.phone or '', l.email or '',
-            l.service or '', l.source or '', l.campaign or '',
-            l.status or '', users_map.get(l.assigned_to, ''),
-            l.created_at.strftime('%d/%m/%Y %H:%M') if l.created_at else '',
-            l.due_date.strftime('%d/%m/%Y') if l.due_date else '',
-            l.remarks or ''
-        ])
+        # Sheet 1: Leads
+        try:
+            ws1 = wb.active
+            ws1.title = "Leads"
+            users_map = {u.id: u.name for u in User.query.all()}
+            style_headers(ws1, ['ID','Name','Company','Phone','Email','Service','Source','Campaign',
+                                 'Status','Assigned To','Created Date','Due Date','Remarks'])
+            for l in Lead.query.order_by(Lead.created_at.desc()).all():
+                ws1.append([
+                    l.id, l.name or '', l.company or '', l.phone or '', l.email or '',
+                    l.service or '', l.source or '', l.campaign or '',
+                    l.status or '', users_map.get(l.assigned_to, ''),
+                    l.created_at.strftime('%d/%m/%Y %H:%M') if l.created_at else '',
+                    l.due_date.strftime('%d/%m/%Y') if l.due_date else '',
+                    l.remarks or ''
+                ])
+        except Exception as e:
+            print(f"Error backing up Leads: {e}")
+            flash(f'Warning: Leads backup incomplete - {str(e)}', 'warning')
 
-    # Sheet 2: Customers
-    ws2 = wb.create_sheet("Customers")
-    style_headers(ws2, ['ID','Name','Company','Phone','Email','Source','Nationality',
-                         'Customer Type','Assigned To','Notes','Created Date'])
-    for c in Customer.query.order_by(Customer.created_at.desc()).all():
-        ws2.append([
-            c.id, c.name or '', c.company or '', c.phone or '', c.email or '',
-            c.source or '', c.nationality or '', c.customer_type or '',
-            users_map.get(c.assigned_to, ''), c.notes or '',
-            c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else ''
-        ])
+        # Sheet 2: Customers
+        try:
+            ws2 = wb.create_sheet("Customers")
+            style_headers(ws2, ['ID','Name','Company','Phone','Email','Source','Nationality',
+                                 'Customer Type','Assigned To','Notes','Created Date'])
+            for c in Customer.query.order_by(Customer.created_at.desc()).all():
+                ws2.append([
+                    c.id, c.name or '', c.company or '', c.phone or '', c.email or '',
+                    c.source or '', c.nationality or '', c.customer_type or '',
+                    users_map.get(c.assigned_to, ''), c.notes or '',
+                    c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else ''
+                ])
+        except Exception as e:
+            print(f"Error backing up Customers: {e}")
+            flash(f'Warning: Customers backup incomplete - {str(e)}', 'warning')
 
-    # Sheet 3: Jobs
-    ws3 = wb.create_sheet("Jobs")
-    style_headers(ws3, ['ID','Customer','Company','Job Type','Assigned To','Created By',
-                         'Status','Invoiced (AED)','Received (AED)','Revenue (AED)',
-                         'Revenue Date','Partner Commission','Partner Received','Created Date','Due Date'])
-    for j in Job.query.order_by(Job.created_at.desc()).all():
-        ws3.append([
-            j.id,
-            j.customer.name if j.customer else '',
-            j.customer.company if j.customer else '',
-            j.job_type or '',
-            users_map.get(j.assigned_to, ''),
-            users_map.get(j.created_by, ''),
-            j.status or '',
-            float(j.amount_invoiced or 0),
-            float(j.amount_received or 0),
-            float(j.revenue or 0),
-            j.revenue_date.strftime('%d/%m/%Y') if j.revenue_date else '',
-            'Yes' if j.has_partner_commission else 'No',
-            'Yes' if j.partner_commission_received else 'No',
-            j.created_at.strftime('%d/%m/%Y %H:%M') if j.created_at else '',
-            j.due_date.strftime('%d/%m/%Y') if j.due_date else ''
-        ])
+        # Sheet 3: Jobs
+        try:
+            ws3 = wb.create_sheet("Jobs")
+            style_headers(ws3, ['ID','Customer','Company','Job Type','Assigned To','Created By',
+                                 'Status','Invoiced (AED)','Received (AED)','Revenue (AED)',
+                                 'Revenue Date','Partner Commission','Partner Received','Created Date','Due Date'])
+            for j in Job.query.order_by(Job.created_at.desc()).all():
+                try:
+                    ws3.append([
+                        j.id,
+                        j.customer.name if j.customer else '',
+                        j.customer.company if j.customer else '',
+                        j.job_type or '',
+                        users_map.get(j.assigned_to, ''),
+                        users_map.get(j.created_by, ''),
+                        j.status or '',
+                        float(j.amount_invoiced or 0),
+                        float(j.amount_received or 0),
+                        float(j.revenue or 0),
+                        j.revenue_date.strftime('%d/%m/%Y') if j.revenue_date else '',
+                        'Yes' if j.has_partner_commission else 'No',
+                        'Yes' if j.partner_commission_received else 'No',
+                        j.created_at.strftime('%d/%m/%Y %H:%M') if j.created_at else '',
+                        j.due_date.strftime('%d/%m/%Y') if j.due_date else ''
+                    ])
+                except Exception as row_error:
+                    print(f"Error backing up Job ID {j.id}: {row_error}")
+                    continue
+        except Exception as e:
+            print(f"Error backing up Jobs: {e}")
+            flash(f'Warning: Jobs backup incomplete - {str(e)}', 'warning')
 
-    # Sheet 4: Documents
-    ws4 = wb.create_sheet("Documents")
-    style_headers(ws4, ['ID','Doc Type','Owner Name','Belongs To','Customer',
-                         'Expiry Date','Notes','Added By','Created Date'])
-    for d in Document.query.order_by(Document.created_at.desc()).all():
-        ws4.append([
-            d.id, d.doc_type or '', d.owner_name or '', d.belongs_to or '',
-            d.customer.name if d.customer else '',
-            d.expiry_date.strftime('%d/%m/%Y') if d.expiry_date else '',
-            d.notes or '', d.added_by or '',
-            d.created_at.strftime('%d/%m/%Y %H:%M') if d.created_at else ''
-        ])
+        # Sheet 4: Documents
+        try:
+            ws4 = wb.create_sheet("Documents")
+            style_headers(ws4, ['ID','Doc Type','Owner Name','Belongs To','Customer',
+                                 'Expiry Date','Notes','Added By','Created Date'])
+            for d in Document.query.order_by(Document.created_at.desc()).all():
+                try:
+                    ws4.append([
+                        d.id, d.doc_type or '', d.owner_name or '', d.belongs_to or '',
+                        d.customer.name if d.customer else '',
+                        d.expiry_date.strftime('%d/%m/%Y') if d.expiry_date else '',
+                        d.notes or '', d.added_by or '',
+                        d.created_at.strftime('%d/%m/%Y %H:%M') if d.created_at else ''
+                    ])
+                except Exception as row_error:
+                    print(f"Error backing up Document ID {d.id}: {row_error}")
+                    continue
+        except Exception as e:
+            print(f"Error backing up Documents: {e}")
+            flash(f'Warning: Documents backup incomplete - {str(e)}', 'warning')
 
-    # Sheet 5: Staff
-    ws5 = wb.create_sheet("Staff")
-    style_headers(ws5, ['ID','Name','Email','Role','Active'])
-    for u in User.query.order_by(User.name).all():
-        ws5.append([u.id, u.name, u.email, u.role, 'Yes' if u.active else 'No'])
+        # Sheet 5: Staff
+        try:
+            ws5 = wb.create_sheet("Staff")
+            style_headers(ws5, ['ID','Name','Email','Role','Active'])
+            for u in User.query.order_by(User.name).all():
+                ws5.append([u.id, u.name, u.email, u.role, 'Yes' if u.active else 'No'])
+        except Exception as e:
+            print(f"Error backing up Staff: {e}")
+            flash(f'Warning: Staff backup incomplete - {str(e)}', 'warning')
 
-    # Mark backup date in session
-    session['last_backup_date'] = now_dubai().strftime('%Y-%m-%d')
-    session.modified = True
+        # Mark backup date in session
+        session['last_backup_date'] = now_dubai().strftime('%Y-%m-%d')
+        session.modified = True
 
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
-    filename = f"tahfeel_backup_{now_dubai().strftime('%Y%m%d_%H%M')}.xlsx"
-    response = make_response(output.read())
-    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
-    return response
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        filename = f"tahfeel_backup_{now_dubai().strftime('%Y%m%d_%H%M')}.xlsx"
+        response = make_response(output.read())
+        response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        return response
+    
+    except Exception as e:
+        print(f"CRITICAL ERROR in backup export: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Backup failed: {str(e)}. Please contact support.', 'error')
+        return redirect(url_for('admin_panel'))
 
 
 @app.route('/analytics')
