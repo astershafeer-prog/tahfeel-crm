@@ -87,6 +87,11 @@ def backup_database():
         
         result = subprocess.run(cmd, env=env, capture_output=True, text=True)
         
+        if result.stdout:
+            print(f"pg_dump stdout: {result.stdout}")
+        if result.stderr:
+            print(f"pg_dump stderr: {result.stderr}")
+        
         if result.returncode == 0:
             # Compress the backup
             with open(backup_file, 'rb') as f_in:

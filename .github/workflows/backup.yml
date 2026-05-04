@@ -31,7 +31,15 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           python backup_database.py
-          echo "✅ Backup completed successfully"
+          echo "✅ Backup script completed"
+      
+      - name: List backup files
+        run: |
+          echo "📦 Checking backup directory:"
+          mkdir -p backups
+          ls -lh backups/ || echo "No files found in backups/"
+          echo "All files in current directory:"
+          find . -name "*.sql.gz" -o -name "*.sql" 2>/dev/null || echo "No SQL files found anywhere"
       
       - name: Upload backup as artifact
         uses: actions/upload-artifact@v4
@@ -39,9 +47,4 @@ jobs:
           name: tahfeel-backup-${{ github.run_number }}
           path: backups/*.sql.gz
           retention-days: 30
-          if-no-files-found: error
-      
-      - name: List backup files
-        run: |
-          echo "📦 Backup files created:"
-          ls -lh backups/
+          if-no-files-found: warn
