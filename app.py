@@ -1503,94 +1503,37 @@ def admin_panel():
 @login_required
 @admin_required
 def fix_cloudinary_access():
-    """Fix Cloudinary document URLs and update to public access"""
+    """Fix Cloudinary document URLs - revert PDFs back to /image/upload/ path"""
     try:
-        import cloudinary.api
-        import cloudinary.uploader
         import re
         
         # Get all documents with Cloudinary URLs
         documents = Document.query.filter(Document.file_url.like('%cloudinary.com%')).all()
-        fixed = 0
-        errors = []
         url_fixes = 0
         
         for doc in documents:
             try:
-                # First, fix the URL if it's a PDF with /image/upload/ path
-                if doc.file_url and doc.file_url.endswith('.pdf') and '/image/upload/' in doc.file_url:
-                    # Change /image/upload/ to /raw/upload/ for PDFs
+                # Revert PDFs back to /image/upload/ if they were changed to /raw/upload/
+                if doc.file_url and doc.file_url.endswith('.pdf') and '/raw/upload/' in doc.file_url:
                     old_url = doc.file_url
-                    doc.file_url = doc.file_url.replace('/image/upload/', '/raw/upload/')
+                    doc.file_url = doc.file_url.replace('/raw/upload/', '/image/upload/')
                     db.session.add(doc)
                     url_fixes += 1
-                    print(f"Fixed URL for Doc {doc.id}: {old_url} → {doc.file_url}")
-                
-                # Now extract public_id
-                public_id = doc.cloudinary_public_id
-                
-                if not public_id and doc.file_url:
-                    # Extract public_id from URL
-                    match = re.search(r'/upload/(?:v\d+/)?(.+?)(?:\.[a-zA-Z0-9]+)?$', doc.file_url)
-                    if match:
-                        public_id = match.group(1)
-                        public_id = re.sub(r'\.[a-zA-Z0-9]+$', '', public_id)
-                        doc.cloudinary_public_id = public_id
-                        db.session.add(doc)
-                
-                # Try to update access mode in Cloudinary
-                if public_id:
-                    # Determine resource type
-                    resource_type = 'raw'  # Default for PDFs
-                    if doc.file_url and any(ext in doc.file_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
-                        resource_type = 'image'
-                    
-                    try:
-                        result = cloudinary.uploader.explicit(
-                            public_id,
-                            type='upload',
-                            resource_type=resource_type,
-                            access_mode='public'
-                        )
-                        fixed += 1
-                    except Exception as e:
-                        # If resource not found, it might already be public or deleted
-                        # Just log it but don't count as critical error
-                        if 'not found' in str(e).lower():
-                            print(f"Doc {doc.id}: Resource not found in Cloudinary, but URL should work if file exists")
-                        else:
-                            error_msg = f"Doc {doc.id} - {doc.doc_type or 'Unknown'} ({public_id}): {str(e)}"
-                            errors.append(error_msg)
+                    print(f"Reverted URL for Doc {doc.id}: {old_url} → {doc.file_url}")
             
             except Exception as e:
-                error_msg = f"Doc {doc.id}: {str(e)}"
-                errors.append(error_msg)
-                print(f"Error processing document: {error_msg}")
+                print(f"Error processing document {doc.id}: {e}")
         
         db.session.commit()
         
-        # Build success message
-        message_parts = []
         if url_fixes > 0:
-            message_parts.append(f"Fixed {url_fixes} PDF URLs (/image/upload/ → /raw/upload/)")
-        if fixed > 0:
-            message_parts.append(f"Updated {fixed} documents in Cloudinary")
-        
-        if errors:
-            error_summary = '<br>'.join(errors[:3])
-            if len(errors) > 3:
-                error_summary += f'<br>...and {len(errors)-3} more errors'
-            message = ' | '.join(message_parts) if message_parts else 'Processed documents'
-            flash(f'{message}. {len(errors)} errors:<br>{error_summary}', 'warning')
-        elif message_parts:
-            flash(' | '.join(message_parts) + '. Documents should now be accessible!', 'success')
+            flash(f'Fixed {url_fixes} PDF URLs. Documents should now be viewable!', 'success')
         else:
-            flash('No documents needed fixing.', 'info')
+            flash('No documents needed fixing. All URLs are correct.', 'info')
             
     except Exception as e:
-        error_detail = str(e)
-        flash(f'Error: {error_detail}', 'error')
-        print(f"Cloudinary Fix Critical Error: {e}")
+        flash(f'Error: {str(e)}', 'error')
+        print(f"Fix Error: {e}")
         import traceback
         traceback.print_exc()
     
