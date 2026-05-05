@@ -235,15 +235,25 @@ def export_sales_report():
 
     users = {u.id: u.name for u in db.session.query(User).all()}
     
-    # SALES REPORT: Filter by revenue_date (when job was closed and revenue recorded)
-    # This ensures revenue total matches dashboard
-    query = (db.session.query(Job, Customer)
+    # SALES REPORT: Include both closed revenue AND partial revenue
+    # 1. Get jobs with closed revenue in date range
+    closed_jobs_query = (db.session.query(Job, Customer)
             .join(Customer, Job.customer_id == Customer.id)
             .filter(Job.revenue_date >= df_d, Job.revenue_date <= dt_d)
-            .filter(Job.revenue.isnot(None)))  # Only jobs with revenue
+            .filter(Job.revenue.isnot(None)))
     if session.get('role') not in ['admin', 'finance']:
-        query = query.filter(Customer.assigned_to == session.get('user_id'))
-    jobs = query.order_by(Job.revenue_date.desc()).all()
+        closed_jobs_query = closed_jobs_query.filter(Customer.assigned_to == session.get('user_id'))
+    closed_jobs = closed_jobs_query.all()
+    
+    # 2. Get partial revenue entries in date range
+    from app import PartialRevenue
+    partial_query = (db.session.query(PartialRevenue, Job, Customer)
+            .join(Job, PartialRevenue.job_id == Job.id)
+            .join(Customer, Job.customer_id == Customer.id)
+            .filter(PartialRevenue.revenue_date >= df_d, PartialRevenue.revenue_date <= dt_d))
+    if session.get('role') not in ['admin', 'finance']:
+        partial_query = partial_query.filter(Customer.assigned_to == session.get('user_id'))
+    partial_revenues = partial_query.all()
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -257,7 +267,10 @@ def export_sales_report():
     _headers(ws, cols)
 
     rows = []
-    for i, (job, cust) in enumerate(jobs, 1):
+    row_num = 1
+    
+    # Add closed jobs
+    for job, cust in closed_jobs:
         inv = float(job.amount_invoiced or 0)
         rec = float(job.amount_received or 0)
         rev = float(job.revenue or 0)
@@ -272,10 +285,10 @@ def export_sales_report():
             payment_status = 'Paid'
         
         rows.append([
-            i, cust.name or '', cust.company or '', cust.phone or '', cust.email or '',
+            row_num, cust.name or '', cust.company or '', cust.phone or '', cust.email or '',
             job.job_type or '', cust.source or '',
-            users.get(cust.assigned_to, '—'),  # Representative (Sales)
-            users.get(job.assigned_to, '—'),    # Assigned To (Operations)
+            users.get(cust.assigned_to, '—'),
+            users.get(job.assigned_to, '—'),
             users.get(job.created_by, '—'),
             job.status or '',
             job.created_at.strftime('%d/%m/%Y') if job.created_at else '',
@@ -283,6 +296,28 @@ def export_sales_report():
             job.revenue_date.strftime('%d/%m/%Y') if job.revenue_date else '',
             inv, rec, rev, outstanding, payment_status,
         ])
+        row_num += 1
+    
+    # Add partial revenue entries
+    for pr, job, cust in partial_revenues:
+        inv = float(job.amount_invoiced or 0)
+        rec = float(job.amount_received or 0)
+        partial_rev = float(pr.amount)
+        outstanding = inv - rec
+        
+        rows.append([
+            row_num, cust.name or '', cust.company or '', cust.phone or '', cust.email or '',
+            job.job_type or '', cust.source or '',
+            users.get(cust.assigned_to, '—'),
+            users.get(job.assigned_to, '—'),
+            users.get(job.created_by, '—'),
+            'Partially Closed',  # Status for partial revenue
+            job.created_at.strftime('%d/%m/%Y') if job.created_at else '',
+            job.due_date.strftime('%d/%m/%Y') if job.due_date else '',
+            pr.revenue_date.strftime('%d/%m/%Y') if pr.revenue_date else '',
+            inv, rec, partial_rev, outstanding, 'Partial',
+        ])
+        row_num += 1
 
     nr = _write_rows(ws, rows, num_cols={14, 15, 16, 17})
     ws.cell(row=nr, column=1, value='TOTAL'); _tot(ws.cell(row=nr, column=1))
