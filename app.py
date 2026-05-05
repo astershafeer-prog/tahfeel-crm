@@ -643,6 +643,7 @@ def dashboard():
                 revenue_jobs = [j for j in all_jobs if j.revenue_date and from_dt <= j.revenue_date <= to_dt]
             elif date_filter == 'all':
                 # Show all time only if explicitly selected
+                leads = all_leads  # FIX: Include all leads
                 jobs = all_jobs
                 revenue_jobs = all_jobs
             else:
