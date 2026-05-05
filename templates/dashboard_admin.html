@@ -22,7 +22,7 @@
       <div class="filter-group">
         <label>Date Range</label>
         <select name="date" id="dateFilter" onchange="toggleCustom()">
-          <option value="" {% if not date_filter %}selected{% endif %}>All time</option>
+          <option value="all" {% if date_filter == 'all' %}selected{% endif %}>All time</option>
           <option value="today" {% if date_filter=='today' %}selected{% endif %}>Today</option>
           <option value="week" {% if date_filter=='week' %}selected{% endif %}>This Week</option>
           <option value="month" {% if date_filter=='month' %}selected{% endif %}>This Month</option>
