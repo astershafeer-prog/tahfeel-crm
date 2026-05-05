@@ -235,13 +235,15 @@ def export_sales_report():
 
     users = {u.id: u.name for u in db.session.query(User).all()}
     
-    # Filter by current user if not admin/finance (based on customer representative)
+    # SALES REPORT: Filter by revenue_date (when job was closed and revenue recorded)
+    # This ensures revenue total matches dashboard
     query = (db.session.query(Job, Customer)
             .join(Customer, Job.customer_id == Customer.id)
-            .filter(Job.created_at >= df_d, Job.created_at <= dt_d))
+            .filter(Job.revenue_date >= df_d, Job.revenue_date <= dt_d)
+            .filter(Job.revenue.isnot(None)))  # Only jobs with revenue
     if session.get('role') not in ['admin', 'finance']:
         query = query.filter(Customer.assigned_to == session.get('user_id'))
-    jobs = query.order_by(Job.created_at.desc()).all()
+    jobs = query.order_by(Job.revenue_date.desc()).all()
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -249,7 +251,7 @@ def export_sales_report():
 
     cols = ['#', 'Customer Name', 'Company', 'Phone', 'Email',
             'Job Type', 'Source', 'Representative', 'Assigned To', 'Created By',
-            'Status', 'Created Date', 'Due Date',
+            'Status', 'Created Date', 'Due Date', 'Revenue Date',
             'Invoiced (AED)', 'Received (AED)', 'Revenue (AED)', 'Outstanding (AED)', 'Payment Status']
     _title_block(ws, "SALES REPORT", df, dt, len(cols))
     _headers(ws, cols)
@@ -278,17 +280,18 @@ def export_sales_report():
             job.status or '',
             job.created_at.strftime('%d/%m/%Y') if job.created_at else '',
             job.due_date.strftime('%d/%m/%Y') if job.due_date else '',
+            job.revenue_date.strftime('%d/%m/%Y') if job.revenue_date else '',
             inv, rec, rev, outstanding, payment_status,
         ])
 
-    nr = _write_rows(ws, rows, num_cols={13, 14, 15, 16})
+    nr = _write_rows(ws, rows, num_cols={14, 15, 16, 17})
     ws.cell(row=nr, column=1, value='TOTAL'); _tot(ws.cell(row=nr, column=1))
-    for col in [13, 14, 15, 16]:
+    for col in [14, 15, 16, 17]:
         ltr = get_column_letter(col)
         c = ws.cell(row=nr, column=col, value=f'=SUM({ltr}5:{ltr}{nr-1})')
         _tot(c, right=True); c.number_format = '#,##0.00'
 
-    _col_widths(ws, [4, 22, 22, 15, 22, 20, 14, 18, 18, 16, 13, 13, 13, 16, 16, 16, 16, 14])
+    _col_widths(ws, [4, 22, 22, 15, 22, 20, 14, 18, 18, 16, 13, 13, 13, 13, 16, 16, 16, 16, 14])
     _freeze(ws); _filter(ws, len(cols))
     return _respond(wb, f"Sales_Report_{df}_{dt}.xlsx")
 
