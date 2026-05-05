@@ -62,7 +62,7 @@
           <div class="form-row-2">
             <div class="form-group">
               <label>Service Enquired *</label>
-              <select name="service" required>
+              <select name="service">
                 <option value="">— Select service —</option>
                 {% for s in services %}
                 <option value="{{ s.name }}" {% if lead.service == s.name %}selected{% endif %}>{{ s.name }}</option>

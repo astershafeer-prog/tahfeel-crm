@@ -250,7 +250,7 @@ def export_sales_report():
     cols = ['#', 'Customer Name', 'Company', 'Phone', 'Email',
             'Job Type', 'Source', 'Representative', 'Assigned To', 'Created By',
             'Status', 'Created Date', 'Due Date',
-            'Invoiced (AED)', 'Received (AED)', 'Outstanding (AED)']
+            'Invoiced (AED)', 'Received (AED)', 'Revenue (AED)', 'Outstanding (AED)', 'Payment Status']
     _title_block(ws, "SALES REPORT", df, dt, len(cols))
     _headers(ws, cols)
 
@@ -258,6 +258,17 @@ def export_sales_report():
     for i, (job, cust) in enumerate(jobs, 1):
         inv = float(job.amount_invoiced or 0)
         rec = float(job.amount_received or 0)
+        rev = float(job.revenue or 0)
+        outstanding = inv - rec
+        
+        # Determine payment status
+        if job.status in ['Closed', 'Closed - Pending Partner Commission']:
+            payment_status = 'Closed'
+        elif outstanding > 0:
+            payment_status = 'Partial'
+        else:
+            payment_status = 'Paid'
+        
         rows.append([
             i, cust.name or '', cust.company or '', cust.phone or '', cust.email or '',
             job.job_type or '', cust.source or '',
@@ -267,17 +278,17 @@ def export_sales_report():
             job.status or '',
             job.created_at.strftime('%d/%m/%Y') if job.created_at else '',
             job.due_date.strftime('%d/%m/%Y') if job.due_date else '',
-            inv, rec, inv - rec,
+            inv, rec, rev, outstanding, payment_status,
         ])
 
-    nr = _write_rows(ws, rows, num_cols={13, 14, 15})
+    nr = _write_rows(ws, rows, num_cols={13, 14, 15, 16})
     ws.cell(row=nr, column=1, value='TOTAL'); _tot(ws.cell(row=nr, column=1))
-    for col in [13, 14, 15]:
+    for col in [13, 14, 15, 16]:
         ltr = get_column_letter(col)
         c = ws.cell(row=nr, column=col, value=f'=SUM({ltr}5:{ltr}{nr-1})')
         _tot(c, right=True); c.number_format = '#,##0.00'
 
-    _col_widths(ws, [4, 22, 22, 15, 22, 20, 14, 18, 18, 16, 13, 13, 18, 18, 18])
+    _col_widths(ws, [4, 22, 22, 15, 22, 20, 14, 18, 18, 16, 13, 13, 13, 16, 16, 16, 16, 14])
     _freeze(ws); _filter(ws, len(cols))
     return _respond(wb, f"Sales_Report_{df}_{dt}.xlsx")
 
