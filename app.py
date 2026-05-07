@@ -385,6 +385,7 @@ def apply_lead_filters(leads, args, now):
     status_filter = args.get('status')
     staff_filter = args.get('staff')
     due_filter = args.get('due')  # NEW: Due Date filter
+    source_filter = args.get('source')
     
     if date_filter == 'today':
         leads = [l for l in leads if l.created_at and l.created_at.date() == now.date()]
@@ -439,6 +440,9 @@ def apply_lead_filters(leads, args, now):
             next_week_start = now.date() + timedelta(days=7)
             next_week_end = next_week_start + timedelta(days=7)
             leads = [l for l in leads if l.due_date and next_week_start <= l.due_date.date() <= next_week_end]
+    
+    if source_filter:
+        leads = [l for l in leads if l.source == source_filter]
     
     return leads
 
@@ -937,9 +941,11 @@ def all_leads():
     page = max(1, min(page, total_pages))
     paginated = leads[(page - 1) * per_page: page * per_page]
 
+    sources = Source.query.order_by(Source.name).all()
     return render_template('all_leads.html', leads=paginated, now=now, users=users,
                            search=search, is_default=is_default,
-                           page=page, total_pages=total_pages, total=total)
+                           page=page, total_pages=total_pages, total=total,
+                           sources=sources)
 
 @app.route('/leads/export')
 @login_required

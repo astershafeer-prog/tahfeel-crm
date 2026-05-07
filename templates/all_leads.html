@@ -99,6 +99,15 @@
           </select>
         </div>
         <div class="filter-group">
+          <label>Source</label>
+          <select name="source">
+            <option value="">All Sources</option>
+            {% for src in sources %}
+              <option value="{{ src.name }}" {% if request.args.get('source') == src.name %}selected{% endif %}>{{ src.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-group">
           <label>Due Date</label>
           <select name="due">
             <option value="">All</option>
