@@ -2664,6 +2664,8 @@ def edit_finance(job_id):
     old_invoiced = job.amount_invoiced or 0
     old_received = job.amount_received or 0
     old_revenue = job.revenue or 0
+    old_revenue_date = job.revenue_date
+    old_created_at = job.created_at
     
     try:
         ai = request.form.get('amount_invoiced')
