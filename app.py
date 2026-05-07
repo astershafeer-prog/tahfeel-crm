@@ -909,16 +909,34 @@ def all_leads():
         flash('Access denied')
         return redirect(url_for('dashboard'))
     now = now_dubai()
-    leads = Lead.query.order_by(Lead.due_date).all()
-    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-    search = request.args.get('search', '').strip().lower()
-    is_default = not any(request.args.get(k) for k in ['date', 'status', 'staff', 'search', 'from', 'to'])
-
     role = session.get('role')
     user_id = session.get('user_id')
 
+    FILTER_KEYS = ['date', 'status', 'staff', 'search', 'from', 'to', 'due', 'source']
+
+    # If reset requested — clear saved filters and redirect clean
+    if request.args.get('reset') == '1':
+        session.pop('leads_filters', None)
+        return redirect(url_for('all_leads'))
+
+    # If any filter param is present in URL — save to session
+    if any(request.args.get(k) for k in FILTER_KEYS):
+        session['leads_filters'] = {k: request.args.get(k, '') for k in FILTER_KEYS}
+        args = request.args
+    # If no filter in URL but session has saved filters — restore them
+    elif 'leads_filters' in session:
+        args = session['leads_filters']
+    else:
+        args = request.args
+
+    search = (args.get('search') or '').strip().lower()
+    is_default = not any(args.get(k) for k in FILTER_KEYS)
+
+    leads = Lead.query.order_by(Lead.due_date).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
+
     # For sales: default to their own leads unless staff filter explicitly set
-    if role == 'sales' and not request.args.get('staff'):
+    if role == 'sales' and not args.get('staff'):
         leads = [l for l in leads if l.assigned_to == user_id]
 
     if search:
@@ -926,12 +944,13 @@ def all_leads():
                  search in (l.name or '').lower() or
                  search in (l.phone or '').lower() or
                  search in (l.company or '').lower()]
-    if is_default and request.args.get('date') != '':
+
+    if is_default:
         # Default: show this week's leads
         week_start = (now - timedelta(days=now.weekday())).date()
         leads = [l for l in leads if l.created_at and l.created_at.date() >= week_start]
     else:
-        leads = apply_lead_filters(leads, request.args, now)
+        leads = apply_lead_filters(leads, args, now)
 
     # Pagination
     page = int(request.args.get('page', 1))
@@ -945,7 +964,7 @@ def all_leads():
     return render_template('all_leads.html', leads=paginated, now=now, users=users,
                            search=search, is_default=is_default,
                            page=page, total_pages=total_pages, total=total,
-                           sources=sources)
+                           sources=sources, saved_filters=session.get('leads_filters', {}))
 
 @app.route('/leads/export')
 @login_required

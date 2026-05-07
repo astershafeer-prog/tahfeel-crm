@@ -49,80 +49,86 @@
       {% if search %}
         <input type="hidden" name="search" value="{{ search }}">
       {% endif %}
+      {% set sf = saved_filters %}
       <div class="filters">
         <div class="filter-group">
           <label>Created Date</label>
+          {% set active_date = request.args.get('date') or sf.get('date') %}
           <select name="date" id="dateFilter" onchange="toggleCustomDates(this.value)">
             <option value="">All time</option>
-            <option value="today" {% if request.args.get('date') == 'today' %}selected{% endif %}>Today</option>
-            <option value="week" {% if request.args.get('date') == 'week' or is_default %}selected{% endif %}>This Week</option>
-            <option value="month" {% if request.args.get('date') == 'month' %}selected{% endif %}>This Month</option>
-            <option value="custom" {% if request.args.get('date') == 'custom' %}selected{% endif %}>Custom Range</option>
+            <option value="today" {% if active_date == 'today' %}selected{% endif %}>Today</option>
+            <option value="week" {% if active_date == 'week' or is_default %}selected{% endif %}>This Week</option>
+            <option value="month" {% if active_date == 'month' %}selected{% endif %}>This Month</option>
+            <option value="custom" {% if active_date == 'custom' %}selected{% endif %}>Custom Range</option>
           </select>
         </div>
-        <div class="filter-group" id="customDates" style="display:{% if request.args.get('date')=='custom' %}flex{% else %}none{% endif %};">
+        <div class="filter-group" id="customDates" style="display:{% if active_date=='custom' %}flex{% else %}none{% endif %};">
           <label>From</label>
-          <input type="date" name="from" value="{{ request.args.get('from', '') }}">
+          <input type="date" name="from" value="{{ request.args.get('from') or sf.get('from', '') }}">
         </div>
-        <div class="filter-group" id="customDatesTo" style="display:{% if request.args.get('date')=='custom' %}flex{% else %}none{% endif %};">
+        <div class="filter-group" id="customDatesTo" style="display:{% if active_date=='custom' %}flex{% else %}none{% endif %};">
           <label>To</label>
-          <input type="date" name="to" value="{{ request.args.get('to', '') }}">
+          <input type="date" name="to" value="{{ request.args.get('to') or sf.get('to', '') }}">
         </div>
         <div class="filter-group">
           <label>Status</label>
+          {% set active_status = request.args.get('status') or sf.get('status') %}
           <select name="status">
             <option value="">All statuses</option>
-            <option value="New" {% if request.args.get('status') == 'New' %}selected{% endif %}>New</option>
-            <option value="Call Connected" {% if request.args.get('status') == 'Call Connected' %}selected{% endif %}>Call Connected</option>
-            <option value="Called — No Answer" {% if request.args.get('status') == 'Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
-            <option value="Customer Not Responding" {% if request.args.get('status') == 'Customer Not Responding' %}selected{% endif %}>Customer Not Responding</option>
-            <option value="Sent WhatsApp" {% if request.args.get('status') == 'Sent WhatsApp' %}selected{% endif %}>Sent WhatsApp</option>
-            <option value="Sent Mail" {% if request.args.get('status') == 'Sent Mail' %}selected{% endif %}>Sent Mail</option>
-            <option value="Potential Lead" {% if request.args.get('status') == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
-            <option value="Meeting Scheduled" {% if request.args.get('status') == 'Meeting Scheduled' %}selected{% endif %}>Meeting Scheduled</option>
-            <option value="Quotation Sent" {% if request.args.get('status') == 'Quotation Sent' %}selected{% endif %}>Quotation Sent</option>
-            <option value="Converted" {% if request.args.get('status') == 'Converted' %}selected{% endif %}>Converted</option>
-            <option value="Lost" {% if request.args.get('status') == 'Lost' %}selected{% endif %}>Lost</option>
-            <option value="Overdue" {% if request.args.get('status') == 'Overdue' %}selected{% endif %}>⚠ Overdue</option>
+            <option value="New" {% if active_status == 'New' %}selected{% endif %}>New</option>
+            <option value="Call Connected" {% if active_status == 'Call Connected' %}selected{% endif %}>Call Connected</option>
+            <option value="Called — No Answer" {% if active_status == 'Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
+            <option value="Customer Not Responding" {% if active_status == 'Customer Not Responding' %}selected{% endif %}>Customer Not Responding</option>
+            <option value="Sent WhatsApp" {% if active_status == 'Sent WhatsApp' %}selected{% endif %}>Sent WhatsApp</option>
+            <option value="Sent Mail" {% if active_status == 'Sent Mail' %}selected{% endif %}>Sent Mail</option>
+            <option value="Potential Lead" {% if active_status == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
+            <option value="Meeting Scheduled" {% if active_status == 'Meeting Scheduled' %}selected{% endif %}>Meeting Scheduled</option>
+            <option value="Quotation Sent" {% if active_status == 'Quotation Sent' %}selected{% endif %}>Quotation Sent</option>
+            <option value="Converted" {% if active_status == 'Converted' %}selected{% endif %}>Converted</option>
+            <option value="Lost" {% if active_status == 'Lost' %}selected{% endif %}>Lost</option>
+            <option value="Overdue" {% if active_status == 'Overdue' %}selected{% endif %}>⚠ Overdue</option>
           </select>
         </div>
         <div class="filter-group">
           <label>Assigned To</label>
+          {% set active_staff = request.args.get('staff') or sf.get('staff') %}
           <select name="staff">
-            <option value="" {% if session.role != 'sales' and not request.args.get('staff') %}selected{% endif %}>All Staff</option>
+            <option value="" {% if session.role != 'sales' and not active_staff %}selected{% endif %}>All Staff</option>
             {% for user in users %}
               <option value="{{ user.id }}"
-                {% if request.args.get('staff') == user.id|string %}selected
-                {% elif session.role == 'sales' and not request.args.get('staff') and user.id == session.user_id %}selected
+                {% if active_staff == user.id|string %}selected
+                {% elif session.role == 'sales' and not active_staff and user.id == session.user_id %}selected
                 {% endif %}>{{ user.name }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="filter-group">
           <label>Source</label>
+          {% set active_source = request.args.get('source') or sf.get('source') %}
           <select name="source">
             <option value="">All Sources</option>
             {% for src in sources %}
-              <option value="{{ src.name }}" {% if request.args.get('source') == src.name %}selected{% endif %}>{{ src.name }}</option>
+              <option value="{{ src.name }}" {% if active_source == src.name %}selected{% endif %}>{{ src.name }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="filter-group">
           <label>Due Date</label>
+          {% set active_due = request.args.get('due') or sf.get('due') %}
           <select name="due">
             <option value="">All</option>
-            <option value="overdue" {% if request.args.get('due') == 'overdue' %}selected{% endif %}>⚠ Overdue</option>
-            <option value="today" {% if request.args.get('due') == 'today' %}selected{% endif %}>Today</option>
-            <option value="tomorrow" {% if request.args.get('due') == 'tomorrow' %}selected{% endif %}>Tomorrow</option>
-            <option value="this_week" {% if request.args.get('due') == 'this_week' %}selected{% endif %}>This Week</option>
-            <option value="next_week" {% if request.args.get('due') == 'next_week' %}selected{% endif %}>Next Week</option>
+            <option value="overdue" {% if active_due == 'overdue' %}selected{% endif %}>⚠ Overdue</option>
+            <option value="today" {% if active_due == 'today' %}selected{% endif %}>Today</option>
+            <option value="tomorrow" {% if active_due == 'tomorrow' %}selected{% endif %}>Tomorrow</option>
+            <option value="this_week" {% if active_due == 'this_week' %}selected{% endif %}>This Week</option>
+            <option value="next_week" {% if active_due == 'next_week' %}selected{% endif %}>Next Week</option>
           </select>
         </div>
         <div class="filter-group">
           <label>&nbsp;</label>
           <div style="display:flex;gap:6px;">
             <button type="submit" class="btn-filter">Filter</button>
-            <a href="/leads" class="btn-reset">Reset</a>
+            <a href="/leads?reset=1" class="btn-reset">Reset</a>
           </div>
         </div>
       </div>
