@@ -717,6 +717,14 @@ def dashboard():
             pending_approval = [j for j in jobs if j.status == 'Pending Finance Approval']
             pending_close = [j for j in jobs if j.status == 'Pending Finance Close']
             recent_jobs = [j for j in all_jobs if j.status not in ['Done', 'Closed', 'Pending Finance Approval']][:10]
+
+            # Global task counts — match All Tasks page exactly
+            closed_statuses_g = ['Closed', 'Closed - Pending Partner Commission']
+            dash_stat_total = len(all_jobs)
+            dash_stat_done = len([j for j in all_jobs if j.status == 'Done'])
+            dash_stat_overdue = len([j for j in all_jobs if j.due_date and j.due_date < now and j.status not in ['Done'] + closed_statuses_g])
+            dash_stat_active = len([j for j in all_jobs if j.status not in ['Done'] + closed_statuses_g])
+            dash_stat_pending_finance = len([j for j in all_jobs if j.status in ['Pending Finance Approval', 'Pending Finance Close']])
         except:
             jobs = all_jobs = active_jobs = done_jobs = closed_jobs = overdue_jobs = pending_approval = pending_close = recent_jobs = []
             total_invoiced = total_received = total_pending = completed_value = customer_advances = total_revenue = 0
@@ -831,7 +839,10 @@ def dashboard():
                                staff_stats=staff_stats,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                now=now, date_filter=date_filter,
-                               from_date=from_date, to_date=to_date)
+                               from_date=from_date, to_date=to_date,
+                               dash_stat_total=dash_stat_total, dash_stat_done=dash_stat_done,
+                               dash_stat_overdue=dash_stat_overdue, dash_stat_active=dash_stat_active,
+                               dash_stat_pending_finance=dash_stat_pending_finance)
 
     # ── Staff dashboard ──────────────────────────────────────────────────────
     period = request.args.get('period', 'month')
