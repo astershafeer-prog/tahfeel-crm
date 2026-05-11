@@ -2191,7 +2191,8 @@ def jobs():
         stat_total = len(all_jobs_global)
         stat_done = len([j for j in all_jobs_global if j.status == 'Done'])
         stat_overdue = len([j for j in all_jobs_global if j.due_date and j.due_date < now and j.status not in ['Done'] + closed_statuses])
-        stat_processing = len([j for j in all_jobs_global if j.status not in ['Done'] + closed_statuses and not (j.due_date and j.due_date < now)])
+        stat_processing = len([j for j in all_jobs_global if j.status not in ['Done'] + closed_statuses])
+        stat_pending_finance = len([j for j in all_jobs_global if j.status in ['Pending Finance Approval', 'Pending Finance Close']])
         users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
         jobs_invoiced = sum((j.amount_invoiced or 0) for j in job_list)
         jobs_received = sum((j.amount_received or 0) for j in job_list)
@@ -2226,7 +2227,8 @@ def jobs():
                            jobs_invoiced=jobs_invoiced, jobs_received=jobs_received,
                            jobs_pending=jobs_pending, jobs_completed=jobs_completed,
                            stat_total=stat_total, stat_done=stat_done,
-                           stat_overdue=stat_overdue, stat_processing=stat_processing)
+                           stat_overdue=stat_overdue, stat_processing=stat_processing,
+                           stat_pending_finance=stat_pending_finance)
 
 
 @app.route('/jobs/export')
