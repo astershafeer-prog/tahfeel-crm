@@ -2184,6 +2184,14 @@ def jobs():
                     job_list = [j for j in job_list if j.due_date and j.due_date.date() <= td]
                 except: pass
         overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
+
+        # Global stats — same for all roles, pulled from full DB
+        all_jobs_global = Job.query.all()
+        closed_statuses = ['Closed', 'Closed - Pending Partner Commission']
+        stat_total = len(all_jobs_global)
+        stat_done = len([j for j in all_jobs_global if j.status == 'Done'])
+        stat_overdue = len([j for j in all_jobs_global if j.due_date and j.due_date < now and j.status not in ['Done'] + closed_statuses])
+        stat_processing = len([j for j in all_jobs_global if j.status not in ['Done'] + closed_statuses and not (j.due_date and j.due_date < now)])
         users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
         jobs_invoiced = sum((j.amount_invoiced or 0) for j in job_list)
         jobs_received = sum((j.amount_received or 0) for j in job_list)
@@ -2216,7 +2224,9 @@ def jobs():
                            assigned_filter=assigned_filter, date_filter=date_filter,
                            sort=sort, order=order,
                            jobs_invoiced=jobs_invoiced, jobs_received=jobs_received,
-                           jobs_pending=jobs_pending, jobs_completed=jobs_completed)
+                           jobs_pending=jobs_pending, jobs_completed=jobs_completed,
+                           stat_total=stat_total, stat_done=stat_done,
+                           stat_overdue=stat_overdue, stat_processing=stat_processing)
 
 
 @app.route('/jobs/export')
