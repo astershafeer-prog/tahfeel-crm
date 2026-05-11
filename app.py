@@ -721,7 +721,7 @@ def dashboard():
             # Global task counts — match All Tasks page exactly
             closed_statuses_g = ['Closed', 'Closed - Pending Partner Commission']
             dash_stat_total = len(all_jobs)
-            dash_stat_done = len([j for j in all_jobs if j.status == 'Done'])
+            dash_stat_done_closed = len([j for j in all_jobs if j.status in ['Done'] + closed_statuses_g])
             dash_stat_overdue = len([j for j in all_jobs if j.due_date and j.due_date < now and j.status not in ['Done'] + closed_statuses_g])
             dash_stat_active = len([j for j in all_jobs if j.status not in ['Done'] + closed_statuses_g])
             dash_stat_pending_finance = len([j for j in all_jobs if j.status in ['Pending Finance Approval', 'Pending Finance Close']])
@@ -840,7 +840,7 @@ def dashboard():
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                now=now, date_filter=date_filter,
                                from_date=from_date, to_date=to_date,
-                               dash_stat_total=dash_stat_total, dash_stat_done=dash_stat_done,
+                               dash_stat_total=dash_stat_total, dash_stat_done_closed=dash_stat_done_closed,
                                dash_stat_overdue=dash_stat_overdue, dash_stat_active=dash_stat_active,
                                dash_stat_pending_finance=dash_stat_pending_finance)
 
@@ -2200,7 +2200,7 @@ def jobs():
         all_jobs_global = Job.query.all()
         closed_statuses = ['Closed', 'Closed - Pending Partner Commission']
         stat_total = len(all_jobs_global)
-        stat_done = len([j for j in all_jobs_global if j.status == 'Done'])
+        stat_done_closed = len([j for j in all_jobs_global if j.status in ['Done'] + closed_statuses])
         stat_overdue = len([j for j in all_jobs_global if j.due_date and j.due_date < now and j.status not in ['Done'] + closed_statuses])
         stat_processing = len([j for j in all_jobs_global if j.status not in ['Done'] + closed_statuses])
         stat_pending_finance = len([j for j in all_jobs_global if j.status in ['Pending Finance Approval', 'Pending Finance Close']])
@@ -2237,7 +2237,7 @@ def jobs():
                            sort=sort, order=order,
                            jobs_invoiced=jobs_invoiced, jobs_received=jobs_received,
                            jobs_pending=jobs_pending, jobs_completed=jobs_completed,
-                           stat_total=stat_total, stat_done=stat_done,
+                           stat_total=stat_total, stat_done_closed=stat_done_closed,
                            stat_overdue=stat_overdue, stat_processing=stat_processing,
                            stat_pending_finance=stat_pending_finance)
 
