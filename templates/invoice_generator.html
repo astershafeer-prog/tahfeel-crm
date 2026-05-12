@@ -151,10 +151,9 @@
         <table class="inv-tbl">
           <thead><tr>
             <th style="width:24px;text-align:center;">#</th>
-            <th style="width:42%;">Description</th>
+            <th style="width:50%;">Description</th>
             <th class="r" style="width:32px;">Qty</th>
-            <th class="r" style="width:80px;">Svc Charge</th>
-            <th class="r" style="width:80px;">Govt. Charge</th>
+            <th class="r" style="width:80px;">Amount (AED)</th>
             <th class="r" style="width:80px;">Total (AED)</th>
             <th style="width:30px;"></th>
           </tr></thead>
@@ -280,10 +279,9 @@
         <table class="inv-tbl">
           <thead><tr>
             <th style="width:24px;text-align:center;">#</th>
-            <th style="width:42%;">Description</th>
+            <th style="width:50%;">Description</th>
             <th class="r" style="width:32px;">Qty</th>
-            <th class="r" style="width:80px;">Svc Charge</th>
-            <th class="r" style="width:80px;">Govt. Charge</th>
+            <th class="r" style="width:80px;">Amount (AED)</th>
             <th class="r" style="width:80px;">Total (AED)</th>
             <th style="width:30px;"></th>
           </tr></thead>
@@ -292,7 +290,6 @@
         <button class="inv-add-btn green" onclick="addRow('qt')">+ Add Line</button>
         <div class="inv-totals-wrap"><div class="inv-totals-box">
           <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="qtSubtotal">AED 0.00</span></div>
-          <div class="inv-tot-row"><span class="lbl">VAT (5% on service)</span><span class="val" id="qtVat">AED 0.00</span></div>
           <div class="inv-tot-row grand"><span class="lbl">TOTAL</span><span class="val" id="qtTotal">AED 0.00</span></div>
           <div class="inv-words" id="qtWords">AED Zero Only</div>
         </div></div>
@@ -432,7 +429,7 @@ function addRow(prefix) {
   services.forEach(function(s){ opts+='<option value="'+s+'">'+s+'</option>'; });
   opts += '<option value="__other__">Other (type below)</option>';
   
-  if (prefix === 'invs') {
+  if (prefix === 'invs' || prefix === 'qt') {
     // Invoice-Service: Simplified (no govt charge column)
     tr.innerHTML =
       '<td style="text-align:center;color:#94A3B8;font-size:12px;vertical-align:middle;">'+(tb.children.length+1)+'</td>'+
@@ -495,23 +492,26 @@ function calcAll(prefix) {
   document.getElementById(prefix+'ItemsBody').querySelectorAll('tr').forEach(function(r) {
     var q=parseFloat(r.querySelector('.qi').value)||0;
     var s=parseFloat(r.querySelector('.si').value)||0;
-    var g = prefix === 'invs' ? 0 : (parseFloat(r.querySelector('.gi').value)||0);
+    var g = (prefix === 'invs' || prefix === 'qt') ? 0 : (parseFloat(r.querySelector('.gi').value)||0);
     var rowTotal=q*(s+g);
-    var rowVat = vatEnabled ? q*(s-s/1.05) : 0;
+    var rowVat = (vatEnabled && prefix !== 'qt') ? q*(s-s/1.05) : 0;
     r.querySelector('.rt').textContent=rowTotal.toFixed(2);
     grand+=rowTotal; totalVat+=rowVat;
   });
   
-  var sub = vatEnabled ? (grand-totalVat) : grand;
+  var sub = (vatEnabled && prefix !== 'qt') ? (grand-totalVat) : grand;
   document.getElementById(prefix+'Subtotal').textContent='AED '+sub.toFixed(2);
   
-  // Show/hide VAT row
-  var vatRow = document.getElementById(prefix+'Vat').closest('.inv-tot-row');
-  if (vatEnabled) {
-    vatRow.style.display = 'flex';
-    document.getElementById(prefix+'Vat').textContent='AED '+totalVat.toFixed(2);
-  } else {
-    vatRow.style.display = 'none';
+  // Show/hide VAT row (not applicable for quotation)
+  var vatEl = document.getElementById(prefix+'Vat');
+  if (vatEl) {
+    var vatRow = vatEl.closest('.inv-tot-row');
+    if (vatEnabled && prefix !== 'qt') {
+      vatRow.style.display = 'flex';
+      vatEl.textContent='AED '+totalVat.toFixed(2);
+    } else {
+      vatRow.style.display = 'none';
+    }
   }
   
   document.getElementById(prefix+'Total').textContent='AED '+grand.toFixed(2);
