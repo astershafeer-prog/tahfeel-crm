@@ -55,7 +55,7 @@
           <label>Created Date</label>
           {% set active_date = request.args.get('date') or sf.get('date') %}
           <select name="date" id="dateFilter" onchange="toggleCustomDates(this.value)">
-            <option value="">All time</option>
+            <option value="all" {% if active_date == 'all' %}selected{% endif %}>All time</option>
             <option value="today" {% if active_date == 'today' %}selected{% endif %}>Today</option>
             <option value="week" {% if active_date == 'week' or is_default %}selected{% endif %}>This Week</option>
             <option value="month" {% if active_date == 'month' %}selected{% endif %}>This Month</option>
