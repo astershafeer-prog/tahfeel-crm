@@ -48,8 +48,8 @@
 
       <!-- Leads Block -->
       <div class="block" style="border-top:5px solid #1A3B8B;">
-        <div class="block-title">Leads <a href="/leads">View all →</a></div>
-        <a href="/leads" style="text-decoration:none;">
+        <div class="block-title">Leads <a href="/leads?date={{ period if period == 'all' else 'week' }}">View all →</a></div>
+        <a href="/leads?date={{ period if period == 'all' else 'week' }}" style="text-decoration:none;">
           <div class="stat-row"><span class="stat-name" style="color:#1A3B8B;font-weight:500;">My Leads</span><span class="stat-val" style="color:#1A3B8B;">{{ leads|length }}</span></div>
         </a>
         <a href="/leads?status=Initiated" style="text-decoration:none;">
