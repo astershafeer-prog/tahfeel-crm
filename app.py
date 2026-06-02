@@ -71,6 +71,7 @@ class User(db.Model):
     role = db.Column(db.String(20), default='staff')
     active = db.Column(db.Boolean, default=True)
     phone = db.Column(db.String(20), nullable=True)
+    on_leave = db.Column(db.Boolean, default=False)  # Excludes from Meta lead rotation
 
 class Lead(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -91,6 +92,7 @@ class Lead(db.Model):
     customer_story = db.Column(db.Text)
     phone2 = db.Column(db.String(20))
     campaign = db.Column(db.String(100))
+    meta_lead_id = db.Column(db.String(50), nullable=True, unique=True)  # Prevents duplicate Meta leads
     assignee = db.relationship('User', foreign_keys=[assigned_to])
     updates = db.relationship('LeadUpdate', backref='lead', lazy=True, order_by='LeadUpdate.created_at.desc()')
 
@@ -1738,6 +1740,17 @@ def admin_toggle_staff(user_id):
     user.active = not user.active
     db.session.commit()
     flash(f'{"Activated" if user.active else "Deactivated"} {user.name}')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/staff/<int:user_id>/toggle-leave')
+@login_required
+@admin_required
+def toggle_staff_leave(user_id):
+    user = User.query.get_or_404(user_id)
+    user.on_leave = not user.on_leave
+    db.session.commit()
+    status = 'On Leave' if user.on_leave else 'Available'
+    flash(f'{user.name} marked as {status}. Meta leads will {"skip" if user.on_leave else "include"} them.')
     return redirect(url_for('admin_panel'))
 
 # ── Customers ────────────────────────────────────────────────────────────────
@@ -3533,7 +3546,9 @@ def init_db():
                 active BOOLEAN DEFAULT TRUE
             )''',
             'ALTER TABLE activity_type ADD COLUMN IF NOT EXISTS weekly_target FLOAT DEFAULT 5',
-            'UPDATE \"user\" SET role = \'sales\' WHERE role = \'staff\'',
+            "UPDATE \"user\" SET role = 'sales' WHERE role = 'staff'",
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS on_leave BOOLEAN DEFAULT FALSE',
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS meta_lead_id VARCHAR(50)',
 
         ]
         for sql in migrations:
@@ -4104,6 +4119,8 @@ def analytics():
 
 from reports import reports_bp
 app.register_blueprint(reports_bp)
+from meta_webhook import meta_bp
+app.register_blueprint(meta_bp)
 
 if __name__ == '__main__':
     init_db()

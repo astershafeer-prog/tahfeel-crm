@@ -95,10 +95,21 @@
               <td><strong>{{ user.name }}</strong></td>
               <td>{{ user.email }}</td>
               <td><span class="{{ 'badge-admin' if user.role == 'admin' else 'badge-staff' }}">{{ user.role }}</span></td>
-              <td><span class="{{ 'badge-active' if user.active else 'badge-inactive' }}">{{ 'Active' if user.active else 'Inactive' }}</span></td>
+              <td>
+                <span class="{{ 'badge-active' if user.active else 'badge-inactive' }}">{{ 'Active' if user.active else 'Inactive' }}</span>
+                {% if user.role == 'sales' and user.on_leave %}
+                  <span style="background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:600;margin-left:4px;">On Leave</span>
+                {% endif %}
+              </td>
               <td>
                 {% if user.role != 'admin' %}
                   <a href="/users/{{ user.id }}/toggle" class="btn-sm">{{ 'Deactivate' if user.active else 'Activate' }}</a>
+                  {% if user.role == 'sales' %}
+                    <a href="/admin/staff/{{ user.id }}/toggle-leave"
+                       class="btn-sm" style="background:{{ '#f59e0b' if not user.on_leave else '#10b981' }};color:white;margin-left:4px;">
+                      {{ 'Mark On Leave' if not user.on_leave else 'Back from Leave' }}
+                    </a>
+                  {% endif %}
                 {% else %}
                   <span class="protected">Protected</span>
                 {% endif %}
