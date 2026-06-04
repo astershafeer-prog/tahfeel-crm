@@ -1542,62 +1542,35 @@ def admin_panel():
 @login_required
 @admin_required
 def fix_cloudinary_access():
-    """Fix Cloudinary document access - set all to public"""
+    """Fix Cloudinary document URLs - revert /raw/upload/ to /image/upload/"""
     try:
-        import cloudinary.uploader
-        import cloudinary.api
-        import re
-        
-        # Get all documents with Cloudinary URLs
-        documents = Document.query.filter(Document.file_url.like('%cloudinary.com%')).all()
+        # Get all documents with /raw/upload/ in their URL (these are broken)
+        documents = Document.query.filter(Document.file_url.like('%/raw/upload/%')).all()
         fixed = 0
-        errors = []
         
         for doc in documents:
-            try:
-                # Extract public_id from URL
-                public_id = doc.cloudinary_public_id
-                
-                if not public_id and doc.file_url:
-                    # Extract from URL: https://res.cloudinary.com/.../tahfeel-documents/document_file_nbxoqf.pdf
-                    match = re.search(r'tahfeel-documents/[^.?]+', doc.file_url)
-                    if match:
-                        public_id = match.group(0)
-                        doc.cloudinary_public_id = public_id
-                        db.session.add(doc)
-                
-                if public_id:
-                    try:
-                        # Use Cloudinary API to update access control to public
-                        # Try as image first (most common)
-                        try:
-                            result = cloudinary.uploader.explicit(
-                                public_id,
-                                type='upload',
-                                resource_type='image',
-                                access_control=[{"access_type": "anonymous"}]
-                            )
-                            fixed += 1
-                            print(f"✓ Fixed Doc {doc.id}: {public_id}")
-                        except Exception as e1:
-                            # If image fails, try as raw (PDF)
-                            if 'not found' in str(e1).lower():
-                                result = cloudinary.uploader.explicit(
-                                    public_id,
-                                    type='upload',
-                                    resource_type='raw',
-                                    access_control=[{"access_type": "anonymous"}]
-                                )
-                                fixed += 1
-                                print(f"✓ Fixed Doc {doc.id} as raw: {public_id}")
-                            else:
-                                raise e1
-                    except Exception as e:
-                        error_msg = f"Doc {doc.id} - {doc.doc_type or 'Unknown'}: {str(e)}"
-                        errors.append(error_msg)
-                        print(f"✗ Error: {error_msg}")
+            if doc.file_url:
+                # Change /raw/upload/ back to /image/upload/
+                old_url = doc.file_url
+                doc.file_url = doc.file_url.replace('/raw/upload/', '/image/upload/')
+                db.session.add(doc)
+                fixed += 1
+                print(f"✓ Fixed URL for Doc {doc.id}: {old_url} → {doc.file_url}")
+        
+        db.session.commit()
+        
+        if fixed > 0:
+            flash(f'✓ Fixed {fixed} document URLs. Files should now be accessible!', 'success')
+        else:
+            flash('No documents needed URL fixing. All URLs are correct.', 'info')
             
-            except Exception as e:
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+        print(f"Fix Error: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    return redirect(url_for('admin_panel'))
                 errors.append(f"Doc {doc.id}: {str(e)}")
         
         db.session.commit()
