@@ -1571,27 +1571,6 @@ def fix_cloudinary_access():
         traceback.print_exc()
     
     return redirect(url_for('admin_panel'))
-                errors.append(f"Doc {doc.id}: {str(e)}")
-        
-        db.session.commit()
-        
-        if errors:
-            error_summary = '<br>'.join(errors[:3])
-            if len(errors) > 3:
-                error_summary += f'<br>...and {len(errors)-3} more'
-            flash(f'✓ Fixed {fixed} documents | ✗ {len(errors)} errors:<br>{error_summary}', 'warning')
-        elif fixed > 0:
-            flash(f'✓ Successfully set {fixed} documents to public access!', 'success')
-        else:
-            flash('No documents found to fix.', 'info')
-            
-    except Exception as e:
-        flash(f'Error: {str(e)}', 'error')
-        print(f"Critical Error: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    return redirect(url_for('admin_panel'))
 
 
 @app.route('/admin/staff/add', methods=['POST'])
