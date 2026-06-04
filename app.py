@@ -4242,26 +4242,119 @@ def mark_partner_received(job_id):
         return redirect(url_for('partner_commissions'))
     
     job = Job.query.get_or_404(job_id)
+    customer = Customer.query.get(job.customer_id)
     
     if not job.partner_commission_expected or job.partner_status != 'Pending':
         flash('This task does not have a pending partner commission.', 'error')
         return redirect(url_for('partner_commissions'))
     
-    # Mark as received
-    job.partner_status = 'Received'
-    job.partner_received_date = now_dubai().date()
-    job.revenue = job.partner_amount  # NOW count the revenue!
-    job.revenue_date = now_dubai().date()  # Revenue counted TODAY (cash-basis)
-    job.status = 'Closed'  # Remove "Pending Partner Commission" from status
+    try:
+        # Get revenue amount from form (user enters it)
+        revenue_amount = request.form.get('revenue_amount')
+        if not revenue_amount:
+            flash('Revenue amount is required.', 'error')
+            return redirect(url_for('partner_commissions'))
+        
+        revenue = float(revenue_amount)
+        invoice_amount = float(job.amount_invoiced or 0)
+        partner_amount = float(job.partner_amount or 0)
+        
+        # Validation
+        if revenue < 0:
+            flash('Revenue cannot be negative.', 'error')
+            return redirect(url_for('partner_commissions'))
+        
+        if revenue > invoice_amount:
+            flash(f'Revenue (AED {revenue:,.0f}) cannot exceed invoice amount (AED {invoice_amount:,.0f}).', 'error')
+            return redirect(url_for('partner_commissions'))
+        
+        if revenue > partner_amount:
+            flash(f'Revenue (AED {revenue:,.0f}) cannot exceed partner reimbursement (AED {partner_amount:,.0f}).', 'error')
+            return redirect(url_for('partner_commissions'))
+        
+        # Mark as received and book revenue
+        job.partner_status = 'Received'
+        job.partner_received_date = now_dubai().date()
+        job.revenue = revenue
+        job.revenue_date = now_dubai().date()
+        job.status = 'Closed'
+        
+        # Add timeline update
+        remark = f'Partner commission RECEIVED from {job.partner_name}: AED {partner_amount:,.0f}. Revenue booked: AED {revenue:,.0f} for {now_dubai().strftime("%B %Y")} (cash-basis). Marked by {session["user_name"]}.'
+        update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
+        db.session.add(update)
+        db.session.commit()
+        
+        flash(f'✓ Partner commission from {job.partner_name} marked received. Revenue AED {revenue:,.0f} booked.')
+        return redirect(url_for('partner_commissions'))
+        
+    except ValueError:
+        flash('Invalid revenue amount.', 'error')
+        return redirect(url_for('partner_commissions'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'error')
+        print(f"Error marking partner received: {e}")
+        return redirect(url_for('partner_commissions'))
+
+@app.route('/partner-commissions/<int:job_id>/edit-revenue', methods=['POST'])
+@login_required
+def edit_partner_revenue(job_id):
+    if session['role'] not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('partner_commissions'))
     
-    # Add timeline update
-    remark = f'Partner commission RECEIVED from {job.partner_name}: AED {job.partner_amount:,.0f}. Revenue now counted for {now_dubai().strftime("%B %Y")} (cash-basis). Marked by {session["user_name"]}.'
-    update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
-    db.session.add(update)
-    db.session.commit()
+    job = Job.query.get_or_404(job_id)
     
-    flash(f'Partner commission of AED {job.partner_amount:,.0f} from {job.partner_name} marked as received. Revenue added to totals.')
-    return redirect(url_for('partner_commissions'))
+    if job.partner_status != 'Received':
+        flash('Can only edit revenue for received commissions.', 'error')
+        return redirect(url_for('partner_commissions'))
+    
+    try:
+        revenue_amount = request.form.get('revenue_amount')
+        if not revenue_amount:
+            flash('Revenue amount is required.', 'error')
+            return redirect(url_for('partner_commissions'))
+        
+        revenue = float(revenue_amount)
+        invoice_amount = float(job.amount_invoiced or 0)
+        partner_amount = float(job.partner_amount or 0)
+        old_revenue = job.revenue
+        
+        # Validation
+        if revenue < 0:
+            flash('Revenue cannot be negative.', 'error')
+            return redirect(url_for('partner_commissions'))
+        
+        if revenue > invoice_amount:
+            flash(f'Revenue (AED {revenue:,.0f}) cannot exceed invoice amount (AED {invoice_amount:,.0f}).', 'error')
+            return redirect(url_for('partner_commissions'))
+        
+        if revenue > partner_amount:
+            flash(f'Revenue (AED {revenue:,.0f}) cannot exceed partner reimbursement (AED {partner_amount:,.0f}).', 'error')
+            return redirect(url_for('partner_commissions'))
+        
+        # Update revenue
+        job.revenue = revenue
+        job.revenue_date = now_dubai().date()
+        
+        # Add timeline update
+        remark = f'Partner commission revenue updated: AED {old_revenue:,.0f} → AED {revenue:,.0f}. Edited by {session["user_name"]}.'
+        update = JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name'])
+        db.session.add(update)
+        db.session.commit()
+        
+        flash(f'✓ Revenue updated to AED {revenue:,.0f}')
+        return redirect(url_for('partner_commissions'))
+        
+    except ValueError:
+        flash('Invalid revenue amount.', 'error')
+        return redirect(url_for('partner_commissions'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'error')
+        print(f"Error editing partner revenue: {e}")
+        return redirect(url_for('partner_commissions'))
 
 # ── Admin Panel Partner Routes (simpler pattern)
 @app.route('/admin/partner/add', methods=['POST'])

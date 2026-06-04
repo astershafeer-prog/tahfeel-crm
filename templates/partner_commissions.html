@@ -113,11 +113,9 @@
               </td>
               <td style="text-align:right;">
                 {% if job.partner_status == 'Pending' %}
-                <form method="post" action="/partner-commissions/{{ job.id }}/mark-received" style="display:inline;" onsubmit="return confirm('Mark AED {{ '{:,.0f}'.format(job.partner_amount or 0) }} from {{ job.partner_name }} as received? Revenue will be added to totals.');">
-                  <button type="submit" class="btn-sm" style="background:#10B981;color:white;">✓ Mark Received</button>
-                </form>
+                <button onclick="openRevenueModal({{ job.id }}, {{ job.amount_invoiced or 0 }}, {{ job.partner_amount or 0 }}, false)" class="btn-sm" style="background:#10B981;color:white;">📥 Mark Received</button>
                 {% else %}
-                <a href="/jobs/{{ job.id }}" class="btn-sm" style="background:#64748B;color:white;text-decoration:none;">View Task</a>
+                <button onclick="openRevenueModal({{ job.id }}, {{ job.amount_invoiced or 0 }}, {{ job.partner_amount or 0 }}, true)" class="btn-sm" style="background:#3B82F6;color:white;">✏️ Edit Revenue</button>
                 {% endif %}
               </td>
             </tr>
@@ -142,5 +140,67 @@
     </div>
 
   </div>
+
+  <!-- Revenue Modal -->
+  <div id="revenueModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:12px;padding:28px;width:90%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+      <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Partner Commission Receipt</div>
+      <form id="revenueForm" method="post" style="display:none;">
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;display:block;margin-bottom:6px;">Partner Reimbursement</label>
+          <div style="font-size:18px;font-weight:700;color:#1A3B8B;" id="partnerAmount"></div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;display:block;margin-bottom:6px;">Invoice Amount</label>
+          <div style="font-size:14px;color:#475569;" id="invoiceAmount"></div>
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;display:block;margin-bottom:6px;">Revenue to Book *</label>
+          <input type="number" name="revenue_amount" id="revenueAmount" step="0.01" min="0" placeholder="Enter revenue amount" style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:14px;" required>
+          <div style="font-size:11px;color:#94A3B8;margin-top:4px;">Max: <span id="maxRevenue"></span> AED</div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button type="submit" id="submitBtn" class="btn-sm" style="flex:1;background:#10B981;color:white;padding:10px;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Submit</button>
+          <button type="button" onclick="closeRevenueModal()" class="btn-sm" style="flex:1;background:#E2E8F0;color:#475569;padding:10px;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openRevenueModal(jobId, invoiceAmount, partnerAmount, editing) {
+      document.getElementById('invoiceAmount').textContent = 'AED ' + parseFloat(invoiceAmount).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      document.getElementById('partnerAmount').textContent = 'AED ' + parseFloat(partnerAmount).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      
+      const maxRevenue = Math.min(invoiceAmount, partnerAmount);
+      document.getElementById('maxRevenue').textContent = parseFloat(maxRevenue).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      
+      const form = document.getElementById('revenueForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const revenueInput = document.getElementById('revenueAmount');
+      
+      if (editing) {
+        submitBtn.textContent = 'Update Revenue';
+        form.action = '/partner-commissions/' + jobId + '/edit-revenue';
+      } else {
+        submitBtn.textContent = 'Mark Received & Book Revenue';
+        form.action = '/partner-commissions/' + jobId + '/mark-received';
+        revenueInput.value = '';
+      }
+      
+      form.style.display = 'block';
+      document.getElementById('revenueModal').style.display = 'flex';
+      revenueInput.focus();
+    }
+
+    function closeRevenueModal() {
+      document.getElementById('revenueModal').style.display = 'none';
+      document.getElementById('revenueForm').reset();
+    }
+
+    document.getElementById('revenueModal').addEventListener('click', function(e) {
+      if (e.target === this) closeRevenueModal();
+    });
+  </script>
 </body>
 </html>
