@@ -32,15 +32,24 @@
 // Theme System
 function setTheme(theme) {
   localStorage.setItem('tahfeel-theme', theme);
-  document.documentElement.setAttribute('data-theme', theme);
-  location.reload();
+  // Remove old theme class
+  document.body.classList.remove('theme-navy', 'theme-beige', 'theme-black');
+  // Add new theme class
+  if (theme !== 'navy') {
+    document.body.classList.add('theme-' + theme);
+  }
 }
 
 function loadTheme() {
   const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
-  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.body.classList.remove('theme-navy', 'theme-beige', 'theme-black');
+  if (savedTheme !== 'navy') {
+    document.body.classList.add('theme-' + savedTheme);
+  }
 }
 
+// Load theme on page load
+document.addEventListener('DOMContentLoaded', loadTheme);
 loadTheme();
 </script>
 
@@ -77,11 +86,16 @@ loadTheme();
   <a href="/jobs" {% if active=='jobs' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">✓ Tasks</a>
   <a href="/customers" {% if active=='customers' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">👤 Customers</a>
   <a href="/documents" {% if active=='documents' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Documents</a>
-  <a href="/desk" {% if active=='desk' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📌 My Desk{% if session.get('unread_mentions',0) > 0 %}<span style="background:#EF4444;color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:2px;">{{ session.get('unread_mentions',0) }}</span>{% endif %}</a>
+  {% if session.role in ['admin', 'sales'] %}
+  <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
+  {% endif %}
   {% if session.role == 'admin' %}
   <a href="/tahfeel-doc" {% if active=='tahfeel_doc' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Tahfeel Doc</a>
   {% endif %}
   <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧾 Doc Generator</a>
+  {% if session.role in ['admin', 'sales'] %}
+  <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
+  {% endif %}
   {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
   <a href="/reports" {% if active=='reports' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📊 Reports</a>
   {% endif %}
