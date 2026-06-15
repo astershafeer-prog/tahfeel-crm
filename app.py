@@ -4414,7 +4414,7 @@ def tahfeel_doc():
         expiring_docs = []
         critical_count = warning_count = expired_count = 0
     
-    return render_template('tahfeel_doc.html',
+    return render_template('tahfeel_doc_simple.html',
                           all_docs=all_docs,
                           expiring_docs=expiring_docs,
                           critical_count=critical_count,
@@ -4593,6 +4593,96 @@ def edit_tahfeel_doc(doc_id):
         db.session.rollback()
         flash(f'Error: {str(e)}', 'error')
         print(f"Error editing document: {e}")
+        return redirect(url_for('tahfeel_doc'))
+
+@app.route('/tahfeel-doc/add-bulk', methods=['POST'])
+@login_required
+def add_tahfeel_doc_bulk():
+    if session['role'] != 'admin':
+        flash('Only admin can add documents.', 'error')
+        return redirect(url_for('tahfeel_doc'))
+    
+    try:
+        # Count how many documents are being added (look for name_0, name_1, etc.)
+        doc_indices = []
+        i = 0
+        while request.form.get(f'name_{i}'):
+            doc_indices.append(i)
+            i += 1
+        
+        if not doc_indices:
+            flash('Please add at least one document.', 'error')
+            return redirect(url_for('tahfeel_doc'))
+        
+        created_count = 0
+        
+        # Process each document
+        for idx in doc_indices:
+            name = request.form.get(f'name_{idx}', '').strip()
+            doc_type = request.form.get(f'doc_type_{idx}', '').strip()
+            owner = request.form.get(f'owner_{idx}', '').strip()
+            issue_date_str = request.form.get(f'issue_date_{idx}', '')
+            expiry_date_str = request.form.get(f'expiry_date_{idx}', '')
+            authority = request.form.get(f'authority_{idx}', '').strip()
+            
+            # Validation
+            if not name or not doc_type or not expiry_date_str or not owner:
+                print(f"Skipping document {idx}: missing required fields")
+                continue
+            
+            try:
+                issue_date = datetime.strptime(issue_date_str, '%Y-%m-%d').date() if issue_date_str else None
+                expiry_date = datetime.strptime(expiry_date_str, '%Y-%m-%d').date()
+            except ValueError as ve:
+                print(f"Date parsing error for doc {idx}: {ve}")
+                continue
+            
+            # Handle file upload
+            doc_url = None
+            cloudinary_id = None
+            file_key = f'file_{idx}'
+            
+            if file_key in request.files and request.files[file_key].filename:
+                try:
+                    file = request.files[file_key]
+                    result = cloudinary.uploader.upload(
+                        file,
+                        folder='tahfeel-documents',
+                        resource_type='auto',
+                        public_id=f"doc_{name.replace(' ', '_')}_{datetime.now().timestamp()}"
+                    )
+                    doc_url = result.get('secure_url')
+                    cloudinary_id = result.get('public_id')
+                except Exception as e:
+                    print(f"Cloudinary upload error for doc {idx}: {e}")
+            
+            # Create document
+            doc = CompanyDocument(
+                name=name,
+                doc_type=doc_type,
+                owner=owner,
+                issue_date=issue_date,
+                expiry_date=expiry_date,
+                authority=authority,
+                document_url=doc_url,
+                cloudinary_public_id=cloudinary_id,
+                created_by=session.get('username', 'Unknown')
+            )
+            
+            db.session.add(doc)
+            created_count += 1
+        
+        if created_count > 0:
+            db.session.commit()
+            flash(f'✓ {created_count} document{"s" if created_count != 1 else ""} added successfully!', 'success')
+        else:
+            flash('No valid documents to add.', 'error')
+        
+        return redirect(url_for('tahfeel_doc'))
+        
+    except Exception as e:
+        print(f"Error adding documents: {e}")
+        flash('Error adding documents. Please try again.', 'error')
         return redirect(url_for('tahfeel_doc'))
 
 @app.route('/tahfeel-doc/<int:doc_id>/delete', methods=['POST'])
