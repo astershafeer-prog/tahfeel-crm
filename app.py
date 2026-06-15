@@ -296,6 +296,38 @@ class JobUpdate(db.Model):
     staff_name = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+class CompanyDocument(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    doc_type = db.Column(db.String(100), nullable=False)  # E-migration Card, E-channel
+    issue_date = db.Column(db.Date)
+    expiry_date = db.Column(db.Date, nullable=False)
+    authority = db.Column(db.String(255))  # Issuer/Authority
+    owner = db.Column(db.String(255), nullable=False)  # Staff name or "Company"
+    document_url = db.Column(db.String(500))  # Cloudinary URL
+    cloudinary_public_id = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_by = db.Column(db.String(100))
+    
+    def days_until_expiry(self):
+        if self.expiry_date:
+            delta = self.expiry_date - now_dubai().date()
+            return delta.days
+        return None
+    
+    def expiry_status(self):
+        days = self.days_until_expiry()
+        if days is None:
+            return 'unknown'
+        elif days < 0:
+            return 'expired'
+        elif days < 30:
+            return 'critical'  # Red
+        elif days < 60:
+            return 'warning'  # Yellow
+        else:
+            return 'ok'  # Green
+
 class MonthlyTarget(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -4355,6 +4387,211 @@ def edit_partner_revenue(job_id):
         flash(f'Error: {str(e)}', 'error')
         print(f"Error editing partner revenue: {e}")
         return redirect(url_for('partner_commissions'))
+
+# ── TAHFEEL DOCUMENTS MANAGEMENT
+@app.route('/tahfeel-doc')
+@login_required
+def tahfeel_doc():
+    if session['role'] not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Get all documents
+        all_docs = CompanyDocument.query.order_by(CompanyDocument.expiry_date).all()
+        
+        # Separate expiring documents (< 60 days) for card view
+        expiring_docs = [d for d in all_docs if d.expiry_status() in ['critical', 'warning', 'expired']]
+        
+        # Count by status
+        critical_count = len([d for d in all_docs if d.expiry_status() == 'critical'])
+        warning_count = len([d for d in all_docs if d.expiry_status() == 'warning'])
+        expired_count = len([d for d in all_docs if d.expiry_status() == 'expired'])
+        
+    except Exception as e:
+        print(f"Error loading documents: {e}")
+        all_docs = []
+        expiring_docs = []
+        critical_count = warning_count = expired_count = 0
+    
+    return render_template('tahfeel_doc.html',
+                          all_docs=all_docs,
+                          expiring_docs=expiring_docs,
+                          critical_count=critical_count,
+                          warning_count=warning_count,
+                          expired_count=expired_count)
+
+@app.route('/tahfeel-doc/add', methods=['POST'])
+@login_required
+def add_tahfeel_doc():
+    if session['role'] != 'admin':
+        flash('Only admin can add documents.')
+        return redirect(url_for('tahfeel_doc'))
+    
+    try:
+        name = request.form.get('name', '').strip()
+        doc_type = request.form.get('doc_type', '').strip()
+        issue_date = request.form.get('issue_date')
+        expiry_date = request.form.get('expiry_date')
+        authority = request.form.get('authority', '').strip()
+        owner = request.form.get('owner', '').strip()
+        
+        # Validation
+        if not name or not doc_type or not expiry_date or not owner:
+            flash('All required fields must be filled.', 'error')
+            return redirect(url_for('tahfeel_doc'))
+        
+        # Parse dates
+        try:
+            issue_dt = datetime.strptime(issue_date, '%Y-%m-%d').date() if issue_date else None
+            expiry_dt = datetime.strptime(expiry_date, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Invalid date format.', 'error')
+            return redirect(url_for('tahfeel_doc'))
+        
+        # Validate expiry date is in future
+        if expiry_dt < now_dubai().date():
+            flash('Expiry date must be in the future.', 'warning')
+        
+        # Handle file upload
+        doc_url = None
+        cloudinary_id = None
+        if 'file' in request.files:
+            file = request.files['file']
+            if file and file.filename:
+                try:
+                    upload_result = cloudinary.uploader.upload(
+                        file,
+                        folder='tahfeel-documents',
+                        resource_type='auto'
+                    )
+                    doc_url = upload_result['secure_url']
+                    cloudinary_id = upload_result['public_id']
+                except Exception as e:
+                    print(f"Cloudinary upload error: {e}")
+                    flash('Document upload failed, but record created.', 'warning')
+        
+        # Create document record
+        doc = CompanyDocument(
+            name=name,
+            doc_type=doc_type,
+            issue_date=issue_dt,
+            expiry_date=expiry_dt,
+            authority=authority,
+            owner=owner,
+            document_url=doc_url,
+            cloudinary_public_id=cloudinary_id,
+            created_by=session['user_name']
+        )
+        db.session.add(doc)
+        db.session.commit()
+        
+        flash(f'✓ Document "{name}" added successfully.')
+        return redirect(url_for('tahfeel_doc'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'error')
+        print(f"Error adding document: {e}")
+        return redirect(url_for('tahfeel_doc'))
+
+@app.route('/tahfeel-doc/<int:doc_id>/edit', methods=['POST'])
+@login_required
+def edit_tahfeel_doc(doc_id):
+    if session['role'] != 'admin':
+        flash('Only admin can edit documents.')
+        return redirect(url_for('tahfeel_doc'))
+    
+    doc = CompanyDocument.query.get_or_404(doc_id)
+    
+    try:
+        name = request.form.get('name', '').strip()
+        doc_type = request.form.get('doc_type', '').strip()
+        issue_date = request.form.get('issue_date')
+        expiry_date = request.form.get('expiry_date')
+        authority = request.form.get('authority', '').strip()
+        owner = request.form.get('owner', '').strip()
+        
+        # Validation
+        if not name or not doc_type or not expiry_date or not owner:
+            flash('All required fields must be filled.', 'error')
+            return redirect(url_for('tahfeel_doc'))
+        
+        # Parse dates
+        try:
+            issue_dt = datetime.strptime(issue_date, '%Y-%m-%d').date() if issue_date else None
+            expiry_dt = datetime.strptime(expiry_date, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Invalid date format.', 'error')
+            return redirect(url_for('tahfeel_doc'))
+        
+        # Update document
+        doc.name = name
+        doc.doc_type = doc_type
+        doc.issue_date = issue_dt
+        doc.expiry_date = expiry_dt
+        doc.authority = authority
+        doc.owner = owner
+        
+        # Handle file replacement
+        if 'file' in request.files:
+            file = request.files['file']
+            if file and file.filename:
+                try:
+                    # Delete old file if exists
+                    if doc.cloudinary_public_id:
+                        cloudinary.uploader.destroy(doc.cloudinary_public_id)
+                    
+                    # Upload new file
+                    upload_result = cloudinary.uploader.upload(
+                        file,
+                        folder='tahfeel-documents',
+                        resource_type='auto'
+                    )
+                    doc.document_url = upload_result['secure_url']
+                    doc.cloudinary_public_id = upload_result['public_id']
+                except Exception as e:
+                    print(f"Cloudinary upload error: {e}")
+                    flash('File update failed, but record updated.', 'warning')
+        
+        db.session.commit()
+        flash(f'✓ Document "{name}" updated successfully.')
+        return redirect(url_for('tahfeel_doc'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'error')
+        print(f"Error editing document: {e}")
+        return redirect(url_for('tahfeel_doc'))
+
+@app.route('/tahfeel-doc/<int:doc_id>/delete', methods=['POST'])
+@login_required
+def delete_tahfeel_doc(doc_id):
+    if session['role'] != 'admin':
+        flash('Only admin can delete documents.')
+        return redirect(url_for('tahfeel_doc'))
+    
+    doc = CompanyDocument.query.get_or_404(doc_id)
+    
+    try:
+        # Delete from Cloudinary
+        if doc.cloudinary_public_id:
+            try:
+                cloudinary.uploader.destroy(doc.cloudinary_public_id)
+            except Exception as e:
+                print(f"Cloudinary delete error: {e}")
+        
+        name = doc.name
+        db.session.delete(doc)
+        db.session.commit()
+        flash(f'✓ Document "{name}" deleted.')
+        return redirect(url_for('tahfeel_doc'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'error')
+        print(f"Error deleting document: {e}")
+        return redirect(url_for('tahfeel_doc'))
 
 # ── Admin Panel Partner Routes (simpler pattern)
 @app.route('/admin/partner/add', methods=['POST'])

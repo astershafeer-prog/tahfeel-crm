@@ -5,6 +5,15 @@
     <span class="topbar-title">Business Solutions CRM</span>
   </div>
   <div class="topbar-right">
+    <!-- Theme Switcher (Admin only) -->
+    {% if session.role == 'admin' %}
+    <div class="theme-switcher">
+      <button class="theme-btn" onclick="setTheme('navy')" title="Navy theme" style="background: #1A3B8B; border: 2px solid white;">Navy</button>
+      <button class="theme-btn" onclick="setTheme('beige')" title="Beige theme" style="background: #D4C5B9;">Beige</button>
+      <button class="theme-btn" onclick="setTheme('black')" title="Black theme" style="background: #1F2937;">Black</button>
+    </div>
+    {% endif %}
+
     <div class="topbar-user">
       <div class="topbar-avatar">{{ session.user_name[0]|upper if session.user_name else 'U' }}</div>
       <span>{{ session.user_name }}</span>
@@ -18,6 +27,22 @@
   </div>
 </div>
 
+
+<script>
+// Theme System
+function setTheme(theme) {
+  localStorage.setItem('tahfeel-theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
+  location.reload();
+}
+
+function loadTheme() {
+  const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+loadTheme();
+</script>
 
 {% endmacro %}
 
@@ -53,8 +78,8 @@
   <a href="/customers" {% if active=='customers' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">👤 Customers</a>
   <a href="/documents" {% if active=='documents' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Documents</a>
   <a href="/desk" {% if active=='desk' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📌 My Desk{% if session.get('unread_mentions',0) > 0 %}<span style="background:#EF4444;color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:2px;">{{ session.get('unread_mentions',0) }}</span>{% endif %}</a>
-  {% if session.role in ['admin', 'sales'] %}
-  <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
+  {% if session.role == 'admin' %}
+  <a href="/tahfeel-doc" {% if active=='tahfeel_doc' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Tahfeel Doc</a>
   {% endif %}
   <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧾 Doc Generator</a>
   {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}

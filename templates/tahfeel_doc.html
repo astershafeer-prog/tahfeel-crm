@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tahfeel Documents</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    :root {
+      --primary: #1A3B8B;
+      --primary-dark: #0F2A5C;
+      --primary-light: #2E5BC2;
+      --accent: #E8B84B;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --info: #3B82F6;
+      --bg-primary: #F8FAFC;
+      --bg-secondary: #FFFFFF;
+      --border: #E2E8F0;
+      --text-primary: #1E293B;
+      --text-secondary: #64748B;
+      --text-muted: #94A3B8;
+    }
+
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .header-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .stat-box {
+      background: rgba(255,255,255,0.1);
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid;
+    }
+
+    .stat-box.critical { border-left-color: var(--danger); }
+    .stat-box.warning { border-left-color: var(--warning); }
+    .stat-box.expired { border-left-color: var(--danger); }
+
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.9;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px 24px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      margin-top: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    .btn-danger:hover {
+      opacity: 0.9;
+    }
+
+    /* Card View */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+      word-break: break-word;
+      flex: 1;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      margin-left: 8px;
+    }
+
+    .badge.critical {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+
+    .badge.warning {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    .badge.expired {
+      background: #FEE2E2;
+      color: #7F1D1D;
+    }
+
+    .badge.ok {
+      background: #DBEAFE;
+      color: #0C2340;
+    }
+
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .card-row:last-child {
+      border-bottom: none;
+    }
+
+    .card-label {
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    .card-value {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .card-footer {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+
+    .card-footer button {
+      flex: 1;
+      padding: 8px;
+      font-size: 12px;
+    }
+
+    /* List View */
+    .table-container {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--bg-primary);
+      border-bottom: 2px solid var(--border);
+    }
+
+    th {
+      padding: 16px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    tbody tr:hover {
+      background: var(--bg-primary);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-badge.critical {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+
+    .status-badge.warning {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    .status-badge.expired {
+      background: #FEE2E2;
+      color: #7F1D1D;
+    }
+
+    .status-badge.ok {
+      background: #D1FAE5;
+      color: #065F46;
+    }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .action-btn-edit {
+      background: var(--info);
+      color: white;
+    }
+
+    .action-btn-edit:hover {
+      opacity: 0.9;
+    }
+
+    .action-btn-delete {
+      background: var(--danger);
+      color: white;
+    }
+
+    .action-btn-delete:hover {
+      opacity: 0.9;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    .modal-header {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: var(--primary);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26, 59, 139, 0.1);
+    }
+
+    .form-group .required::after {
+      content: ' *';
+      color: var(--danger);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .modal-footer button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .modal-footer .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .modal-footer .btn-secondary {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .empty-state-text {
+      font-size: 16px;
+      margin-bottom: 24px;
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📄 Tahfeel Documents</h1>
+  <p style="opacity: 0.9; font-size: 14px; margin-top: 4px;">Manage staff visas, licenses, and company documents</p>
+  
+  <div class="header-stats">
+    <div class="stat-box critical">
+      <div class="stat-label">🔴 Critical (< 30 days)</div>
+      <div class="stat-value">{{ critical_count }}</div>
+    </div>
+    <div class="stat-box warning">
+      <div class="stat-label">🟡 Warning (< 60 days)</div>
+      <div class="stat-value">{{ warning_count }}</div>
+    </div>
+    <div class="stat-box expired">
+      <div class="stat-label">⚠️ Expired</div>
+      <div class="stat-value">{{ expired_count }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+      <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
+        {% if category == 'error' %}
+          background: #FEE2E2; color: #991B1B; border-left: 4px solid #EF4444;
+        {% elif category == 'warning' %}
+          background: #FEF3C7; color: #92400E; border-left: 4px solid #F59E0B;
+        {% else %}
+          background: #D1FAE5; color: #065F46; border-left: 4px solid #10B981;
+        {% endif %}
+      ">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- EXPIRING DOCUMENTS - CARD VIEW -->
+  {% if expiring_docs %}
+  <div class="section-title">
+    <span>⏰ Documents Expiring Soon</span>
+    <button class="btn btn-primary" onclick="openModal('add')">+ Add Document</button>
+  </div>
+
+  <div class="cards-grid">
+    {% for doc in expiring_docs %}
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">{{ doc.name }}</div>
+        <span class="badge {{ doc.expiry_status() }}">
+          {% if doc.expiry_status() == 'critical' %}🔴 Critical
+          {% elif doc.expiry_status() == 'warning' %}🟡 Warning
+          {% elif doc.expiry_status() == 'expired' %}⚠️ Expired
+          {% endif %}
+        </span>
+      </div>
+
+      <div class="card-row">
+        <span class="card-label">Type</span>
+        <span class="card-value">{{ doc.doc_type }}</span>
+      </div>
+
+      <div class="card-row">
+        <span class="card-label">Owner</span>
+        <span class="card-value">{{ doc.owner }}</span>
+      </div>
+
+      <div class="card-row">
+        <span class="card-label">Issue Date</span>
+        <span class="card-value">{{ doc.issue_date.strftime('%d-%b-%Y') if doc.issue_date else '—' }}</span>
+      </div>
+
+      <div class="card-row">
+        <span class="card-label">Expiry Date</span>
+        <span class="card-value" style="font-weight: 700; color: var(--danger);">
+          {{ doc.expiry_date.strftime('%d-%b-%Y') }}
+        </span>
+      </div>
+
+      <div class="card-row">
+        <span class="card-label">Days Left</span>
+        <span class="card-value" style="font-weight: 700;">
+          {% if doc.days_until_expiry() < 0 %}
+            🔴 Expired ({{ doc.days_until_expiry() }} days ago)
+          {% else %}
+            {{ doc.days_until_expiry() }} days
+          {% endif %}
+        </span>
+      </div>
+
+      <div class="card-row">
+        <span class="card-label">Authority</span>
+        <span class="card-value">{{ doc.authority or '—' }}</span>
+      </div>
+
+      <div class="card-footer">
+        <button class="action-btn action-btn-edit" onclick="openModal('edit', {{ doc.id }})">Edit</button>
+        <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="flex: 1;" onsubmit="return confirm('Delete this document?');">
+          <button type="submit" class="btn btn-danger" style="width: 100%;">Delete</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ALL DOCUMENTS - LIST VIEW -->
+  <div class="section-title">
+    <span>📋 All Documents</span>
+    <button class="btn btn-primary" onclick="openModal('add')">+ Add Document</button>
+  </div>
+
+  {% if all_docs %}
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Document Name</th>
+          <th>Type</th>
+          <th>Owner</th>
+          <th>Issue Date</th>
+          <th>Expiry Date</th>
+          <th>Days Left</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in all_docs %}
+        <tr>
+          <td>
+            <strong>{{ doc.name }}</strong>
+            {% if doc.authority %}<br><span style="font-size: 12px; color: var(--text-muted);">{{ doc.authority }}</span>{% endif %}
+          </td>
+          <td>{{ doc.doc_type }}</td>
+          <td>{{ doc.owner }}</td>
+          <td>{{ doc.issue_date.strftime('%d-%b-%Y') if doc.issue_date else '—' }}</td>
+          <td><strong>{{ doc.expiry_date.strftime('%d-%b-%Y') }}</strong></td>
+          <td>
+            {% if doc.days_until_expiry() < 0 %}
+              <span style="color: var(--danger); font-weight: 600;">{{ doc.days_until_expiry() }}</span>
+            {% else %}
+              {{ doc.days_until_expiry() }}
+            {% endif %}
+          </td>
+          <td>
+            <span class="status-badge {{ doc.expiry_status() }}">
+              {% if doc.expiry_status() == 'critical' %}🔴 Critical
+              {% elif doc.expiry_status() == 'warning' %}🟡 Warning
+              {% elif doc.expiry_status() == 'expired' %}⚠️ Expired
+              {% elif doc.expiry_status() == 'ok' %}✓ Good
+              {% else %}—
+              {% endif %}
+            </span>
+          </td>
+          <td>
+            <div class="actions">
+              <button class="action-btn action-btn-edit" onclick="openModal('edit', {{ doc.id }})">Edit</button>
+              <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="display: inline;" onsubmit="return confirm('Delete?');">
+                <button type="submit" class="action-btn action-btn-delete">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📄</div>
+    <div class="empty-state-text">No documents yet</div>
+    <button class="btn btn-primary" onclick="openModal('add')">+ Add First Document</button>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div id="docModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header" id="modalTitle">+ Add Document</div>
+    
+    <form id="docForm" method="post" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="required">Document Name</label>
+        <input type="text" name="name" id="name" placeholder="e.g., Shafeer's Visa" required>
+        <div class="help-text">Staff name or document description</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="required">Type</label>
+          <select name="doc_type" id="doc_type" required>
+            <option value="">Select type...</option>
+            <option value="E-migration Card">E-migration Card</option>
+            <option value="E-channel">E-channel</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="required">Owner</label>
+          <input type="text" name="owner" id="owner" placeholder="e.g., Shafeer Pv or Company" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Issue Date</label>
+          <input type="date" name="issue_date" id="issue_date">
+        </div>
+
+        <div class="form-group">
+          <label class="required">Expiry Date</label>
+          <input type="date" name="expiry_date" id="expiry_date" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Authority / Issuer</label>
+        <input type="text" name="authority" id="authority" placeholder="e.g., UAE Ministry of Interior">
+      </div>
+
+      <div class="form-group">
+        <label>Upload Document (PDF, Image)</label>
+        <input type="file" name="file" id="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+        <div class="help-text">Optional - Attach document file for reference</div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary" id="submitBtn">Add Document</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let isEditMode = false;
+  let editDocId = null;
+
+  function openModal(mode, docId = null) {
+    isEditMode = mode === 'edit';
+    editDocId = docId;
+
+    const modal = document.getElementById('docModal');
+    const form = document.getElementById('docForm');
+    const title = document.getElementById('modalTitle');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (isEditMode) {
+      title.textContent = '✏️ Edit Document';
+      submitBtn.textContent = 'Update Document';
+      form.action = '/tahfeel-doc/' + docId + '/edit';
+      // TODO: Load document data and pre-fill form
+    } else {
+      title.textContent = '+ Add Document';
+      submitBtn.textContent = 'Add Document';
+      form.action = '/tahfeel-doc/add';
+      form.reset();
+    }
+
+    modal.classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('docModal').classList.remove('active');
+    document.getElementById('docForm').reset();
+  }
+
+  document.getElementById('docModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+</script>
+
+</body>
+</html>

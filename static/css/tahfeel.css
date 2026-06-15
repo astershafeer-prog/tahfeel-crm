@@ -1300,3 +1300,148 @@ table tbody tr:last-child td { border-bottom:none; }
 /* Override per context */
 .quick-add.mention  { border-top-color: #8B5CF6; }
 .note-card.mentions { border-top-color: #8B5CF6; }
+
+/* ──────────────────────────────────────────────────────────────────────── */
+/* THEME SWITCHER */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+.theme-switcher {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-right: 16px;
+}
+
+.theme-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0;
+}
+
+.theme-btn:hover {
+  border-color: white;
+  transform: scale(1.1);
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+/* THEME COLORS - NAVY (Default) */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+:root[data-theme="navy"],
+:root {
+  --primary-color: #1A3B8B;
+  --primary-dark: #0F2A5C;
+  --primary-light: #2E5BC2;
+  --accent-color: #E8B84B;
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --bg-primary: #F8FAFC;
+  --border-color: #E2E8F0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+/* THEME COLORS - BEIGE */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+:root[data-theme="beige"] {
+  --primary-color: #8B7355;
+  --primary-dark: #6B5548;
+  --primary-light: #A0876D;
+  --accent-color: #D4C5B9;
+  --text-primary: #4A4741;
+  --text-secondary: #7A6F6A;
+  --bg-primary: #FBF8F5;
+  --border-color: #E8E4E0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+/* THEME COLORS - BLACK */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+:root[data-theme="black"] {
+  --primary-color: #1F2937;
+  --primary-dark: #111827;
+  --primary-light: #374151;
+  --accent-color: #F3F4F6;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --bg-primary: #F9FAFB;
+  --border-color: #E5E7EB;
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+/* APPLY THEME COLORS TO EXISTING ELEMENTS */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+/* Topbar */
+.topbar {
+  background: var(--primary-color) !important;
+}
+
+/* Primary buttons */
+.btn-primary,
+.btn-filter,
+button[type="submit"],
+input[type="submit"] {
+  background: var(--primary-color) !important;
+  color: white !important;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark) !important;
+}
+
+/* Links */
+a {
+  color: var(--primary-color) !important;
+}
+
+/* Cards and containers */
+.block,
+.stat-card,
+.filter-card,
+.sum-card,
+.quick-add,
+.note-card {
+  border-top-color: var(--primary-color) !important;
+}
+
+/* Filter bars */
+.filter-bar {
+  border-top-color: var(--primary-color) !important;
+}
+
+/* Select dropdowns */
+select {
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary) !important;
+}
+
+/* Table headers */
+thead {
+  background-color: var(--bg-primary) !important;
+  color: var(--primary-color) !important;
+}
+
+/* Flash messages */
+.flash {
+  background-color: var(--accent-color);
+  color: var(--primary-color);
+}
+
+/* Status badges and colored elements */
+.filter-group label,
+.modal-title,
+.dialog-title {
+  color: var(--primary-color) !important;
+}
+
