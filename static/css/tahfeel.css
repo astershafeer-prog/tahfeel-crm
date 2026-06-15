@@ -1343,23 +1343,23 @@ body.theme-beige {
   --text-dim: #A8A29E;
 }
 
-/* ── COLUMBIA BLUE THEME ── */
-body.theme-columbia {
-  --primary: #1F4788;
-  --primary-light: #3A62B1;
-  --primary-dark: #153456;
-  --primary-bg: rgba(31, 71, 136, 0.12);
-  --accent: #4A90E2;
-  --accent-light: #6BA3F5;
+/* ── MAROON THEME ── */
+body.theme-maroon {
+  --primary: #8B2E2E;
+  --primary-light: #B53E3E;
+  --primary-dark: #5A1F1F;
+  --primary-bg: rgba(139, 46, 46, 0.12);
+  --accent: #D97706;
+  --accent-light: #F59E0B;
   --bg: #FFFFFF;
-  --surface: #F0F5FB;
-  --surface2: #E8F0F7;
-  --surface3: #DFE9F3;
-  --border: #D4E0F0;
-  --border-light: #E5EEF6;
-  --text: #1A2847;
-  --text-muted: #556B8A;
-  --text-dim: #7A8BA3;
+  --surface: #FAF5F5;
+  --surface2: #F5ECEC;
+  --surface3: #EFE3E3;
+  --border: #E8D6D6;
+  --border-light: #F0E5E5;
+  --text: #4A2323;
+  --text-muted: #7A5555;
+  --text-dim: #A87777;
 }
 
 /* ── BLACK THEME ── */
