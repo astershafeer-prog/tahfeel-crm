@@ -9,6 +9,7 @@
     {% if session.role == 'admin' %}
     <div class="theme-switcher">
       <button class="theme-btn" onclick="setTheme('navy')" title="Navy theme" style="background: #1A3B8B; border: 2px solid white;">Navy</button>
+      <button class="theme-btn" onclick="setTheme('columbia')" title="Columbia Blue theme" style="background: #1F4788;">Blue</button>
       <button class="theme-btn" onclick="setTheme('beige')" title="Beige theme" style="background: #D4C5B9;">Beige</button>
       <button class="theme-btn" onclick="setTheme('black')" title="Black theme" style="background: #1F2937;">Black</button>
     </div>
@@ -29,12 +30,12 @@
 
 
 <script>
-// Theme System
+// Theme System - 4 Themes: Navy, Columbia Blue, Beige, Black
 function setTheme(theme) {
   localStorage.setItem('tahfeel-theme', theme);
-  // Remove old theme class
-  document.body.classList.remove('theme-navy', 'theme-beige', 'theme-black');
-  // Add new theme class
+  // Remove old theme classes
+  document.body.classList.remove('theme-navy', 'theme-columbia', 'theme-beige', 'theme-black');
+  // Add new theme class (navy is default, no class needed)
   if (theme !== 'navy') {
     document.body.classList.add('theme-' + theme);
   }
@@ -42,7 +43,7 @@ function setTheme(theme) {
 
 function loadTheme() {
   const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
-  document.body.classList.remove('theme-navy', 'theme-beige', 'theme-black');
+  document.body.classList.remove('theme-navy', 'theme-columbia', 'theme-beige', 'theme-black');
   if (savedTheme !== 'navy') {
     document.body.classList.add('theme-' + savedTheme);
   }

@@ -1343,6 +1343,25 @@ body.theme-beige {
   --text-dim: #A8A29E;
 }
 
+/* ── COLUMBIA BLUE THEME ── */
+body.theme-columbia {
+  --primary: #1F4788;
+  --primary-light: #3A62B1;
+  --primary-dark: #153456;
+  --primary-bg: rgba(31, 71, 136, 0.12);
+  --accent: #4A90E2;
+  --accent-light: #6BA3F5;
+  --bg: #FFFFFF;
+  --surface: #F0F5FB;
+  --surface2: #E8F0F7;
+  --surface3: #DFE9F3;
+  --border: #D4E0F0;
+  --border-light: #E5EEF6;
+  --text: #1A2847;
+  --text-muted: #556B8A;
+  --text-dim: #7A8BA3;
+}
+
 /* ── BLACK THEME ── */
 body.theme-black {
   --primary: #d97706;
