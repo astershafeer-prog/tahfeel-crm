@@ -130,7 +130,7 @@
     /* Card View */
     .cards-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 16px;
       margin-bottom: 40px;
     }
@@ -139,7 +139,7 @@
       background: white;
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 20px;
+      padding: 14px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       transition: all 0.2s;
     }
@@ -783,36 +783,52 @@
     document.getElementById('docForm').reset();
   }
 
-  document.getElementById('addAnother').addEventListener('click', addDocumentRow);
-
-  document.getElementById('docForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    if (!isEditMode) {
-      for (let i = 0; i <= documentCount; i++) {
-        const nameInput = document.querySelector(`input[name="doc_name_${i}"]`);
-        const typeSelect = document.querySelector(`select[name="doc_type_${i}"]`);
-        const ownerInput = document.querySelector(`input[name="doc_owner_${i}"]`);
-        const issueInput = document.querySelector(`input[name="doc_issue_date_${i}"]`);
-        const expiryInput = document.querySelector(`input[name="doc_expiry_date_${i}"]`);
-        const authInput = document.querySelector(`input[name="doc_authority_${i}"]`);
-        const fileInput = document.querySelector(`input[name="doc_file_${i}"]`);
-        
-        if (nameInput && nameInput.value) {
-          nameInput.name = i === 0 ? 'name' : `name_${i}`;
-          typeSelect.name = i === 0 ? 'doc_type' : `doc_type_${i}`;
-          ownerInput.name = i === 0 ? 'owner' : `owner_${i}`;
-          issueInput.name = i === 0 ? 'issue_date' : `issue_date_${i}`;
-          expiryInput.name = i === 0 ? 'expiry_date' : `expiry_date_${i}`;
-          authInput.name = i === 0 ? 'authority' : `authority_${i}`;
-          fileInput.name = i === 0 ? 'file' : `file_${i}`;
-        }
-      }
+  document.addEventListener('DOMContentLoaded', function() {
+    // Attach event listeners after DOM is ready
+    const addAnotherBtn = document.getElementById('addAnother');
+    const docForm = document.getElementById('docForm');
+    const docModal = document.getElementById('docModal');
+    
+    if (addAnotherBtn) {
+      addAnotherBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        addDocumentRow();
+      });
     }
-    this.submit();
-  });
 
-  document.getElementById('docModal').addEventListener('click', function(e) {
-    if (e.target === this) closeModal();
+    if (docForm) {
+      docForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (!isEditMode) {
+          for (let i = 0; i <= documentCount; i++) {
+            const nameInput = document.querySelector(`input[name="doc_name_${i}"]`);
+            const typeSelect = document.querySelector(`select[name="doc_type_${i}"]`);
+            const ownerInput = document.querySelector(`input[name="doc_owner_${i}"]`);
+            const issueInput = document.querySelector(`input[name="doc_issue_date_${i}"]`);
+            const expiryInput = document.querySelector(`input[name="doc_expiry_date_${i}"]`);
+            const authInput = document.querySelector(`input[name="doc_authority_${i}"]`);
+            const fileInput = document.querySelector(`input[name="doc_file_${i}"]`);
+            
+            if (nameInput && nameInput.value) {
+              nameInput.name = i === 0 ? 'name' : `name_${i}`;
+              typeSelect.name = i === 0 ? 'doc_type' : `doc_type_${i}`;
+              ownerInput.name = i === 0 ? 'owner' : `owner_${i}`;
+              issueInput.name = i === 0 ? 'issue_date' : `issue_date_${i}`;
+              expiryInput.name = i === 0 ? 'expiry_date' : `expiry_date_${i}`;
+              authInput.name = i === 0 ? 'authority' : `authority_${i}`;
+              fileInput.name = i === 0 ? 'file' : `file_${i}`;
+            }
+          }
+        }
+        this.submit();
+      });
+    }
+
+    if (docModal) {
+      docModal.addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+      });
+    }
   });
 
   document.addEventListener('keydown', function(e) {
