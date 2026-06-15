@@ -4595,6 +4595,53 @@ def edit_tahfeel_doc(doc_id):
         print(f"Error editing document: {e}")
         return redirect(url_for('tahfeel_doc'))
 
+@app.route('/tahfeel-doc/<int:doc_id>/upload', methods=['POST'])
+@login_required
+def upload_tahfeel_doc_file(doc_id):
+    if session['role'] != 'admin':
+        flash('Only admin can upload files.', 'error')
+        return redirect(url_for('tahfeel_doc'))
+    
+    doc = CompanyDocument.query.get_or_404(doc_id)
+    
+    try:
+        if 'file' not in request.files:
+            flash('No file selected.', 'error')
+            return redirect(url_for('tahfeel_doc'))
+        
+        file = request.files['file']
+        if not file or not file.filename:
+            flash('No file selected.', 'error')
+            return redirect(url_for('tahfeel_doc'))
+        
+        # Delete old file if exists
+        if doc.cloudinary_public_id:
+            try:
+                cloudinary.uploader.destroy(doc.cloudinary_public_id)
+            except Exception as e:
+                print(f"Cloudinary delete error: {e}")
+        
+        # Upload new file
+        upload_result = cloudinary.uploader.upload(
+            file,
+            folder='tahfeel-documents',
+            resource_type='auto',
+            public_id=f"doc_{doc.name.replace(' ', '_')}_{datetime.now().timestamp()}"
+        )
+        
+        doc.document_url = upload_result.get('secure_url')
+        doc.cloudinary_public_id = upload_result.get('public_id')
+        
+        db.session.commit()
+        flash(f'✓ File uploaded successfully for "{doc.name}".', 'success')
+        return redirect(url_for('tahfeel_doc'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error uploading file: {str(e)}', 'error')
+        print(f"Error uploading file: {e}")
+        return redirect(url_for('tahfeel_doc'))
+
 @app.route('/tahfeel-doc/add-bulk', methods=['POST'])
 @login_required
 def add_tahfeel_doc_bulk():

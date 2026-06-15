@@ -6,58 +6,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <style>
-    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-    .header { background: var(--primary); color: white; padding: 24px; margin-bottom: 24px; border-radius: 12px; }
-    .header h1 { font-size: 28px; margin: 0; }
-    .btn { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary-dark); }
-    .btn-danger { background: #EF4444; color: white; }
-    .btn-danger:hover { opacity: 0.9; }
-    .btn-secondary { background: var(--border); color: var(--text); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .page-title { font-size: 28px; font-weight: 700; color: var(--text); }
+    .export-btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .stat-card.all { border-top: 4px solid #10B981; }
+    .stat-card.critical { border-top: 4px solid #EF4444; }
+    .stat-card.warning { border-top: 4px solid #F59E0B; }
+    .stat-card.pending { border-top: 4px solid #F59E0B; }
+    .stat-card.complete { border-top: 4px solid #3B82F6; }
+    
+    .stat-label { font-size: 13px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+    .stat-number { font-size: 32px; font-weight: 700; color: var(--primary); }
+    .stat-icon { font-size: 24px; float: right; opacity: 0.6; }
 
-    .form-section { background: white; padding: 24px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 24px; }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--text); font-size: 13px; text-transform: uppercase; }
-    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
-    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,59,139,0.1); }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .required::after { content: ' *'; color: #EF4444; }
+    .table-container { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+    .table-header { padding: 16px 20px; background: var(--surface); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr; gap: 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+    .table-row { padding: 16px 20px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr; gap: 16px; align-items: center; }
+    .table-row:last-child { border-bottom: none; }
+    .table-row:hover { background: var(--surface); }
 
-    .doc-list { background: white; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
-    .doc-item { padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .doc-item:last-child { border-bottom: none; }
-    .doc-info { flex: 1; }
-    .doc-name { font-weight: 600; color: var(--text); margin-bottom: 4px; }
-    .doc-meta { font-size: 13px; color: var(--text-muted); }
-    .doc-actions { display: flex; gap: 8px; }
-    .doc-actions button { padding: 6px 12px; font-size: 12px; }
+    .doc-name { font-weight: 600; color: var(--primary); }
+    .doc-meta { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-badge.expired { background: #FEE2E2; color: #991B1B; }
+    .status-badge.critical { background: #FEE2E2; color: #7F1D1D; }
+    .status-badge.warning { background: #FEF3C7; color: #92400E; }
+    .status-badge.pending { background: #FEF3C7; color: #92400E; }
+    .status-badge.ok { background: #D1FAE5; color: #065F46; }
+
+    .actions { display: flex; gap: 8px; }
+    .action-btn { padding: 6px 10px; border: 1px solid var(--border); background: white; color: var(--text); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
+    .action-btn:hover { background: var(--surface); border-color: var(--primary); color: var(--primary); }
+    .action-btn-delete { color: #EF4444; border-color: #FEE2E2; }
+    .action-btn-delete:hover { background: #FEE2E2; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
 
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
     .modal.active { display: flex; }
-    .modal-content { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
-    .modal-header { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--primary); }
-    .modal-footer { display: flex; gap: 12px; margin-top: 24px; }
-    .modal-footer button { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .modal-content { background: white; padding: 32px; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+    .modal-header { font-size: 20px; font-weight: 700; margin-bottom: 24px; color: var(--primary); }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--text); font-size: 13px; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,59,139,0.1); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    
+    .modal-footer { display: flex; gap: 12px; margin-top: 32px; }
+    .modal-footer button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .modal-footer .btn-primary { background: var(--primary); color: white; }
+    .modal-footer .btn-primary:hover { background: var(--primary-dark); }
+    .modal-footer .btn-secondary { background: var(--border); color: var(--text); }
+    .modal-footer .btn-secondary:hover { background: var(--surface); }
 
-    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
-    .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
-    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 8px; }
-    .status-badge.critical { background: #FEE2E2; color: #991B1B; }
-    .status-badge.warning { background: #FEF3C7; color: #92400E; }
-    .status-badge.expired { background: #FEE2E2; color: #7F1D1D; }
-    .status-badge.ok { background: #D1FAE5; color: #065F46; }
+    .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+    .file-input-wrapper input[type=file] { position: absolute; left: -9999px; }
+    .file-label { display: block; padding: 10px; border: 2px dashed var(--border); border-radius: 8px; text-align: center; cursor: pointer; transition: 0.2s; color: var(--text-muted); }
+    .file-label:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+    .file-label.has-file { border-color: #10B981; background: #F0FDF4; color: #065F46; }
   </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>📄 Tahfeel Documents</h1>
-  <p style="opacity: 0.9; margin-top: 8px;">Manage staff visas, licenses, and company documents</p>
-</div>
-
-<div class="container">
+<div style="padding: 24px; max-width: 1400px; margin: 0 auto;">
+  
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
@@ -74,68 +91,98 @@
     {% endif %}
   {% endwith %}
 
-  <!-- ADD DOCUMENT FORM -->
-  <div class="form-section">
-    <h2 style="margin: 0 0 20px 0; color: var(--text); font-size: 18px;">➕ Add Document</h2>
-    <form id="addDocForm" onsubmit="addDocument(event)">
-      <div class="form-group">
-        <label class="required">Document Name</label>
-        <input type="text" id="name" placeholder="e.g., Shafeer's Visa" required>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="required">Type</label>
-          <select id="doc_type" required>
-            <option value="">Select type...</option>
-            <option value="E-migration Card">E-migration Card</option>
-            <option value="E-channel">E-channel</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="required">Owner</label>
-          <input type="text" id="owner" placeholder="e.g., Shafeer Pv or Company" required>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Issue Date</label>
-          <input type="date" id="issue_date">
-        </div>
-        <div class="form-group">
-          <label class="required">Expiry Date</label>
-          <input type="date" id="expiry_date" required>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Authority / Issuer</label>
-        <input type="text" id="authority" placeholder="e.g., UAE Ministry of Interior">
-      </div>
-
-      <div class="form-group">
-        <label>Upload Document (PDF, Image)</label>
-        <input type="file" id="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
-      </div>
-
-      <button type="submit" class="btn btn-primary">+ Add to List</button>
-    </form>
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <h1 class="page-title">📄 Tahfeel Documents</h1>
+    <button class="export-btn" onclick="openAddModal()">➕ Add Document</button>
   </div>
 
-  <!-- DOCUMENT LIST -->
-  <h2 style="color: var(--text); font-size: 18px; margin-bottom: 16px;">📋 Documents</h2>
-  <div id="docList" class="doc-list">
-    <div class="empty-state">
-      <div class="empty-state-icon">📄</div>
-      <div>No documents yet. Add one above!</div>
+  <!-- STATUS CARDS -->
+  <div class="stats-grid">
+    <div class="stat-card all">
+      <div class="stat-label">Total Documents</div>
+      <div class="stat-number">{{ all_docs|length }}</div>
+      <div class="stat-icon">✓</div>
+    </div>
+
+    <div class="stat-card critical">
+      <div class="stat-label">Expired</div>
+      <div class="stat-number">{{ expired_count }}</div>
+      <div class="stat-icon">🔴</div>
+    </div>
+
+    <div class="stat-card warning">
+      <div class="stat-label">Expiring Soon</div>
+      <div class="stat-number">{{ critical_count + warning_count }}</div>
+      <div class="stat-icon">⚠️</div>
+    </div>
+
+    <div class="stat-card pending">
+      <div class="stat-label">Pending File</div>
+      <div class="stat-number">{{ all_docs|selectattr('document_url', 'none')|list|length }}</div>
+      <div class="stat-icon">📎</div>
+    </div>
+
+    <div class="stat-card complete">
+      <div class="stat-label">Complete</div>
+      <div class="stat-number">{{ all_docs|selectattr('document_url')|list|length }}</div>
+      <div class="stat-icon">👍</div>
     </div>
   </div>
 
-  <!-- SAVE ALL BUTTON -->
-  <button id="saveAllBtn" class="btn btn-primary" style="width: 100%; margin-top: 24px; padding: 12px; font-size: 16px; display: none;" onclick="saveAllDocuments()">
-    💾 Save All Documents to Database
-  </button>
+  <!-- DOCUMENTS TABLE -->
+  <div class="table-container">
+    {% if all_docs %}
+      <div class="table-header">
+        <div>DOCUMENT NAME</div>
+        <div>OWNER</div>
+        <div>TYPE</div>
+        <div>EXPIRY</div>
+        <div>ACTIONS</div>
+      </div>
+
+      {% for doc in all_docs|sort(attribute='expiry_date') %}
+      <div class="table-row">
+        <div>
+          <div class="doc-name">{{ doc.name }}</div>
+          <div class="doc-meta">{{ doc.doc_type }}</div>
+        </div>
+
+        <div>{{ doc.owner }}</div>
+
+        <div>
+          {% if doc.expiry_status() == 'expired' %}
+            <span class="status-badge expired">EXPIRED</span>
+          {% elif doc.expiry_status() == 'critical' %}
+            <span class="status-badge critical">🔴 {{ doc.days_until_expiry() }}d</span>
+          {% elif doc.expiry_status() == 'warning' %}
+            <span class="status-badge warning">⚠️ {{ doc.days_until_expiry() }}d</span>
+          {% else %}
+            <span class="status-badge ok">✓ OK</span>
+          {% endif %}
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-muted);">
+          {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '—' }}
+        </div>
+
+        <div class="actions">
+          <button class="action-btn" onclick="openViewModal({{ doc.id }}, '{{ doc.name }}', '{{ doc.doc_type }}', '{{ doc.owner }}', '{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}', '{{ doc.issue_date.strftime('%Y-%m-%d') if doc.issue_date else '' }}', '{{ doc.authority }}', '{{ doc.document_url or '' }}')">👁️ View</button>
+          <button class="action-btn" onclick="openEditModal({{ doc.id }}, '{{ doc.name }}', '{{ doc.doc_type }}', '{{ doc.owner }}', '{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}', '{{ doc.issue_date.strftime('%Y-%m-%d') if doc.issue_date else '' }}', '{{ doc.authority }}')">✏️ Edit</button>
+          <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="display: inline;" onsubmit="return confirm('Delete {{ doc.name }}?');">
+            <button type="submit" class="action-btn action-btn-delete">🗑️ Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📄</div>
+        <div style="font-size: 16px; color: var(--text-muted);">No documents yet</div>
+      </div>
+    {% endif %}
+  </div>
 
 </div>
 
@@ -143,171 +190,235 @@
 <div id="viewModal" class="modal">
   <div class="modal-content">
     <div class="modal-header" id="viewTitle">Document Details</div>
-    <div id="viewContent"></div>
+    
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Type</div>
+      <div id="viewType" style="color: var(--text); font-weight: 500;"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Owner</div>
+      <div id="viewOwner" style="color: var(--text);"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Issue Date</div>
+      <div id="viewIssueDate" style="color: var(--text);"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Expiry Date</div>
+      <div id="viewExpiryDate" style="color: var(--text); font-weight: 600;"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Authority</div>
+      <div id="viewAuthority" style="color: var(--text);"></div>
+    </div>
+
+    <!-- FILE UPLOAD SECTION -->
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 12px;">Document File</div>
+      <div id="fileStatus"></div>
+      <form id="uploadFileForm" style="display: none;">
+        <input type="hidden" id="docIdForUpload">
+        <div class="file-input-wrapper">
+          <input type="file" id="docFile" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="updateFileLabel()">
+          <label for="docFile" class="file-label" id="fileLabel">📎 Click to upload or drag file</label>
+        </div>
+      </form>
+    </div>
+
     <div class="modal-footer">
-      <button class="btn btn-primary" onclick="closeModal('viewModal')">Close</button>
+      <button class="btn-secondary" onclick="closeModal('viewModal')">Close</button>
+      <button id="uploadBtn" class="btn-primary" onclick="uploadFile()" style="display: none;">⬆️ Upload File</button>
     </div>
   </div>
 </div>
 
+<!-- ADD/EDIT MODAL -->
+<div id="addEditModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header" id="addEditTitle">➕ Add Document</div>
+
+    <form id="docForm" method="post">
+      <div class="form-group">
+        <label>Document Name *</label>
+        <input type="text" id="inputName" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type *</label>
+          <select id="inputType" required>
+            <option value="">Select type...</option>
+            <option value="E-migration Card">E-migration Card</option>
+            <option value="E-channel">E-channel</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Owner *</label>
+          <input type="text" id="inputOwner" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Issue Date</label>
+          <input type="date" id="inputIssueDate">
+        </div>
+        <div class="form-group">
+          <label>Expiry Date *</label>
+          <input type="date" id="inputExpiryDate" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Authority</label>
+        <input type="text" id="inputAuthority">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('addEditModal')">Cancel</button>
+        <button type="submit" class="btn-primary" id="submitBtn">Add Document</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
-  let documentsToAdd = [];
+  let editDocId = null;
 
-  function addDocument(e) {
-    e.preventDefault();
+  function openViewModal(docId, name, type, owner, expiryDate, issueDate, authority, fileUrl) {
+    document.getElementById('viewTitle').textContent = name;
+    document.getElementById('viewType').textContent = type;
+    document.getElementById('viewOwner').textContent = owner;
+    document.getElementById('viewIssueDate').textContent = issueDate || '—';
+    document.getElementById('viewExpiryDate').textContent = expiryDate;
+    document.getElementById('viewAuthority').textContent = authority || '—';
+    document.getElementById('docIdForUpload').value = docId;
 
-    const doc = {
-      id: Date.now(),
-      name: document.getElementById('name').value,
-      doc_type: document.getElementById('doc_type').value,
-      owner: document.getElementById('owner').value,
-      issue_date: document.getElementById('issue_date').value,
-      expiry_date: document.getElementById('expiry_date').value,
-      authority: document.getElementById('authority').value,
-      file: document.getElementById('file').files[0] || null
-    };
-
-    if (!doc.name || !doc.doc_type || !doc.expiry_date || !doc.owner) {
-      alert('Please fill all required fields');
-      return;
+    // File status
+    if (fileUrl) {
+      document.getElementById('fileStatus').innerHTML = `
+        <div style="padding: 12px; background: #D1FAE5; border-radius: 8px; color: #065F46; font-size: 14px;">
+          ✓ <strong>File uploaded</strong><br>
+          <a href="${fileUrl}" target="_blank" style="color: #059669; text-decoration: underline; font-size: 12px;">View File</a>
+        </div>
+      `;
+      document.getElementById('uploadBtn').style.display = 'none';
+      document.getElementById('uploadFileForm').style.display = 'none';
+    } else {
+      document.getElementById('fileStatus').innerHTML = `<div style="color: var(--text-muted); font-size: 13px;">No file uploaded yet</div>`;
+      document.getElementById('uploadBtn').style.display = 'block';
+      document.getElementById('uploadFileForm').style.display = 'block';
     }
 
-    documentsToAdd.push(doc);
-    renderDocuments();
-    document.getElementById('addDocForm').reset();
-    alert('✓ Document added to list!');
-  }
-
-  function renderDocuments() {
-    const list = document.getElementById('docList');
-    
-    if (documentsToAdd.length === 0) {
-      list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📄</div><div>No documents yet. Add one above!</div></div>';
-      document.getElementById('saveAllBtn').style.display = 'none';
-      return;
-    }
-
-    list.innerHTML = documentsToAdd.map(doc => `
-      <div class="doc-item">
-        <div class="doc-info">
-          <div class="doc-name">${doc.name}</div>
-          <div class="doc-meta">Type: ${doc.doc_type} | Owner: ${doc.owner} | Expires: ${doc.expiry_date || 'N/A'}</div>
-        </div>
-        <div class="doc-actions">
-          <button class="btn btn-secondary" onclick="viewDocument(${doc.id})">👁️ View</button>
-          <button class="btn btn-secondary" onclick="editDocument(${doc.id})">✏️ Edit</button>
-          <button class="btn btn-danger" onclick="deleteDocument(${doc.id})">🗑️ Delete</button>
-        </div>
-      </div>
-    `).join('');
-
-    document.getElementById('saveAllBtn').style.display = 'block';
-  }
-
-  function viewDocument(id) {
-    const doc = documentsToAdd.find(d => d.id === id);
-    if (!doc) return;
-
-    document.getElementById('viewTitle').textContent = doc.name;
-    document.getElementById('viewContent').innerHTML = `
-      <div style="margin-bottom: 16px;">
-        <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">Type</div>
-        <div style="color: var(--text); font-weight: 500;">${doc.doc_type}</div>
-      </div>
-      <div style="margin-bottom: 16px;">
-        <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">Owner</div>
-        <div style="color: var(--text); font-weight: 500;">${doc.owner}</div>
-      </div>
-      <div style="margin-bottom: 16px;">
-        <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">Issue Date</div>
-        <div style="color: var(--text);">${doc.issue_date || '—'}</div>
-      </div>
-      <div style="margin-bottom: 16px;">
-        <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">Expiry Date</div>
-        <div style="color: var(--text); font-weight: 600;">${doc.expiry_date}</div>
-      </div>
-      <div style="margin-bottom: 16px;">
-        <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">Authority</div>
-        <div style="color: var(--text);">${doc.authority || '—'}</div>
-      </div>
-      <div>
-        <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">File</div>
-        <div style="color: var(--text);">${doc.file ? '✓ ' + doc.file.name : '—'}</div>
-      </div>
-    `;
     document.getElementById('viewModal').classList.add('active');
   }
 
-  function editDocument(id) {
-    const doc = documentsToAdd.find(d => d.id === id);
-    if (!doc) return;
+  function openEditModal(docId, name, type, owner, expiryDate, issueDate, authority) {
+    editDocId = docId;
+    document.getElementById('addEditTitle').textContent = '✏️ Edit Document';
+    document.getElementById('submitBtn').textContent = 'Update Document';
+    
+    document.getElementById('inputName').value = name;
+    document.getElementById('inputType').value = type;
+    document.getElementById('inputOwner').value = owner;
+    document.getElementById('inputIssueDate').value = issueDate;
+    document.getElementById('inputExpiryDate').value = expiryDate;
+    document.getElementById('inputAuthority').value = authority;
 
-    document.getElementById('name').value = doc.name;
-    document.getElementById('doc_type').value = doc.doc_type;
-    document.getElementById('owner').value = doc.owner;
-    document.getElementById('issue_date').value = doc.issue_date;
-    document.getElementById('expiry_date').value = doc.expiry_date;
-    document.getElementById('authority').value = doc.authority;
-
-    deleteDocument(id);
-    document.getElementById('addDocForm').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('addEditModal').classList.add('active');
   }
 
-  function deleteDocument(id) {
-    documentsToAdd = documentsToAdd.filter(d => d.id !== id);
-    renderDocuments();
-  }
-
-  function saveAllDocuments() {
-    if (documentsToAdd.length === 0) {
-      alert('Add documents first!');
-      return;
-    }
-
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/tahfeel-doc/add-bulk';
-    form.enctype = 'multipart/form-data';
-
-    documentsToAdd.forEach((doc, idx) => {
-      const fields = {
-        [`name_${idx}`]: doc.name,
-        [`doc_type_${idx}`]: doc.doc_type,
-        [`owner_${idx}`]: doc.owner,
-        [`issue_date_${idx}`]: doc.issue_date,
-        [`expiry_date_${idx}`]: doc.expiry_date,
-        [`authority_${idx}`]: doc.authority
-      };
-
-      Object.entries(fields).forEach(([key, value]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = value;
-        form.appendChild(input);
-      });
-
-      if (doc.file) {
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.name = `file_${idx}`;
-        fileInput.hidden = true;
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(doc.file);
-        fileInput.files = dataTransfer.files;
-        form.appendChild(fileInput);
-      }
-    });
-
-    document.body.appendChild(form);
-    document.getElementById('saveAllBtn').disabled = true;
-    document.getElementById('saveAllBtn').textContent = 'Saving... please wait';
-    form.submit();
+  function openAddModal() {
+    editDocId = null;
+    document.getElementById('addEditTitle').textContent = '➕ Add Document';
+    document.getElementById('submitBtn').textContent = 'Add Document';
+    document.getElementById('docForm').reset();
+    document.getElementById('addEditModal').classList.add('active');
   }
 
   function closeModal(id) {
     document.getElementById(id).classList.remove('active');
   }
+
+  document.getElementById('docForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const form = new FormData();
+    form.append('name', document.getElementById('inputName').value);
+    form.append('doc_type', document.getElementById('inputType').value);
+    form.append('owner', document.getElementById('inputOwner').value);
+    form.append('issue_date', document.getElementById('inputIssueDate').value);
+    form.append('expiry_date', document.getElementById('inputExpiryDate').value);
+    form.append('authority', document.getElementById('inputAuthority').value);
+
+    const url = editDocId ? `/tahfeel-doc/${editDocId}/edit` : '/tahfeel-doc/add';
+    
+    fetch(url, { method: 'POST', body: form })
+      .then(r => r.text())
+      .then(() => {
+        location.reload();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Error saving document');
+      });
+  });
+
+  function updateFileLabel() {
+    const file = document.getElementById('docFile').files[0];
+    if (file) {
+      document.getElementById('fileLabel').textContent = '✓ ' + file.name;
+      document.getElementById('fileLabel').classList.add('has-file');
+    }
+  }
+
+  function uploadFile() {
+    const file = document.getElementById('docFile').files[0];
+    const docId = document.getElementById('docIdForUpload').value;
+
+    if (!file) {
+      alert('Please select a file');
+      return;
+    }
+
+    const form = new FormData();
+    form.append('file', file);
+
+    document.getElementById('uploadBtn').disabled = true;
+    document.getElementById('uploadBtn').textContent = 'Uploading...';
+
+    fetch(`/tahfeel-doc/${docId}/upload`, { method: 'POST', body: form })
+      .then(r => r.text())
+      .then(() => {
+        alert('✓ File uploaded successfully!');
+        location.reload();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Error uploading file');
+        document.getElementById('uploadBtn').disabled = false;
+        document.getElementById('uploadBtn').textContent = '⬆️ Upload File';
+      });
+  }
+
+  // Modal click outside to close
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
+      e.target.classList.remove('active');
+    }
+  });
+
+  // Escape key to close
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.getElementById('viewModal').classList.remove('active');
+      document.getElementById('addEditModal').classList.remove('active');
+    }
+  });
 
   // Load theme
   function loadTheme() {
@@ -319,9 +430,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', loadTheme);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal('viewModal');
-  });
 </script>
 
 </body>
