@@ -4,6 +4,7 @@
   <title>Tahfeel Documents</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
   <style>
     * {
       margin: 0;
@@ -778,6 +779,14 @@
     modal.classList.add('active');
   }
 
+  function showLoading() {
+    const submitBtn = document.getElementById("submitBtn");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Adding... please wait";
+    }
+  }
+
   function closeModal() {
     document.getElementById('docModal').classList.remove('active');
     document.getElementById('docForm').reset();
@@ -820,7 +829,7 @@
             }
           }
         }
-        this.submit();
+        showLoading(); setTimeout(() => this.submit(), 500);
       });
     }
 
@@ -834,6 +843,20 @@
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeModal();
   });
+</script>
+
+<!-- Theme System Loading -->
+<script>
+  function loadTheme() {
+    const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
+    document.body.classList.remove('theme-navy', 'theme-maroon', 'theme-beige', 'theme-black');
+    if (savedTheme !== 'navy') {
+      document.body.classList.add('theme-' + savedTheme);
+    }
+  }
+  
+  document.addEventListener('DOMContentLoaded', loadTheme);
+  loadTheme();
 </script>
 
 </body>
