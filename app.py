@@ -4429,64 +4429,95 @@ def add_tahfeel_doc():
         return redirect(url_for('tahfeel_doc'))
     
     try:
-        name = request.form.get('name', '').strip()
-        doc_type = request.form.get('doc_type', '').strip()
-        issue_date = request.form.get('issue_date')
-        expiry_date = request.form.get('expiry_date')
-        authority = request.form.get('authority', '').strip()
-        owner = request.form.get('owner', '').strip()
+        # Count how many documents are being added (look for name_0, name_1, etc.)
+        doc_indices = []
+        i = 0
+        while True:
+            key = f'name_{i}' if i > 0 else 'name'
+            if request.form.get(key):
+                doc_indices.append(i)
+                i += 1
+            else:
+                break
         
-        # Validation
-        if not name or not doc_type or not expiry_date or not owner:
-            flash('All required fields must be filled.', 'error')
+        if not doc_indices:
+            flash('Please add at least one document.', 'error')
             return redirect(url_for('tahfeel_doc'))
         
-        # Parse dates
-        try:
-            issue_dt = datetime.strptime(issue_date, '%Y-%m-%d').date() if issue_date else None
-            expiry_dt = datetime.strptime(expiry_date, '%Y-%m-%d').date()
-        except ValueError:
-            flash('Invalid date format.', 'error')
-            return redirect(url_for('tahfeel_doc'))
+        created_count = 0
         
-        # Validate expiry date is in future
-        if expiry_dt < now_dubai().date():
-            flash('Expiry date must be in the future.', 'warning')
+        # Process each document
+        for idx in doc_indices:
+            name_key = f'name_{idx}' if idx > 0 else 'name'
+            type_key = f'doc_type_{idx}' if idx > 0 else 'doc_type'
+            owner_key = f'doc_owner_{idx}' if idx > 0 else 'owner'
+            issue_key = f'doc_issue_date_{idx}' if idx > 0 else 'issue_date'
+            expiry_key = f'doc_expiry_date_{idx}' if idx > 0 else 'expiry_date'
+            auth_key = f'doc_authority_{idx}' if idx > 0 else 'authority'
+            file_key = f'doc_file_{idx}' if idx > 0 else 'file'
+            
+            name = request.form.get(name_key, '').strip()
+            doc_type = request.form.get(type_key, '').strip()
+            issue_date = request.form.get(issue_key)
+            expiry_date = request.form.get(expiry_key)
+            authority = request.form.get(auth_key, '').strip()
+            owner = request.form.get(owner_key, '').strip()
+            
+            # Validation
+            if not name or not doc_type or not expiry_date or not owner:
+                continue  # Skip this document if required fields missing
+            
+            # Parse dates
+            try:
+                issue_dt = datetime.strptime(issue_date, '%Y-%m-%d').date() if issue_date else None
+                expiry_dt = datetime.strptime(expiry_date, '%Y-%m-%d').date()
+            except ValueError:
+                continue  # Skip on date error
+            
+            # Handle file upload
+            doc_url = None
+            cloudinary_id = None
+            if file_key in request.files:
+                file = request.files[file_key]
+                if file and file.filename:
+                    try:
+                        upload_result = cloudinary.uploader.upload(
+                            file,
+                            folder='tahfeel-documents',
+                            resource_type='auto'
+                        )
+                        doc_url = upload_result['secure_url']
+                        cloudinary_id = upload_result['public_id']
+                    except Exception as e:
+                        print(f"Cloudinary upload error: {e}")
+            
+            # Create document record
+            doc = CompanyDocument(
+                name=name,
+                doc_type=doc_type,
+                issue_date=issue_dt,
+                expiry_date=expiry_dt,
+                authority=authority,
+                owner=owner,
+                document_url=doc_url,
+                cloudinary_public_id=cloudinary_id,
+                created_by=session['user_name']
+            )
+            db.session.add(doc)
+            created_count += 1
         
-        # Handle file upload
-        doc_url = None
-        cloudinary_id = None
-        if 'file' in request.files:
-            file = request.files['file']
-            if file and file.filename:
-                try:
-                    upload_result = cloudinary.uploader.upload(
-                        file,
-                        folder='tahfeel-documents',
-                        resource_type='auto'
-                    )
-                    doc_url = upload_result['secure_url']
-                    cloudinary_id = upload_result['public_id']
-                except Exception as e:
-                    print(f"Cloudinary upload error: {e}")
-                    flash('Document upload failed, but record created.', 'warning')
+        if created_count > 0:
+            db.session.commit()
+            flash(f'✓ {created_count} document{"s" if created_count > 1 else ""} added successfully.')
+        else:
+            flash('No valid documents to add.', 'error')
         
-        # Create document record
-        doc = CompanyDocument(
-            name=name,
-            doc_type=doc_type,
-            issue_date=issue_dt,
-            expiry_date=expiry_dt,
-            authority=authority,
-            owner=owner,
-            document_url=doc_url,
-            cloudinary_public_id=cloudinary_id,
-            created_by=session['user_name']
-        )
-        db.session.add(doc)
-        db.session.commit()
+        return redirect(url_for('tahfeel_doc'))
         
-        flash(f'✓ Document "{name}" added successfully.')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'error')
+        print(f"Error adding documents: {e}")
         return redirect(url_for('tahfeel_doc'))
         
     except Exception as e:

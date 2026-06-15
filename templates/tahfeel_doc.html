@@ -641,59 +641,19 @@
 
 </div>
 
+
 <!-- ADD/EDIT MODAL -->
 <div id="docModal" class="modal">
   <div class="modal-content">
-    <div class="modal-header" id="modalTitle">+ Add Document</div>
+    <div class="modal-header" id="modalTitle">+ Add Documents</div>
     
     <form id="docForm" method="post" enctype="multipart/form-data">
-      <div class="form-group">
-        <label class="required">Document Name</label>
-        <input type="text" name="name" id="name" placeholder="e.g., Shafeer's Visa" required>
-        <div class="help-text">Staff name or document description</div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="required">Type</label>
-          <select name="doc_type" id="doc_type" required>
-            <option value="">Select type...</option>
-            <option value="E-migration Card">E-migration Card</option>
-            <option value="E-channel">E-channel</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="required">Owner</label>
-          <input type="text" name="owner" id="owner" placeholder="e.g., Shafeer Pv or Company" required>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Issue Date</label>
-          <input type="date" name="issue_date" id="issue_date">
-        </div>
-
-        <div class="form-group">
-          <label class="required">Expiry Date</label>
-          <input type="date" name="expiry_date" id="expiry_date" required>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Authority / Issuer</label>
-        <input type="text" name="authority" id="authority" placeholder="e.g., UAE Ministry of Interior">
-      </div>
-
-      <div class="form-group">
-        <label>Upload Document (PDF, Image)</label>
-        <input type="file" name="file" id="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
-        <div class="help-text">Optional - Attach document file for reference</div>
-      </div>
-
+      <div id="documentsContainer"></div>
+      
+      <button type="button" id="addAnother" class="btn btn-primary" style="width: 100%; margin-bottom: 20px;">+ Add Another Document</button>
+      
       <div class="modal-footer">
-        <button type="submit" class="btn btn-primary" id="submitBtn">Add Document</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Add Documents</button>
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
       </div>
     </form>
@@ -703,6 +663,89 @@
 <script>
   let isEditMode = false;
   let editDocId = null;
+  let documentCount = 0;
+
+  function createDocumentRow(index) {
+    return `
+      <div class="document-row" id="doc-row-${index}" style="background: var(--surface); padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h4 style="margin: 0; font-size: 14px; font-weight: 600;">Document ${index + 1}</h4>
+          ${index > 0 ? `<button type="button" onclick="removeDocRow(${index})" class="btn btn-danger" style="padding: 4px 12px; font-size: 12px;">Remove</button>` : ''}
+        </div>
+
+        <div class="form-group">
+          <label class="required">Document Name</label>
+          <input type="text" name="doc_name_${index}" placeholder="e.g., Shafeer's Visa" required>
+          <div class="help-text">Staff name or document description</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="required">Type</label>
+            <div style="display: flex; gap: 8px;">
+              <select name="doc_type_${index}" class="doc-type-select" required style="flex: 1;">
+                <option value="">Select type...</option>
+                <option value="E-migration Card">E-migration Card</option>
+                <option value="E-channel">E-channel</option>
+              </select>
+              <button type="button" onclick="openTypeModal(${index})" class="btn btn-primary" style="padding: 10px 12px; font-size: 12px; white-space: nowrap;">+ Add Type</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="required">Owner</label>
+            <input type="text" name="doc_owner_${index}" placeholder="e.g., Shafeer Pv or Company" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Issue Date</label>
+            <input type="date" name="doc_issue_date_${index}">
+          </div>
+
+          <div class="form-group">
+            <label class="required">Expiry Date</label>
+            <input type="date" name="doc_expiry_date_${index}" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Authority / Issuer</label>
+          <input type="text" name="doc_authority_${index}" placeholder="e.g., UAE Ministry of Interior">
+        </div>
+
+        <div class="form-group">
+          <label>Upload Document (PDF, Image)</label>
+          <input type="file" name="doc_file_${index}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+          <div class="help-text">Optional - Attach document file for reference</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function addDocumentRow() {
+    documentCount++;
+    const html = createDocumentRow(documentCount);
+    document.getElementById('documentsContainer').insertAdjacentHTML('beforeend', html);
+  }
+
+  function removeDocRow(index) {
+    const row = document.getElementById(`doc-row-${index}`);
+    if (row) row.remove();
+  }
+
+  function openTypeModal(docIndex) {
+    const typeInput = prompt('Enter new document type:', '');
+    if (typeInput && typeInput.trim()) {
+      const select = document.querySelector(`select[name="doc_type_${docIndex}"]`);
+      const option = document.createElement('option');
+      option.value = typeInput;
+      option.textContent = typeInput;
+      select.appendChild(option);
+      select.value = typeInput;
+    }
+  }
 
   function openModal(mode, docId = null) {
     isEditMode = mode === 'edit';
@@ -712,17 +755,24 @@
     const form = document.getElementById('docForm');
     const title = document.getElementById('modalTitle');
     const submitBtn = document.getElementById('submitBtn');
+    const addAnotherBtn = document.getElementById('addAnother');
+    const container = document.getElementById('documentsContainer');
+
+    container.innerHTML = '';
+    documentCount = 0;
 
     if (isEditMode) {
       title.textContent = '✏️ Edit Document';
       submitBtn.textContent = 'Update Document';
+      addAnotherBtn.style.display = 'none';
       form.action = '/tahfeel-doc/' + docId + '/edit';
-      // TODO: Load document data and pre-fill form
+      addDocumentRow();
     } else {
-      title.textContent = '+ Add Document';
-      submitBtn.textContent = 'Add Document';
+      title.textContent = '+ Add Documents';
+      submitBtn.textContent = 'Add Documents';
+      addAnotherBtn.style.display = 'block';
       form.action = '/tahfeel-doc/add';
-      form.reset();
+      addDocumentRow();
     }
 
     modal.classList.add('active');
@@ -733,11 +783,38 @@
     document.getElementById('docForm').reset();
   }
 
+  document.getElementById('addAnother').addEventListener('click', addDocumentRow);
+
+  document.getElementById('docForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!isEditMode) {
+      for (let i = 0; i <= documentCount; i++) {
+        const nameInput = document.querySelector(`input[name="doc_name_${i}"]`);
+        const typeSelect = document.querySelector(`select[name="doc_type_${i}"]`);
+        const ownerInput = document.querySelector(`input[name="doc_owner_${i}"]`);
+        const issueInput = document.querySelector(`input[name="doc_issue_date_${i}"]`);
+        const expiryInput = document.querySelector(`input[name="doc_expiry_date_${i}"]`);
+        const authInput = document.querySelector(`input[name="doc_authority_${i}"]`);
+        const fileInput = document.querySelector(`input[name="doc_file_${i}"]`);
+        
+        if (nameInput && nameInput.value) {
+          nameInput.name = i === 0 ? 'name' : `name_${i}`;
+          typeSelect.name = i === 0 ? 'doc_type' : `doc_type_${i}`;
+          ownerInput.name = i === 0 ? 'owner' : `owner_${i}`;
+          issueInput.name = i === 0 ? 'issue_date' : `issue_date_${i}`;
+          expiryInput.name = i === 0 ? 'expiry_date' : `expiry_date_${i}`;
+          authInput.name = i === 0 ? 'authority' : `authority_${i}`;
+          fileInput.name = i === 0 ? 'file' : `file_${i}`;
+        }
+      }
+    }
+    this.submit();
+  });
+
   document.getElementById('docModal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
 
-  // Close on Escape key
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeModal();
   });
