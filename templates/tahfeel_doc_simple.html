@@ -11,20 +11,20 @@
     .export-btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
     
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
-    .stat-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .stat-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
     .stat-card.all { border-top: 4px solid #10B981; }
     .stat-card.critical { border-top: 4px solid #EF4444; }
     .stat-card.warning { border-top: 4px solid #F59E0B; }
     .stat-card.pending { border-top: 4px solid #F59E0B; }
     .stat-card.complete { border-top: 4px solid #3B82F6; }
     
-    .stat-label { font-size: 13px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
-    .stat-number { font-size: 32px; font-weight: 700; color: var(--primary); }
-    .stat-icon { font-size: 24px; float: right; opacity: 0.6; }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+    .stat-number { font-size: 28px; font-weight: 700; color: var(--primary); }
+    .stat-icon { font-size: 20px; float: right; opacity: 0.6; }
 
     .table-container { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
-    .table-header { padding: 16px 20px; background: var(--surface); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr; gap: 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
-    .table-row { padding: 16px 20px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr; gap: 16px; align-items: center; }
+    .table-header { padding: 16px 20px; background: var(--surface); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1.2fr; gap: 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+    .table-row { padding: 16px 20px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1.2fr; gap: 16px; align-items: center; }
     .table-row:last-child { border-bottom: none; }
     .table-row:hover { background: var(--surface); }
 
@@ -135,8 +135,8 @@
     {% if all_docs %}
       <div class="table-header">
         <div>DOCUMENT NAME</div>
-        <div>OWNER</div>
-        <div>TYPE</div>
+        <div>AUTHORITY</div>
+        <div>ISSUE DATE</div>
         <div>EXPIRY</div>
         <div>ACTIONS</div>
       </div>
@@ -145,21 +145,12 @@
       <div class="table-row">
         <div>
           <div class="doc-name">{{ doc.name }}</div>
-          <div class="doc-meta">{{ doc.doc_type }}</div>
         </div>
 
-        <div>{{ doc.owner }}</div>
+        <div style="font-size: 13px; color: var(--text);">{{ doc.authority or '—' }}</div>
 
-        <div>
-          {% if doc.expiry_status() == 'expired' %}
-            <span class="status-badge expired">EXPIRED</span>
-          {% elif doc.expiry_status() == 'critical' %}
-            <span class="status-badge critical">🔴 {{ doc.days_until_expiry() }}d</span>
-          {% elif doc.expiry_status() == 'warning' %}
-            <span class="status-badge warning">⚠️ {{ doc.days_until_expiry() }}d</span>
-          {% else %}
-            <span class="status-badge ok">✓ OK</span>
-          {% endif %}
+        <div style="font-size: 13px; color: var(--text-muted);">
+          {{ doc.issue_date.strftime('%d %b %Y') if doc.issue_date else '—' }}
         </div>
 
         <div style="font-size: 13px; color: var(--text-muted);">
