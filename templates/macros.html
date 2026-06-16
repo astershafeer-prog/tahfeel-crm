@@ -5,15 +5,13 @@
     <span class="topbar-title">Business Solutions CRM</span>
   </div>
   <div class="topbar-right">
-    <!-- Theme Switcher (Admin only) -->
-    {% if session.role == 'admin' %}
+    <!-- Theme Switcher (All users) -->
     <div class="theme-switcher">
       <button class="theme-btn" onclick="setTheme('navy')" title="Navy theme" style="background: #1A3B8B;">Navy</button>
       <button class="theme-btn" onclick="setTheme('maroon')" title="Maroon theme" style="background: #8B2E2E;">Maroon</button>
       <button class="theme-btn" onclick="setTheme('beige')" title="Beige theme" style="background: #8B7355; color: white;">Beige</button>
       <button class="theme-btn" onclick="setTheme('black')" title="Black theme" style="background: #1F2937;">Black</button>
     </div>
-    {% endif %}
 
     <div class="topbar-user">
       <div class="topbar-avatar">{{ session.user_name[0]|upper if session.user_name else 'U' }}</div>
