@@ -6,6 +6,8 @@
   <title>Tahfeel CRM — Finance Dashboard</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav, welcome -%}

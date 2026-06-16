@@ -55,6 +55,19 @@ loadTheme();
 {% endmacro %}
 
 
+{% macro theme_loader() %}
+<!-- Early Theme Loader - Prevents flash of wrong theme -->
+<script>
+// Load theme immediately (before page renders)
+(function() {
+  const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
+  if (savedTheme !== 'navy') {
+    document.documentElement.classList.add('theme-' + savedTheme);
+  }
+})();
+</script>
+{% endmacro %}
+
 {% macro birthday_banner(birthdays_today, now) %}
 {% if birthdays_today %}
 <div style="background:linear-gradient(135deg,#FDF2F8,#FCE7F3);border-bottom:1px solid #FBCFE8;padding:8px 24px;display:flex;align-items:center;justify-content:space-between;">
