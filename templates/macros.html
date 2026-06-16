@@ -31,18 +31,29 @@
 // Theme System - 4 Themes: Navy, Maroon, Beige, Black
 function setTheme(theme) {
   localStorage.setItem('tahfeel-theme', theme);
-  // Remove old theme classes
-  document.body.classList.remove('theme-navy', 'theme-maroon', 'theme-beige', 'theme-black');
+  // Remove all theme classes from both html and body
+  ['navy', 'maroon', 'beige', 'black'].forEach(t => {
+    document.documentElement.classList.remove('theme-' + t);
+    document.body.classList.remove('theme-' + t);
+  });
   // Add new theme class (navy is default, no class needed)
   if (theme !== 'navy') {
+    document.documentElement.classList.add('theme-' + theme);
     document.body.classList.add('theme-' + theme);
   }
+  console.log('Theme changed to:', theme);
 }
 
 function loadTheme() {
   const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
-  document.body.classList.remove('theme-navy', 'theme-maroon', 'theme-beige', 'theme-black');
+  // Remove all theme classes
+  ['navy', 'maroon', 'beige', 'black'].forEach(t => {
+    document.documentElement.classList.remove('theme-' + t);
+    document.body.classList.remove('theme-' + t);
+  });
+  // Apply saved theme
   if (savedTheme !== 'navy') {
+    document.documentElement.classList.add('theme-' + savedTheme);
     document.body.classList.add('theme-' + savedTheme);
   }
 }
@@ -62,7 +73,16 @@ loadTheme();
 (function() {
   const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
   if (savedTheme !== 'navy') {
+    // Apply to html for immediate effect
     document.documentElement.classList.add('theme-' + savedTheme);
+    // Also apply to body when ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.classList.add('theme-' + savedTheme);
+      });
+    } else {
+      document.body.classList.add('theme-' + savedTheme);
+    }
   }
 })();
 </script>
