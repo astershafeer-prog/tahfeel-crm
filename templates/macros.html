@@ -5,12 +5,10 @@
     <span class="topbar-title">Business Solutions CRM</span>
   </div>
   <div class="topbar-right">
-    <!-- Theme Switcher (All users) -->
+    <!-- Theme Switcher (Navy & Dark Black only) -->
     <div class="theme-switcher">
       <button class="theme-btn" onclick="setTheme('navy')" title="Navy theme" style="background: #1A3B8B;">Navy</button>
-      <button class="theme-btn" onclick="setTheme('maroon')" title="Maroon theme" style="background: #8B2E2E;">Maroon</button>
-      <button class="theme-btn" onclick="setTheme('beige')" title="Beige theme" style="background: #8B7355; color: white;">Beige</button>
-      <button class="theme-btn" onclick="setTheme('black')" title="Black theme" style="background: #1F2937;">Black</button>
+      <button class="theme-btn" onclick="setTheme('black')" title="Dark theme" style="background: #0f0f0f; border: 1px solid #333;">Dark</button>
     </div>
 
     <div class="topbar-user">
@@ -28,11 +26,11 @@
 
 
 <script>
-// Theme System - 4 Themes: Navy, Maroon, Beige, Black
+// Theme System - 2 Themes: Navy (default), Black (dark)
 function setTheme(theme) {
   localStorage.setItem('tahfeel-theme', theme);
   // Remove all theme classes from both html and body
-  ['navy', 'maroon', 'beige', 'black'].forEach(t => {
+  ['navy', 'black'].forEach(t => {
     document.documentElement.classList.remove('theme-' + t);
     document.body.classList.remove('theme-' + t);
   });
@@ -47,7 +45,7 @@ function setTheme(theme) {
 function loadTheme() {
   const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
   // Remove all theme classes
-  ['navy', 'maroon', 'beige', 'black'].forEach(t => {
+  ['navy', 'black'].forEach(t => {
     document.documentElement.classList.remove('theme-' + t);
     document.body.classList.remove('theme-' + t);
   });
