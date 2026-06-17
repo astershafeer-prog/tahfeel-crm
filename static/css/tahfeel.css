@@ -144,7 +144,7 @@ input, select, textarea, button { font-family: var(--font); }
   min-height: 46px;
 }
 .nav a {
-  color: rgba(255,255,255,0.85);
+  color: #FFFFFF;
   font-size: 14px;
   font-weight: 500;
   padding: 10px 12px;
