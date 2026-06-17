@@ -494,6 +494,7 @@ def login():
             session.permanent = True  # Enable persistent session
             session['user_id'] = user.id
             session['user_name'] = user.name
+            session['user_email'] = user.email
             session['role'] = user.role
             try:
                 session['unread_mentions'] = DeskNote.query.filter_by(mention_user_id=user.id, is_done=False).count()
@@ -4392,7 +4393,8 @@ def edit_partner_revenue(job_id):
 @app.route('/tahfeel-doc')
 @login_required
 def tahfeel_doc():
-    if session['role'] not in ['admin', 'finance']:
+    # Allow: Admin role OR Saada (saadatahfeel@gmail.com)
+    if session['role'] not in ['admin', 'finance'] and session.get('user_email') != 'saadatahfeel@gmail.com':
         flash('Access denied.')
         return redirect(url_for('dashboard'))
     
@@ -4529,7 +4531,8 @@ def add_tahfeel_doc():
 @app.route('/tahfeel-doc/<int:doc_id>/edit', methods=['POST'])
 @login_required
 def edit_tahfeel_doc(doc_id):
-    if session['role'] != 'admin':
+    # Allow: Admin OR Saada (saadatahfeel@gmail.com)
+    if session['role'] != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
         flash('Only admin can edit documents.')
         return redirect(url_for('tahfeel_doc'))
     
@@ -4735,7 +4738,8 @@ def add_tahfeel_doc_bulk():
 @app.route('/tahfeel-doc/<int:doc_id>/delete', methods=['POST'])
 @login_required
 def delete_tahfeel_doc(doc_id):
-    if session['role'] != 'admin':
+    # Allow: Admin OR Saada (saadatahfeel@gmail.com)
+    if session['role'] != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
         flash('Only admin can delete documents.')
         return redirect(url_for('tahfeel_doc'))
     
