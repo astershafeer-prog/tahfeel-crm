@@ -30,11 +30,11 @@
     /* ─── TABLE ─── */
     .table-container { background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
     .table-header { 
-      padding: 10px 14px; 
+      padding: 8px 12px; 
       background: var(--surface2);
       display: grid; 
       grid-template-columns: 2.5fr 1.8fr 1.2fr 1.2fr 100px;
-      gap: 14px; 
+      gap: 12px; 
       font-size: 10px; 
       font-weight: 700; 
       text-transform: uppercase; 
@@ -43,13 +43,14 @@
       border-bottom: 1px solid var(--border);
     }
     .table-row { 
-      padding: 11px 14px;
+      padding: 8px 12px;
       display: grid; 
       grid-template-columns: 2.5fr 1.8fr 1.2fr 1.2fr 100px;
-      gap: 14px; 
+      gap: 12px; 
       align-items: center;
       transition: background 0.15s ease;
       border-bottom: 1px solid var(--border-light);
+      min-height: 36px;
     }
     .table-row:last-child { border-bottom: none; }
     .table-row:hover { background: var(--surface2); }
@@ -57,25 +58,26 @@
     .doc-name { 
       font-weight: 600; 
       color: var(--text-primary); 
-      font-size: 12px; 
+      font-size: 11px; 
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
+      line-height: 1.2;
     }
-    .doc-name-icon { font-size: 14px; }
-    .doc-authority { font-size: 11px; color: var(--text-secondary); }
-    .doc-date { font-size: 11px; color: var(--text-muted); }
+    .doc-name-icon { font-size: 13px; flex-shrink: 0; }
+    .doc-authority { font-size: 11px; color: var(--text-secondary); line-height: 1.2; }
+    .doc-date { font-size: 11px; color: var(--text-muted); line-height: 1.2; }
     
     .actions { display: flex; gap: 2px; justify-content: flex-end; align-items: center; }
     .action-btn { 
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       border: none; 
       background: var(--primary);
       color: white;
-      border-radius: 5px; 
+      border-radius: 4px; 
       cursor: pointer; 
-      font-size: 12px;
+      font-size: 11px;
       display: flex;
       align-items: center;
       justify-content: center;
