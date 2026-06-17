@@ -6,56 +6,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <style>
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .page-title { font-size: 32px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 12px; }
-    .add-btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
-    .add-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
-    .back-btn { padding: 8px 14px; background: var(--surface2); color: var(--text-primary); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .page-title { font-size: 24px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+    .add-btn { padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
+    .add-btn:hover { background: var(--primary-dark); }
+    .back-btn { padding: 6px 12px; background: var(--surface2); color: var(--text-primary); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.2s; }
     .back-btn:hover { background: var(--surface3); }
     
-    /* ─── STATUS CARDS ─── */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
-    .stat-card { 
-      background: var(--surface);
-      border-left: 4px solid var(--primary);
-      border-radius: 12px;
-      padding: 16px;
-      transition: all 0.3s ease;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      cursor: default;
-    }
-    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-    .stat-card.critical { border-left-color: #EF4444; }
-    .stat-card.warning { border-left-color: #F59E0B; }
-    .stat-card.success { border-left-color: #10B981; }
-    .stat-card.info { border-left-color: #3B82F6; }
-    
-    .stat-info { flex: 1; }
-    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .stat-number { font-size: 28px; font-weight: 700; color: var(--primary); line-height: 1; }
-    .stat-icon-box { 
-      font-size: 24px; 
-      width: 40px; 
-      height: 40px; 
+    /* ─── STATS BAR ─── */
+    .stats-bar { 
       display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      background: var(--primary-bg);
-      border-radius: 10px;
-      flex-shrink: 0;
+      gap: 24px; 
+      margin-bottom: 16px;
+      font-size: 13px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
     }
+    .stat-item { display: flex; align-items: center; gap: 6px; }
+    .stat-icon { font-size: 18px; }
+    .stat-label { color: var(--text-muted); text-transform: uppercase; font-weight: 600; font-size: 11px; }
+    .stat-value { color: var(--text-primary); font-weight: 700; font-size: 16px; }
 
     /* ─── TABLE ─── */
-    .table-container { background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+    .table-container { background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
     .table-header { 
-      padding: 12px 16px; 
+      padding: 10px 14px; 
       background: var(--surface2);
       display: grid; 
-      grid-template-columns: 2fr 1.5fr 1.2fr 1.2fr 120px;
-      gap: 16px; 
-      font-size: 11px; 
+      grid-template-columns: 2.5fr 1.8fr 1.2fr 1.2fr 100px;
+      gap: 14px; 
+      font-size: 10px; 
       font-weight: 700; 
       text-transform: uppercase; 
       color: var(--text-muted); 
@@ -63,74 +43,81 @@
       border-bottom: 1px solid var(--border);
     }
     .table-row { 
-      padding: 12px 16px;
+      padding: 11px 14px;
       display: grid; 
-      grid-template-columns: 2fr 1.5fr 1.2fr 1.2fr 120px;
-      gap: 16px; 
+      grid-template-columns: 2.5fr 1.8fr 1.2fr 1.2fr 100px;
+      gap: 14px; 
       align-items: center;
-      transition: background 0.2s ease;
+      transition: background 0.15s ease;
+      border-bottom: 1px solid var(--border-light);
     }
+    .table-row:last-child { border-bottom: none; }
     .table-row:hover { background: var(--surface2); }
 
     .doc-name { 
       font-weight: 600; 
       color: var(--text-primary); 
-      font-size: 13px; 
+      font-size: 12px; 
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
-    .doc-name-icon { font-size: 16px; }
-    .doc-authority { font-size: 12px; color: var(--text-secondary); }
-    .doc-date { font-size: 12px; color: var(--text-muted); }
+    .doc-name-icon { font-size: 14px; }
+    .doc-authority { font-size: 11px; color: var(--text-secondary); }
+    .doc-date { font-size: 11px; color: var(--text-muted); }
     
-    .actions { display: flex; gap: 3px; justify-content: flex-end; align-items: center; }
+    .actions { display: flex; gap: 2px; justify-content: flex-end; align-items: center; }
     .action-btn { 
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       border: none; 
       background: var(--primary);
       color: white;
-      border-radius: 6px; 
+      border-radius: 5px; 
       cursor: pointer; 
-      font-size: 14px;
+      font-size: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
+      transition: all 0.15s;
       flex-shrink: 0;
     }
     .action-btn:hover { 
       background: var(--primary-dark);
-      transform: scale(1.05);
+      transform: scale(1.08);
     }
     .action-btn-delete { background: #EF4444; }
     .action-btn-delete:hover { background: #DC2626; }
     .action-btn-edit { background: #3B82F6; }
     .action-btn-edit:hover { background: #2563EB; }
 
+    /* ─── EMPTY STATE ─── */
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-text { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
+
     /* ─── MODALS ─── */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
     .modal.active { display: flex; }
     .modal-content { 
       background: var(--surface); 
-      padding: 32px; 
-      border-radius: 14px; 
+      padding: 28px; 
+      border-radius: 12px; 
       width: 100%; 
-      max-width: 600px; 
+      max-width: 550px; 
       max-height: 85vh; 
       overflow-y: auto;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     }
-    .modal-header { font-size: 22px; font-weight: 700; margin-bottom: 24px; color: var(--text-primary); }
-    .form-group { margin-bottom: 20px; }
-    .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); font-size: 13px; }
+    .modal-header { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-primary); }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--text-primary); font-size: 12px; }
     .form-group input, .form-group select { 
       width: 100%; 
-      padding: 10px 12px; 
+      padding: 8px 10px; 
       border: 1px solid var(--border); 
-      border-radius: 8px; 
-      font-size: 14px;
+      border-radius: 6px; 
+      font-size: 13px;
       background: var(--surface);
       color: var(--text-primary);
       transition: border 0.2s;
@@ -138,40 +125,33 @@
     .form-group input:focus, .form-group select:focus { 
       outline: none; 
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(26,59,139,0.1);
+      box-shadow: 0 0 0 2px rgba(26,59,139,0.08);
     }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     
-    .modal-footer { display: flex; gap: 12px; margin-top: 32px; }
-    .modal-footer button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; }
+    .modal-footer { display: flex; gap: 10px; margin-top: 24px; }
+    .modal-footer button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px; }
     .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: var(--primary-dark); }
     .btn-secondary { background: var(--surface2); color: var(--text-primary); }
     .btn-secondary:hover { background: var(--surface3); }
 
-    /* ─── EMPTY STATE ─── */
-    .empty-state { text-align: center; padding: 80px 20px; }
-    .empty-icon { font-size: 64px; margin-bottom: 20px; }
-    .empty-text { font-size: 16px; color: var(--text-muted); margin-bottom: 20px; }
-
-    /* ─── FILE UPLOAD ─── */
     .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
     .file-input-wrapper input[type=file] { position: absolute; left: -9999px; }
-    .file-label { display: block; padding: 12px; border: 2px dashed var(--border); border-radius: 8px; text-align: center; cursor: pointer; transition: 0.2s; color: var(--text-muted); }
+    .file-label { display: block; padding: 10px; border: 2px dashed var(--border); border-radius: 6px; text-align: center; cursor: pointer; transition: 0.2s; color: var(--text-muted); font-size: 12px; }
     .file-label:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
     .file-label.has-file { border-color: #10B981; background: #D1FAE5; color: #065F46; }
 
-    /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
-      .stats-grid { grid-template-columns: 1fr 1fr; }
-      .table-header, .table-row { grid-template-columns: 1.5fr 1fr 100px; gap: 12px; }
+      .stats-bar { flex-direction: column; gap: 8px; }
+      .table-header, .table-row { grid-template-columns: 1.5fr 1fr 80px; gap: 10px; }
       .doc-date { display: none; }
     }
   </style>
 </head>
 <body>
 
-<div style="padding: 28px; max-width: 1400px; margin: 0 auto;">
+<div style="padding: 20px; max-width: 1400px; margin: 0 auto;">
   
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -198,46 +178,46 @@
     <button class="add-btn" onclick="openAddModal()">➕ Add Document</button>
   </div>
 
-  <!-- STATUS CARDS -->
-  <div class="stats-grid">
-    <div class="stat-card success">
-      <div class="stat-info">
-        <div class="stat-label">Total Documents</div>
-        <div class="stat-number">{{ all_docs|length }}</div>
+  <!-- STATUS STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-icon">✓</span>
+      <div>
+        <div class="stat-label">Total</div>
+        <div class="stat-value">{{ all_docs|length }}</div>
       </div>
-      <div class="stat-icon-box">✓</div>
     </div>
 
-    <div class="stat-card critical">
-      <div class="stat-info">
+    <div class="stat-item">
+      <span class="stat-icon">🔴</span>
+      <div>
         <div class="stat-label">Expired</div>
-        <div class="stat-number">{{ expired_count }}</div>
+        <div class="stat-value">{{ expired_count }}</div>
       </div>
-      <div class="stat-icon-box">🔴</div>
     </div>
 
-    <div class="stat-card warning">
-      <div class="stat-info">
+    <div class="stat-item">
+      <span class="stat-icon">⚠️</span>
+      <div>
         <div class="stat-label">Expiring Soon</div>
-        <div class="stat-number">{{ critical_count + warning_count }}</div>
+        <div class="stat-value">{{ critical_count + warning_count }}</div>
       </div>
-      <div class="stat-icon-box">⚠️</div>
     </div>
 
-    <div class="stat-card warning">
-      <div class="stat-info">
+    <div class="stat-item">
+      <span class="stat-icon">📎</span>
+      <div>
         <div class="stat-label">Pending File</div>
-        <div class="stat-number">{{ all_docs|selectattr('document_url', 'none')|list|length }}</div>
+        <div class="stat-value">{{ all_docs|selectattr('document_url', 'none')|list|length }}</div>
       </div>
-      <div class="stat-icon-box">📎</div>
     </div>
 
-    <div class="stat-card info">
-      <div class="stat-info">
+    <div class="stat-item">
+      <span class="stat-icon">✨</span>
+      <div>
         <div class="stat-label">Complete</div>
-        <div class="stat-number">{{ all_docs|selectattr('document_url')|list|length }}</div>
+        <div class="stat-value">{{ all_docs|selectattr('document_url')|list|length }}</div>
       </div>
-      <div class="stat-icon-box">✨</div>
     </div>
   </div>
 
