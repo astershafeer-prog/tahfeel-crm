@@ -126,9 +126,9 @@ loadTheme();
   {% if session.role in ['admin', 'finance'] %}
   <a href="/analytics" {% if active=='analytics' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📈 Analytics</a>
   <a href="/partner-commissions" {% if active=='partner-commissions' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">💰 Commissions</a>
+  {% endif %}
   {% if session.role == 'admin' or session.get('user_email') == 'saadatahfeel@gmail.com' %}
   <a href="/tahfeel-doc" {% if active=='tahfeel_doc' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Tahfeel Doc</a>
-  {% endif %}
   {% endif %}
   <div style="flex:1;"></div>
   {% if session.role == 'admin' %}
