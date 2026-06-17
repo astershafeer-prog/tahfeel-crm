@@ -832,19 +832,31 @@ tr.selected td { background: var(--info-bg) !important; }
 .full { grid-column: 1 / -1; }
 .actions { display: flex; gap: 10px; margin-top: 20px; grid-column: 1 / -1; }
 .btn-view { 
-  padding: 4px 10px; 
+  padding: 8px 14px; 
   border-radius: var(--radius-sm); 
-  font-size: 11px; 
-  font-weight: 600; 
-  border: 1.5px solid var(--primary); 
+  font-size: 12px; 
+  font-weight: 700;
+  line-height: 1.4;
+  border: none;
   background: var(--primary);
-  color: white !important;
+  color: #FFFFFF !important;
   text-decoration: none;
   cursor: pointer;
   transition: var(--transition);
+  display: inline-block;
+  text-align: center;
+  white-space: nowrap;
 }
 .btn-view:hover { 
   background: var(--primary-dark); 
+  color: #FFFFFF !important;
+}
+.btn-view:active {
+  opacity: 0.9;
+}
+
+/* Force white text for all button content */
+.btn-view *, .btn-edit *, .btn-delete * {
   color: white !important;
 }
 
