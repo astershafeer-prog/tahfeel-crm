@@ -64,6 +64,11 @@ body {
 }
 a { color: var(--primary); text-decoration: none; }
 a:hover { color: var(--primary-light); }
+
+/* Don't override text color on button-like links (with background) */
+a[style*="background"] {
+  color: white !important;
+}
 input, select, textarea, button { font-family: var(--font); }
 
 /* ── Topbar ────────────────────────────────────────────── */
