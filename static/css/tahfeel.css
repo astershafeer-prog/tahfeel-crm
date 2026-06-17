@@ -78,6 +78,14 @@ input, select, textarea, button { font-family: var(--font); }
   position: sticky;
   top: 0;
   z-index: 100;
+  /* Force white text for readability across all themes */
+  color: white !important;
+}
+.topbar * {
+  color: white !important;
+}
+.topbar a, .topbar button {
+  color: white !important;
 }
 .topbar-brand {
   display: flex;
@@ -142,9 +150,14 @@ input, select, textarea, button { font-family: var(--font); }
   top: 56px;
   z-index: 99;
   min-height: 46px;
+  /* Ensure all text is readable */
+}
+.nav,
+.nav * {
+  color: white !important;
 }
 .nav a {
-  color: #FFFFFF;
+  color: #FFFFFF !important;
   font-size: 14px;
   font-weight: 500;
   padding: 10px 12px;
@@ -821,7 +834,42 @@ tr.selected td { background: var(--info-bg) !important; }
 .btn-view { padding: 4px 10px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; border: 1.5px solid var(--primary); color: var(--primary); text-decoration: none; }
 .btn-view:hover { background: var(--primary); color: white; }
 
-/* ── Sum Cards (Documents page) ───────────────────────── */
+/* ════════════════════════════════════════════════════════════════════ */
+/* GLOBAL READABILITY FIX - Ensure all text is readable for ALL USERS  */
+/* ════════════════════════════════════════════════════════════════════ */
+
+/* Topbar & Navigation - always white text */
+.topbar, .topbar *, .topbar a, .topbar button {
+  color: white !important;
+}
+
+.nav, .nav *, .nav a, .nav button {
+  color: white !important;
+}
+
+/* All buttons with white text on colored backgrounds */
+.btn-view, .btn-edit, .btn-delete, .btn-add, .btn-save, 
+.btn-primary, .btn-secondary, .btn-approve {
+  color: white !important;
+}
+
+/* Override theme-specific buttons for readability */
+body .btn-view {
+  color: var(--primary) !important;
+}
+
+body .btn-view:hover {
+  color: white !important;
+}
+
+/* Ensure filter buttons and period selectors are readable */
+button[class*="btn"], button[type="button"], button[type="submit"],
+a[class*="btn-"], a[class*="filter"] {
+  /* Inherit parent text color for contrast */
+  color: currentColor;
+}
+
+/* ────────────────────────────────────────────────────────────────────
 .sum-card {
   background: var(--surface);
   border: 1px solid var(--border);
