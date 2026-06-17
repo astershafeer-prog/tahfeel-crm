@@ -133,7 +133,7 @@ input, select, textarea, button { font-family: var(--font); }
 
 /* ── Navigation ────────────────────────────────────────── */
 .nav {
-  background: #0F2660;
+  background: var(--primary-dark);
   padding: 0 20px;
   display: flex;
   gap: 2px;
@@ -144,7 +144,7 @@ input, select, textarea, button { font-family: var(--font); }
   min-height: 46px;
 }
 .nav a {
-  color: rgba(255,255,255,0.65);
+  color: rgba(255,255,255,0.85);
   font-size: 14px;
   font-weight: 500;
   padding: 10px 12px;
@@ -158,18 +158,18 @@ input, select, textarea, button { font-family: var(--font); }
 }
 .nav a:hover {
   color: white;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.15);
 }
 .nav a.active {
   color: white;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.2);
   font-weight: 600;
 }
 .nav a.admin-link {
-  color: #FCD34D;
+  color: var(--accent-light);
 }
-.nav a.admin-link:hover { background: rgba(252,211,77,0.15); }
-.nav a.admin-link.active { background: rgba(252,211,77,0.2); }
+.nav a.admin-link:hover { background: rgba(255,255,255,0.15); }
+.nav a.admin-link.active { background: rgba(255,255,255,0.2); }
 
 /* ── Container ─────────────────────────────────────────── */
 .container {
@@ -183,7 +183,7 @@ input, select, textarea, button { font-family: var(--font); }
   background: var(--surface);
   border-radius: var(--radius-lg);
   border: 0.5px solid var(--border);
-  border-top: 5px solid #1A3B8B;
+  border-top: 5px solid var(--primary);
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   overflow: hidden;
   margin-bottom: 14px;
@@ -1296,7 +1296,7 @@ table tbody tr:last-child td { border-bottom:none; }
 .stat-card,
 .filter-card,
 .sum-card {
-  border-top: 5px solid #1A3B8B;
+  border-top: 5px solid var(--primary);
 }
 
 /* Override per context */
