@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tahfeel Documents</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <style>
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .page-title { font-size: 28px; font-weight: 700; color: var(--text); }
+    .export-btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+    .stat-card.all { border-top: 4px solid #10B981; }
+    .stat-card.critical { border-top: 4px solid #EF4444; }
+    .stat-card.warning { border-top: 4px solid #F59E0B; }
+    .stat-card.pending { border-top: 4px solid #F59E0B; }
+    .stat-card.complete { border-top: 4px solid #3B82F6; }
+    
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+    .stat-number { font-size: 28px; font-weight: 700; color: var(--primary); }
+    .stat-icon { font-size: 20px; float: right; opacity: 0.6; }
+
+    .table-container { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+    .table-header { padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1.2fr; gap: 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+    .table-row { padding: 12px 16px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1.2fr; gap: 16px; align-items: center; }
+    .table-row .actions { justify-content: flex-end; margin: 0; }
+    .table-row:last-child { border-bottom: none; }
+    .table-row:hover { background: var(--surface); }
+
+    .doc-name { font-weight: 600; color: var(--primary); font-size: 14px; }
+    .doc-meta { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-badge.expired { background: #FEE2E2; color: #991B1B; }
+    .status-badge.critical { background: #FEE2E2; color: #7F1D1D; }
+    .status-badge.warning { background: #FEF3C7; color: #92400E; }
+    .status-badge.pending { background: #FEF3C7; color: #92400E; }
+    .status-badge.ok { background: #D1FAE5; color: #065F46; }
+
+    .actions { display: flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; align-items: center; }
+    .action-btn { padding: 3px 7px; border: 1px solid var(--border); background: white; color: var(--text); border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; transition: 0.2s; display: inline-block; white-space: nowrap; }
+    .action-btn:hover { background: var(--surface); border-color: var(--primary); color: var(--primary); }
+    .action-btn-delete { color: #EF4444; border-color: #FEE2E2; }
+    .action-btn-delete:hover { background: #FEE2E2; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; padding: 32px; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+    .modal-header { font-size: 20px; font-weight: 700; margin-bottom: 24px; color: var(--primary); }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--text); font-size: 13px; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,59,139,0.1); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    
+    .modal-footer { display: flex; gap: 12px; margin-top: 32px; }
+    .modal-footer button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .modal-footer .btn-primary { background: var(--primary); color: white; }
+    .modal-footer .btn-primary:hover { background: var(--primary-dark); }
+    .modal-footer .btn-secondary { background: var(--border); color: var(--text); }
+    .modal-footer .btn-secondary:hover { background: var(--surface); }
+
+    .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+    .file-input-wrapper input[type=file] { position: absolute; left: -9999px; }
+    .file-label { display: block; padding: 10px; border: 2px dashed var(--border); border-radius: 8px; text-align: center; cursor: pointer; transition: 0.2s; color: var(--text-muted); }
+    .file-label:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+    .file-label.has-file { border-color: #10B981; background: #F0FDF4; color: #065F46; }
+  </style>
+</head>
+<body>
+
+<div style="padding: 24px; max-width: 1400px; margin: 0 auto;">
+  
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+      <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
+        {% if category == 'error' %}
+          background: #FEE2E2; color: #991B1B; border-left: 4px solid #EF4444;
+        {% elif category == 'warning' %}
+          background: #FEF3C7; color: #92400E; border-left: 4px solid #F59E0B;
+        {% else %}
+          background: #D1FAE5; color: #065F46; border-left: 4px solid #10B981;
+        {% endif %}
+      ">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <button onclick="window.history.back()" style="padding: 8px 14px; background: var(--border); color: var(--text); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">← Back</button>
+      <h1 class="page-title">📄 Tahfeel Documents</h1>
+    </div>
+    <button class="export-btn" onclick="openAddModal()">➕ Add Document</button>
+  </div>
+
+  <!-- STATUS CARDS -->
+  <div class="stats-grid">
+    <div class="stat-card all">
+      <div class="stat-label">Total Documents</div>
+      <div class="stat-number">{{ all_docs|length }}</div>
+      <div class="stat-icon">✓</div>
+    </div>
+
+    <div class="stat-card critical">
+      <div class="stat-label">Expired</div>
+      <div class="stat-number">{{ expired_count }}</div>
+      <div class="stat-icon">🔴</div>
+    </div>
+
+    <div class="stat-card warning">
+      <div class="stat-label">Expiring Soon</div>
+      <div class="stat-number">{{ critical_count + warning_count }}</div>
+      <div class="stat-icon">⚠️</div>
+    </div>
+
+    <div class="stat-card pending">
+      <div class="stat-label">Pending File</div>
+      <div class="stat-number">{{ all_docs|selectattr('document_url', 'none')|list|length }}</div>
+      <div class="stat-icon">📎</div>
+    </div>
+
+    <div class="stat-card complete">
+      <div class="stat-label">Complete</div>
+      <div class="stat-number">{{ all_docs|selectattr('document_url')|list|length }}</div>
+      <div class="stat-icon">👍</div>
+    </div>
+  </div>
+
+  <!-- DOCUMENTS TABLE -->
+  <div class="table-container">
+    {% if all_docs %}
+      <div class="table-header">
+        <div>DOCUMENT NAME</div>
+        <div>AUTHORITY</div>
+        <div>ISSUE DATE</div>
+        <div>EXPIRY</div>
+        <div>ACTIONS</div>
+      </div>
+
+      {% for doc in all_docs|sort(attribute='expiry_date') %}
+      <div class="table-row">
+        <div>
+          <div class="doc-name">{{ doc.name }}</div>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text);">{{ doc.authority or '—' }}</div>
+
+        <div style="font-size: 13px; color: var(--text-muted);">
+          {{ doc.issue_date.strftime('%d %b %Y') if doc.issue_date else '—' }}
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-muted);">
+          {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '—' }}
+        </div>
+
+        <div class="actions">
+          <button class="action-btn" onclick="openViewModal({{ doc.id }}, '{{ doc.name }}', '{{ doc.doc_type }}', '{{ doc.owner }}', '{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}', '{{ doc.issue_date.strftime('%Y-%m-%d') if doc.issue_date else '' }}', '{{ doc.authority }}', '{{ doc.document_url or '' }}')">👁️ View</button>
+          <button class="action-btn" onclick="openEditModal({{ doc.id }}, '{{ doc.name }}', '{{ doc.doc_type }}', '{{ doc.owner }}', '{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}', '{{ doc.issue_date.strftime('%Y-%m-%d') if doc.issue_date else '' }}', '{{ doc.authority }}')">✏️ Edit</button>
+          <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="display: inline;" onsubmit="return confirm('Delete {{ doc.name }}?');">
+            <button type="submit" class="action-btn action-btn-delete">🗑️ Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📄</div>
+        <div style="font-size: 16px; color: var(--text-muted);">No documents yet</div>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- VIEW MODAL -->
+<div id="viewModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header" id="viewTitle">Document Details</div>
+    
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Type</div>
+      <div id="viewType" style="color: var(--text); font-weight: 500;"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Owner</div>
+      <div id="viewOwner" style="color: var(--text);"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Issue Date</div>
+      <div id="viewIssueDate" style="color: var(--text);"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Expiry Date</div>
+      <div id="viewExpiryDate" style="color: var(--text); font-weight: 600;"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 6px;">Authority</div>
+      <div id="viewAuthority" style="color: var(--text);"></div>
+    </div>
+
+    <!-- FILE UPLOAD SECTION -->
+    <div style="margin-bottom: 24px;">
+      <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 12px;">Document File</div>
+      <div id="fileStatus"></div>
+      <form id="uploadFileForm" style="display: none;">
+        <input type="hidden" id="docIdForUpload">
+        <div class="file-input-wrapper">
+          <input type="file" id="docFile" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="updateFileLabel()">
+          <label for="docFile" class="file-label" id="fileLabel">📎 Click to upload or drag file</label>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('viewModal')">Close</button>
+      <button id="uploadBtn" class="btn-primary" onclick="uploadFile()" style="display: none;">⬆️ Upload File</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div id="addEditModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header" id="addEditTitle">➕ Add Document</div>
+
+    <form id="docForm" method="post">
+      <div class="form-group">
+        <label>Document Name *</label>
+        <input type="text" id="inputName" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type *</label>
+          <select id="inputType" required>
+            <option value="">Select type...</option>
+            <option value="E-migration Card">E-migration Card</option>
+            <option value="E-channel">E-channel</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Owner *</label>
+          <input type="text" id="inputOwner" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Issue Date</label>
+          <input type="date" id="inputIssueDate">
+        </div>
+        <div class="form-group">
+          <label>Expiry Date *</label>
+          <input type="date" id="inputExpiryDate" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Authority</label>
+        <input type="text" id="inputAuthority">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('addEditModal')">Cancel</button>
+        <button type="submit" class="btn-primary" id="submitBtn">Add Document</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let editDocId = null;
+
+  function openViewModal(docId, name, type, owner, expiryDate, issueDate, authority, fileUrl) {
+    document.getElementById('viewTitle').textContent = name;
+    document.getElementById('viewType').textContent = type;
+    document.getElementById('viewOwner').textContent = owner;
+    document.getElementById('viewIssueDate').textContent = issueDate || '—';
+    document.getElementById('viewExpiryDate').textContent = expiryDate;
+    document.getElementById('viewAuthority').textContent = authority || '—';
+    document.getElementById('docIdForUpload').value = docId;
+
+    // File status
+    if (fileUrl) {
+      document.getElementById('fileStatus').innerHTML = `
+        <div style="padding: 12px; background: #D1FAE5; border-radius: 8px; color: #065F46; font-size: 14px;">
+          ✓ <strong>File uploaded</strong><br>
+          <a href="${fileUrl}" target="_blank" style="color: #059669; text-decoration: underline; font-size: 12px;">View File</a>
+        </div>
+      `;
+      document.getElementById('uploadBtn').style.display = 'none';
+      document.getElementById('uploadFileForm').style.display = 'none';
+    } else {
+      document.getElementById('fileStatus').innerHTML = `<div style="color: var(--text-muted); font-size: 13px;">No file uploaded yet</div>`;
+      document.getElementById('uploadBtn').style.display = 'block';
+      document.getElementById('uploadFileForm').style.display = 'block';
+    }
+
+    document.getElementById('viewModal').classList.add('active');
+  }
+
+  function openEditModal(docId, name, type, owner, expiryDate, issueDate, authority) {
+    editDocId = docId;
+    document.getElementById('addEditTitle').textContent = '✏️ Edit Document';
+    document.getElementById('submitBtn').textContent = 'Update Document';
+    
+    document.getElementById('inputName').value = name;
+    document.getElementById('inputType').value = type;
+    document.getElementById('inputOwner').value = owner;
+    document.getElementById('inputIssueDate').value = issueDate;
+    document.getElementById('inputExpiryDate').value = expiryDate;
+    document.getElementById('inputAuthority').value = authority;
+
+    document.getElementById('addEditModal').classList.add('active');
+  }
+
+  function openAddModal() {
+    editDocId = null;
+    document.getElementById('addEditTitle').textContent = '➕ Add Document';
+    document.getElementById('submitBtn').textContent = 'Add Document';
+    document.getElementById('docForm').reset();
+    document.getElementById('addEditModal').classList.add('active');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+  }
+
+  document.getElementById('docForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const form = new FormData();
+    form.append('name', document.getElementById('inputName').value);
+    form.append('doc_type', document.getElementById('inputType').value);
+    form.append('owner', document.getElementById('inputOwner').value);
+    form.append('issue_date', document.getElementById('inputIssueDate').value);
+    form.append('expiry_date', document.getElementById('inputExpiryDate').value);
+    form.append('authority', document.getElementById('inputAuthority').value);
+
+    const url = editDocId ? `/tahfeel-doc/${editDocId}/edit` : '/tahfeel-doc/add';
+    
+    fetch(url, { method: 'POST', body: form })
+      .then(r => r.text())
+      .then(() => {
+        location.reload();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Error saving document');
+      });
+  });
+
+  function updateFileLabel() {
+    const file = document.getElementById('docFile').files[0];
+    if (file) {
+      document.getElementById('fileLabel').textContent = '✓ ' + file.name;
+      document.getElementById('fileLabel').classList.add('has-file');
+    }
+  }
+
+  function uploadFile() {
+    const file = document.getElementById('docFile').files[0];
+    const docId = document.getElementById('docIdForUpload').value;
+
+    if (!file) {
+      alert('Please select a file');
+      return;
+    }
+
+    const form = new FormData();
+    form.append('file', file);
+
+    document.getElementById('uploadBtn').disabled = true;
+    document.getElementById('uploadBtn').textContent = 'Uploading...';
+
+    fetch(`/tahfeel-doc/${docId}/upload`, { method: 'POST', body: form })
+      .then(r => r.text())
+      .then(() => {
+        alert('✓ File uploaded successfully!');
+        location.reload();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Error uploading file');
+        document.getElementById('uploadBtn').disabled = false;
+        document.getElementById('uploadBtn').textContent = '⬆️ Upload File';
+      });
+  }
+
+  // Modal click outside to close
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
+      e.target.classList.remove('active');
+    }
+  });
+
+  // Escape key to close
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.getElementById('viewModal').classList.remove('active');
+      document.getElementById('addEditModal').classList.remove('active');
+    }
+  });
+
+  // Load theme
+  function loadTheme() {
+    const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
+    document.body.classList.remove('theme-navy', 'theme-maroon', 'theme-beige', 'theme-black');
+    if (savedTheme !== 'navy') {
+      document.body.classList.add('theme-' + savedTheme);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadTheme);
+</script>
+
+</body>
+</html>
