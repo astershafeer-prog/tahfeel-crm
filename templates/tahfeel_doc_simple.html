@@ -66,22 +66,29 @@
 </head>
 <body>
   <div class="topbar">
-    <h1>Tahfeel Business Solutions — CRM</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:18px;font-weight:700;">Tahfeel Business Solutions — CRM</span>
+    </div>
     <div class="right">
-      <span>{{ session.user_name }} {% if session.role == 'admin' %}(Admin){% endif %}</span>
+      <span>{{ session.user_name }}</span>
       <a href="/logout">Logout</a>
     </div>
   </div>
   
   <div class="nav">
-    <a href="/dashboard">Dashboard</a>
-    <a href="/leads">All Leads</a>
-    <a href="/leads/add">Add Lead</a>
-    <a href="/leads/import">Import Leads</a>
-    <a href="/jobs">Jobs</a>
-    <a href="/tasks">All Tasks</a>
-    {% if session.role == 'admin' or session.get('user_email') == 'saadatahfeel@gmail.com' %}<a href="/tahfeel-doc" class="active">📄 Documents</a>{% endif %}
-    <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+    <a href="/dashboard">⊞ Dashboard</a>
+    <a href="/leads">◉ Leads</a>
+    <a href="/jobs">✓ Tasks</a>
+    <a href="/customers">👤 Customers</a>
+    <a href="/documents">📄 Documents</a>
+    {% if session.role in ['admin', 'sales'] %}<a href="/activity">📋 Daily Log</a>{% endif %}
+    <a href="/invoice">🧾 Doc Generator</a>
+    {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}<a href="/reports">📊 Reports</a>{% endif %}
+    {% if session.role in ['admin', 'finance'] %}<a href="/analytics">📈 Analytics</a>{% endif %}
+    {% if session.role in ['admin', 'finance'] %}<a href="/partner-commissions">💰 Commissions</a>{% endif %}
+    {% if session.role == 'admin' or session.get('user_email') == 'saadatahfeel@gmail.com' %}<a href="/tahfeel-doc" class="active">📄 Tahfeel Doc</a>{% endif %}
+    <div style="flex:1;"></div>
+    {% if session.role == 'admin' %}<a href="/admin" class="admin-link">⚙ Admin</a>{% endif %}
   </div>
 
   <div class="container">
