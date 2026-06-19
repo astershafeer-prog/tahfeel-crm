@@ -137,9 +137,13 @@
         <div>
           <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ job.job_type }}</div>
           <div style="font-size:11px;color:#94A3B8;margin-top:2px;">{{ job.customer.name }}{% if job.customer.company %} · {{ job.customer.company }}{% endif %}</div>
-          {% if job.customer.rep %}<div style="font-size:10px;color:#64748B;margin-top:3px;"><strong>Rep:</strong> {{ job.customer.rep.name }}</div>{% endif %}
           {% if job.service_note %}<div style="font-size:11px;color:#64748B;margin-top:2px;font-style:italic;">{{ job.service_note }}</div>{% endif %}
         </div>
+        {% if job.customer.rep %}
+        <div style="font-size:11px;color:#1A2333;font-weight:600;padding:4px 8px;background:#F0F4F8;border-radius:6px;">{{ job.customer.rep.name }}</div>
+        {% else %}
+        <div style="font-size:11px;color:#CBD5E1;">—</div>
+        {% endif %}
         <div class="av-wrap">
           {% if job.assignee %}
           <div class="av" style="background:{% if loop.index % 4 == 1 %}#1A3B8B{% elif loop.index % 4 == 2 %}#10B981{% elif loop.index % 4 == 3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ job.assignee.name[:2].upper() }}</div>
