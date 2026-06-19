@@ -276,17 +276,7 @@
       </div>
       <div class="inv-card green">
         <h3>Services / Items</h3>
-        <table class="inv-tbl">
-          <thead><tr>
-            <th style="width:24px;text-align:center;">#</th>
-            <th style="width:50%;">Description</th>
-            <th class="r" style="width:32px;">Qty</th>
-            <th class="r" style="width:80px;">Amount (AED)</th>
-            <th class="r" style="width:80px;">Total (AED)</th>
-            <th style="width:30px;"></th>
-          </tr></thead>
-          <tbody id="qtItemsBody"></tbody>
-        </table>
+        <div id="qtItemsBody" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
         <button class="inv-add-btn green" onclick="addRow('qt')">+ Add Line</button>
         <div class="inv-totals-wrap"><div class="inv-totals-box">
           <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="qtSubtotal">AED 0.00</span></div>
@@ -429,36 +419,53 @@ function addRow(prefix) {
   services.forEach(function(s){ opts+='<option value="'+s+'">'+s+'</option>'; });
   opts += '<option value="__other__">Other (type below)</option>';
   
+function addRow(prefix) {
+  var tb = document.getElementById(prefix+'ItemsBody');
+  var n = prefix==='inv' ? ++invRowN : (prefix==='invs' ? ++invsRowN : ++qtRowN);
+  var rid = prefix+'r'+n;
+  var div = document.createElement('div');
+  div.id = rid;
+  var opts = '<option value="">— Select service —</option>';
+  services.forEach(function(s){ opts+='<option value="'+s+'">'+s+'</option>'; });
+  opts += '<option value="__other__">Other (type below)</option>';
+  
+  var itemNum = tb.children.length + 1;
+  
   if (prefix === 'invs' || prefix === 'qt') {
-    // Invoice-Service: Simplified (no govt charge column)
-    tr.innerHTML =
-      '<td style="text-align:center;color:#94A3B8;font-size:11px;vertical-align:middle;padding:6px 4px;">'+(tb.children.length+1)+'</td>'+
-      '<td style="padding:6px 8px;">'+
-        '<input type="hidden" class="pi" value="">'+
-        '<select onchange="svcSel(this,\''+prefix+'\')" style="font-weight:600;font-size:12px;color:#1A2333;width:100%;border:1px solid #D1D5DB;border-radius:4px;padding:6px 8px;margin-bottom:3px;background:#FFFFFF;">'+opts+'</select>'+
-        '<input type="text" placeholder="Details (optional)" class="di" oninput="calcAll(\''+prefix+'\')" style="font-size:11px;color:#666;width:100%;border:1px solid #E5E7EB;border-radius:4px;padding:5px 8px;">'+
-      '</td>'+
-      '<td class="r" style="padding:6px 4px;"><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="text-align:center;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:4px;padding:5px 6px;"></td>'+
-      '<td class="r" style="padding:6px 4px;"><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="text-align:right;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:4px;padding:5px 6px;"></td>'+
-      '<td style="padding:6px 4px;"><div class="total-cell rt" style="text-align:right;font-weight:600;font-size:12px;color:#1A2333;">0.00</div></td>'+
-      '<td style="padding:6px 2px;"><button class="rm-btn" onclick="rmRow(\''+rid+'\',\''+prefix+'\')">✕</button></td>';
+    div.style.cssText = 'border:1px solid #E2E8F0;border-radius:8px;padding:12px;background:#F9FAFB;';
+    div.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'+
+        '<span style="font-weight:600;color:#64748B;font-size:12px;">Item '+itemNum+'</span>'+
+        '<button class="rm-btn" onclick="rmRow(\''+rid+'\',\''+prefix+'\')" style="background:#EF4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;font-weight:600;">Delete</button>'+
+      '</div>'+
+      '<input type="hidden" class="pi" value="">'+
+      '<select onchange="svcSel(this,\''+prefix+'\')" style="font-weight:600;font-size:13px;color:#1A2333;width:100%;border:1px solid #D1D5DB;border-radius:6px;padding:8px;margin-bottom:10px;background:#FFFFFF;">'+opts+'</select>'+
+      '<input type="text" placeholder="Details (optional)" class="di" oninput="calcAll(\''+prefix+'\')" style="font-size:12px;color:#666;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;margin-bottom:10px;font-family:Arial;">'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">'+
+        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">QTY</label><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="text-align:center;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
+        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">AMOUNT (AED)</label><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="text-align:right;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
+        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">TOTAL (AED)</label><div class="total-cell rt" style="text-align:right;font-weight:700;font-size:14px;color:#1A2333;padding:8px;">0.00</div></div>'+
+      '</div>';
   } else {
-    // Regular invoice or quotation
-    tr.innerHTML =
-      '<td style="text-align:center;color:#94A3B8;font-size:11px;vertical-align:middle;padding:6px 4px;">'+(tb.children.length+1)+'</td>'+
-      '<td style="padding:6px 8px;">'+
-        '<input type="hidden" class="pi" value="">'+
-        '<select onchange="svcSel(this,\''+prefix+'\')" style="font-weight:600;font-size:12px;color:#1A2333;width:100%;border:1px solid #D1D5DB;border-radius:4px;padding:6px 8px;margin-bottom:3px;background:#FFFFFF;">'+opts+'</select>'+
-        '<input type="text" placeholder="Details (optional)" class="di" oninput="calcAll(\''+prefix+'\')" style="font-size:11px;color:#666;width:100%;border:1px solid #E5E7EB;border-radius:4px;padding:5px 8px;">'+
-      '</td>'+
-      '<td class="r" style="padding:6px 4px;"><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="text-align:center;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:4px;padding:5px 6px;"></td>'+
-      '<td class="r" style="padding:6px 4px;"><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="text-align:right;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:4px;padding:5px 6px;"></td>'+
-      '<td class="r" style="padding:6px 4px;"><input type="number" value="0" min="0" step="0.01" class="gi" oninput="calcAll(\''+prefix+'\')" style="text-align:right;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:4px;padding:5px 6px;"></td>'+
-      '<td style="padding:6px 4px;"><div class="total-cell rt" style="text-align:right;font-weight:600;font-size:12px;color:#1A2333;">0.00</div></td>'+
-      '<td style="padding:6px 2px;"><button class="rm-btn" onclick="rmRow(\''+rid+'\',\''+prefix+'\')">✕</button></td>';
+    div.style.cssText = 'border:1px solid #E2E8F0;border-radius:8px;padding:12px;background:#F9FAFB;';
+    div.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'+
+        '<span style="font-weight:600;color:#64748B;font-size:12px;">Item '+itemNum+'</span>'+
+        '<button class="rm-btn" onclick="rmRow(\''+rid+'\',\''+prefix+'\')" style="background:#EF4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;font-weight:600;">Delete</button>'+
+      '</div>'+
+      '<input type="hidden" class="pi" value="">'+
+      '<select onchange="svcSel(this,\''+prefix+'\')" style="font-weight:600;font-size:13px;color:#1A2333;width:100%;border:1px solid #D1D5DB;border-radius:6px;padding:8px;margin-bottom:10px;background:#FFFFFF;">'+opts+'</select>'+
+      '<input type="text" placeholder="Details (optional)" class="di" oninput="calcAll(\''+prefix+'\')" style="font-size:12px;color:#666;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;margin-bottom:10px;font-family:Arial;">'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">'+
+        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">QTY</label><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="text-align:center;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
+        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">AMOUNT (AED)</label><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="text-align:right;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
+        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">GOV CHARGE (AED)</label><input type="number" value="0" min="0" step="0.01" class="gi" oninput="calcAll(\''+prefix+'\')" style="text-align:right;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
+        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">TOTAL (AED)</label><div class="total-cell rt" style="text-align:right;font-weight:700;font-size:14px;color:#1A2333;padding:8px;">0.00</div></div>'+
+      '</div>';
   }
-  tb.appendChild(tr);
+  tb.appendChild(div);
   renum(prefix);
+}
 }
 
 function svcSel(s, prefix) {
