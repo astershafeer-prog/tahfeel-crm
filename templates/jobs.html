@@ -137,6 +137,7 @@
         <div>
           <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ job.job_type }}</div>
           <div style="font-size:11px;color:#94A3B8;margin-top:2px;">{{ job.customer.name }}{% if job.customer.company %} · {{ job.customer.company }}{% endif %}</div>
+          {% if job.customer.rep %}<div style="font-size:10px;color:#64748B;margin-top:3px;"><strong>Rep:</strong> {{ job.customer.rep.name }}</div>{% endif %}
           {% if job.service_note %}<div style="font-size:11px;color:#64748B;margin-top:2px;font-style:italic;">{{ job.service_note }}</div>{% endif %}
         </div>
         <div class="av-wrap">
@@ -145,12 +146,6 @@
           <span class="av-name">{{ job.assignee.name }}</span>
           {% else %}<span style="font-size:12px;color:#CBD5E1;">Unassigned</span>{% endif %}
         </div>
-        {% if job.customer.rep %}
-        <div class="av-wrap" style="background:#F0F4F8;padding:6px 12px;border-radius:6px;border:1px solid #DDE1E6;">
-          <span style="font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;">Rep:</span>
-          <span class="av-name" style="font-size:12px;color:#1A2333;font-weight:600;">{{ job.customer.rep.name }}</span>
-        </div>
-        {% endif %}
         <div class="due-pill {% if is_overdue %}overdue{% endif %}">
           📅 {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
         </div>
