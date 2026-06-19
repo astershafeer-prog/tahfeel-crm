@@ -2141,15 +2141,15 @@ def jobs():
         # Exclude Done and Closed by default unless explicitly filtered
         if not status_filter:
             if role in ['admin', 'finance']:
-                job_list = Job.query.all()
+                job_list = Job.query.options(db.joinedload(Job.customer).joinedload(Customer.rep)).all()
             else:
-                job_list = Job.query.filter(Job.status.notin_(['Done', 'Closed', 'Closed - Pending Partner Commission'])).order_by(Job.due_date.asc()).all()
+                job_list = Job.query.options(db.joinedload(Job.customer).joinedload(Customer.rep)).filter(Job.status.notin_(['Done', 'Closed', 'Closed - Pending Partner Commission'])).order_by(Job.due_date.asc()).all()
         elif status_filter == 'Closed':
-            job_list = Job.query.filter(Job.status.in_(['Closed', 'Closed - Pending Partner Commission'])).all()
+            job_list = Job.query.options(db.joinedload(Job.customer).joinedload(Customer.rep)).filter(Job.status.in_(['Closed', 'Closed - Pending Partner Commission'])).all()
         elif status_filter == 'Done':
-            job_list = Job.query.filter(Job.status == 'Done').all()
+            job_list = Job.query.options(db.joinedload(Job.customer).joinedload(Customer.rep)).filter(Job.status == 'Done').all()
         else:
-            job_list = Job.query.filter(Job.status == status_filter).order_by(Job.due_date.asc()).all()
+            job_list = Job.query.options(db.joinedload(Job.customer).joinedload(Customer.rep)).filter(Job.status == status_filter).order_by(Job.due_date.asc()).all()
         
         priority_filter = request.args.get('priority', '')
         assigned_filter = request.args.get('assigned_to', '') or request.args.get('staff', '')
