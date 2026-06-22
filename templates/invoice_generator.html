@@ -476,13 +476,22 @@ function calcAll(prefix) {
   }
   
   var grand=0, totalVat=0;
-  document.getElementById(prefix+'ItemsBody').querySelectorAll('tr').forEach(function(r) {
+  var itemsBody = document.getElementById(prefix+'ItemsBody');
+  
+  // Handle both div-based (new) and tr-based (old) layouts
+  var rows = itemsBody.querySelectorAll('div[id^="'+prefix+'r"]');
+  if (rows.length === 0) {
+    rows = itemsBody.querySelectorAll('tr');
+  }
+  
+  rows.forEach(function(r) {
     var q=parseFloat(r.querySelector('.qi').value)||0;
     var s=parseFloat(r.querySelector('.si').value)||0;
     var g = (prefix === 'invs' || prefix === 'qt') ? 0 : (parseFloat(r.querySelector('.gi').value)||0);
     var rowTotal=q*(s+g);
     var rowVat = (vatEnabled && prefix !== 'qt') ? q*(s-s/1.05) : 0;
-    r.querySelector('.rt').textContent=rowTotal.toFixed(2);
+    var rtEl = r.querySelector('.rt') || r.querySelector('.total-cell');
+    if (rtEl) rtEl.textContent=rowTotal.toFixed(2);
     grand+=rowTotal; totalVat+=rowVat;
   });
   
@@ -527,7 +536,15 @@ function getRows(prefix) {
   }
   
   var items=[],grand=0,totalVat=0;
-  document.getElementById(prefix+'ItemsBody').querySelectorAll('tr').forEach(function(r){
+  var itemsBody = document.getElementById(prefix+'ItemsBody');
+  
+  // Handle both div-based (new) and tr-based (old) layouts
+  var rows = itemsBody.querySelectorAll('div[id^="'+prefix+'r"]');
+  if (rows.length === 0) {
+    rows = itemsBody.querySelectorAll('tr');
+  }
+  
+  rows.forEach(function(r){
     var pi=r.querySelector('.pi'); var primary=pi?pi.value.trim():'';
     var desc=r.querySelector('.di').value||'';
     var q=parseFloat(r.querySelector('.qi').value)||0;
