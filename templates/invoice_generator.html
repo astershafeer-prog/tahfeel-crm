@@ -148,7 +148,18 @@
       </div>
       <div class="inv-card green">
         <h3>Services / Items</h3>
-        <div id="invItemsBody" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
+        <table class="inv-tbl" style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:#F3F4F6;border-bottom:2px solid #E5E7EB;">
+            <th style="padding:8px;text-align:left;font-size:11px;font-weight:700;color:#1A3B8B;">#</th>
+            <th style="padding:8px;text-align:left;font-size:11px;font-weight:700;color:#1A3B8B;">SERVICE</th>
+            <th style="padding:8px;text-align:center;font-size:11px;font-weight:700;color:#1A3B8B;">QTY</th>
+            <th style="padding:8px;text-align:right;font-size:11px;font-weight:700;color:#1A3B8B;">SERVICE FEE (AED)</th>
+            <th style="padding:8px;text-align:right;font-size:11px;font-weight:700;color:#1A3B8B;">GOVT FEE (AED)</th>
+            <th style="padding:8px;text-align:right;font-size:11px;font-weight:700;color:#1A3B8B;">AMOUNT (AED)</th>
+            <th style="padding:8px;text-align:center;font-size:11px;font-weight:700;color:#1A3B8B;">ACTION</th>
+          </tr></thead>
+          <tbody id="invItemsBody"></tbody>
+        </table>
         <button class="inv-add-btn green" onclick="addRow('inv')">+ Add Line</button>
         <div class="inv-totals-wrap"><div class="inv-totals-box">
           <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="invSubtotal">AED 0.00</span></div>
@@ -207,7 +218,17 @@
       </div>
       <div class="inv-card green">
         <h3>Services / Items</h3>
-        <div id="invsItemsBody" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
+        <table class="inv-tbl" style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:#F3F4F6;border-bottom:2px solid #E5E7EB;">
+            <th style="padding:8px;text-align:left;font-size:11px;font-weight:700;color:#1A3B8B;">#</th>
+            <th style="padding:8px;text-align:left;font-size:11px;font-weight:700;color:#1A3B8B;">SERVICE</th>
+            <th style="padding:8px;text-align:center;font-size:11px;font-weight:700;color:#1A3B8B;">QTY</th>
+            <th style="padding:8px;text-align:right;font-size:11px;font-weight:700;color:#1A3B8B;">SERVICE FEE (AED)</th>
+            <th style="padding:8px;text-align:right;font-size:11px;font-weight:700;color:#1A3B8B;">AMOUNT (AED)</th>
+            <th style="padding:8px;text-align:center;font-size:11px;font-weight:700;color:#1A3B8B;">ACTION</th>
+          </tr></thead>
+          <tbody id="invsItemsBody"></tbody>
+        </table>
         <button class="inv-add-btn green" onclick="addRow('invs')">+ Add Line</button>
         <div class="inv-totals-wrap"><div class="inv-totals-box">
           <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="invsSubtotal">AED 0.00</span></div>
@@ -256,7 +277,17 @@
       </div>
       <div class="inv-card green">
         <h3>Services / Items</h3>
-        <div id="qtItemsBody" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
+        <table class="inv-tbl" style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:#F3F4F6;border-bottom:2px solid #E5E7EB;">
+            <th style="padding:8px;text-align:left;font-size:11px;font-weight:700;color:#1A3B8B;">#</th>
+            <th style="padding:8px;text-align:left;font-size:11px;font-weight:700;color:#1A3B8B;">SERVICE</th>
+            <th style="padding:8px;text-align:center;font-size:11px;font-weight:700;color:#1A3B8B;">QTY</th>
+            <th style="padding:8px;text-align:right;font-size:11px;font-weight:700;color:#1A3B8B;">AMOUNT (AED)</th>
+            <th style="padding:8px;text-align:right;font-size:11px;font-weight:700;color:#1A3B8B;">TOTAL (AED)</th>
+            <th style="padding:8px;text-align:center;font-size:11px;font-weight:700;color:#1A3B8B;">ACTION</th>
+          </tr></thead>
+          <tbody id="qtItemsBody"></tbody>
+        </table>
         <button class="inv-add-btn green" onclick="addRow('qt')">+ Add Line</button>
         <div class="inv-totals-wrap"><div class="inv-totals-box">
           <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="qtSubtotal">AED 0.00</span></div>
@@ -393,47 +424,36 @@ function addRow(prefix) {
   var tb = document.getElementById(prefix+'ItemsBody');
   var n = prefix==='inv' ? ++invRowN : (prefix==='invs' ? ++invsRowN : ++qtRowN);
   var rid = prefix+'r'+n;
-  var div = document.createElement('div');
-  div.id = rid;
+  var tr = document.createElement('tr');
+  tr.id = rid;
+  
   var opts = '<option value="">— Select service —</option>';
   services.forEach(function(s){ opts+='<option value="'+s+'">'+s+'</option>'; });
   opts += '<option value="__other__">Other (type below)</option>';
   
-  var itemNum = tb.children.length + 1;
-  
-  if (prefix === 'invs' || prefix === 'qt') {
-    div.style.cssText = 'border:1px solid #E2E8F0;border-radius:8px;padding:12px;background:#F9FAFB;';
-    div.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'+
-        '<span style="font-weight:600;color:#64748B;font-size:12px;">Item '+itemNum+'</span>'+
-        '<button class="rm-btn" onclick="rmRow(\''+rid+'\',\''+prefix+'\')" style="background:#EF4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;font-weight:600;">Delete</button>'+
-      '</div>'+
-      '<input type="hidden" class="pi" value="">'+
-      '<select onchange="svcSel(this,\''+prefix+'\')" style="font-weight:600;font-size:13px;color:#1A2333;width:100%;border:1px solid #D1D5DB;border-radius:6px;padding:8px;margin-bottom:10px;background:#FFFFFF;">'+opts+'</select>'+
-      '<input type="text" placeholder="Details (optional)" class="di" oninput="calcAll(\''+prefix+'\')" style="font-size:12px;color:#666;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;margin-bottom:10px;font-family:Arial;">'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">'+
-        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">QTY</label><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="text-align:center;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
-        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">AMOUNT (AED)</label><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="text-align:right;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
-        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">TOTAL (AED)</label><div class="total-cell rt" style="text-align:right;font-weight:700;font-size:14px;color:#1A2333;padding:8px;">0.00</div></div>'+
-      '</div>';
-  } else {
-    div.style.cssText = 'border:1px solid #E2E8F0;border-radius:8px;padding:12px;background:#F9FAFB;';
-    div.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'+
-        '<span style="font-weight:600;color:#64748B;font-size:12px;">Item '+itemNum+'</span>'+
-        '<button class="rm-btn" onclick="rmRow(\''+rid+'\',\''+prefix+'\')" style="background:#EF4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;font-weight:600;">Delete</button>'+
-      '</div>'+
-      '<input type="hidden" class="pi" value="">'+
-      '<select onchange="svcSel(this,\''+prefix+'\')" style="font-weight:600;font-size:13px;color:#1A2333;width:100%;border:1px solid #D1D5DB;border-radius:6px;padding:8px;margin-bottom:10px;background:#FFFFFF;">'+opts+'</select>'+
-      '<input type="text" placeholder="Details (optional)" class="di" oninput="calcAll(\''+prefix+'\')" style="font-size:12px;color:#666;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;margin-bottom:10px;font-family:Arial;">'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">'+
-        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">QTY</label><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="text-align:center;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
-        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">AMOUNT (AED)</label><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="text-align:right;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
-        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">GOV CHARGE (AED)</label><input type="number" value="0" min="0" step="0.01" class="gi" oninput="calcAll(\''+prefix+'\')" style="text-align:right;font-size:12px;width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:8px;"></div>'+
-        '<div><label style="font-size:11px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px;">TOTAL (AED)</label><div class="total-cell rt" style="text-align:right;font-weight:700;font-size:14px;color:#1A2333;padding:8px;">0.00</div></div>'+
-      '</div>';
+  // For invoices with govt charge
+  if (prefix === 'inv') {
+    tr.innerHTML = 
+      '<td style="padding:8px;">#</td>'+
+      '<td style="padding:8px;"><input type="hidden" class="pi" value=""><select class="svc-select" onchange="svcSel(this,\''+prefix+'\')" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;">'+opts+'</select><input type="text" placeholder="Custom service" class="di" oninput="calcAll(\''+prefix+'\')" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;margin-top:4px;"></td>'+
+      '<td style="padding:8px;text-align:center;"><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:4px;text-align:center;font-size:12px;"></td>'+
+      '<td style="padding:8px;text-align:right;"><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="width:90px;padding:6px;border:1px solid #ddd;border-radius:4px;text-align:right;font-size:12px;"></td>'+
+      '<td style="padding:8px;text-align:right;"><input type="number" value="0" min="0" step="0.01" class="gi" oninput="calcAll(\''+prefix+'\')" style="width:90px;padding:6px;border:1px solid #ddd;border-radius:4px;text-align:right;font-size:12px;"></td>'+
+      '<td style="padding:8px;text-align:right;"><span class="rt" style="font-weight:700;font-size:13px;">0.00</span></td>'+
+      '<td style="padding:8px;text-align:center;"><button onclick="rmRow(\''+rid+'\',\''+prefix+'\')" style="background:#EF4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;">Delete</button></td>';
   }
-  tb.appendChild(div);
+  // For invoice-service and quotation (no govt charge)
+  else {
+    tr.innerHTML = 
+      '<td style="padding:8px;">#</td>'+
+      '<td style="padding:8px;"><input type="hidden" class="pi" value=""><select class="svc-select" onchange="svcSel(this,\''+prefix+'\')" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;">'+opts+'</select><input type="text" placeholder="Custom service" class="di" oninput="calcAll(\''+prefix+'\')" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;margin-top:4px;"></td>'+
+      '<td style="padding:8px;text-align:center;"><input type="number" value="1" min="1" class="qi" oninput="calcAll(\''+prefix+'\')" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:4px;text-align:center;font-size:12px;"></td>'+
+      '<td style="padding:8px;text-align:right;"><input type="number" value="0" min="0" step="0.01" class="si" oninput="calcAll(\''+prefix+'\')" style="width:90px;padding:6px;border:1px solid #ddd;border-radius:4px;text-align:right;font-size:12px;"></td>'+
+      '<td style="padding:8px;text-align:right;"><span class="rt" style="font-weight:700;font-size:13px;">0.00</span></td>'+
+      '<td style="padding:8px;text-align:center;"><button onclick="rmRow(\''+rid+'\',\''+prefix+'\')" style="background:#EF4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;">Delete</button></td>';
+  }
+  
+  tb.appendChild(tr);
   renum(prefix);
 }
 
@@ -465,22 +485,13 @@ function calcAll(prefix) {
   }
   
   var grand=0, totalVat=0;
-  var itemsBody = document.getElementById(prefix+'ItemsBody');
-  
-  // Handle both div-based (new) and tr-based (old) layouts
-  var rows = itemsBody.querySelectorAll('div[id^="'+prefix+'r"]');
-  if (rows.length === 0) {
-    rows = itemsBody.querySelectorAll('tr');
-  }
-  
-  rows.forEach(function(r) {
+  document.getElementById(prefix+'ItemsBody').querySelectorAll('tr').forEach(function(r) {
     var q=parseFloat(r.querySelector('.qi').value)||0;
     var s=parseFloat(r.querySelector('.si').value)||0;
     var g = (prefix === 'invs' || prefix === 'qt') ? 0 : (parseFloat(r.querySelector('.gi').value)||0);
     var rowTotal=q*(s+g);
     var rowVat = (vatEnabled && prefix !== 'qt') ? q*(s-s/1.05) : 0;
-    var rtEl = r.querySelector('.rt') || r.querySelector('.total-cell');
-    if (rtEl) rtEl.textContent=rowTotal.toFixed(2);
+    r.querySelector('.rt').textContent=rowTotal.toFixed(2);
     grand+=rowTotal; totalVat+=rowVat;
   });
   
@@ -525,15 +536,7 @@ function getRows(prefix) {
   }
   
   var items=[],grand=0,totalVat=0;
-  var itemsBody = document.getElementById(prefix+'ItemsBody');
-  
-  // Handle both div-based (new) and tr-based (old) layouts
-  var rows = itemsBody.querySelectorAll('div[id^="'+prefix+'r"]');
-  if (rows.length === 0) {
-    rows = itemsBody.querySelectorAll('tr');
-  }
-  
-  rows.forEach(function(r){
+  document.getElementById(prefix+'ItemsBody').querySelectorAll('tr').forEach(function(r){
     var pi=r.querySelector('.pi'); var primary=pi?pi.value.trim():'';
     var desc=r.querySelector('.di').value||'';
     var q=parseFloat(r.querySelector('.qi').value)||0;
