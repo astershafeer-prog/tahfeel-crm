@@ -148,17 +148,7 @@
       </div>
       <div class="inv-card green">
         <h3>Services / Items</h3>
-        <table class="inv-tbl">
-          <thead><tr>
-            <th style="width:24px;text-align:center;">#</th>
-            <th style="width:50%;">Description</th>
-            <th class="r" style="width:32px;">Qty</th>
-            <th class="r" style="width:80px;">Amount (AED)</th>
-            <th class="r" style="width:80px;">Total (AED)</th>
-            <th style="width:30px;"></th>
-          </tr></thead>
-          <tbody id="invItemsBody"></tbody>
-        </table>
+        <div id="invItemsBody" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
         <button class="inv-add-btn green" onclick="addRow('inv')">+ Add Line</button>
         <div class="inv-totals-wrap"><div class="inv-totals-box">
           <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="invSubtotal">AED 0.00</span></div>
@@ -217,17 +207,7 @@
       </div>
       <div class="inv-card green">
         <h3>Services / Items</h3>
-        <table class="inv-tbl">
-          <thead><tr>
-            <th style="width:24px;text-align:center;">#</th>
-            <th style="width:50%;">Description</th>
-            <th class="r" style="width:60px;">Qty</th>
-            <th class="r" style="width:120px;">Service Charge</th>
-            <th class="r" style="width:120px;">Total (AED)</th>
-            <th style="width:30px;"></th>
-          </tr></thead>
-          <tbody id="invsItemsBody"></tbody>
-        </table>
+        <div id="invsItemsBody" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
         <button class="inv-add-btn green" onclick="addRow('invs')">+ Add Line</button>
         <div class="inv-totals-wrap"><div class="inv-totals-box">
           <div class="inv-tot-row"><span class="lbl">Subtotal</span><span class="val" id="invsSubtotal">AED 0.00</span></div>
