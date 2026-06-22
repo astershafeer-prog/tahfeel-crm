@@ -393,16 +393,6 @@ function addRow(prefix) {
   var tb = document.getElementById(prefix+'ItemsBody');
   var n = prefix==='inv' ? ++invRowN : (prefix==='invs' ? ++invsRowN : ++qtRowN);
   var rid = prefix+'r'+n;
-  var tr = document.createElement('tr');
-  tr.id = rid;
-  var opts = '<option value="">— Select service —</option>';
-  services.forEach(function(s){ opts+='<option value="'+s+'">'+s+'</option>'; });
-  opts += '<option value="__other__">Other (type below)</option>';
-  
-function addRow(prefix) {
-  var tb = document.getElementById(prefix+'ItemsBody');
-  var n = prefix==='inv' ? ++invRowN : (prefix==='invs' ? ++invsRowN : ++qtRowN);
-  var rid = prefix+'r'+n;
   var div = document.createElement('div');
   div.id = rid;
   var opts = '<option value="">— Select service —</option>';
@@ -445,7 +435,6 @@ function addRow(prefix) {
   }
   tb.appendChild(div);
   renum(prefix);
-}
 }
 
 function svcSel(s, prefix) {
