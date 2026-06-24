@@ -17,12 +17,11 @@ def now_dubai():
     return datetime.now(DUBAI_TZ).replace(tzinfo=None)
 
 
-# ── Round-robin state ─────────────────────────────────────────────────────────
-_rr_index = 0
-
-def get_next_sales_staff(db, User):
-    """Pick next active, non-leave sales staff in round-robin order."""
-    global _rr_index
+# ── Round-robin assignment ────────────────────────────────────────────────────
+def get_next_sales_staff(db, User, Lead):
+    """Assign the new lead to the active sales staff member who was assigned a lead
+    LEAST recently. This is true round-robin that survives restarts/redeploys and
+    works across all gunicorn workers (state lives in the DB, not in memory)."""
     staff = User.query.filter(
         User.active == True,
         User.on_leave == False,
@@ -39,10 +38,13 @@ def get_next_sales_staff(db, User):
     if not staff:
         return None
 
-    _rr_index = _rr_index % len(staff)
-    chosen = staff[_rr_index]
-    _rr_index += 1
-    return chosen
+    def last_lead_id(s):
+        last = Lead.query.filter_by(assigned_to=s.id).order_by(Lead.id.desc()).first()
+        return last.id if last else 0
+
+    # The staff member whose most-recent lead is oldest (or who has none) is next up.
+    # Ties resolve to lowest User.id (staff list is already id-ordered, min is stable).
+    return min(staff, key=last_lead_id)
 
 
 # ── Fetch lead details from Meta API ─────────────────────────────────────────
@@ -98,8 +100,8 @@ def save_lead_to_crm(lead_data, raw_meta):
         print(f'[Meta] Duplicate lead ignored: {meta_lead_id}')
         return None
 
-    # Round-robin assignment
-    assigned_user = get_next_sales_staff(db, User)
+    # Round-robin assignment (least-recently-assigned active sales staff)
+    assigned_user = get_next_sales_staff(db, User, Lead)
 
     remarks = f'Preferred call time: {pref_time}' if pref_time else ''
 
