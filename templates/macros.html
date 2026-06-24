@@ -67,8 +67,10 @@ loadTheme();
 </script>
 
 <style>
-@keyframes tfSlideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes tfFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tfPop { 0% { transform: scale(.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes tfBellShake { 0%,100%{transform:rotate(0);} 20%{transform:rotate(16deg);} 40%{transform:rotate(-14deg);} 60%{transform:rotate(10deg);} 80%{transform:rotate(-6deg);} }
+@keyframes tfBellPulse { 0%,100%{box-shadow:0 0 0 0 rgba(229,62,62,.5);} 50%{box-shadow:0 0 0 6px rgba(229,62,62,0);} }
 #leadBell.ring span:first-child { display:inline-block; animation: tfBellShake .6s ease; }
 </style>
 <script>
@@ -94,22 +96,35 @@ loadTheme();
     } catch(e){}
   }
 
-  function showToast(lead){
-    var t = document.createElement('div');
-    t.style.cssText = 'position:fixed;top:18px;right:18px;z-index:99999;background:#0F2660;color:#fff;'+
-      'padding:13px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);max-width:320px;'+
-      'cursor:pointer;border-left:4px solid #38A169;font-family:inherit;animation:tfSlideIn .25s ease;';
-    t.innerHTML = '<div style="font-size:12px;font-weight:700;letter-spacing:.3px;margin-bottom:3px;">🔔 NEW LEAD RECEIVED</div>'+
-      '<div style="font-size:15px;font-weight:600;">'+ (lead.name||'Lead') +'</div>'+
-      (lead.source ? '<div style="font-size:12px;opacity:.85;margin-top:2px;">'+ lead.source +'</div>' : '')+
-      '<div style="font-size:11px;opacity:.6;margin-top:4px;">Click to open →</div>';
-    t.onclick = function(){ window.location.href = '/leads/' + lead.id; };
-    document.body.appendChild(t);
-    setTimeout(function(){
-      t.style.transition = 'opacity .4s, transform .4s';
-      t.style.opacity = '0'; t.style.transform = 'translateX(120%)';
-      setTimeout(function(){ t.remove(); }, 420);
-    }, 10000);
+  function showBigAlert(lead, extra){
+    var old = document.getElementById('tfLeadAlert');
+    if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'tfLeadAlert';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(8,18,45,.55);'+
+      'display:flex;align-items:center;justify-content:center;animation:tfFadeIn .2s ease;';
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;color:#0F2660;width:min(92vw,440px);border-radius:20px;'+
+      'padding:32px 28px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.45);'+
+      'border-top:7px solid #38A169;animation:tfPop .3s cubic-bezier(.2,.9,.3,1.35);font-family:inherit;';
+    card.innerHTML =
+      '<div style="font-size:52px;line-height:1;margin-bottom:6px;">🔔</div>'+
+      '<div style="font-size:13px;font-weight:800;letter-spacing:1.5px;color:#2F855A;margin-bottom:12px;">NEW LEAD RECEIVED</div>'+
+      '<div style="font-size:27px;font-weight:800;margin-bottom:5px;line-height:1.15;">'+ (lead.name||'Lead') +'</div>'+
+      (lead.source ? '<div style="font-size:14px;color:#5b6b8c;margin-bottom:2px;">'+ lead.source +'</div>' : '')+
+      (lead.created_at ? '<div style="font-size:12px;color:#9aa6bd;">'+ lead.created_at +'</div>' : '')+
+      (extra>0 ? '<div style="margin-top:14px;font-size:13px;font-weight:700;color:#E53E3E;">+ '+extra+' more new lead'+(extra>1?'s':'')+' waiting</div>' : '')+
+      '<div style="display:flex;gap:10px;margin-top:24px;">'+
+        '<button id="tfAlertOpen" style="flex:1;background:#0F2660;color:#fff;border:none;padding:14px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">Open Lead →</button>'+
+        '<button id="tfAlertClose" style="background:#EDF1F7;color:#46557a;border:none;padding:14px 18px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">Dismiss</button>'+
+      '</div>';
+    ov.appendChild(card);
+    document.body.appendChild(ov);
+    function close(){ ov.style.transition='opacity .2s'; ov.style.opacity='0'; setTimeout(function(){ if(ov.parentNode) ov.remove(); }, 200); }
+    document.getElementById('tfAlertOpen').onclick = function(){ window.location.href = '/leads/' + lead.id; };
+    document.getElementById('tfAlertClose').onclick = close;
+    ov.onclick = function(e){ if(e.target === ov) close(); };
+    setTimeout(close, 20000);   // auto-dismiss after 20s if ignored
   }
 
   function poll(){
@@ -129,8 +144,8 @@ loadTheme();
         }
         if(d.latest_id > stored){
           var fresh = (d.recent || []).filter(function(l){ return l.id > stored; });
-          fresh.reverse().forEach(function(l){ showToast(l); });
           if(fresh.length){
+            showBigAlert(fresh[0], fresh.length - 1);   // fresh[0] = newest (recent is id-desc)
             beep();
             bell.classList.remove('ring'); void bell.offsetWidth; bell.classList.add('ring');
           }
