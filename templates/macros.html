@@ -11,6 +11,11 @@
       <button class="theme-btn" onclick="setTheme('black')" title="Dark theme" style="background: #0f0f0f; border: 1px solid #333;">Dark</button>
     </div>
 
+    <a href="/leads" id="leadBell" title="New leads" style="position:relative;text-decoration:none;display:flex;align-items:center;font-size:19px;line-height:1;margin-right:4px;">
+      <span style="filter:grayscale(0);">🔔</span>
+      <span id="leadBellBadge" style="display:none;position:absolute;top:-7px;right:-9px;background:#E53E3E;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:999px;padding:0 4px;box-shadow:0 0 0 2px rgba(15,38,96,.9);">0</span>
+    </a>
+
     <div class="topbar-user">
       <div class="topbar-avatar">{{ session.user_name[0]|upper if session.user_name else 'U' }}</div>
       <span>{{ session.user_name }}</span>
@@ -59,6 +64,85 @@ function loadTheme() {
 // Load theme on page load
 document.addEventListener('DOMContentLoaded', loadTheme);
 loadTheme();
+</script>
+
+<style>
+@keyframes tfSlideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes tfBellShake { 0%,100%{transform:rotate(0);} 20%{transform:rotate(16deg);} 40%{transform:rotate(-14deg);} 60%{transform:rotate(10deg);} 80%{transform:rotate(-6deg);} }
+#leadBell.ring span:first-child { display:inline-block; animation: tfBellShake .6s ease; }
+</style>
+<script>
+// ── New-lead alert: bell badge + toast + beep (polls every 25s) ──────────────
+(function(){
+  var BELL_KEY = 'tahfeel_lastLeadId_{{ session.user_id }}';
+  var bell  = document.getElementById('leadBell');
+  var badge = document.getElementById('leadBellBadge');
+  if(!bell || !badge) return;
+  var firstRun = true;
+
+  function beep(){
+    try{
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if(!Ctx) return;
+      var ctx = new Ctx(), o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+      o.start(); o.stop(ctx.currentTime + 0.45);
+    } catch(e){}
+  }
+
+  function showToast(lead){
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:18px;right:18px;z-index:99999;background:#0F2660;color:#fff;'+
+      'padding:13px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);max-width:320px;'+
+      'cursor:pointer;border-left:4px solid #38A169;font-family:inherit;animation:tfSlideIn .25s ease;';
+    t.innerHTML = '<div style="font-size:12px;font-weight:700;letter-spacing:.3px;margin-bottom:3px;">🔔 NEW LEAD RECEIVED</div>'+
+      '<div style="font-size:15px;font-weight:600;">'+ (lead.name||'Lead') +'</div>'+
+      (lead.source ? '<div style="font-size:12px;opacity:.85;margin-top:2px;">'+ lead.source +'</div>' : '')+
+      '<div style="font-size:11px;opacity:.6;margin-top:4px;">Click to open →</div>';
+    t.onclick = function(){ window.location.href = '/leads/' + lead.id; };
+    document.body.appendChild(t);
+    setTimeout(function(){
+      t.style.transition = 'opacity .4s, transform .4s';
+      t.style.opacity = '0'; t.style.transform = 'translateX(120%)';
+      setTimeout(function(){ t.remove(); }, 420);
+    }, 10000);
+  }
+
+  function poll(){
+    fetch('/api/lead-alerts', { headers: { 'X-Requested-With': 'fetch' } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(!d) return;
+        if(d.count > 0){ badge.textContent = d.count > 99 ? '99+' : d.count; badge.style.display = 'block'; }
+        else { badge.style.display = 'none'; }
+
+        var stored = parseInt(localStorage.getItem(BELL_KEY) || '0', 10);
+        if(firstRun){
+          // First load on this page = baseline only, never toast pre-existing leads
+          if(d.latest_id > stored) localStorage.setItem(BELL_KEY, String(d.latest_id));
+          firstRun = false;
+          return;
+        }
+        if(d.latest_id > stored){
+          var fresh = (d.recent || []).filter(function(l){ return l.id > stored; });
+          fresh.reverse().forEach(function(l){ showToast(l); });
+          if(fresh.length){
+            beep();
+            bell.classList.remove('ring'); void bell.offsetWidth; bell.classList.add('ring');
+          }
+          localStorage.setItem(BELL_KEY, String(d.latest_id));
+        }
+      })
+      .catch(function(){});
+  }
+
+  poll();                       // run shortly after load
+  setInterval(poll, 25000);     // then every 25s
+})();
 </script>
 
 {% endmacro %}

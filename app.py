@@ -510,6 +510,26 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+@app.route('/api/lead-alerts')
+@login_required
+def api_lead_alerts():
+    """Lightweight JSON feed for the new-lead bell/toast in the top bar.
+    Admin sees all 'New' leads; everyone else sees leads assigned to them."""
+    from flask import jsonify
+    base = Lead.query.filter(Lead.status == 'New')
+    if session.get('role') != 'admin':
+        base = base.filter(Lead.assigned_to == session['user_id'])
+    count = base.count()
+    new_leads = base.order_by(Lead.id.desc()).limit(8).all()
+    recent = [{
+        'id': l.id,
+        'name': l.name or 'Lead',
+        'source': l.source or '',
+        'created_at': l.created_at.strftime('%d %b, %I:%M %p') if l.created_at else '',
+    } for l in new_leads]
+    latest_id = new_leads[0].id if new_leads else 0
+    return jsonify({'count': count, 'latest_id': latest_id, 'recent': recent})
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
