@@ -66,6 +66,9 @@
         <a href="/leads?status=Lost" style="text-decoration:none;">
           <div class="stat-row"><span class="stat-name" style="color:#EF4444;font-weight:500;">Lost</span><span class="stat-val" style="color:#EF4444;">{{ lost|length }}</span></div>
         </a>
+        <a href="/leads?status=Future" style="text-decoration:none;">
+          <div class="stat-row"><span class="stat-name" style="color:#8B5CF6;font-weight:500;">🔮 Future{% if future_due and future_due|length %} <span style="background:#8B5CF6;color:#fff;padding:0 6px;border-radius:10px;font-size:10px;">{{ future_due|length }} due</span>{% endif %}</span><span class="stat-val" style="color:#8B5CF6;">{{ future|length }}</span></div>
+        </a>
       </div>
 
       <!-- Tasks Block -->

@@ -124,6 +124,7 @@
                 <option value="Potential Lead" {% if lead.status == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
                 <option value="Converted" {% if lead.status == 'Converted' %}selected{% endif %}>Converted</option>
                 <option value="Lost" {% if lead.status == 'Lost' %}selected{% endif %}>Lost</option>
+                <option value="Future" {% if lead.status == 'Future' %}selected{% endif %}>🔮 Future — Revisit Later</option>
               </select>
             </div>
             <div class="lost-fields" id="lostFields" style="display:none;">
@@ -175,6 +176,7 @@
               {% elif 'mail' in stage_lower or 'email' in stage_lower %}📧
               {% elif 'call' in stage_lower %}📞
               {% elif 'converted' in stage_lower %}✅
+              {% elif 'future' in stage_lower %}🔮
               {% elif 'lost' in stage_lower %}❌
               {% elif 'meeting' in stage_lower %}🤝
               {% elif 'quotation' in stage_lower %}📄
@@ -220,13 +222,22 @@
         followupDate.value = getTomorrow();
       }
       const followupField = document.getElementById('followupField');
+      const followupLabel = document.querySelector('#followupField label');
       if (NO_FOLLOWUP_STATUSES.includes(stage)) {
         followupField.style.display = 'none';
         followupDate.required = false;
       } else {
         followupField.style.display = 'block';
         followupDate.required = true;
-        followupDate.min = today;
+        if (stage === 'Future') {
+          // Future leads must be revisited on a later date — earliest is tomorrow.
+          followupDate.min = getTomorrow();
+          if (followupDate.value && followupDate.value < getTomorrow()) followupDate.value = getTomorrow();
+          if (followupLabel) followupLabel.innerHTML = '🔮 Revisit date (when this lead comes back) <span style="color:var(--danger);">*</span>';
+        } else {
+          followupDate.min = today;
+          if (followupLabel) followupLabel.innerHTML = 'Follow-up date <span style="color:var(--danger);" id="followupReq">*</span>';
+        }
       }
     }
     // Run on page load to set correct visibility

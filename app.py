@@ -464,9 +464,10 @@ def apply_lead_filters(leads, args, now):
         if status_filter == 'Overdue':
             leads = [l for l in leads if l.due_date < now and l.status not in ['Converted', 'Lost']]
         elif status_filter == 'Initiated':
-            # Initiated = any action taken (not New, Converted, or Lost)
-            leads = [l for l in leads if l.status not in ['New', 'Converted', 'Lost']]
+            # Initiated = any action taken (not New, Converted, Lost, or Future)
+            leads = [l for l in leads if l.status not in ['New', 'Converted', 'Lost', 'Future']]
         else:
+            # Includes status_filter == 'Future' (shows all parked + due future leads)
             leads = [l for l in leads if l.status == status_filter]
     
     if staff_filter:
@@ -822,12 +823,14 @@ def dashboard():
 
         # Lead stats
         total = len(leads)
-        overdue_leads = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
+        overdue_leads = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost', 'Future']]
         converted = [l for l in leads if l.status == 'Converted']
         lost = [l for l in leads if l.status == 'Lost']
         new_leads = [l for l in leads if l.status == 'New']
-        # Initiated = any action taken (not New, Converted, or Lost)
-        initiated = [l for l in leads if l.status not in ['New', 'Converted', 'Lost']]
+        future = [l for l in leads if l.status == 'Future']
+        future_due = [l for l in future if l.due_date and l.due_date.date() <= now.date()]
+        # Initiated = any action taken (not New, Converted, Lost, or Future)
+        initiated = [l for l in leads if l.status not in ['New', 'Converted', 'Lost', 'Future']]
 
         users = User.query.filter_by(active=True).filter(User.role != 'admin').all()
         # Workload — always this month
@@ -883,6 +886,7 @@ def dashboard():
                 'overdue_leads': len([l for l in u_leads if l.due_date and l.due_date < now and l.status not in ['Converted','Lost']]),
                 'conversions': len([l for l in u_leads if l.status == 'Converted']),
                 'lost': len([l for l in u_leads if l.status == 'Lost']),
+                'future': len([l for l in u_leads if l.status == 'Future']),
                 'active_jobs': len([j for j in u_jobs_all if j.status not in ['Done','Closed','Pending Finance Approval']]),
                 'overdue_jobs': len([j for j in u_jobs_all if j.due_date and j.due_date < now and j.status not in ['Done','Closed','Pending Finance Approval']]),
                 'invoiced': u_invoiced,
@@ -914,6 +918,7 @@ def dashboard():
                                wl_filter=wl_filter, wl_from=wl_from, wl_to=wl_to,
                                total=total, overdue_leads=overdue_leads,
                                converted=converted, lost=lost, new_leads=new_leads, initiated=initiated,
+                               future=future, future_due=future_due,
                                jobs=jobs, active_jobs=active_jobs,
                                overdue_jobs=overdue_jobs, done_jobs=done_jobs,
                                pending_approval=pending_approval,
@@ -948,11 +953,13 @@ def dashboard():
         leads = [l for l in all_leads if l.created_at and l.created_at.year == now.year and l.created_at.month == now.month]
     else:
         leads = all_leads
-    overdue = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost']]
+    overdue = [l for l in leads if l.due_date and l.due_date < now and l.status not in ['Converted', 'Lost', 'Future']]
     converted = [l for l in leads if l.status == 'Converted']
     lost = [l for l in leads if l.status == 'Lost']
     new_leads = [l for l in leads if l.status == 'New']
-    initiated = [l for l in leads if l.status not in ['New', 'Converted', 'Lost']]
+    future = [l for l in leads if l.status == 'Future']
+    future_due = [l for l in future if l.due_date and l.due_date.date() <= now.date()]
+    initiated = [l for l in leads if l.status not in ['New', 'Converted', 'Lost', 'Future']]
     try:
         my_jobs = Job.query.filter_by(assigned_to=session['user_id']).filter(Job.status.notin_(['Done','Closed'])).order_by(Job.due_date).all()
         pending_approval_jobs = [j for j in my_jobs if j.status == 'Pending Finance Approval']
@@ -994,6 +1001,7 @@ def dashboard():
     return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
                            birthdays_today=birthdays_today,
                            converted=converted, lost=lost, new_leads=new_leads, initiated=initiated,
+                           future=future, future_due=future_due,
                            my_jobs=my_jobs, overdue_jobs=overdue_jobs,
                            total_invoiced=total_invoiced,
                            total_received=total_received,
@@ -1050,7 +1058,17 @@ def all_leads():
     if is_default:
         # Default: show this week's leads
         week_start = (now - timedelta(days=now.weekday())).date()
-        leads = [l for l in leads if l.created_at and l.created_at.date() >= week_start]
+        today = now.date()
+        # This week's leads, but exclude Future leads still parked (revisit date not yet due)
+        base_leads = [l for l in leads
+                      if l.created_at and l.created_at.date() >= week_start
+                      and not (l.status == 'Future' and l.due_date and l.due_date.date() > today)]
+        # Always resurface Future leads whose revisit date is now due — even older ones
+        due_future = [l for l in leads
+                      if l.status == 'Future' and l.due_date and l.due_date.date() <= today]
+        ids = {l.id for l in base_leads}
+        leads = base_leads + [l for l in due_future if l.id not in ids]
+        leads.sort(key=lambda l: (l.due_date or now))
     else:
         leads = apply_lead_filters(leads, args, now)
 
@@ -1159,6 +1177,10 @@ def lead_detail(lead_id):
         remark = request.form['remark']
         followup = request.form.get('followup_date')
         followup_dt = datetime.strptime(followup, '%Y-%m-%d') if followup else None
+        # A "Future" lead must have a revisit date — that's what brings it back later.
+        if stage == 'Future' and not followup_dt:
+            flash('Please pick a future revisit date for a Future lead.')
+            return redirect(url_for('lead_detail', lead_id=lead_id))
         update = LeadUpdate(
             lead_id=lead.id, stage=stage, remark=remark,
             staff_name=session['user_name'], followup_date=followup_dt,

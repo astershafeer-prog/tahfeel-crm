@@ -30,30 +30,11 @@
 
     <!-- Staff Management — full width -->
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-header">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
         <h2>👥 Staff Management</h2>
+        <button type="button" class="btn-primary" style="height:34px;padding:0 16px;" onclick="openStaffModal()">+ Add Staff</button>
       </div>
       <div class="card-body">
-        <form method="POST" action="/admin/staff/add">
-          <div class="section-label">Add New Staff</div>
-          <div class="form-row-2" style="align-items:flex-end;">
-            <div class="form-group"><label>Full Name</label><input type="text" name="name" required placeholder="Staff name"></div>
-            <div class="form-group"><label>Email</label><input type="email" name="email" required placeholder="email@tahfeel.ae"></div>
-            <div class="form-group"><label>Mobile Number <span style="color:#94A3B8;font-weight:400;">(optional)</span></label><input type="text" name="phone" placeholder="+971 XX XXX XXXX"></div>
-            <div class="form-group"><label>Password</label><input type="password" name="password" required placeholder="Password"></div>
-            <div class="form-group">
-              <label>Role</label>
-              <select name="role">
-                <option value="sales">Sales</option>
-                <option value="operations">Operations</option>
-                <option value="finance">Finance</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-          </div>
-          <button type="submit" class="btn-primary" style="margin-top:4px;">Add Staff</button>
-        </form>
-        <hr class="divider">
         <div class="section-label">Current Staff</div>
         <table>
           <thead>
@@ -113,6 +94,34 @@
             {% endfor %}
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Add Staff Modal -->
+    <div class="modal-overlay" id="staffModal" style="display:none;">
+      <div class="modal-box" style="max-width:560px;width:92%;text-align:left;">
+        <h3 style="margin-top:0;">➕ Add New Staff</h3>
+        <form method="POST" action="/admin/staff/add">
+          <div class="form-row-2" style="align-items:flex-end;">
+            <div class="form-group"><label>Full Name</label><input type="text" name="name" required placeholder="Staff name"></div>
+            <div class="form-group"><label>Email</label><input type="email" name="email" required placeholder="email@tahfeel.ae"></div>
+            <div class="form-group"><label>Mobile Number <span style="color:#94A3B8;font-weight:400;">(optional)</span></label><input type="text" name="phone" placeholder="+971 XX XXX XXXX"></div>
+            <div class="form-group"><label>Password</label><input type="password" name="password" required placeholder="Password"></div>
+            <div class="form-group">
+              <label>Role</label>
+              <select name="role">
+                <option value="sales">Sales</option>
+                <option value="operations">Operations</option>
+                <option value="finance">Finance</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
+            <button type="button" class="btn-sm" onclick="closeStaffModal()">Cancel</button>
+            <button type="submit" class="btn-primary">Add Staff</button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -389,6 +398,12 @@
       const row = document.getElementById('edit-row-' + id);
       row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
     }
+    function openStaffModal() { document.getElementById('staffModal').classList.add('active'); }
+    function closeStaffModal() { document.getElementById('staffModal').classList.remove('active'); }
+    (function(){
+      var m = document.getElementById('staffModal');
+      if (m) m.addEventListener('click', function(e){ if (e.target === this) closeStaffModal(); });
+    })();
     function jtEdit(id) { document.getElementById('jt-view-'+id).style.display='none'; document.getElementById('jt-form-'+id).style.display='flex'; }
     function jtCancel(id) { document.getElementById('jt-view-'+id).style.display='flex'; document.getElementById('jt-form-'+id).style.display='none'; }
     function svEdit(id) { document.getElementById('sv-view-'+id).style.display='none'; document.getElementById('sv-form-'+id).style.display='flex'; }

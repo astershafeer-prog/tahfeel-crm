@@ -88,6 +88,7 @@
             <option value="Quotation Sent" {% if active_status == 'Quotation Sent' %}selected{% endif %}>Quotation Sent</option>
             <option value="Converted" {% if active_status == 'Converted' %}selected{% endif %}>Converted</option>
             <option value="Lost" {% if active_status == 'Lost' %}selected{% endif %}>Lost</option>
+            <option value="Future" {% if active_status == 'Future' %}selected{% endif %}>🔮 Future</option>
             <option value="Overdue" {% if active_status == 'Overdue' %}selected{% endif %}>⚠ Overdue</option>
           </select>
         </div>
@@ -157,7 +158,16 @@
                 <tr id="row-{{ lead.id }}">
                   <td><input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="row-check" onchange="updateBulkBar()"></td>
                   <td colspan="2">
-                    <div style="font-size:13px;font-weight:700;color:#1A3B8B;">{{ lead.name }}</div>
+                    <div style="font-size:13px;font-weight:700;color:#1A3B8B;">
+                      {{ lead.name }}
+                      {% if lead.status == 'Future' %}
+                        {% if lead.due_date and lead.due_date.date() <= now.date() %}
+                          <span title="Future lead — revisit date is due" style="background:#8B5CF6;color:#fff;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;margin-left:4px;">🔮 Future due</span>
+                        {% else %}
+                          <span title="Future lead — parked until {{ lead.due_date.strftime('%d %b %Y') if lead.due_date else '' }}" style="font-size:12px;margin-left:4px;">🔮</span>
+                        {% endif %}
+                      {% endif %}
+                    </div>
                     {% if lead.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ lead.company }}</div>{% endif %}
                   </td>
                   <td>{{ lead.service or '—' }}</td>
@@ -171,7 +181,7 @@
                   </td>
                   <td style="font-size:12px;color:var(--text-muted);">{{ lead.created_at.strftime('%d %b') if lead.created_at else '—' }}</td>
                   <td>
-                    {% set is_overdue = lead.due_date < now and lead.status not in ['Converted','Lost'] %}
+                    {% set is_overdue = lead.due_date < now and lead.status not in ['Converted','Lost','Future'] %}
                     <span class="due-pill {% if is_overdue %}overdue{% endif %}">📅 {{ lead.due_date.strftime('%d %b') }}</span>
                   </td>
                   <td>
@@ -179,6 +189,8 @@
                       <span style="background:#DCFCE7;color:#15803D;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif lead.status == 'Lost' %}
                       <span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif lead.status == 'Future' %}
+                      <span style="background:#F5F3FF;color:#7C3AED;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">🔮 {{ lead.status }}</span>
                     {% elif lead.status == 'Potential Lead' %}
                       <span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif 'Connected' in lead.status or 'Called' in lead.status %}
