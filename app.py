@@ -1738,45 +1738,6 @@ def admin_edit_staff(user_id):
     flash('Staff member updated successfully')
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/cleanup/delete-info-account', methods=['POST'])
-@login_required
-@admin_required
-def admin_delete_info_account():
-    # TEMPORARY one-off cleanup — deletes only the unused info@tahfeel.ae account.
-    # Remove this route (and its button in admin_panel.html) after it has been used.
-    user = User.query.filter_by(email='info@tahfeel.ae').first()
-    if not user:
-        flash('No account found with email info@tahfeel.ae (already removed?).')
-        return redirect(url_for('admin_panel'))
-    if user.id == session.get('user_id'):
-        flash('You cannot delete your own account.')
-        return redirect(url_for('admin_panel'))
-    name = user.name
-    try:
-        # Detach nullable references so the delete can't fail on a foreign key
-        Lead.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
-        Customer.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
-        Task.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
-        Task.query.filter_by(created_by=user.id).update({'created_by': None}, synchronize_session=False)
-        Job.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
-        Job.query.filter_by(created_by=user.id).update({'created_by': None}, synchronize_session=False)
-        Job.query.filter_by(finance_approved_by=user.id).update({'finance_approved_by': None}, synchronize_session=False)
-        SubTask.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
-        PartialRevenue.query.filter_by(recorded_by=user.id).update({'recorded_by': None}, synchronize_session=False)
-        Document.query.filter_by(uploaded_by=user.id).update({'uploaded_by': None}, synchronize_session=False)
-        DeskNote.query.filter_by(mention_user_id=user.id).update({'mention_user_id': None}, synchronize_session=False)
-        # Per-user records that can't be null — remove them with the user
-        DeskNote.query.filter_by(user_id=user.id).delete(synchronize_session=False)
-        MonthlyTarget.query.filter_by(user_id=user.id).delete(synchronize_session=False)
-        ActivityLog.query.filter_by(user_id=user.id).delete(synchronize_session=False)
-        db.session.delete(user)
-        db.session.commit()
-        flash(f'Staff member "{name}" permanently deleted.')
-    except Exception as e:
-        db.session.rollback()
-        flash('Could not delete — ' + str(e))
-    return redirect(url_for('admin_panel'))
-
 @app.route('/admin/service/add', methods=['POST'])
 @login_required
 @admin_required
