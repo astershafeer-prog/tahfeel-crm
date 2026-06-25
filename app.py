@@ -553,10 +553,13 @@ def api_lead_alerts():
     """Lightweight JSON feed for the new-lead bell/toast in the top bar.
     Admin sees all 'New' leads; everyone else sees leads assigned to them."""
     from flask import jsonify
+    since = request.args.get('since', 0, type=int)
     base = Lead.query.filter(Lead.status == 'New')
     if session.get('role') != 'admin':
         base = base.filter(Lead.assigned_to == session['user_id'])
     count = base.count()
+    # "unseen" = New leads newer than the last one the user acknowledged (bell click)
+    unseen = base.filter(Lead.id > since).count()
     new_leads = base.order_by(Lead.id.desc()).limit(8).all()
     recent = [{
         'id': l.id,
@@ -565,7 +568,7 @@ def api_lead_alerts():
         'created_at': l.created_at.strftime('%d %b, %I:%M %p') if l.created_at else '',
     } for l in new_leads]
     latest_id = new_leads[0].id if new_leads else 0
-    return jsonify({'count': count, 'latest_id': latest_id, 'recent': recent})
+    return jsonify({'count': count, 'unseen': unseen, 'latest_id': latest_id, 'recent': recent})
 
 @app.route('/dashboard')
 @login_required
@@ -1733,6 +1736,45 @@ def admin_edit_staff(user_id):
     user.phone = request.form.get('phone', '').strip() or None
     db.session.commit()
     flash('Staff member updated successfully')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/cleanup/delete-info-account', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_info_account():
+    # TEMPORARY one-off cleanup — deletes only the unused info@tahfeel.ae account.
+    # Remove this route (and its button in admin_panel.html) after it has been used.
+    user = User.query.filter_by(email='info@tahfeel.ae').first()
+    if not user:
+        flash('No account found with email info@tahfeel.ae (already removed?).')
+        return redirect(url_for('admin_panel'))
+    if user.id == session.get('user_id'):
+        flash('You cannot delete your own account.')
+        return redirect(url_for('admin_panel'))
+    name = user.name
+    try:
+        # Detach nullable references so the delete can't fail on a foreign key
+        Lead.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
+        Customer.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
+        Task.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
+        Task.query.filter_by(created_by=user.id).update({'created_by': None}, synchronize_session=False)
+        Job.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
+        Job.query.filter_by(created_by=user.id).update({'created_by': None}, synchronize_session=False)
+        Job.query.filter_by(finance_approved_by=user.id).update({'finance_approved_by': None}, synchronize_session=False)
+        SubTask.query.filter_by(assigned_to=user.id).update({'assigned_to': None}, synchronize_session=False)
+        PartialRevenue.query.filter_by(recorded_by=user.id).update({'recorded_by': None}, synchronize_session=False)
+        Document.query.filter_by(uploaded_by=user.id).update({'uploaded_by': None}, synchronize_session=False)
+        DeskNote.query.filter_by(mention_user_id=user.id).update({'mention_user_id': None}, synchronize_session=False)
+        # Per-user records that can't be null — remove them with the user
+        DeskNote.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+        MonthlyTarget.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+        ActivityLog.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+        db.session.delete(user)
+        db.session.commit()
+        flash(f'Staff member "{name}" permanently deleted.')
+    except Exception as e:
+        db.session.rollback()
+        flash('Could not delete — ' + str(e))
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/service/add', methods=['POST'])

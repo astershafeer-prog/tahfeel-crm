@@ -76,11 +76,19 @@ loadTheme();
 <script>
 // ── New-lead alert: bell badge + toast + beep (polls every 25s) ──────────────
 (function(){
-  var BELL_KEY = 'tahfeel_lastLeadId_{{ session.user_id }}';
+  var BELL_KEY = 'tahfeel_lastLeadId_{{ session.user_id }}';   // popup baseline
+  var SEEN_KEY = 'tahfeel_seenLeadId_{{ session.user_id }}';   // badge baseline (cleared on bell click)
   var bell  = document.getElementById('leadBell');
   var badge = document.getElementById('leadBellBadge');
   if(!bell || !badge) return;
   var firstRun = true;
+  var lastLatestId = 0;
+
+  // Clicking the bell acknowledges all current new leads → badge clears (then navigates to /leads)
+  bell.addEventListener('click', function(){
+    if(lastLatestId) localStorage.setItem(SEEN_KEY, String(lastLatestId));
+    badge.style.display = 'none';
+  });
 
   function beep(){
     try{
@@ -124,15 +132,19 @@ loadTheme();
     document.getElementById('tfAlertOpen').onclick = function(){ window.location.href = '/leads/' + lead.id; };
     document.getElementById('tfAlertClose').onclick = close;
     ov.onclick = function(e){ if(e.target === ov) close(); };
-    setTimeout(close, 20000);   // auto-dismiss after 20s if ignored
+    // Stays until the user clicks Open/Dismiss (or outside the card) — no auto-close.
   }
 
   function poll(){
-    fetch('/api/lead-alerts', { headers: { 'X-Requested-With': 'fetch' } })
+    var seen = parseInt(localStorage.getItem(SEEN_KEY) || '0', 10);
+    fetch('/api/lead-alerts?since=' + seen, { headers: { 'X-Requested-With': 'fetch' } })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(d){
         if(!d) return;
-        if(d.count > 0){ badge.textContent = d.count > 99 ? '99+' : d.count; badge.style.display = 'block'; }
+        lastLatestId = d.latest_id || 0;
+        // Badge = unseen new leads since the bell was last clicked (not the whole backlog)
+        var unseen = (typeof d.unseen === 'number') ? d.unseen : d.count;
+        if(unseen > 0){ badge.textContent = unseen > 99 ? '99+' : unseen; badge.style.display = 'block'; }
         else { badge.style.display = 'none'; }
 
         var stored = parseInt(localStorage.getItem(BELL_KEY) || '0', 10);

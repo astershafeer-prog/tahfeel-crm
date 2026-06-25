@@ -36,8 +36,13 @@
       </div>
       <div class="card-body">
         <div class="section-label">Current Staff</div>
+        <!-- TEMPORARY: one-off cleanup button for the unused info@tahfeel.ae account. Remove after use. -->
+        <form method="POST" action="/admin/cleanup/delete-info-account" onsubmit="return confirm('Permanently delete the unused info@tahfeel.ae account? This cannot be undone.');" style="margin-bottom:10px;">
+          <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);">🗑 Delete info@tahfeel.ae (temporary)</button>
+        </form>
+        <div style="max-height:440px;overflow-y:auto;border:0.5px solid var(--border);border-radius:var(--radius-sm);">
         <table>
-          <thead>
+          <thead style="position:sticky;top:0;z-index:1;background:var(--bg);">
             <tr>
               <th>Name</th>
               <th>Email</th>
@@ -94,6 +99,7 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
 
