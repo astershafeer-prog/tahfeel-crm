@@ -1,2 +1,21 @@
 __pycache__/
 instance/
+
+# Secrets — never commit
+.env
+.env.*
+*.env
+
+# Databases — contain PII and password hashes
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups
+backups/
+*.sql
+*.sql.gz
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db

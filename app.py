@@ -38,7 +38,13 @@ from functools import wraps
 import os
 
 app = Flask(__name__)
-app.secret_key = 'tahfeel2026secretkey'
+# Secret key signs all session cookies. MUST be set via the SECRET_KEY env var in Railway.
+# The fallback only exists so the app still boots if the var is missing — it is NOT secure
+# (it is public in git history) so set SECRET_KEY in Railway to override it.
+app.secret_key = os.environ.get('SECRET_KEY') or 'tahfeel2026secretkey'
+if app.secret_key == 'tahfeel2026secretkey':
+    print('⚠️  SECURITY WARNING: SECRET_KEY env var not set — using insecure public fallback. '
+          'Set SECRET_KEY in Railway and redeploy to secure sessions.')
 # Session configuration for custom domain support
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS only
@@ -48,6 +54,17 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tahfeel.db')).replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+@app.after_request
+def set_security_headers(resp):
+    # Defensive headers — safe defaults that don't affect existing pages.
+    resp.headers['X-Content-Type-Options'] = 'nosniff'
+    resp.headers['X-Frame-Options'] = 'SAMEORIGIN'           # blocks clickjacking
+    resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    resp.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+    # HSTS: site is already HTTPS-only (SESSION_COOKIE_SECURE=True)
+    resp.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return resp
 
 @app.errorhandler(500)
 def internal_error(error):
@@ -484,11 +501,28 @@ def apply_lead_filters(leads, args, now):
 def index():
     return redirect(url_for('login'))
 
+import time as _time
+from collections import defaultdict as _defaultdict
+_login_attempts = _defaultdict(list)   # ip -> [failed-attempt timestamps]
+_LOGIN_MAX_ATTEMPTS = 10               # per window, per IP
+_LOGIN_WINDOW = 300                    # seconds (5 minutes)
+
+def _client_ip():
+    fwd = request.headers.get('X-Forwarded-For', '')
+    return (fwd.split(',')[0].strip() if fwd else request.remote_addr) or 'unknown'
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        # Basic brute-force throttle (per IP, in-memory).
+        ip = _client_ip()
+        now_ts = _time.time()
+        _login_attempts[ip] = [t for t in _login_attempts[ip] if now_ts - t < _LOGIN_WINDOW]
+        if len(_login_attempts[ip]) >= _LOGIN_MAX_ATTEMPTS:
+            flash('Too many failed attempts. Please wait a few minutes and try again.')
+            return render_template('login.html', email=email), 429
         user = User.query.filter_by(email=email, active=True).first()
         if user and check_password_hash(user.password, password):
             session.permanent = True  # Enable persistent session
@@ -500,7 +534,9 @@ def login():
                 session['unread_mentions'] = DeskNote.query.filter_by(mention_user_id=user.id, is_done=False).count()
             except:
                 session['unread_mentions'] = 0
+            _login_attempts[ip] = []  # reset on success
             return redirect(url_for('dashboard'))
+        _login_attempts[ip].append(now_ts)  # record failed attempt
         flash('Invalid email or password')
         return render_template('login.html', email=email)
     return render_template('login.html', email='')
@@ -4129,7 +4165,10 @@ app.register_blueprint(meta_bp)
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # debug defaults OFF; enable locally with FLASK_DEBUG=true. Never enable in production
+    # (the Werkzeug debugger allows remote code execution). Railway runs via gunicorn anyway.
+    _debug = os.environ.get('FLASK_DEBUG', '').lower() == 'true'
+    app.run(debug=_debug, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
 else:
     init_db()
 
