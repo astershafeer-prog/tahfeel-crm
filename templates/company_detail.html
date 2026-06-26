@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — {{ company.name }}</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('companies') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <a href="/companies" style="display:inline-block;margin-bottom:12px;color:#555;text-decoration:none;font-size:13px;">← Back to Companies</a>
+
+    <!-- Company info -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>🏢 {{ company.name }}</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <form method="POST" action="/companies/{{ company.id }}/toggle-alerts" style="margin:0;">
+            <button type="submit" class="btn-sm" style="border-color:{{ '#16A34A' if company.alerts_enabled else '#94A3B8' }};color:{{ '#16A34A' if company.alerts_enabled else '#64748B' }};">
+              {{ '🔔 Alerts ON' if company.alerts_enabled else '🔕 Alerts OFF' }}
+            </button>
+          </form>
+          <button class="btn-sm" onclick="openEditModal()">✏ Edit</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-row-2" style="gap:12px;">
+          <div><div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Owner (Customer)</div><div style="font-size:14px;">{{ company.owner.name if company.owner else '—' }}</div></div>
+          <div><div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Contact Person</div><div style="font-size:14px;">{{ company.contact_person or '—' }}</div></div>
+          <div><div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Phone</div><div style="font-size:14px;">{{ company.phone or '—' }}</div></div>
+          <div><div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Email</div><div style="font-size:14px;">{{ company.email or '—' }}</div></div>
+          <div><div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Trade License No.</div><div style="font-size:14px;">{{ company.trade_license_no or '—' }}</div></div>
+          <div><div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Authority</div><div style="font-size:14px;">{{ company.authority or '—' }}</div></div>
+          <div><div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Address</div><div style="font-size:14px;">{{ company.address or '—' }}</div></div>
+          <div><div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Alert recipients</div><div style="font-size:13px;color:var(--text-muted);">{{ company.alert_email or '—' }}{% if company.alert_whatsapp %} · {{ company.alert_whatsapp }}{% endif %}</div></div>
+        </div>
+        {% if company.notes %}<div style="margin-top:12px;font-size:13px;color:var(--text-secondary);"><strong>Notes:</strong> {{ company.notes }}</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><h2>📄 Company Documents <span style="font-size:12px;color:var(--text-muted);font-weight:400;">({{ docs|length }})</span></h2></div>
+      <div class="card-body">
+        <form method="POST" action="/companies/{{ company.id }}/documents/add" enctype="multipart/form-data">
+          <div class="section-label">Add Document</div>
+          <div class="form-row-2" style="align-items:flex-end;">
+            <div class="form-group"><label>Document Type</label>
+              <select name="doc_type" required>
+                <option value="">— Select —</option>
+                {% for dt in doc_types %}<option value="{{ dt.name }}">{{ dt.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group"><label>Expiry Date</label><input type="date" name="expiry_date"></div>
+            <div class="form-group"><label>File <span style="color:#94A3B8;font-weight:400;">(optional)</span></label><input type="file" name="document_file"></div>
+            <div class="form-group"><label>Notes</label><input type="text" name="notes" placeholder="optional"></div>
+          </div>
+          <button type="submit" class="btn-primary" style="margin-top:4px;">+ Add Document</button>
+        </form>
+        <hr class="divider">
+        <table>
+          <thead><tr><th>Type</th><th>Expiry</th><th>Status</th><th>File</th><th>Added</th></tr></thead>
+          <tbody>
+            {% for d in docs %}
+            <tr>
+              <td style="font-weight:600;">{{ d.doc_type }}</td>
+              <td style="font-size:13px;">{{ d.expiry_date.strftime('%d %b %Y') if d.expiry_date else '—' }}</td>
+              <td>
+                {% if not d.expiry_date %}<span style="font-size:11px;color:#CBD5E1;">—</span>
+                {% else %}{% set days = (d.expiry_date.date() - now.date()).days %}
+                  {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">Expired</span>
+                  {% elif days <= 30 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ days }}d left</span>
+                  {% elif days <= 60 %}<span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ days }}d left</span>
+                  {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ days }}d left</span>{% endif %}
+                {% endif %}
+              </td>
+              <td>{% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}—{% endif %}</td>
+              <td style="font-size:12px;color:var(--text-muted);">{{ d.added_by or '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="empty">No documents yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if session.role == 'admin' %}
+    <form method="POST" action="/companies/{{ company.id }}/delete" onsubmit="return confirm('Delete this company? Its documents will be kept but unlinked. This cannot be undone.');" style="margin-bottom:30px;">
+      <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);">🗑 Delete Company</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <!-- Edit Company Modal -->
+  <div class="modal-overlay" id="editModal" style="display:none;">
+    <div class="modal-box" style="max-width:620px;width:94%;text-align:left;">
+      <h3 style="margin-top:0;">✏ Edit Company</h3>
+      <form method="POST" action="/companies/{{ company.id }}/edit">
+        <div class="form-row-2">
+          <div class="form-group"><label>Company Name <span style="color:var(--danger);">*</span></label><input type="text" name="name" required value="{{ company.name }}"></div>
+          <div class="form-group"><label>Owner (Customer)</label>
+            <select name="customer_id">
+              <option value="">— None —</option>
+              {% for cust in customers %}<option value="{{ cust.id }}" {% if company.customer_id == cust.id %}selected{% endif %}>{{ cust.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group"><label>Contact Person</label><input type="text" name="contact_person" value="{{ company.contact_person or '' }}"></div>
+          <div class="form-group"><label>Phone</label><input type="text" name="phone" value="{{ company.phone or '' }}"></div>
+          <div class="form-group"><label>Email</label><input type="email" name="email" value="{{ company.email or '' }}"></div>
+          <div class="form-group"><label>Trade License No.</label><input type="text" name="trade_license_no" value="{{ company.trade_license_no or '' }}"></div>
+          <div class="form-group"><label>Authority</label><input type="text" name="authority" value="{{ company.authority or '' }}"></div>
+          <div class="form-group"><label>Address</label><input type="text" name="address" value="{{ company.address or '' }}"></div>
+        </div>
+        <div class="form-group"><label>Notes</label><textarea name="notes">{{ company.notes or '' }}</textarea></div>
+        <hr class="divider">
+        <div class="section-label">Document Expiry Alerts</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px;cursor:pointer;">
+          <input type="checkbox" name="alerts_enabled" value="1" style="width:auto;" {% if company.alerts_enabled %}checked{% endif %}>
+          Send WhatsApp + email alerts when a document is &lt; 30 days from expiry
+        </label>
+        <div class="form-row-2">
+          <div class="form-group"><label>Alert Email</label><input type="email" name="alert_email" value="{{ company.alert_email or '' }}" placeholder="who to email"></div>
+          <div class="form-group"><label>Alert WhatsApp Number</label><input type="text" name="alert_whatsapp" value="{{ company.alert_whatsapp or '' }}" placeholder="+971 XX XXX XXXX"></div>
+        </div>
+        <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
+          <button type="button" class="btn-sm" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openEditModal(){ document.getElementById('editModal').classList.add('active'); }
+    function closeEditModal(){ document.getElementById('editModal').classList.remove('active'); }
+    (function(){ var m=document.getElementById('editModal'); if(m) m.addEventListener('click', function(e){ if(e.target===this) closeEditModal(); }); })();
+  </script>
+</body>
+</html>

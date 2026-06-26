@@ -226,6 +226,26 @@ class PartialRevenue(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     recorder = db.relationship('User', foreign_keys=[recorded_by])
 
+class Company(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)  # owner (one customer → many companies)
+    contact_person = db.Column(db.String(100))
+    phone = db.Column(db.String(30))
+    email = db.Column(db.String(120))
+    trade_license_no = db.Column(db.String(100))
+    authority = db.Column(db.String(150))
+    address = db.Column(db.String(255))
+    notes = db.Column(db.Text)
+    # Document-expiry alert settings (per company)
+    alerts_enabled = db.Column(db.Boolean, default=False)
+    alert_email = db.Column(db.String(120))
+    alert_whatsapp = db.Column(db.String(30))
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    owner = db.relationship('Customer', foreign_keys=[customer_id])
+    documents = db.relationship('Document', backref='company', lazy=True)
+
 class Partner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
@@ -256,6 +276,7 @@ class Document(db.Model):
     belongs_to = db.Column(db.String(20), nullable=False)  # Company / Individual / Staff
     owner_name = db.Column(db.String(100), nullable=False)
     customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)  # attach doc to a company
     expiry_date = db.Column(db.DateTime, nullable=True)
     notes = db.Column(db.Text)
     file_name = db.Column(db.String(255), nullable=True)
@@ -3226,6 +3247,134 @@ def admin_delete_jobtype(jobtype_id):
 
 # ── Documents ─────────────────────────────────────────────────────────────────
 
+# ─────────────────────────── Companies ───────────────────────────
+@app.route('/companies')
+@login_required
+def companies():
+    now = now_dubai()
+    search = (request.args.get('search') or '').strip().lower()
+    company_list = Company.query.order_by(Company.name).all()
+    if search:
+        company_list = [c for c in company_list if
+                        search in (c.name or '').lower() or
+                        search in (c.contact_person or '').lower() or
+                        search in (c.trade_license_no or '').lower()]
+    def soonest(c):
+        days = [(d.expiry_date.date() - now.date()).days for d in c.documents if d.expiry_date]
+        return min(days) if days else None
+    rows = [{'c': c, 'doc_count': len(c.documents), 'soonest': soonest(c)} for c in company_list]
+    customers = Customer.query.order_by(Customer.name).all()
+    return render_template('companies.html', rows=rows, now=now, search=search, customers=customers)
+
+@app.route('/companies/add', methods=['POST'])
+@login_required
+def add_company():
+    name = (request.form.get('name') or '').strip()
+    if not name:
+        flash('Company name is required')
+        return redirect(url_for('companies'))
+    c = Company(
+        name=name,
+        customer_id=(int(request.form['customer_id']) if request.form.get('customer_id') else None),
+        contact_person=request.form.get('contact_person') or None,
+        phone=request.form.get('phone') or None,
+        email=request.form.get('email') or None,
+        trade_license_no=request.form.get('trade_license_no') or None,
+        authority=request.form.get('authority') or None,
+        address=request.form.get('address') or None,
+        notes=request.form.get('notes') or None,
+        created_by=session.get('user_id'),
+    )
+    db.session.add(c)
+    db.session.commit()
+    flash(f'Company "{name}" added')
+    return redirect(url_for('company_detail', company_id=c.id))
+
+@app.route('/companies/<int:company_id>')
+@login_required
+def company_detail(company_id):
+    now = now_dubai()
+    company = Company.query.get_or_404(company_id)
+    docs = sorted(company.documents, key=lambda d: (d.expiry_date or datetime.max))
+    doc_types = DocType.query.order_by(DocType.name).all()
+    customers = Customer.query.order_by(Customer.name).all()
+    return render_template('company_detail.html', company=company, docs=docs,
+                           doc_types=doc_types, customers=customers, now=now)
+
+@app.route('/companies/<int:company_id>/edit', methods=['POST'])
+@login_required
+def edit_company(company_id):
+    c = Company.query.get_or_404(company_id)
+    c.name = (request.form.get('name') or c.name).strip()
+    c.customer_id = int(request.form['customer_id']) if request.form.get('customer_id') else None
+    c.contact_person = request.form.get('contact_person') or None
+    c.phone = request.form.get('phone') or None
+    c.email = request.form.get('email') or None
+    c.trade_license_no = request.form.get('trade_license_no') or None
+    c.authority = request.form.get('authority') or None
+    c.address = request.form.get('address') or None
+    c.notes = request.form.get('notes') or None
+    c.alerts_enabled = bool(request.form.get('alerts_enabled'))
+    c.alert_email = request.form.get('alert_email') or None
+    c.alert_whatsapp = request.form.get('alert_whatsapp') or None
+    db.session.commit()
+    flash('Company updated')
+    return redirect(url_for('company_detail', company_id=c.id))
+
+@app.route('/companies/<int:company_id>/toggle-alerts', methods=['POST'])
+@login_required
+def toggle_company_alerts(company_id):
+    c = Company.query.get_or_404(company_id)
+    c.alerts_enabled = not c.alerts_enabled
+    db.session.commit()
+    flash(('🔔 Alerts ON' if c.alerts_enabled else '🔕 Alerts OFF') + f' for {c.name}')
+    return redirect(url_for('company_detail', company_id=c.id))
+
+@app.route('/companies/<int:company_id>/documents/add', methods=['POST'])
+@login_required
+def add_company_document(company_id):
+    company = Company.query.get_or_404(company_id)
+    expiry = request.form.get('expiry_date')
+    expiry_dt = datetime.strptime(expiry, '%Y-%m-%d') if expiry else None
+    file_name = file_url = public_id = None
+    if 'document_file' in request.files:
+        f = request.files['document_file']
+        if f and f.filename:
+            file_name = f.filename
+            file_url, public_id = upload_to_cloudinary(f)
+            if not file_url:
+                flash('⚠️ File could not be uploaded — document saved without attachment.', 'warning')
+    doc = Document(
+        doc_type=request.form['doc_type'],
+        belongs_to='Company',
+        owner_name=company.name,
+        company_id=company.id,
+        customer_id=company.customer_id,
+        expiry_date=expiry_dt,
+        notes=request.form.get('notes'),
+        file_name=file_name,
+        file_url=file_url,
+        cloudinary_public_id=public_id,
+        uploaded_by=session['user_id'],
+        added_by=session['user_name'],
+    )
+    db.session.add(doc)
+    db.session.commit()
+    flash('Document added')
+    return redirect(url_for('company_detail', company_id=company.id))
+
+@app.route('/companies/<int:company_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_company(company_id):
+    c = Company.query.get_or_404(company_id)
+    Document.query.filter_by(company_id=c.id).update({'company_id': None}, synchronize_session=False)
+    name = c.name
+    db.session.delete(c)
+    db.session.commit()
+    flash(f'Company "{name}" deleted')
+    return redirect(url_for('companies'))
+
 @app.route('/documents')
 @login_required
 def documents():
@@ -3615,6 +3764,11 @@ def init_db():
             "UPDATE \"user\" SET role = 'sales' WHERE role = 'staff'",
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS on_leave BOOLEAN DEFAULT FALSE',
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS meta_lead_id VARCHAR(50)',
+            # Company entity + document linkage (company table itself created by create_all)
+            'ALTER TABLE document ADD COLUMN IF NOT EXISTS company_id INTEGER',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS alerts_enabled BOOLEAN DEFAULT FALSE',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS alert_email VARCHAR(120)',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS alert_whatsapp VARCHAR(30)',
 
         ]
         for sql in migrations:
