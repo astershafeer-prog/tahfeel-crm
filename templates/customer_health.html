@@ -48,7 +48,18 @@
     .echip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;margin:4px 4px 0 0;}
     .deduct{margin:0 18px 16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:11px 14px;}
     .deduct h4{margin:0 0 5px;font-size:12px;color:#B45309;display:flex;align-items:center;gap:6px;}
-    @media print{.topbar,.nav,.hc-btn,.hc-back{display:none!important;}body{background:#fff;}.hc-card,.dtile,.empcard{box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+    .hc-brand{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:4px 2px 14px;border-bottom:3px solid #1A3B8B;margin-bottom:18px;}
+    @page{size:A4 landscape;margin:9mm;}
+    @media print{
+      .topbar,.nav,.hc-btn,.hc-back,.no-print{display:none!important;}
+      body{background:#fff;}
+      .hc{max-width:100%;}
+      .stats{grid-template-columns:repeat(5,1fr)!important;gap:8px;}
+      .two{grid-template-columns:1fr 1fr!important;}
+      .dgrid{grid-template-columns:repeat(4,1fr)!important;}
+      .hc-card,.dtile,.empcard{box-shadow:none!important;border:1px solid #d8dee9!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      .stat .num{font-size:22px;}
+    }
   </style>
 </head>
 <body>
@@ -77,16 +88,29 @@
     <div class="hc">
     {% with messages = get_flashed_messages() %}{% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}{% endwith %}
 
-    <a href="/health-check" class="hc-back" style="color:#1A3B8B;text-decoration:none;font-size:13px;display:inline-block;margin-bottom:10px;">← Back to Health Check</a>
-    <div class="hc-top">
-      <div>
-        <div class="hc-title">{% if customer.customer_type == 'Company' %}🏢{% else %}👤{% endif %} {{ customer.name }}</div>
-        <div class="hc-meta">{% if customer.ac_code %}{{ customer.ac_code }} · {% endif %}Last checked: {{ now.strftime('%d %b %Y') }}</div>
-      </div>
+    <!-- Action bar (screen only) -->
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <a href="/health-check" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to Health Check</a>
       <div class="hc-actions">
         <button class="hc-btn" onclick="window.print()">🖨 Print / Download</button>
         <form method="POST" action="/customers/{{ customer.id }}/email-health" style="margin:0;"><button type="submit" class="hc-btn">📧 Email</button></form>
         {% if wa_number %}<a class="hc-btn wa" target="_blank" href="https://wa.me/{{ wa_number }}?text=Dear%20{{ customer.contact_person.split()[0] if customer.contact_person else customer.name.split()[0] }}%2C%20here%20is%20your%20document%20health%20update%20from%20Tahfeel.">💬 WhatsApp</a>{% endif %}
+      </div>
+    </div>
+
+    <!-- Branded letterhead (prints) -->
+    <div class="hc-brand">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <img src="/static/img/logo.jpg" alt="Tahfeel" style="height:52px;object-fit:contain;" onerror="this.style.display='none'">
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#1A3B8B;letter-spacing:1.5px;">BUSINESS HEALTH CHECK</div>
+          <div style="font-size:22px;font-weight:800;color:#0F2660;line-height:1.15;">{% if customer.customer_type == 'Company' %}🏢{% else %}👤{% endif %} {{ customer.name }}</div>
+          <div style="font-size:11px;color:#64748B;margin-top:2px;">{% if customer.ac_code %}{{ customer.ac_code }} · {% endif %}Last checked: {{ now.strftime('%d %b %Y') }}</div>
+        </div>
+      </div>
+      <div style="text-align:right;font-size:10px;color:#64748B;line-height:1.7;">
+        <div style="font-weight:800;color:#1A3B8B;font-size:13px;">Tahfeel Business Solutions</div>
+        TRN: 104627774300003<br>Wasl Ivory, Al Karama, Dubai – UAE<br>+971 50 394 5656 · info@tahfeel.ae
       </div>
     </div>
 
