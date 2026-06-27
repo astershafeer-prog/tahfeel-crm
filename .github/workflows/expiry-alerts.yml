@@ -1,0 +1,17 @@
+name: Daily Document Expiry Alerts
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # 08:00 Dubai (UTC+4) = 04:00 UTC, daily
+  workflow_dispatch: {}    # allows manual run from the Actions tab
+
+jobs:
+  alerts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger expiry-alert emails
+        run: |
+          echo "Calling expiry-alerts endpoint..."
+          curl -fsS "https://tahfeel-crm-production.up.railway.app/cron/expiry-alerts?key=${{ secrets.CRON_KEY }}" -o response.json \
+            || { echo "Request failed"; exit 1; }
+          echo "Response:"; cat response.json
