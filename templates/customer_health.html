@@ -6,29 +6,50 @@
   <title>Health Check — {{ customer.name }}</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
-  {% set arc = '#34D399' if (score is not none and score >= 70) else ('#FBBF24' if (score is not none and score >= 50) else '#F87171') %}
+  {% set hcol = '#059669' if (score is not none and score >= 70) else ('#B45309' if (score is not none and score >= 50) else '#DC2626') %}
+  {% set rcol = '#059669' if risk_level == 'Low' else ('#B45309' if risk_level == 'Medium' else ('#DC2626' if risk_level == 'High' else '#94A3B8')) %}
   <style>
-    .hc-wrap{max-width:1040px;margin:0 auto;}
-    .hc-hero{background:linear-gradient(135deg,#0F2660 0%,#1A3B8B 60%,#2850B0 100%);border-radius:20px;padding:30px 34px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;box-shadow:0 14px 40px rgba(15,38,96,.35);margin-bottom:18px;}
-    .hc-eyebrow{font-size:11px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,.7);text-transform:uppercase;}
-    .hc-name{font-size:30px;font-weight:800;margin:4px 0;line-height:1.1;}
-    .hc-sub{font-size:13px;color:rgba(255,255,255,.8);}
-    .hc-gen{font-size:11px;color:rgba(255,255,255,.55);margin-top:10px;}
-    .hc-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px;}
-    @media(max-width:880px){.hc-kpis{grid-template-columns:repeat(3,1fr);}}
-    .hc-kpi{background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(0,0,0,.06);border:0.5px solid #EAEef4;display:flex;flex-direction:column;gap:6px;}
-    .hc-kpi .ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
-    .hc-kpi .num{font-size:26px;font-weight:800;line-height:1;}
-    .hc-kpi .lbl{font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.3px;}
-    .hc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
-    .hc-tile{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 3px 12px rgba(0,0,0,.05);border:0.5px solid #EAEef4;border-left:5px solid #94A3B8;transition:transform .12s ease,box-shadow .12s ease;}
-    .hc-tile:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.10);}
-    .hc-tile .dt{font-size:14px;font-weight:700;color:#1A2333;}
-    .hc-tile .ow{font-size:11px;color:#94A3B8;margin-top:1px;}
-    .hc-tile .ex{font-size:12px;color:#475569;margin-top:8px;}
-    .hc-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-top:8px;}
-    .hc-sec{font-size:13px;font-weight:800;color:#1A2333;margin:18px 0 10px;display:flex;align-items:center;gap:8px;}
-    @media print{.topbar,.nav,.no-print{display:none!important;}body{background:#fff;}.hc-hero{box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.hc-tile,.hc-kpi{box-shadow:none;border:1px solid #ddd;}}
+    .hc{max-width:1200px;margin:0 auto;}
+    .hc-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px;}
+    .hc-title{font-size:26px;font-weight:800;color:#0F2660;line-height:1.1;}
+    .hc-meta{font-size:12px;color:#64748B;margin-top:4px;}
+    .hc-actions{display:flex;gap:8px;}
+    .hc-btn{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #E2E8F0;color:#334155;padding:8px 15px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;}
+    .hc-btn:hover{background:#F8FAFC;}
+    .hc-btn.wa{border-color:#25D366;color:#16A34A;}
+    .hc-card{background:#fff;border:0.5px solid #E2E8F0;border-radius:16px;box-shadow:0 3px 12px rgba(0,0,0,.05);}
+    .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:16px;}
+    @media(max-width:1000px){.stats{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr);}}
+    .stat{padding:18px 14px;text-align:center;}
+    .stat .lbl{font-size:12px;color:#64748B;font-weight:700;}
+    .stat .num{font-size:30px;font-weight:800;line-height:1;margin:6px 0 2px;}
+    .stat .sub{font-size:11px;color:#94A3B8;}
+    .stat .ico{width:40px;height:40px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:8px;}
+    .sec-head{display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid #EEF2F7;}
+    .sec-head h2{margin:0;font-size:15px;color:#0F2660;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .legend{display:flex;gap:14px;font-size:11px;color:#64748B;}
+    .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
+    .comp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;padding:20px;}
+    .comp{background:#F8FAFC;border:1px solid #EEF2F7;border-radius:14px;padding:18px 14px;text-align:center;}
+    .comp .cico{width:50px;height:50px;border-radius:13px;display:inline-flex;align-items:center;justify-content:center;font-size:24px;background:#fff;border:1px solid #EEF2F7;margin-bottom:10px;}
+    .comp .cname{font-size:13px;font-weight:700;color:#1A2333;}
+    .comp .cref{font-size:10px;color:#94A3B8;margin-top:2px;text-transform:uppercase;letter-spacing:.3px;}
+    .comp .cstat{font-size:12px;font-weight:700;margin-top:10px;}
+    .comp .cdate{font-size:11px;color:#94A3B8;margin-top:3px;}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+    @media(max-width:820px){.two{grid-template-columns:1fr;}}
+    .row{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid #F1F5F9;font-size:13px;}
+    .row:last-child{border-bottom:none;}
+    .row .k{color:#64748B;display:flex;align-items:center;gap:8px;}
+    .row .v{color:#1A2333;font-weight:700;}
+    .badges{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px 20px 8px;}
+    .badge{border-radius:12px;padding:14px;text-align:center;border:1.5px solid;}
+    .badge .bl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#94A3B8;}
+    .badge .bv{font-size:18px;font-weight:800;margin-top:4px;}
+    .deduct{margin:8px 20px 18px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;}
+    .deduct h4{margin:0 0 6px;font-size:12px;color:#B45309;display:flex;align-items:center;gap:6px;}
+    @media print{.topbar,.nav,.hc-btn,.hc-back{display:none!important;}body{background:#fff;}.hc-card,.comp,.badge{box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
   </style>
 </head>
 <body>
@@ -36,84 +57,131 @@
   {{ topbar() }}
   {{ nav('health-check') }}
   <div class="container">
-    <div class="hc-wrap">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
-    {% endwith %}
+    <div class="hc">
+    {% with messages = get_flashed_messages() %}{% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}{% endwith %}
 
-    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <a href="/customers/{{ customer.id }}" style="color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to client</a>
-      <div style="display:flex;gap:8px;">
-        <form method="POST" action="/customers/{{ customer.id }}/email-health" style="margin:0;">
-          <button type="submit" class="btn-sm" style="border-color:#059669;color:#059669;">📧 Email Report</button>
-        </form>
-        <button onclick="window.print()" class="btn-primary" style="padding:6px 16px;">🖨 Print / Save PDF</button>
+    <a href="/health-check" class="hc-back" style="color:#1A3B8B;text-decoration:none;font-size:13px;display:inline-block;margin-bottom:10px;">← Back to Health Check</a>
+    <div class="hc-top">
+      <div>
+        <div class="hc-title">{% if customer.customer_type == 'Company' %}🏢{% else %}👤{% endif %} {{ customer.name }}</div>
+        <div class="hc-meta">{% if customer.ac_code %}{{ customer.ac_code }} · {% endif %}Last checked: {{ now.strftime('%d %b %Y') }}</div>
+      </div>
+      <div class="hc-actions">
+        <button class="hc-btn" onclick="window.print()">🖨 Print</button>
+        <form method="POST" action="/customers/{{ customer.id }}/email-health" style="margin:0;"><button type="submit" class="hc-btn">📧 Email</button></form>
+        {% if wa_number %}<a class="hc-btn wa" target="_blank" href="https://wa.me/{{ wa_number }}?text=Dear%20{{ customer.contact_person.split()[0] if customer.contact_person else customer.name.split()[0] }}%2C%20here%20is%20your%20document%20health%20update%20from%20Tahfeel.">💬 WhatsApp</a>{% endif %}
       </div>
     </div>
 
-    <!-- Hero -->
-    <div class="hc-hero">
-      <div style="flex:1;min-width:240px;">
-        <div class="hc-eyebrow">Business Health Check</div>
-        <div class="hc-name">{% if customer.customer_type == 'Company' %}🏢{% else %}👤{% endif %} {{ customer.name }}</div>
-        <div class="hc-sub">{{ customer.customer_type or 'Individual' }}{% if customer.contact_person %} · Contact: {{ customer.contact_person }}{% endif %}{% if customer.licensing_authority %} · {{ customer.licensing_authority }}{% endif %}</div>
-        <div class="hc-gen">Generated {{ now.strftime('%d %b %Y, %I:%M %p') }}</div>
-      </div>
-      <div style="text-align:center;">
-        {% if score is not none %}
-        {% set circ = 377.0 %}
-        <svg width="150" height="150" viewBox="0 0 150 150">
-          <circle cx="75" cy="75" r="60" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="14"/>
-          <circle cx="75" cy="75" r="60" fill="none" stroke="{{ arc }}" stroke-width="14" stroke-linecap="round"
-                  stroke-dasharray="{{ (circ * score / 100)|round(1) }} {{ circ }}" transform="rotate(-90 75 75)"/>
-          <text x="75" y="72" text-anchor="middle" font-size="34" font-weight="800" fill="#fff">{{ score }}%</text>
-          <text x="75" y="95" text-anchor="middle" font-size="13" font-weight="700" fill="{{ arc }}">{{ band }}</text>
+    <!-- Stats -->
+    <div class="stats">
+      <div class="hc-card stat">
+        <div class="lbl">Overall Health</div>
+        {% if score is not none %}{% set c1=326.7 %}
+        <svg width="104" height="104" viewBox="0 0 120 120" style="margin:6px 0;">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#E5E7EB" stroke-width="11"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="{{ hcol }}" stroke-width="11" stroke-linecap="round" stroke-dasharray="{{ (c1*score/100)|round(1) }} {{ c1 }}" transform="rotate(-90 60 60)"/>
+          <text x="60" y="67" text-anchor="middle" font-size="26" font-weight="800" fill="{{ hcol }}">{{ score }}%</text>
         </svg>
-        {% else %}
-        <div style="width:150px;height:150px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);border:2px dashed rgba(255,255,255,.3);border-radius:50%;">No documents</div>
-        {% endif %}
-        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px;">Health Score</div>
+        <div style="color:{{ hcol }};font-weight:700;font-size:13px;">✓ {{ band }}</div>
+        {% else %}<div class="num" style="color:#94A3B8;">—</div><div class="sub">No documents</div>{% endif %}
+      </div>
+      <div class="hc-card stat">
+        <div class="lbl">Risk Assessment</div>
+        {% set c2=326.7 %}
+        <svg width="104" height="104" viewBox="0 0 120 120" style="margin:6px 0;">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#E5E7EB" stroke-width="11"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="{{ rcol }}" stroke-width="11" stroke-linecap="round" stroke-dasharray="{{ (c2*(risk_value/5.0))|round(1) }} {{ c2 }}" transform="rotate(-90 60 60)"/>
+          <text x="60" y="67" text-anchor="middle" font-size="24" font-weight="800" fill="{{ rcol }}">{{ risk_value }}</text>
+        </svg>
+        <div style="color:{{ rcol }};font-weight:700;font-size:13px;">⚠ {{ risk_level }}</div>
+      </div>
+      <div class="hc-card stat">
+        <div class="ico" style="background:#EBF2FF;color:#1A3B8B;">📁</div>
+        <div class="num" style="color:#1A3B8B;">{{ total }}</div>
+        <div class="lbl">Total Documents</div><div class="sub">Tracked items</div>
+      </div>
+      <div class="hc-card stat">
+        <div class="ico" style="background:#ECFDF5;color:#059669;">✓</div>
+        <div class="num" style="color:#059669;">{{ valid|length }}</div>
+        <div class="lbl">Valid</div><div class="sub">All up to date</div>
+      </div>
+      <div class="hc-card stat">
+        <div class="ico" style="background:#FFFBEB;color:#B45309;">⏳</div>
+        <div class="num" style="color:#B45309;">{{ expiring|length }}</div>
+        <div class="lbl">Expiring Soon</div><div class="sub">Within 90 days</div>
+      </div>
+      <div class="hc-card stat">
+        <div class="ico" style="background:#FEF2F2;color:#DC2626;">✕</div>
+        <div class="num" style="color:#DC2626;">{{ expired|length }}</div>
+        <div class="lbl">Expired</div><div class="sub">Needs action</div>
       </div>
     </div>
 
-    <!-- KPIs -->
-    <div class="hc-kpis">
-      <div class="hc-kpi"><div class="ic" style="background:#EBF2FF;color:#1A3B8B;">📄</div><div class="num" style="color:#1A3B8B;">{{ total }}</div><div class="lbl">Total Docs</div></div>
-      <div class="hc-kpi"><div class="ic" style="background:#ECFDF5;color:#059669;">✓</div><div class="num" style="color:#059669;">{{ valid|length }}</div><div class="lbl">Valid</div></div>
-      <div class="hc-kpi"><div class="ic" style="background:#FEF2F2;color:#DC2626;">⏳</div><div class="num" style="color:#DC2626;">{{ expiring|length }}</div><div class="lbl">≤ 30 days</div></div>
-      <div class="hc-kpi"><div class="ic" style="background:#FFFBEB;color:#B45309;">📅</div><div class="num" style="color:#B45309;">{{ expiring60|length }}</div><div class="lbl">31–60 days</div></div>
-      <div class="hc-kpi"><div class="ic" style="background:#FEF2F2;color:#B91C1C;">⚠</div><div class="num" style="color:#B91C1C;">{{ expired|length }}</div><div class="lbl">Expired</div></div>
-      <div class="hc-kpi"><div class="ic" style="background:#F5F3FF;color:#7C3AED;">👔</div><div class="num" style="color:#7C3AED;">{{ employees_count }}</div><div class="lbl">Employees</div></div>
-    </div>
-
-    <!-- Documents -->
-    <div class="hc-sec">🗂 Document Compliance</div>
-    {% if docs %}
-    <div class="hc-grid">
-      {% for d in docs %}
-      {% set days = (d.expiry_date.date() - today).days %}
-      {% if days < 0 %}{% set bc='#B91C1C' %}{% set pb='#FEF2F2' %}{% set pc='#B91C1C' %}{% set txt='Expired ' ~ (-days) ~ 'd ago' %}
-      {% elif days <= 30 %}{% set bc='#DC2626' %}{% set pb='#FEF2F2' %}{% set pc='#DC2626' %}{% set txt=days ~ 'd left' %}
-      {% elif days <= 60 %}{% set bc='#B45309' %}{% set pb='#FFFBEB' %}{% set pc='#B45309' %}{% set txt=days ~ 'd left' %}
-      {% else %}{% set bc='#059669' %}{% set pb='#ECFDF5' %}{% set pc='#059669' %}{% set txt='Valid · ' ~ days ~ 'd' %}{% endif %}
-      <div class="hc-tile" style="border-left-color:{{ bc }};">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-          <div>
-            <div class="dt">{{ d.doc_type }}</div>
-            <div class="ow">{{ d.owner_name or customer.name }}</div>
-          </div>
-          {% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" class="no-print" style="font-size:11px;color:#1A3B8B;text-decoration:none;">📎</a>{% endif %}
+    <!-- Compliance Overview -->
+    <div class="hc-card" style="margin-bottom:16px;">
+      <div class="sec-head">
+        <h2>📋 Compliance Overview</h2>
+        <div class="legend">
+          <span><i style="background:#059669;"></i>Valid</span>
+          <span><i style="background:#B45309;"></i>Expiring</span>
+          <span><i style="background:#DC2626;"></i>Expired</span>
+          <span><i style="background:#94A3B8;"></i>Missing</span>
         </div>
-        <div class="ex">📅 {{ d.expiry_date.strftime('%d %b %Y') }}</div>
-        <span class="hc-pill" style="background:{{ pb }};color:{{ pc }};">{{ txt }}</span>
       </div>
-      {% endfor %}
+      <div class="comp-grid">
+        {% for ci in compliance_items %}
+        {% if ci.status=='Valid' %}{% set sc='#059669' %}{% elif ci.status=='Expiring' %}{% set sc='#B45309' %}{% elif ci.status=='Expired' %}{% set sc='#DC2626' %}{% else %}{% set sc='#94A3B8' %}{% endif %}
+        <div class="comp">
+          <div class="cico">{{ ci.icon }}</div>
+          <div class="cname">{{ ci.name }}</div>
+          <div class="cref">{{ ci.ref or '—' }}</div>
+          <div class="cstat" style="color:{{ sc }};">● {{ ci.status }}</div>
+          <div class="cdate">{{ ci.date or '' }}</div>
+        </div>
+        {% endfor %}
+      </div>
     </div>
-    {% else %}
-    <div class="card"><div class="empty">No documents with expiry dates yet. <a href="/documents/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add a document →</a></div></div>
-    {% endif %}
 
-    <div style="text-align:center;color:#94A3B8;font-size:11px;margin:22px 0 30px;">Tahfeel Business Solutions · Document Health Report</div>
+    <!-- Details + Status -->
+    <div class="two">
+      <div class="hc-card">
+        <div class="sec-head"><h2>🏢 Company Details</h2></div>
+        <div class="row"><span class="k">🏷 AC Code</span><span class="v">{{ customer.ac_code or '—' }}</span></div>
+        <div class="row"><span class="k">📊 Status</span><span class="v">{{ customer.ac_status or 'Active' }}</span></div>
+        <div class="row"><span class="k">🏛 Type</span><span class="v">{{ customer.legal_form or customer.jurisdiction or '—' }}</span></div>
+        <div class="row"><span class="k">📍 Region</span><span class="v">{{ customer.emirate or '—' }}</span></div>
+        <div class="row"><span class="k">👤 Account Manager</span><span class="v">{{ customer.rep.name if customer.rep else '—' }}</span></div>
+        <div class="row"><span class="k">👔 Employees</span><span class="v">{{ employees_count }}</span></div>
+      </div>
+      <div class="hc-card">
+        <div class="sec-head"><h2>🛡 Compliance Status</h2></div>
+        <div class="badges">
+          <div class="badge" style="border-color:{{ rcol }};background:{{ rcol }}11;">
+            <div class="bl">Risk</div><div class="bv" style="color:{{ rcol }};">● {{ risk_level }}</div>
+          </div>
+          <div class="badge" style="border-color:{{ '#059669' if docs_complete else '#B45309' }};background:{{ '#ECFDF5' if docs_complete else '#FFFBEB' }};">
+            <div class="bl">Key Docs</div><div class="bv" style="color:{{ '#059669' if docs_complete else '#B45309' }};">{{ '✓ Complete' if docs_complete else '◐ Pending' }}</div>
+          </div>
+        </div>
+        <div class="row"><span class="k">🩺 Health Band</span><span class="v" style="color:{{ hcol }};">{{ band }}</span></div>
+        {% set missing = compliance_items|selectattr('status','equalto','Missing')|list %}
+        {% if expired or expiring or missing %}
+        <div class="deduct">
+          <h4>⚠ Score Deductions</h4>
+          <ul style="margin:0;padding-left:18px;color:#475569;font-size:12px;">
+            {% if expired %}<li>{{ expired|length }} document(s) expired</li>{% endif %}
+            {% if expiring %}<li>{{ expiring|length }} expiring within 90 days</li>{% endif %}
+            {% for m in missing %}<li>Missing: {{ m.name }}</li>{% endfor %}
+          </ul>
+        </div>
+        {% else %}
+        <div style="padding:8px 20px 18px;color:#059669;font-size:13px;">✓ No issues — all key documents present and valid.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="text-align:center;color:#94A3B8;font-size:11px;margin:22px 0 30px;">Tahfeel Business Solutions · Document Health Report · {{ now.strftime('%d %b %Y, %I:%M %p') }}</div>
     </div>
   </div>
 </body>

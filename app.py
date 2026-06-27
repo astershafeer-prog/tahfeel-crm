@@ -2069,18 +2069,19 @@ def customer_health(customer_id):
     customer = Customer.query.get_or_404(customer_id)
     now = now_dubai()
     today = now.date()
-    docs = [d for d in Document.query.filter_by(customer_id=customer_id).all() if d.expiry_date]
+    all_docs = Document.query.filter_by(customer_id=customer_id).all()
+    docs = [d for d in all_docs if d.expiry_date]
     docs.sort(key=lambda d: d.expiry_date)
     def dleft(d):
         return (d.expiry_date.date() - today).days
-    valid = [d for d in docs if dleft(d) > 30]
-    expiring = [d for d in docs if 0 <= dleft(d) <= 30]
     expired = [d for d in docs if dleft(d) < 0]
-    total = len(docs)
-    # Health score: valid=1, expiring-soon=0.5, expired=0
-    score = round(100 * (len(valid) + 0.5 * len(expiring)) / total) if total else None
+    expiring = [d for d in docs if 0 <= dleft(d) <= 90]   # "expiring soon" = within 90 days
+    valid = [d for d in docs if dleft(d) > 90]
+    total = len(all_docs)
+    scored = len(docs)
+    score = round(100 * (len(valid) + 0.5 * len(expiring)) / scored) if scored else None
     if score is None:
-        band = 'No documents'
+        band = 'No data'
     elif score >= 90:
         band = 'Excellent'
     elif score >= 70:
@@ -2089,11 +2090,53 @@ def customer_health(customer_id):
         band = 'Average'
     else:
         band = 'Poor'
+    # Risk: lower health -> higher risk (0-5 scale)
+    if score is None:
+        risk_level, risk_value = '—', 0
+    elif score >= 80:
+        risk_level = 'Low'
+    elif score >= 50:
+        risk_level = 'Medium'
+    else:
+        risk_level = 'High'
+    risk_value = round((100 - (score or 0)) / 20.0, 2)
+
+    # Compliance Overview — key UAE documents: Valid / Expiring / Expired / Missing
+    essentials = [
+        ('Trade License', '📜', ['trade license', 'license']),
+        ('Establishment Card', '🏛️', ['establishment', 'immigration card']),
+        ('VAT / TRN', '🧾', ['vat', 'trn']),
+        ('Tenancy / Ejari', '🏠', ['ejari', 'tenancy', 'lease']),
+        ('Labour Card', '🪪', ['labour', 'mohre', 'work permit']),
+        ('Emirates ID', '🆔', ['emirates id', 'eid']),
+    ]
+    company_docs = [d for d in all_docs if not d.employee_id]
+    compliance_items = []
+    for name, icon, keys in essentials:
+        match = None
+        for d in company_docs:
+            dtl = (d.doc_type or '').lower()
+            if any(k in dtl for k in keys):
+                if match is None or (d.expiry_date and (match.expiry_date is None or d.expiry_date < match.expiry_date)):
+                    match = d
+        if not match:
+            status, date_str = 'Missing', None
+        elif not match.expiry_date:
+            status, date_str = 'Valid', None
+        else:
+            dd = (match.expiry_date.date() - today).days
+            status = 'Expired' if dd < 0 else ('Expiring' if dd <= 90 else 'Valid')
+            date_str = match.expiry_date.strftime('%d %b %Y')
+        compliance_items.append({'name': name, 'icon': icon, 'status': status,
+                                 'date': date_str, 'ref': (match.doc_type if match else None)})
+    docs_complete = all(ci['status'] != 'Missing' for ci in compliance_items)
     employees_count = Employee.query.filter_by(customer_id=customer_id).count()
-    expiring60 = [d for d in docs if 30 < (d.expiry_date.date() - today).days <= 60]
+    wa_number = (customer.whatsapp or customer.mobile or customer.phone or '').replace(' ', '').replace('+', '')
     return render_template('customer_health.html', customer=customer, docs=docs, today=today, now=now,
-                           valid=valid, expiring=expiring, expiring60=expiring60, expired=expired, total=total,
-                           score=score, band=band, employees_count=employees_count)
+                           valid=valid, expiring=expiring, expired=expired, total=total,
+                           score=score, band=band, risk_level=risk_level, risk_value=risk_value,
+                           compliance_items=compliance_items, docs_complete=docs_complete,
+                           employees_count=employees_count, wa_number=wa_number)
 
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required
