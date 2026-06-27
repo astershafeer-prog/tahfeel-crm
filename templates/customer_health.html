@@ -27,7 +27,12 @@
 
     <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <a href="/customers/{{ customer.id }}" style="color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to customer</a>
-      <button onclick="window.print()" class="btn-sm" style="background:#1A3B8B;color:#fff;border-color:#1A3B8B;">🖨 Print / Save PDF</button>
+      <div style="display:flex;gap:8px;">
+        <form method="POST" action="/customers/{{ customer.id }}/email-health" style="margin:0;">
+          <button type="submit" class="btn-sm" style="border-color:#059669;color:#059669;">📧 Email Report</button>
+        </form>
+        <button onclick="window.print()" class="btn-sm" style="background:#1A3B8B;color:#fff;border-color:#1A3B8B;">🖨 Print / Save PDF</button>
+      </div>
     </div>
 
     <!-- Header: name + score -->

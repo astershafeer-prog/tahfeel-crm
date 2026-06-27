@@ -36,6 +36,9 @@ def now_dubai():
     return datetime.now(DUBAI_TZ).replace(tzinfo=None)
 from functools import wraps
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 # Secret key signs all session cookies. MUST be set via the SECRET_KEY env var in Railway.
@@ -3617,6 +3620,91 @@ def delete_owner(owner_id):
     db.session.commit()
     flash('Owner removed')
     return redirect(url_for('customer_detail', customer_id=cid))
+
+# ─────────────────────────── Email alert engine ───────────────────────────
+def send_email(to_list, subject, html_body):
+    host = os.environ.get('SMTP_HOST'); user = os.environ.get('SMTP_USER'); pwd = os.environ.get('SMTP_PASS')
+    port = int(os.environ.get('SMTP_PORT', '465')); sender = os.environ.get('SMTP_FROM', user or '')
+    recipients = [r for r in to_list if r]
+    if not (host and user and pwd):
+        return False, 'SMTP not configured (set SMTP_HOST/USER/PASS in Railway)'
+    if not recipients:
+        return False, 'No recipient email on file'
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject; msg['From'] = sender; msg['To'] = ', '.join(recipients)
+    msg.attach(MIMEText(html_body, 'html'))
+    try:
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=25) as s:
+                s.login(user, pwd); s.sendmail(sender, recipients, msg.as_string())
+        else:
+            with smtplib.SMTP(host, port, timeout=25) as s:
+                s.starttls(); s.login(user, pwd); s.sendmail(sender, recipients, msg.as_string())
+        return True, 'sent'
+    except Exception as e:
+        print(f'[email] send failed: {e}')
+        return False, str(e)
+
+def _expiring_items(customer_id, within_days=30):
+    today = now_dubai().date()
+    items = []
+    for d in Document.query.filter_by(customer_id=customer_id).all():
+        if d.expiry_date:
+            days = (d.expiry_date.date() - today).days
+            if days <= within_days:
+                items.append((d, days))
+    items.sort(key=lambda x: x[1])
+    return items
+
+def _doc_table_html(customer, items, intro):
+    rows = ''
+    for d, days in items:
+        status = f'Expired {-days}d ago' if days < 0 else f'{days} days left'
+        color = '#B91C1C' if days <= 30 else ('#B45309' if days <= 60 else '#059669')
+        rows += (f'<tr><td style="padding:6px 10px;border:1px solid #e5e7eb;">{d.doc_type}</td>'
+                 f'<td style="padding:6px 10px;border:1px solid #e5e7eb;">{d.owner_name or customer.name}</td>'
+                 f'<td style="padding:6px 10px;border:1px solid #e5e7eb;">{d.expiry_date.strftime("%d %b %Y")}</td>'
+                 f'<td style="padding:6px 10px;border:1px solid #e5e7eb;color:{color};font-weight:bold;">{status}</td></tr>')
+    return (f'<div style="font-family:Arial,sans-serif;color:#1a2333;">'
+            f'<h2 style="color:#1A3B8B;">Tahfeel Business Health Check</h2>'
+            f'<p><strong>{customer.name}</strong> — {intro}</p>'
+            f'<table style="border-collapse:collapse;font-size:14px;"><tr style="background:#1A3B8B;color:#fff;">'
+            f'<th style="padding:6px 10px;">Document</th><th style="padding:6px 10px;">Owner</th>'
+            f'<th style="padding:6px 10px;">Expiry</th><th style="padding:6px 10px;">Status</th></tr>{rows}</table>'
+            f'<p style="color:#888;font-size:12px;margin-top:16px;">Sent automatically by Tahfeel CRM.</p></div>')
+
+@app.route('/cron/expiry-alerts')
+def cron_expiry_alerts():
+    from flask import jsonify
+    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+        return 'Forbidden', 403
+    admin_email = os.environ.get('ALERT_ADMIN_EMAIL')
+    alerted, results = 0, []
+    for c in Customer.query.filter_by(alerts_enabled=True).all():
+        items = _expiring_items(c.id, 30)
+        if not items:
+            continue
+        ok, msg = send_email([c.alert_email or c.email, admin_email],
+                             f'Document Expiry Alert — {c.name}',
+                             _doc_table_html(c, items, f'has {len(items)} document(s) expiring within 30 days or already expired:'))
+        if ok:
+            alerted += 1
+        results.append(f'{c.name}: {len(items)} doc(s) -> {msg}')
+    return jsonify({'companies_alerted': alerted, 'details': results})
+
+@app.route('/customers/<int:customer_id>/email-health', methods=['POST'])
+@login_required
+def email_health(customer_id):
+    c = Customer.query.get_or_404(customer_id)
+    items = _expiring_items(c.id, 36500)  # all documents that have an expiry date
+    if not items:
+        flash('No documents with expiry dates to report.')
+        return redirect(url_for('customer_health', customer_id=customer_id))
+    ok, msg = send_email([c.alert_email or c.email, os.environ.get('ALERT_ADMIN_EMAIL')],
+                         f'Health Report — {c.name}',
+                         _doc_table_html(c, items, f'full document status report ({len(items)} documents):'))
+    flash('📧 Health report emailed.' if ok else f'Email failed: {msg}')
+    return redirect(url_for('customer_health', customer_id=customer_id))
 
 @app.route('/health-check')
 @login_required
