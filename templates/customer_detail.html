@@ -211,6 +211,47 @@
     </div>
     {% endif %}
 
+    {% if customer.customer_type == 'Company' %}
+    <!-- Owners / UBO -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>👥 Owners / Authorized Persons <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ owners|length }}</span></h2>
+        <button class="btn-add" style="font-size:12px;padding:6px 14px;" onclick="openOwnerModal()">+ Add Owner</button>
+      </div>
+      {% if owners %}
+      <table>
+        <thead><tr><th>Name</th><th>Role</th><th>Share %</th><th>Nationality</th><th>Passport</th><th>Emirates ID</th><th></th></tr></thead>
+        <tbody>
+          {% for o in owners %}
+          <tr>
+            <td><strong>{{ o.name }}</strong></td>
+            <td>{{ o.role or '—' }}</td>
+            <td>{{ (o.share_pct|round(2)) ~ '%' if o.share_pct is not none else '—' }}</td>
+            <td>{{ o.nationality or '—' }}</td>
+            <td style="font-size:12px;">{{ o.passport_no or '—' }}{% if o.passport_expiry %}<div style="color:{{ '#B91C1C' if (o.passport_expiry - today).days <= 30 else 'var(--text-muted)' }};">exp {{ o.passport_expiry.strftime('%d %b %Y') }}</div>{% endif %}</td>
+            <td style="font-size:12px;">{{ o.eid_no or '—' }}{% if o.eid_expiry %}<div style="color:{{ '#B91C1C' if (o.eid_expiry - today).days <= 30 else 'var(--text-muted)' }};">exp {{ o.eid_expiry.strftime('%d %b %Y') }}</div>{% endif %}</td>
+            <td>
+              <div style="display:flex;gap:6px;">
+                <button class="btn-sm" onclick='openOwnerEdit(this)'
+                  data-id="{{ o.id }}" data-name="{{ o.name|e }}" data-role="{{ o.role|e if o.role else '' }}"
+                  data-share="{{ o.share_pct if o.share_pct is not none else '' }}" data-nat="{{ o.nationality|e if o.nationality else '' }}"
+                  data-pno="{{ o.passport_no|e if o.passport_no else '' }}" data-pexp="{{ o.passport_expiry.strftime('%Y-%m-%d') if o.passport_expiry else '' }}"
+                  data-eno="{{ o.eid_no|e if o.eid_no else '' }}" data-eexp="{{ o.eid_expiry.strftime('%Y-%m-%d') if o.eid_expiry else '' }}">Edit</button>
+                <form method="POST" action="/owners/{{ o.id }}/delete" onsubmit="return confirm('Remove {{ o.name }}?');" style="margin:0;">
+                  <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);">🗑</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No owners/authorized persons yet. Click <strong>+ Add Owner</strong>.</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
         <!-- Documents -->
     <div class="section-label">Documents ({{ documents|length }})</div>
     <div class="card card-customers">
@@ -275,10 +316,74 @@
     </div>
   </div>
 
+  <!-- Add Owner Modal -->
+  <div class="modal-overlay" id="ownerModal" style="display:none;">
+    <div class="modal-box" style="max-width:620px;width:94%;text-align:left;">
+      <h3 style="margin-top:0;">👥 Add Owner / Authorized Person</h3>
+      <form method="POST" action="/customers/{{ customer.id }}/owners/add">
+        <div class="form-row-2">
+          <div class="form-group"><label>Full Name <span style="color:var(--danger);">*</span></label><input type="text" name="name" required></div>
+          <div class="form-group"><label>Role</label><select name="role"><option value="">— Select —</option>{% for r in ['Shareholder','Director','Manager','Authorized Signatory','Partner','UBO'] %}<option>{{ r }}</option>{% endfor %}</select></div>
+          <div class="form-group"><label>Share %</label><input type="number" step="0.01" name="share_pct"></div>
+          <div class="form-group"><label>Nationality</label><input type="text" name="nationality"></div>
+          <div class="form-group"><label>Passport No.</label><input type="text" name="passport_no"></div>
+          <div class="form-group"><label>Passport Expiry</label><input type="date" name="passport_expiry"></div>
+          <div class="form-group"><label>Emirates ID No.</label><input type="text" name="eid_no"></div>
+          <div class="form-group"><label>Emirates ID Expiry</label><input type="date" name="eid_expiry"></div>
+        </div>
+        <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
+          <button type="button" class="btn-sm" onclick="closeOwnerModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Add Owner</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Owner Modal -->
+  <div class="modal-overlay" id="ownerEdit" style="display:none;">
+    <div class="modal-box" style="max-width:620px;width:94%;text-align:left;">
+      <h3 style="margin-top:0;">✏ Edit Owner</h3>
+      <form method="POST" id="ownerEditForm">
+        <div class="form-row-2">
+          <div class="form-group"><label>Full Name <span style="color:var(--danger);">*</span></label><input type="text" name="name" id="oeName" required></div>
+          <div class="form-group"><label>Role</label><select name="role" id="oeRole"><option value="">— Select —</option>{% for r in ['Shareholder','Director','Manager','Authorized Signatory','Partner','UBO'] %}<option>{{ r }}</option>{% endfor %}</select></div>
+          <div class="form-group"><label>Share %</label><input type="number" step="0.01" name="share_pct" id="oeShare"></div>
+          <div class="form-group"><label>Nationality</label><input type="text" name="nationality" id="oeNat"></div>
+          <div class="form-group"><label>Passport No.</label><input type="text" name="passport_no" id="oePno"></div>
+          <div class="form-group"><label>Passport Expiry</label><input type="date" name="passport_expiry" id="oePexp"></div>
+          <div class="form-group"><label>Emirates ID No.</label><input type="text" name="eid_no" id="oeEno"></div>
+          <div class="form-group"><label>Emirates ID Expiry</label><input type="date" name="eid_expiry" id="oeEexp"></div>
+        </div>
+        <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
+          <button type="button" class="btn-sm" onclick="closeOwnerEdit()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     function openEmpModal(){ var m=document.getElementById('empModal'); if(m) m.classList.add('active'); }
     function closeEmpModal(){ var m=document.getElementById('empModal'); if(m) m.classList.remove('active'); }
-    (function(){ var m=document.getElementById('empModal'); if(m) m.addEventListener('click', function(e){ if(e.target===this) closeEmpModal(); }); })();
+    function openOwnerModal(){ document.getElementById('ownerModal').classList.add('active'); }
+    function closeOwnerModal(){ document.getElementById('ownerModal').classList.remove('active'); }
+    function openOwnerEdit(btn){
+      document.getElementById('ownerEditForm').action = '/owners/' + btn.getAttribute('data-id') + '/edit';
+      document.getElementById('oeName').value = btn.getAttribute('data-name') || '';
+      document.getElementById('oeRole').value = btn.getAttribute('data-role') || '';
+      document.getElementById('oeShare').value = btn.getAttribute('data-share') || '';
+      document.getElementById('oeNat').value = btn.getAttribute('data-nat') || '';
+      document.getElementById('oePno').value = btn.getAttribute('data-pno') || '';
+      document.getElementById('oePexp').value = btn.getAttribute('data-pexp') || '';
+      document.getElementById('oeEno').value = btn.getAttribute('data-eno') || '';
+      document.getElementById('oeEexp').value = btn.getAttribute('data-eexp') || '';
+      document.getElementById('ownerEdit').classList.add('active');
+    }
+    function closeOwnerEdit(){ document.getElementById('ownerEdit').classList.remove('active'); }
+    ['empModal','ownerModal','ownerEdit'].forEach(function(id){
+      var m=document.getElementById(id);
+      if(m) m.addEventListener('click', function(e){ if(e.target===this) m.classList.remove('active'); });
+    });
   </script>
 </body>
 </html>

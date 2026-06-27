@@ -2049,10 +2049,11 @@ def customer_detail(customer_id):
     jobs = Job.query.filter_by(customer_id=customer_id).order_by(Job.created_at.desc()).all()
     docs = Document.query.filter_by(customer_id=customer_id, employee_id=None).order_by(Document.expiry_date).all()
     employees = Employee.query.filter_by(customer_id=customer_id).order_by(Employee.name).all()
+    owners = Owner.query.filter_by(customer_id=customer_id).order_by(Owner.id).all()
     total_invoiced = sum(j.amount_invoiced or 0 for j in jobs)
     total_received = sum(j.amount_received or 0 for j in jobs)
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
-                           documents=docs, employees=employees, now=now, today=now.date(),
+                           documents=docs, employees=employees, owners=owners, now=now, today=now.date(),
                            total_invoiced=total_invoiced, total_received=total_received)
 
 
@@ -3568,6 +3569,54 @@ def add_employee_document(employee_id):
     db.session.commit()
     flash('Document added')
     return redirect(url_for('employee_detail', employee_id=emp.id))
+
+# ─────────────────────────── Owners / UBO ───────────────────────────
+def _owner_from_form(o):
+    o.name = (request.form.get('name') or o.name or '').strip()
+    o.role = request.form.get('role') or None
+    o.nationality = request.form.get('nationality') or None
+    o.passport_no = request.form.get('passport_no') or None
+    o.eid_no = request.form.get('eid_no') or None
+    try:
+        o.share_pct = float(request.form.get('share_pct')) if request.form.get('share_pct') else None
+    except ValueError:
+        o.share_pct = None
+    pe = request.form.get('passport_expiry'); ee = request.form.get('eid_expiry')
+    o.passport_expiry = datetime.strptime(pe, '%Y-%m-%d').date() if pe else None
+    o.eid_expiry = datetime.strptime(ee, '%Y-%m-%d').date() if ee else None
+    return o
+
+@app.route('/customers/<int:customer_id>/owners/add', methods=['POST'])
+@login_required
+def add_owner(customer_id):
+    Customer.query.get_or_404(customer_id)
+    if not (request.form.get('name') or '').strip():
+        flash('Owner name is required')
+        return redirect(url_for('customer_detail', customer_id=customer_id))
+    o = _owner_from_form(Owner(customer_id=customer_id))
+    db.session.add(o)
+    db.session.commit()
+    flash(f'Added {o.name}')
+    return redirect(url_for('customer_detail', customer_id=customer_id))
+
+@app.route('/owners/<int:owner_id>/edit', methods=['POST'])
+@login_required
+def edit_owner(owner_id):
+    o = Owner.query.get_or_404(owner_id)
+    _owner_from_form(o)
+    db.session.commit()
+    flash('Owner updated')
+    return redirect(url_for('customer_detail', customer_id=o.customer_id))
+
+@app.route('/owners/<int:owner_id>/delete', methods=['POST'])
+@login_required
+def delete_owner(owner_id):
+    o = Owner.query.get_or_404(owner_id)
+    cid = o.customer_id
+    db.session.delete(o)
+    db.session.commit()
+    flash('Owner removed')
+    return redirect(url_for('customer_detail', customer_id=cid))
 
 @app.route('/health-check')
 @login_required
