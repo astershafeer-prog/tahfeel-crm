@@ -173,6 +173,22 @@ class Customer(db.Model):
     alerts_enabled = db.Column(db.Boolean, default=False)  # document-expiry alerts (email/WhatsApp)
     alert_email = db.Column(db.String(120))
     alert_whatsapp = db.Column(db.String(30))
+    # Company profile (UAE) — used for Company-type customers
+    ac_code = db.Column(db.String(50))
+    trade_name = db.Column(db.String(150))
+    legal_form = db.Column(db.String(60))           # LLC, Sole Est, Branch, Free Zone Co, Offshore...
+    jurisdiction = db.Column(db.String(30))         # Mainland / Free Zone / Offshore
+    licensing_authority = db.Column(db.String(120)) # DED, DMCC, JAFZA, IFZA...
+    freezone_name = db.Column(db.String(120))
+    emirate = db.Column(db.String(40))
+    country_incorp = db.Column(db.String(60))
+    business_activity = db.Column(db.String(200))
+    ac_status = db.Column(db.String(30))            # Active / Under Formation / Inactive / Closed
+    po_box = db.Column(db.String(30))
+    mobile = db.Column(db.String(30))
+    whatsapp = db.Column(db.String(30))
+    website = db.Column(db.String(120))
+    ac_opening_date = db.Column(db.Date)
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -250,6 +266,35 @@ class Company(db.Model):
     owner = db.relationship('Customer', foreign_keys=[customer_id])
     documents = db.relationship('Document', backref='company', lazy=True)
 
+class Employee(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)  # the company they belong to
+    name = db.Column(db.String(120), nullable=False)
+    designation = db.Column(db.String(100))
+    nationality = db.Column(db.String(60))
+    date_of_birth = db.Column(db.Date)
+    join_date = db.Column(db.Date)
+    mobile = db.Column(db.String(30))
+    email = db.Column(db.String(120))
+    status = db.Column(db.String(30), default='Active')
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    company = db.relationship('Customer', foreign_keys=[customer_id])
+    documents = db.relationship('Document', backref='employee', lazy=True)
+
+class Owner(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)  # the company
+    name = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(60))            # Shareholder / Director / Manager / Authorized Signatory
+    share_pct = db.Column(db.Float)
+    nationality = db.Column(db.String(60))
+    passport_no = db.Column(db.String(60))
+    passport_expiry = db.Column(db.Date)
+    eid_no = db.Column(db.String(60))
+    eid_expiry = db.Column(db.Date)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    company = db.relationship('Customer', foreign_keys=[customer_id])
+
 class Partner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
@@ -281,6 +326,7 @@ class Document(db.Model):
     owner_name = db.Column(db.String(100), nullable=False)
     customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)  # attach doc to a company
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=True)  # attach doc to an employee
     expiry_date = db.Column(db.DateTime, nullable=True)
     notes = db.Column(db.Text)
     file_name = db.Column(db.String(255), nullable=True)
@@ -1949,6 +1995,12 @@ def add_customer():
         db.session.add(customer)
         db.session.flush()  # get customer.id before commit
 
+        # Company profile fields (UAE) — applied for any customer; blank for individuals
+        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website']:
+            setattr(customer, _f, request.form.get(_f, '').strip() or None)
+        _aod = request.form.get('ac_opening_date', '').strip()
+        customer.ac_opening_date = datetime.strptime(_aod, '%Y-%m-%d').date() if _aod else None
+
         # Save inline documents
         doc_types_inline = request.form.getlist('doc_type[]')
         doc_owners = request.form.getlist('doc_owner[]')
@@ -2055,6 +2107,11 @@ def edit_customer(customer_id):
         customer.alert_email = request.form.get('alert_email', '').strip() or None
         customer.alert_whatsapp = request.form.get('alert_whatsapp', '').strip() or None
         customer.alerts_enabled = bool(request.form.get('alerts_enabled'))
+        # Company profile fields (UAE)
+        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website']:
+            setattr(customer, _f, request.form.get(_f, '').strip() or None)
+        _aod = request.form.get('ac_opening_date', '').strip()
+        customer.ac_opening_date = datetime.strptime(_aod, '%Y-%m-%d').date() if _aod else None
         try:
             customer.assigned_to = int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None
         except:
@@ -3879,6 +3936,24 @@ def init_db():
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS alerts_enabled BOOLEAN DEFAULT FALSE',
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS alert_email VARCHAR(120)',
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS alert_whatsapp VARCHAR(30)',
+            # Company profile fields (UAE) on customer
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS ac_code VARCHAR(50)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS trade_name VARCHAR(150)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS legal_form VARCHAR(60)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS jurisdiction VARCHAR(30)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS licensing_authority VARCHAR(120)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS freezone_name VARCHAR(120)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS emirate VARCHAR(40)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS country_incorp VARCHAR(60)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS business_activity VARCHAR(200)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS ac_status VARCHAR(30)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS po_box VARCHAR(30)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS mobile VARCHAR(30)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(30)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS website VARCHAR(120)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS ac_opening_date DATE',
+            # Document -> employee link (employee/owner tables auto-created by create_all)
+            'ALTER TABLE document ADD COLUMN IF NOT EXISTS employee_id INTEGER',
 
         ]
         for sql in migrations:
