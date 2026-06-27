@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee — {{ emp.name }}</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('customers') }}
+  <div class="container" style="max-width:960px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <a href="/customers/{{ emp.customer_id }}" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to {{ emp.company.name if emp.company else 'company' }}</a>
+
+    <!-- Employee info -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>👔 {{ emp.name }}</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm" onclick="openEmpEdit()">✏ Edit</button>
+          <form method="POST" action="/employees/{{ emp.id }}/delete" onsubmit="return confirm('Remove {{ emp.name }} and their documents? This cannot be undone.');" style="margin:0;">
+            <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);">🗑 Remove</button>
+          </form>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-row-3">
+          {% set fields = [
+            ('Designation', emp.designation), ('Nationality', emp.nationality),
+            ('Status', emp.status or 'Active'),
+            ('Date of Birth', emp.date_of_birth.strftime('%d %b %Y') if emp.date_of_birth else None),
+            ('Join Date', emp.join_date.strftime('%d %b %Y') if emp.join_date else None),
+            ('Mobile', emp.mobile), ('Email', emp.email)
+          ] %}
+          {% for label, val in fields %}
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">{{ label }}</div>
+            <div style="font-size:13px;">{{ val or '—' }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Employee documents -->
+    <div class="card">
+      <div class="card-header"><h2>📄 Employee Documents <span style="font-size:12px;color:var(--text-muted);font-weight:400;">({{ docs|length }})</span></h2></div>
+      <div class="card-body">
+        <form method="POST" action="/employees/{{ emp.id }}/documents/add" enctype="multipart/form-data">
+          <div class="section-label">Add Document <span style="font-weight:400;color:#94A3B8;text-transform:none;">(passport, visa, Emirates ID, labour card, insurance, driving license…)</span></div>
+          <div class="form-row-2" style="align-items:flex-end;">
+            <div class="form-group"><label>Document Type</label>
+              <select name="doc_type" required><option value="">— Select —</option>{% for dt in doc_types %}<option value="{{ dt.name }}">{{ dt.name }}</option>{% endfor %}</select>
+            </div>
+            <div class="form-group"><label>Expiry Date</label><input type="date" name="expiry_date"></div>
+            <div class="form-group"><label>File <span style="color:#94A3B8;font-weight:400;">(optional)</span></label><input type="file" name="document_file"></div>
+            <div class="form-group"><label>Notes</label><input type="text" name="notes" placeholder="optional"></div>
+          </div>
+          <button type="submit" class="btn-primary" style="margin-top:4px;">+ Add Document</button>
+        </form>
+        <hr class="divider">
+        <table>
+          <thead><tr><th>Type</th><th>Expiry</th><th>Status</th><th>File</th></tr></thead>
+          <tbody>
+            {% for d in docs %}
+            <tr>
+              <td style="font-weight:600;">{{ d.doc_type }}</td>
+              <td style="font-size:13px;">{{ d.expiry_date.strftime('%d %b %Y') if d.expiry_date else '—' }}</td>
+              <td>
+                {% if not d.expiry_date %}<span style="font-size:11px;color:#CBD5E1;">—</span>
+                {% else %}{% set days = (d.expiry_date.date() - today).days %}
+                  {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Expired {{ -days }}d ago</span>
+                  {% elif days <= 30 %}<span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
+                  {% elif days <= 60 %}<span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
+                  {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>{% endif %}
+                {% endif %}
+              </td>
+              <td>{% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="empty">No documents yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Employee Modal -->
+  <div class="modal-overlay" id="empEdit" style="display:none;">
+    <div class="modal-box" style="max-width:620px;width:94%;text-align:left;">
+      <h3 style="margin-top:0;">✏ Edit Employee</h3>
+      <form method="POST" action="/employees/{{ emp.id }}/edit">
+        <div class="form-row-2">
+          <div class="form-group"><label>Full Name <span style="color:var(--danger);">*</span></label><input type="text" name="name" required value="{{ emp.name }}"></div>
+          <div class="form-group"><label>Designation</label><input type="text" name="designation" value="{{ emp.designation or '' }}"></div>
+          <div class="form-group"><label>Nationality</label><input type="text" name="nationality" value="{{ emp.nationality or '' }}"></div>
+          <div class="form-group"><label>Status</label><select name="status">{% for s in ['Active','On Leave','Resigned','Terminated'] %}<option {% if (emp.status or 'Active')==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+          <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth" value="{{ emp.date_of_birth.strftime('%Y-%m-%d') if emp.date_of_birth else '' }}"></div>
+          <div class="form-group"><label>Join Date</label><input type="date" name="join_date" value="{{ emp.join_date.strftime('%Y-%m-%d') if emp.join_date else '' }}"></div>
+          <div class="form-group"><label>Mobile</label><input type="text" name="mobile" value="{{ emp.mobile or '' }}"></div>
+          <div class="form-group"><label>Email</label><input type="email" name="email" value="{{ emp.email or '' }}"></div>
+        </div>
+        <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
+          <button type="button" class="btn-sm" onclick="closeEmpEdit()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openEmpEdit(){ document.getElementById('empEdit').classList.add('active'); }
+    function closeEmpEdit(){ document.getElementById('empEdit').classList.remove('active'); }
+    (function(){ var m=document.getElementById('empEdit'); if(m) m.addEventListener('click', function(e){ if(e.target===this) closeEmpEdit(); }); })();
+  </script>
+</body>
+</html>

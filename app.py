@@ -2047,11 +2047,12 @@ def customer_detail(customer_id):
     customer = Customer.query.get_or_404(customer_id)
     now = now_dubai()
     jobs = Job.query.filter_by(customer_id=customer_id).order_by(Job.created_at.desc()).all()
-    docs = Document.query.filter_by(customer_id=customer_id).order_by(Document.expiry_date).all()
+    docs = Document.query.filter_by(customer_id=customer_id, employee_id=None).order_by(Document.expiry_date).all()
+    employees = Employee.query.filter_by(customer_id=customer_id).order_by(Employee.name).all()
     total_invoiced = sum(j.amount_invoiced or 0 for j in jobs)
     total_received = sum(j.amount_received or 0 for j in jobs)
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
-                           documents=docs, now=now,
+                           documents=docs, employees=employees, now=now, today=now.date(),
                            total_invoiced=total_invoiced, total_received=total_received)
 
 
@@ -3479,6 +3480,94 @@ def delete_company(company_id):
     db.session.commit()
     flash(f'Company "{name}" deleted')
     return redirect(url_for('companies'))
+
+# ─────────────────────────── Employees ───────────────────────────
+@app.route('/customers/<int:customer_id>/employees/add', methods=['POST'])
+@login_required
+def add_employee(customer_id):
+    Customer.query.get_or_404(customer_id)
+    name = (request.form.get('name') or '').strip()
+    if not name:
+        flash('Employee name is required')
+        return redirect(url_for('customer_detail', customer_id=customer_id))
+    e = Employee(
+        customer_id=customer_id, name=name,
+        designation=request.form.get('designation') or None,
+        nationality=request.form.get('nationality') or None,
+        mobile=request.form.get('mobile') or None,
+        email=request.form.get('email') or None,
+        status=request.form.get('status') or 'Active',
+    )
+    dob = request.form.get('date_of_birth'); jd = request.form.get('join_date')
+    e.date_of_birth = datetime.strptime(dob, '%Y-%m-%d').date() if dob else None
+    e.join_date = datetime.strptime(jd, '%Y-%m-%d').date() if jd else None
+    db.session.add(e)
+    db.session.commit()
+    flash(f'Employee "{name}" added')
+    return redirect(url_for('employee_detail', employee_id=e.id))
+
+@app.route('/employees/<int:employee_id>')
+@login_required
+def employee_detail(employee_id):
+    emp = Employee.query.get_or_404(employee_id)
+    now = now_dubai()
+    docs = sorted(list(emp.documents), key=lambda d: (d.expiry_date or datetime.max))
+    doc_types = DocType.query.order_by(DocType.name).all()
+    return render_template('employee_detail.html', emp=emp, docs=docs, doc_types=doc_types,
+                           now=now, today=now.date())
+
+@app.route('/employees/<int:employee_id>/edit', methods=['POST'])
+@login_required
+def edit_employee(employee_id):
+    e = Employee.query.get_or_404(employee_id)
+    e.name = (request.form.get('name') or e.name).strip()
+    e.designation = request.form.get('designation') or None
+    e.nationality = request.form.get('nationality') or None
+    e.mobile = request.form.get('mobile') or None
+    e.email = request.form.get('email') or None
+    e.status = request.form.get('status') or 'Active'
+    dob = request.form.get('date_of_birth'); jd = request.form.get('join_date')
+    e.date_of_birth = datetime.strptime(dob, '%Y-%m-%d').date() if dob else None
+    e.join_date = datetime.strptime(jd, '%Y-%m-%d').date() if jd else None
+    db.session.commit()
+    flash('Employee updated')
+    return redirect(url_for('employee_detail', employee_id=e.id))
+
+@app.route('/employees/<int:employee_id>/delete', methods=['POST'])
+@login_required
+def delete_employee(employee_id):
+    e = Employee.query.get_or_404(employee_id)
+    cid = e.customer_id
+    Document.query.filter_by(employee_id=e.id).delete(synchronize_session=False)
+    db.session.delete(e)
+    db.session.commit()
+    flash('Employee removed')
+    return redirect(url_for('customer_detail', customer_id=cid))
+
+@app.route('/employees/<int:employee_id>/documents/add', methods=['POST'])
+@login_required
+def add_employee_document(employee_id):
+    emp = Employee.query.get_or_404(employee_id)
+    expiry = request.form.get('expiry_date')
+    expiry_dt = datetime.strptime(expiry, '%Y-%m-%d') if expiry else None
+    file_name = file_url = public_id = None
+    if 'document_file' in request.files:
+        f = request.files['document_file']
+        if f and f.filename:
+            file_name = f.filename
+            file_url, public_id = upload_to_cloudinary(f)
+            if not file_url:
+                flash('⚠️ File could not be uploaded — document saved without attachment.', 'warning')
+    doc = Document(
+        doc_type=request.form['doc_type'], belongs_to='Employee', owner_name=emp.name,
+        employee_id=emp.id, customer_id=emp.customer_id, expiry_date=expiry_dt,
+        notes=request.form.get('notes'), file_name=file_name, file_url=file_url,
+        cloudinary_public_id=public_id, uploaded_by=session['user_id'], added_by=session['user_name'],
+    )
+    db.session.add(doc)
+    db.session.commit()
+    flash('Document added')
+    return redirect(url_for('employee_detail', employee_id=emp.id))
 
 @app.route('/health-check')
 @login_required

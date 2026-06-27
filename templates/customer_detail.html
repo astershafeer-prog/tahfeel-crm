@@ -176,6 +176,41 @@
       {% endif %}
     </div>
 
+    {% if customer.customer_type == 'Company' %}
+    <!-- Employees -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>👔 Employees <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ employees|length }}</span></h2>
+        <button class="btn-add" style="font-size:12px;padding:6px 14px;" onclick="openEmpModal()">+ Add Employee</button>
+      </div>
+      {% if employees %}
+      <table>
+        <thead><tr><th>Name</th><th>Designation</th><th>Nationality</th><th>Documents</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for e in employees %}
+          {% set exp = [] %}
+          {% for d in e.documents if d.expiry_date %}{% set _ = exp.append((d.expiry_date.date() - today).days) %}{% endfor %}
+          <tr>
+            <td><strong>{{ e.name }}</strong></td>
+            <td>{{ e.designation or '—' }}</td>
+            <td>{{ e.nationality or '—' }}</td>
+            <td>
+              {{ e.documents|length }}
+              {% if exp and (exp|min) < 0 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> · EXPIRED</span>
+              {% elif exp and (exp|min) <= 30 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> · ⚠ {{ exp|min }}d</span>{% endif %}
+            </td>
+            <td><span class="badge {{ 'badge-active' if (e.status or 'Active') == 'Active' else 'badge-inactive' }}">{{ e.status or 'Active' }}</span></td>
+            <td><a href="/employees/{{ e.id }}" class="ib" title="Open">👁</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No employees yet. Click <strong>+ Add Employee</strong> to add staff and their documents.</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
         <!-- Documents -->
     <div class="section-label">Documents ({{ documents|length }})</div>
     <div class="card card-customers">
@@ -216,5 +251,34 @@
       {% endif %}
     </div>
   </div>
+
+  <!-- Add Employee Modal -->
+  <div class="modal-overlay" id="empModal" style="display:none;">
+    <div class="modal-box" style="max-width:620px;width:94%;text-align:left;">
+      <h3 style="margin-top:0;">👔 Add Employee</h3>
+      <form method="POST" action="/customers/{{ customer.id }}/employees/add">
+        <div class="form-row-2">
+          <div class="form-group"><label>Full Name <span style="color:var(--danger);">*</span></label><input type="text" name="name" required placeholder="Employee name"></div>
+          <div class="form-group"><label>Designation</label><input type="text" name="designation" placeholder="e.g. Accountant"></div>
+          <div class="form-group"><label>Nationality</label><input type="text" name="nationality"></div>
+          <div class="form-group"><label>Status</label><select name="status"><option>Active</option><option>On Leave</option><option>Resigned</option><option>Terminated</option></select></div>
+          <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth"></div>
+          <div class="form-group"><label>Join Date</label><input type="date" name="join_date"></div>
+          <div class="form-group"><label>Mobile</label><input type="text" name="mobile" placeholder="+971 5X XXX XXXX"></div>
+          <div class="form-group"><label>Email</label><input type="email" name="email"></div>
+        </div>
+        <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
+          <button type="button" class="btn-sm" onclick="closeEmpModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Add Employee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openEmpModal(){ var m=document.getElementById('empModal'); if(m) m.classList.add('active'); }
+    function closeEmpModal(){ var m=document.getElementById('empModal'); if(m) m.classList.remove('active'); }
+    (function(){ var m=document.getElementById('empModal'); if(m) m.addEventListener('click', function(e){ if(e.target===this) closeEmpModal(); }); })();
+  </script>
 </body>
 </html>
