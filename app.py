@@ -169,6 +169,10 @@ class Customer(db.Model):
     nationality = db.Column(db.String(50))
     date_of_birth = db.Column(db.Date, nullable=True)
     customer_type = db.Column(db.String(20), default='Individual')
+    contact_person = db.Column(db.String(100))  # used for Company-type customers
+    alerts_enabled = db.Column(db.Boolean, default=False)  # document-expiry alerts (email/WhatsApp)
+    alert_email = db.Column(db.String(120))
+    alert_whatsapp = db.Column(db.String(30))
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -1937,6 +1941,7 @@ def add_customer():
                 source=request.form.get('source', '').strip() or None,
                 nationality=request.form.get('nationality', '').strip() or None,
                 customer_type=request.form.get('customer_type', 'Individual'),
+                contact_person=request.form.get('contact_person', '').strip() or None,
                 assigned_to=int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None,
                 notes=request.form.get('notes', '').strip() or None,
                 date_of_birth=datetime.strptime(request.form.get('date_of_birth'), '%Y-%m-%d').date() if request.form.get('date_of_birth') else None
@@ -2016,6 +2021,10 @@ def edit_customer(customer_id):
         dob_str = request.form.get('date_of_birth', '').strip()
         customer.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
         customer.customer_type = request.form.get('customer_type', 'Individual')
+        customer.contact_person = request.form.get('contact_person', '').strip() or None
+        customer.alert_email = request.form.get('alert_email', '').strip() or None
+        customer.alert_whatsapp = request.form.get('alert_whatsapp', '').strip() or None
+        customer.alerts_enabled = bool(request.form.get('alerts_enabled'))
         try:
             customer.assigned_to = int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None
         except:
@@ -2063,6 +2072,15 @@ def edit_customer(customer_id):
     existing_docs = Document.query.filter_by(customer_id=customer_id).order_by(Document.expiry_date).all()
     now = now_dubai()
     return render_template('edit_customer.html', customer=customer, sources=sources, users=users, doc_types=doc_types, existing_docs=existing_docs, now=now)
+
+@app.route('/customers/<int:customer_id>/toggle-alerts', methods=['POST'])
+@login_required
+def toggle_customer_alerts(customer_id):
+    c = Customer.query.get_or_404(customer_id)
+    c.alerts_enabled = not c.alerts_enabled
+    db.session.commit()
+    flash(('🔔 Document alerts ON' if c.alerts_enabled else '🔕 Document alerts OFF') + f' for {c.name}')
+    return redirect(url_for('customer_detail', customer_id=customer_id))
 
 @app.route('/customers/<int:customer_id>/delete')
 @login_required
@@ -3769,6 +3787,11 @@ def init_db():
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS alerts_enabled BOOLEAN DEFAULT FALSE',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS alert_email VARCHAR(120)',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS alert_whatsapp VARCHAR(30)',
+            # Customer = unified entity (Individual or Company): contact person + expiry alerts
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS contact_person VARCHAR(100)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS alerts_enabled BOOLEAN DEFAULT FALSE',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS alert_email VARCHAR(120)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS alert_whatsapp VARCHAR(30)',
 
         ]
         for sql in migrations:

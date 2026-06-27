@@ -29,6 +29,9 @@
 <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Task</a>
             <a href="/documents/add?customer_id={{ customer.id }}" class="btn-sm" style="background:white;border-color:var(--primary);color:var(--primary);">📄 Add Document</a>
+            <form method="POST" action="/customers/{{ customer.id }}/toggle-alerts" style="margin:0;display:inline;">
+              <button type="submit" class="btn-sm" style="border-color:{{ '#16A34A' if customer.alerts_enabled else '#94A3B8' }};color:{{ '#16A34A' if customer.alerts_enabled else '#64748B' }};">{{ '🔔 Alerts ON' if customer.alerts_enabled else '🔕 Alerts OFF' }}</button>
+            </form>
             <a href="/customers/{{ customer.id }}/edit" class="ib" title="Edit">✏</a>
             {% if session.role == 'admin' %}
             <a href="/customers/{{ customer.id }}/delete" class="ib ib-del" onclick="return confirm('Delete {{ customer.name }}? This cannot be undone.')" title="Delete">🗑</a>
@@ -76,6 +79,16 @@
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Customer Type</div>
             <div style="font-size:13px;"><span class="badge b-{{ (customer.customer_type or 'individual')|lower }}">{{ customer.customer_type or 'Individual' }}</span></div>
+          </div>
+          {% if customer.customer_type == 'Company' or customer.contact_person %}
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Contact Person</div>
+            <div style="font-size:13px;">{{ customer.contact_person or '—' }}</div>
+          </div>
+          {% endif %}
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Doc Expiry Alerts</div>
+            <div style="font-size:13px;">{% if customer.alerts_enabled %}🔔 On — {{ customer.alert_email or customer.email or 'no email' }}{% if customer.alert_whatsapp %} · {{ customer.alert_whatsapp }}{% endif %}{% else %}<span style="color:var(--text-light);">Off</span>{% endif %}</div>
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Primary Rep</div>

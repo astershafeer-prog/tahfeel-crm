@@ -35,6 +35,10 @@
               <input type="text" name="company" value="{{ customer.company or '' }}" placeholder="Company name">
             </div>
             <div class="form-group">
+              <label>Contact Person <span style="color:#94A3B8;font-weight:400;">(for companies)</span></label>
+              <input type="text" name="contact_person" value="{{ customer.contact_person or '' }}" placeholder="Person to contact">
+            </div>
+            <div class="form-group">
               <label>Phone *</label>
               <input type="text" name="phone" value="{{ customer.phone or '' }}" required placeholder="+971 50 000 0000">
             </div>
@@ -65,6 +69,21 @@
                 <option value="Company" {% if customer.customer_type == 'Company' %}selected{% endif %}>Company</option>
                 <option value="Investor" {% if customer.customer_type == 'Investor' %}selected{% endif %}>Investor</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label>Document Expiry Alerts</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;text-transform:none;cursor:pointer;margin-top:6px;">
+                <input type="checkbox" name="alerts_enabled" value="1" style="width:auto;" {% if customer.alerts_enabled %}checked{% endif %}>
+                Alert when a document is &lt; 30 days from expiry (email + WhatsApp)
+              </label>
+            </div>
+            <div class="form-group">
+              <label>Alert Email <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+              <input type="email" name="alert_email" value="{{ customer.alert_email or '' }}" placeholder="defaults to customer email">
+            </div>
+            <div class="form-group">
+              <label>Alert WhatsApp <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+              <input type="text" name="alert_whatsapp" value="{{ customer.alert_whatsapp or '' }}" placeholder="+971 XX XXX XXXX">
             </div>
             <div class="form-group">
               <label>Source</label>
