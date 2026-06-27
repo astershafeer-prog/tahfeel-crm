@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Health Check</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('health-check') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>🩺 Document Health Check</h2>
+      <form method="GET" action="/health-check" style="display:flex;gap:8px;align-items:center;">
+        {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+        <select name="type" onchange="this.form.submit()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;">
+          <option value="">All types</option>
+          <option value="Individual" {% if type_filter=='Individual' %}selected{% endif %}>Individual</option>
+          <option value="Company" {% if type_filter=='Company' %}selected{% endif %}>Company</option>
+          <option value="Investor" {% if type_filter=='Investor' %}selected{% endif %}>Investor</option>
+          <option value="Staff" {% if type_filter=='Staff' %}selected{% endif %}>Staff</option>
+        </select>
+        {% if status_filter or type_filter %}<a href="/health-check" class="btn-sm">Clear</a>{% endif %}
+      </form>
+    </div>
+
+    <!-- Summary cards (click to filter) -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
+      <a href="/health-check?status=expired{% if type_filter %}&type={{ type_filter }}{% endif %}" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B91C1C;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);{% if status_filter=='expired' %}outline:2px solid #B91C1C;{% endif %}">
+        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Expired</div>
+        <div style="font-size:26px;font-weight:800;color:#B91C1C;">{{ n_expired }}</div>
+      </a>
+      <a href="/health-check?status=red{% if type_filter %}&type={{ type_filter }}{% endif %}" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #DC2626;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);{% if status_filter=='red' %}outline:2px solid #DC2626;{% endif %}">
+        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">≤ 30 days</div>
+        <div style="font-size:26px;font-weight:800;color:#DC2626;">{{ n_red }}</div>
+      </a>
+      <a href="/health-check?status=amber{% if type_filter %}&type={{ type_filter }}{% endif %}" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B45309;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);{% if status_filter=='amber' %}outline:2px solid #B45309;{% endif %}">
+        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">31–60 days</div>
+        <div style="font-size:26px;font-weight:800;color:#B45309;">{{ n_amber }}</div>
+      </a>
+      <a href="/health-check?status=green{% if type_filter %}&type={{ type_filter }}{% endif %}" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #059669;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);{% if status_filter=='green' %}outline:2px solid #059669;{% endif %}">
+        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Healthy (60+)</div>
+        <div style="font-size:26px;font-weight:800;color:#059669;">{{ n_green }}</div>
+      </a>
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Total Docs</div>
+        <div style="font-size:26px;font-weight:800;color:#1A3B8B;">{{ total }}</div>
+      </div>
+    </div>
+
+    {% macro status_badge(days) %}
+      {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Expired {{ -days }}d ago</span>
+      {% elif days <= 30 %}<span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
+      {% elif days <= 60 %}<span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
+      {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>{% endif %}
+    {% endmacro %}
+
+    {% if rows %}
+      {% for r in rows %}
+      <div class="card" style="margin-bottom:12px;border-left:5px solid {% if r.worst < 0 or r.worst <= 30 %}#DC2626{% elif r.worst <= 60 %}#B45309{% else %}#059669{% endif %};">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h2 style="margin:0;">{% if r.owner_type == 'Company' %}🏢{% elif r.owner_type == 'Staff' %}👔{% else %}👤{% endif %} {{ r.owner_name }}</h2>
+            <span class="badge b-{{ (r.owner_type or 'individual')|lower }}">{{ r.owner_type }}</span>
+            <span style="font-size:12px;color:var(--text-muted);">{{ r.count }} doc{{ 's' if r.count != 1 else '' }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            {{ status_badge(r.worst) }}
+            {% if r.customer_id %}<a href="/customers/{{ r.customer_id }}" class="btn-sm">Open →</a>{% endif %}
+          </div>
+        </div>
+        <div class="card-body" style="padding-top:0;">
+          <table>
+            <thead><tr><th>Document</th><th>Expiry Date</th><th>Status</th><th>File</th></tr></thead>
+            <tbody>
+              {% for d in r.docs %}
+              {% set days = (d.expiry_date.date() - today).days %}
+              <tr>
+                <td style="font-weight:600;">{{ d.doc_type }}</td>
+                <td style="font-size:13px;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
+                <td>{{ status_badge(days) }}</td>
+                <td>{% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="card"><div class="empty">No documents with expiry dates yet. Add documents (with an expiry date) to customers to see their health here.</div></div>
+    {% endif %}
+  </div>
+</body>
+</html>

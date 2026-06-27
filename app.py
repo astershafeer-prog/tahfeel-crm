@@ -3393,6 +3393,63 @@ def delete_company(company_id):
     flash(f'Company "{name}" deleted')
     return redirect(url_for('companies'))
 
+@app.route('/health-check')
+@login_required
+def health_check():
+    now = now_dubai()
+    today = now.date()
+    docs = Document.query.filter(Document.expiry_date != None).all()
+
+    def days_left(d):
+        return (d.expiry_date.date() - today).days
+
+    # Overall summary counts
+    n_expired = len([d for d in docs if days_left(d) < 0])
+    n_red = len([d for d in docs if 0 <= days_left(d) <= 30])
+    n_amber = len([d for d in docs if 30 < days_left(d) <= 60])
+    n_green = len([d for d in docs if days_left(d) > 60])
+
+    # Group documents by owner (customer/company, or staff name when no customer)
+    customers_by_id = {c.id: c for c in Customer.query.all()}
+    groups = {}
+    for d in docs:
+        key = d.customer_id if d.customer_id else ('staff:' + (d.owner_name or 'Unknown'))
+        groups.setdefault(key, []).append(d)
+
+    rows = []
+    for key, dl in groups.items():
+        dl_sorted = sorted(dl, key=lambda d: d.expiry_date)
+        worst = min(days_left(d) for d in dl)
+        if isinstance(key, int):
+            c = customers_by_id.get(key)
+            owner_name = c.name if c else 'Unknown'
+            owner_type = (c.customer_type if c and c.customer_type else 'Individual')
+            cid = key
+        else:
+            owner_name = key.split('staff:', 1)[1]
+            owner_type = 'Staff'
+            cid = None
+        rows.append({'owner_name': owner_name, 'owner_type': owner_type, 'customer_id': cid,
+                     'docs': dl_sorted, 'count': len(dl), 'worst': worst})
+    rows.sort(key=lambda r: r['worst'])  # most urgent first
+
+    status_filter = request.args.get('status', '')
+    type_filter = request.args.get('type', '')
+    if type_filter:
+        rows = [r for r in rows if r['owner_type'] == type_filter]
+    if status_filter == 'expired':
+        rows = [r for r in rows if r['worst'] < 0]
+    elif status_filter == 'red':
+        rows = [r for r in rows if 0 <= r['worst'] <= 30]
+    elif status_filter == 'amber':
+        rows = [r for r in rows if 30 < r['worst'] <= 60]
+    elif status_filter == 'green':
+        rows = [r for r in rows if r['worst'] > 60]
+
+    return render_template('health_check.html', rows=rows, now=now, today=today,
+                           n_expired=n_expired, n_red=n_red, n_amber=n_amber, n_green=n_green,
+                           total=len(docs), status_filter=status_filter, type_filter=type_filter)
+
 @app.route('/documents')
 @login_required
 def documents():
