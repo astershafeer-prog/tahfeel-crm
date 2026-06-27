@@ -2003,6 +2003,36 @@ def customer_detail(customer_id):
                            total_invoiced=total_invoiced, total_received=total_received)
 
 
+@app.route('/customers/<int:customer_id>/health')
+@login_required
+def customer_health(customer_id):
+    customer = Customer.query.get_or_404(customer_id)
+    now = now_dubai()
+    today = now.date()
+    docs = [d for d in Document.query.filter_by(customer_id=customer_id).all() if d.expiry_date]
+    docs.sort(key=lambda d: d.expiry_date)
+    def dleft(d):
+        return (d.expiry_date.date() - today).days
+    valid = [d for d in docs if dleft(d) > 30]
+    expiring = [d for d in docs if 0 <= dleft(d) <= 30]
+    expired = [d for d in docs if dleft(d) < 0]
+    total = len(docs)
+    # Health score: valid=1, expiring-soon=0.5, expired=0
+    score = round(100 * (len(valid) + 0.5 * len(expiring)) / total) if total else None
+    if score is None:
+        band = 'No documents'
+    elif score >= 90:
+        band = 'Excellent'
+    elif score >= 70:
+        band = 'Good'
+    elif score >= 50:
+        band = 'Average'
+    else:
+        band = 'Poor'
+    return render_template('customer_health.html', customer=customer, docs=docs, today=today, now=now,
+                           valid=valid, expiring=expiring, expired=expired, total=total,
+                           score=score, band=band)
+
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_customer(customer_id):

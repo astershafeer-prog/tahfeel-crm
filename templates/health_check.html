@@ -73,7 +73,8 @@
           </div>
           <div style="display:flex;align-items:center;gap:10px;">
             {{ status_badge(r.worst) }}
-            {% if r.customer_id %}<a href="/customers/{{ r.customer_id }}" class="btn-sm">Open →</a>{% endif %}
+            {% if r.customer_id %}<a href="/customers/{{ r.customer_id }}/health" class="btn-sm" style="border-color:#059669;color:#059669;">🩺 Health</a>
+            <a href="/customers/{{ r.customer_id }}" class="btn-sm">Open →</a>{% endif %}
           </div>
         </div>
         <div class="card-body" style="padding-top:0;">

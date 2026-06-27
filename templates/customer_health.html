@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Check — {{ customer.name }}</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    {% set color = '#059669' if (score is not none and score >= 70) else ('#B45309' if (score is not none and score >= 50) else '#DC2626') %}
+    @media print {
+      .topbar, .nav, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100% !important; }
+      .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('health-check') }}
+  <div class="container" style="max-width:980px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <a href="/customers/{{ customer.id }}" style="color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to customer</a>
+      <button onclick="window.print()" class="btn-sm" style="background:#1A3B8B;color:#fff;border-color:#1A3B8B;">🖨 Print / Save PDF</button>
+    </div>
+
+    <!-- Header: name + score -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-body" style="display:flex;align-items:center;gap:28px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Business Health Check</div>
+          <div style="font-size:24px;font-weight:800;color:var(--text-primary);margin-top:2px;">{% if customer.customer_type == 'Company' %}🏢{% else %}👤{% endif %} {{ customer.name }}</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">
+            {{ customer.customer_type or 'Individual' }}{% if customer.contact_person %} · Contact: {{ customer.contact_person }}{% endif %}
+          </div>
+          <div style="font-size:12px;color:var(--text-light);margin-top:6px;">Generated {{ now.strftime('%d %b %Y') }}</div>
+        </div>
+        <!-- Score donut -->
+        <div style="text-align:center;">
+          {% if score is not none %}
+          {% set circ = 339.292 %}
+          <svg width="130" height="130" viewBox="0 0 130 130">
+            <circle cx="65" cy="65" r="54" fill="none" stroke="#E5E7EB" stroke-width="12"/>
+            <circle cx="65" cy="65" r="54" fill="none" stroke="{{ color }}" stroke-width="12" stroke-linecap="round"
+                    stroke-dasharray="{{ (circ * score / 100)|round(1) }} {{ circ }}" transform="rotate(-90 65 65)"/>
+            <text x="65" y="62" text-anchor="middle" font-size="30" font-weight="800" fill="{{ color }}">{{ score }}%</text>
+            <text x="65" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="#64748B">{{ band }}</text>
+          </svg>
+          {% else %}
+          <div style="width:130px;height:130px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;border:2px dashed #E5E7EB;border-radius:50%;">No docs</div>
+          {% endif %}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Health Score</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
+      <div class="card" style="border-top:5px solid #1A3B8B;"><div class="card-body"><div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Total Documents</div><div style="font-size:24px;font-weight:800;color:#1A3B8B;">{{ total }}</div></div></div>
+      <div class="card" style="border-top:5px solid #059669;"><div class="card-body"><div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Valid</div><div style="font-size:24px;font-weight:800;color:#059669;">{{ valid|length }}</div></div></div>
+      <div class="card" style="border-top:5px solid #B45309;"><div class="card-body"><div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Expiring ≤30d</div><div style="font-size:24px;font-weight:800;color:#B45309;">{{ expiring|length }}</div></div></div>
+      <div class="card" style="border-top:5px solid #DC2626;"><div class="card-body"><div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Expired</div><div style="font-size:24px;font-weight:800;color:#DC2626;">{{ expired|length }}</div></div></div>
+    </div>
+
+    <!-- Document list -->
+    <div class="card">
+      <div class="card-header"><h2>📄 Documents &amp; Validity</h2></div>
+      <div class="card-body">
+        {% if docs %}
+        <table>
+          <thead><tr><th>Document</th><th>Owner</th><th>Expiry Date</th><th>Status</th><th class="no-print">File</th></tr></thead>
+          <tbody>
+            {% for d in docs %}
+            {% set days = (d.expiry_date.date() - today).days %}
+            <tr>
+              <td style="font-weight:600;">{{ d.doc_type }}</td>
+              <td style="font-size:13px;color:var(--text-muted);">{{ d.owner_name or customer.name }}</td>
+              <td style="font-size:13px;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
+              <td>
+                {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Expired {{ -days }}d ago</span>
+                {% elif days <= 30 %}<span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
+                {% elif days <= 60 %}<span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
+                {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Valid · {{ days }}d</span>{% endif %}
+              </td>
+              <td class="no-print">{% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty">No documents with expiry dates yet. <a href="/documents/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add a document →</a></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
