@@ -2089,9 +2089,11 @@ def customer_health(customer_id):
         band = 'Average'
     else:
         band = 'Poor'
+    employees_count = Employee.query.filter_by(customer_id=customer_id).count()
+    expiring60 = [d for d in docs if 30 < (d.expiry_date.date() - today).days <= 60]
     return render_template('customer_health.html', customer=customer, docs=docs, today=today, now=now,
-                           valid=valid, expiring=expiring, expired=expired, total=total,
-                           score=score, band=band)
+                           valid=valid, expiring=expiring, expiring60=expiring60, expired=expired, total=total,
+                           score=score, band=band, employees_count=employees_count)
 
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required

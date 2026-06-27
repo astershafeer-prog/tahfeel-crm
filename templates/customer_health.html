@@ -6,102 +6,114 @@
   <title>Health Check — {{ customer.name }}</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {% set arc = '#34D399' if (score is not none and score >= 70) else ('#FBBF24' if (score is not none and score >= 50) else '#F87171') %}
   <style>
-    {% set color = '#059669' if (score is not none and score >= 70) else ('#B45309' if (score is not none and score >= 50) else '#DC2626') %}
-    @media print {
-      .topbar, .nav, .no-print { display: none !important; }
-      body { background: #fff; }
-      .container { max-width: 100% !important; }
-      .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
-    }
+    .hc-wrap{max-width:1040px;margin:0 auto;}
+    .hc-hero{background:linear-gradient(135deg,#0F2660 0%,#1A3B8B 60%,#2850B0 100%);border-radius:20px;padding:30px 34px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;box-shadow:0 14px 40px rgba(15,38,96,.35);margin-bottom:18px;}
+    .hc-eyebrow{font-size:11px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,.7);text-transform:uppercase;}
+    .hc-name{font-size:30px;font-weight:800;margin:4px 0;line-height:1.1;}
+    .hc-sub{font-size:13px;color:rgba(255,255,255,.8);}
+    .hc-gen{font-size:11px;color:rgba(255,255,255,.55);margin-top:10px;}
+    .hc-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px;}
+    @media(max-width:880px){.hc-kpis{grid-template-columns:repeat(3,1fr);}}
+    .hc-kpi{background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(0,0,0,.06);border:0.5px solid #EAEef4;display:flex;flex-direction:column;gap:6px;}
+    .hc-kpi .ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+    .hc-kpi .num{font-size:26px;font-weight:800;line-height:1;}
+    .hc-kpi .lbl{font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.3px;}
+    .hc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+    .hc-tile{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 3px 12px rgba(0,0,0,.05);border:0.5px solid #EAEef4;border-left:5px solid #94A3B8;transition:transform .12s ease,box-shadow .12s ease;}
+    .hc-tile:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.10);}
+    .hc-tile .dt{font-size:14px;font-weight:700;color:#1A2333;}
+    .hc-tile .ow{font-size:11px;color:#94A3B8;margin-top:1px;}
+    .hc-tile .ex{font-size:12px;color:#475569;margin-top:8px;}
+    .hc-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-top:8px;}
+    .hc-sec{font-size:13px;font-weight:800;color:#1A2333;margin:18px 0 10px;display:flex;align-items:center;gap:8px;}
+    @media print{.topbar,.nav,.no-print{display:none!important;}body{background:#fff;}.hc-hero{box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.hc-tile,.hc-kpi{box-shadow:none;border:1px solid #ddd;}}
   </style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
   {{ topbar() }}
   {{ nav('health-check') }}
-  <div class="container" style="max-width:980px;">
+  <div class="container">
+    <div class="hc-wrap">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <a href="/customers/{{ customer.id }}" style="color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to customer</a>
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <a href="/customers/{{ customer.id }}" style="color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to client</a>
       <div style="display:flex;gap:8px;">
         <form method="POST" action="/customers/{{ customer.id }}/email-health" style="margin:0;">
           <button type="submit" class="btn-sm" style="border-color:#059669;color:#059669;">📧 Email Report</button>
         </form>
-        <button onclick="window.print()" class="btn-sm" style="background:#1A3B8B;color:#fff;border-color:#1A3B8B;">🖨 Print / Save PDF</button>
+        <button onclick="window.print()" class="btn-primary" style="padding:6px 16px;">🖨 Print / Save PDF</button>
       </div>
     </div>
 
-    <!-- Header: name + score -->
-    <div class="card" style="margin-bottom:14px;">
-      <div class="card-body" style="display:flex;align-items:center;gap:28px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:220px;">
-          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Business Health Check</div>
-          <div style="font-size:24px;font-weight:800;color:var(--text-primary);margin-top:2px;">{% if customer.customer_type == 'Company' %}🏢{% else %}👤{% endif %} {{ customer.name }}</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">
-            {{ customer.customer_type or 'Individual' }}{% if customer.contact_person %} · Contact: {{ customer.contact_person }}{% endif %}
-          </div>
-          <div style="font-size:12px;color:var(--text-light);margin-top:6px;">Generated {{ now.strftime('%d %b %Y') }}</div>
-        </div>
-        <!-- Score donut -->
-        <div style="text-align:center;">
-          {% if score is not none %}
-          {% set circ = 339.292 %}
-          <svg width="130" height="130" viewBox="0 0 130 130">
-            <circle cx="65" cy="65" r="54" fill="none" stroke="#E5E7EB" stroke-width="12"/>
-            <circle cx="65" cy="65" r="54" fill="none" stroke="{{ color }}" stroke-width="12" stroke-linecap="round"
-                    stroke-dasharray="{{ (circ * score / 100)|round(1) }} {{ circ }}" transform="rotate(-90 65 65)"/>
-            <text x="65" y="62" text-anchor="middle" font-size="30" font-weight="800" fill="{{ color }}">{{ score }}%</text>
-            <text x="65" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="#64748B">{{ band }}</text>
-          </svg>
-          {% else %}
-          <div style="width:130px;height:130px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;border:2px dashed #E5E7EB;border-radius:50%;">No docs</div>
-          {% endif %}
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Health Score</div>
-        </div>
+    <!-- Hero -->
+    <div class="hc-hero">
+      <div style="flex:1;min-width:240px;">
+        <div class="hc-eyebrow">Business Health Check</div>
+        <div class="hc-name">{% if customer.customer_type == 'Company' %}🏢{% else %}👤{% endif %} {{ customer.name }}</div>
+        <div class="hc-sub">{{ customer.customer_type or 'Individual' }}{% if customer.contact_person %} · Contact: {{ customer.contact_person }}{% endif %}{% if customer.licensing_authority %} · {{ customer.licensing_authority }}{% endif %}</div>
+        <div class="hc-gen">Generated {{ now.strftime('%d %b %Y, %I:%M %p') }}</div>
       </div>
-    </div>
-
-    <!-- Summary cards -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
-      <div class="card" style="border-top:5px solid #1A3B8B;"><div class="card-body"><div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Total Documents</div><div style="font-size:24px;font-weight:800;color:#1A3B8B;">{{ total }}</div></div></div>
-      <div class="card" style="border-top:5px solid #059669;"><div class="card-body"><div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Valid</div><div style="font-size:24px;font-weight:800;color:#059669;">{{ valid|length }}</div></div></div>
-      <div class="card" style="border-top:5px solid #B45309;"><div class="card-body"><div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Expiring ≤30d</div><div style="font-size:24px;font-weight:800;color:#B45309;">{{ expiring|length }}</div></div></div>
-      <div class="card" style="border-top:5px solid #DC2626;"><div class="card-body"><div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Expired</div><div style="font-size:24px;font-weight:800;color:#DC2626;">{{ expired|length }}</div></div></div>
-    </div>
-
-    <!-- Document list -->
-    <div class="card">
-      <div class="card-header"><h2>📄 Documents &amp; Validity</h2></div>
-      <div class="card-body">
-        {% if docs %}
-        <table>
-          <thead><tr><th>Document</th><th>Owner</th><th>Expiry Date</th><th>Status</th><th class="no-print">File</th></tr></thead>
-          <tbody>
-            {% for d in docs %}
-            {% set days = (d.expiry_date.date() - today).days %}
-            <tr>
-              <td style="font-weight:600;">{{ d.doc_type }}</td>
-              <td style="font-size:13px;color:var(--text-muted);">{{ d.owner_name or customer.name }}</td>
-              <td style="font-size:13px;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
-              <td>
-                {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Expired {{ -days }}d ago</span>
-                {% elif days <= 30 %}<span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
-                {% elif days <= 60 %}<span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
-                {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Valid · {{ days }}d</span>{% endif %}
-              </td>
-              <td class="no-print">{% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div style="text-align:center;">
+        {% if score is not none %}
+        {% set circ = 377.0 %}
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <circle cx="75" cy="75" r="60" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="14"/>
+          <circle cx="75" cy="75" r="60" fill="none" stroke="{{ arc }}" stroke-width="14" stroke-linecap="round"
+                  stroke-dasharray="{{ (circ * score / 100)|round(1) }} {{ circ }}" transform="rotate(-90 75 75)"/>
+          <text x="75" y="72" text-anchor="middle" font-size="34" font-weight="800" fill="#fff">{{ score }}%</text>
+          <text x="75" y="95" text-anchor="middle" font-size="13" font-weight="700" fill="{{ arc }}">{{ band }}</text>
+        </svg>
         {% else %}
-        <div class="empty">No documents with expiry dates yet. <a href="/documents/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add a document →</a></div>
+        <div style="width:150px;height:150px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);border:2px dashed rgba(255,255,255,.3);border-radius:50%;">No documents</div>
         {% endif %}
+        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px;">Health Score</div>
       </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="hc-kpis">
+      <div class="hc-kpi"><div class="ic" style="background:#EBF2FF;color:#1A3B8B;">📄</div><div class="num" style="color:#1A3B8B;">{{ total }}</div><div class="lbl">Total Docs</div></div>
+      <div class="hc-kpi"><div class="ic" style="background:#ECFDF5;color:#059669;">✓</div><div class="num" style="color:#059669;">{{ valid|length }}</div><div class="lbl">Valid</div></div>
+      <div class="hc-kpi"><div class="ic" style="background:#FEF2F2;color:#DC2626;">⏳</div><div class="num" style="color:#DC2626;">{{ expiring|length }}</div><div class="lbl">≤ 30 days</div></div>
+      <div class="hc-kpi"><div class="ic" style="background:#FFFBEB;color:#B45309;">📅</div><div class="num" style="color:#B45309;">{{ expiring60|length }}</div><div class="lbl">31–60 days</div></div>
+      <div class="hc-kpi"><div class="ic" style="background:#FEF2F2;color:#B91C1C;">⚠</div><div class="num" style="color:#B91C1C;">{{ expired|length }}</div><div class="lbl">Expired</div></div>
+      <div class="hc-kpi"><div class="ic" style="background:#F5F3FF;color:#7C3AED;">👔</div><div class="num" style="color:#7C3AED;">{{ employees_count }}</div><div class="lbl">Employees</div></div>
+    </div>
+
+    <!-- Documents -->
+    <div class="hc-sec">🗂 Document Compliance</div>
+    {% if docs %}
+    <div class="hc-grid">
+      {% for d in docs %}
+      {% set days = (d.expiry_date.date() - today).days %}
+      {% if days < 0 %}{% set bc='#B91C1C' %}{% set pb='#FEF2F2' %}{% set pc='#B91C1C' %}{% set txt='Expired ' ~ (-days) ~ 'd ago' %}
+      {% elif days <= 30 %}{% set bc='#DC2626' %}{% set pb='#FEF2F2' %}{% set pc='#DC2626' %}{% set txt=days ~ 'd left' %}
+      {% elif days <= 60 %}{% set bc='#B45309' %}{% set pb='#FFFBEB' %}{% set pc='#B45309' %}{% set txt=days ~ 'd left' %}
+      {% else %}{% set bc='#059669' %}{% set pb='#ECFDF5' %}{% set pc='#059669' %}{% set txt='Valid · ' ~ days ~ 'd' %}{% endif %}
+      <div class="hc-tile" style="border-left-color:{{ bc }};">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div>
+            <div class="dt">{{ d.doc_type }}</div>
+            <div class="ow">{{ d.owner_name or customer.name }}</div>
+          </div>
+          {% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" class="no-print" style="font-size:11px;color:#1A3B8B;text-decoration:none;">📎</a>{% endif %}
+        </div>
+        <div class="ex">📅 {{ d.expiry_date.strftime('%d %b %Y') }}</div>
+        <span class="hc-pill" style="background:{{ pb }};color:{{ pc }};">{{ txt }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card"><div class="empty">No documents with expiry dates yet. <a href="/documents/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add a document →</a></div></div>
+    {% endif %}
+
+    <div style="text-align:center;color:#94A3B8;font-size:11px;margin:22px 0 30px;">Tahfeel Business Solutions · Document Health Report</div>
     </div>
   </div>
 </body>

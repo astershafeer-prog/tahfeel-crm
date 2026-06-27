@@ -5,11 +5,6 @@
     <span class="topbar-title">Business Solutions CRM</span>
   </div>
   <div class="topbar-right">
-    <!-- Theme Switcher (Navy & Dark Black only) -->
-    <div class="theme-switcher">
-      <button class="theme-btn" onclick="setTheme('navy')" title="Navy theme" style="background: #1A3B8B;">Navy</button>
-      <button class="theme-btn" onclick="setTheme('black')" title="Dark theme" style="background: #0f0f0f; border: 1px solid #333;">Dark</button>
-    </div>
 
     <a href="/leads" id="leadBell" title="New leads" style="position:relative;text-decoration:none;display:flex;align-items:center;font-size:19px;line-height:1;margin-right:4px;">
       <span style="filter:grayscale(0);">🔔</span>
@@ -48,7 +43,7 @@ function setTheme(theme) {
 }
 
 function loadTheme() {
-  const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
+  const savedTheme = 'navy';  // dark theme removed — always navy
   // Remove all theme classes
   ['navy', 'black'].forEach(t => {
     document.documentElement.classList.remove('theme-' + t);
@@ -180,7 +175,7 @@ loadTheme();
 <script>
 // Load theme immediately (before page renders)
 (function() {
-  const savedTheme = localStorage.getItem('tahfeel-theme') || 'navy';
+  const savedTheme = 'navy';  // dark theme removed — always navy
   if (savedTheme !== 'navy') {
     // Apply to html for immediate effect
     document.documentElement.classList.add('theme-' + savedTheme);

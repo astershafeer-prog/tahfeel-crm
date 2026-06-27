@@ -252,9 +252,12 @@
     </div>
     {% endif %}
 
-        <!-- Documents -->
-    <div class="section-label">Documents ({{ documents|length }})</div>
-    <div class="card card-customers">
+    <!-- Documents -->
+    <div class="card card-customers" style="margin-bottom:30px;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>📄 Documents <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ documents|length }}</span></h2>
+        <a href="/documents/add?customer_id={{ customer.id }}" class="btn-add" style="font-size:12px;padding:6px 14px;">+ Add Document</a>
+      </div>
       {% if documents %}
       <table>
         <thead>
