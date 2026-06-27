@@ -25,18 +25,32 @@
         <div class="card-body">
 
           <div class="section-label">Client Information</div>
+          <style>
+            .ctype-opt{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;text-transform:none;font-size:15px;padding:11px 22px;border:2px solid var(--border);border-radius:12px;}
+            .ctype-opt:has(input:checked){border-color:var(--primary);background:var(--info-bg);color:var(--primary);}
+            .ctype-opt input{width:auto;}
+          </style>
+          {% set ct = customer.customer_type or 'Individual' %}
           <div class="form-group" style="margin-bottom:14px;">
             <label>Client Type</label>
-            <div style="display:flex;gap:20px;margin-top:6px;flex-wrap:wrap;">
-              {% set ct = customer.customer_type or 'Individual' %}
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500;text-transform:none;"><input type="radio" name="customer_type" value="Individual" {% if ct=='Individual' %}checked{% endif %} style="width:auto;"> 👤 Individual</label>
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500;text-transform:none;"><input type="radio" name="customer_type" value="Company" {% if ct=='Company' %}checked{% endif %} style="width:auto;"> 🏢 Company</label>
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500;text-transform:none;"><input type="radio" name="customer_type" value="Investor" {% if ct=='Investor' %}checked{% endif %} style="width:auto;"> 💼 Investor</label>
+            <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;">
+              <label class="ctype-opt"><input type="radio" name="customer_type" value="Individual" {% if ct=='Individual' %}checked{% endif %} onchange="onTypeChange()"> 👤 Individual</label>
+              <label class="ctype-opt"><input type="radio" name="customer_type" value="Company" {% if ct=='Company' %}checked{% endif %} onchange="onTypeChange()"> 🏢 Company</label>
             </div>
           </div>
+          <script>
+            function onTypeChange(){
+              var t=document.querySelector('input[name="customer_type"]:checked');
+              var isCompany=t&&t.value==='Company';
+              var nl=document.getElementById('nameLabel'); if(nl) nl.textContent=isCompany?'Company Name *':'Full Name *';
+              var cp=document.querySelector('input[name="contact_person"]'); if(cp) cp.required=isCompany;
+              var co=document.querySelector('input[name="company"]'); if(co){var g=co.closest('.form-group'); if(g) g.style.display=isCompany?'none':'';}
+            }
+            document.addEventListener('DOMContentLoaded', onTypeChange);
+          </script>
           <div class="form-row-2">
             <div class="form-group">
-              <label>Full Name *</label>
+              <label id="nameLabel">Full Name *</label>
               <input type="text" name="name" value="{{ customer.name }}" required placeholder="Full name">
             </div>
             <div class="form-group">

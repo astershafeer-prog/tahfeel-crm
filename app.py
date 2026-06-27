@@ -1945,6 +1945,9 @@ def add_customer():
     converted_leads = Lead.query.filter_by(status='Converted').order_by(Lead.name).all()
     sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
+        if request.form.get('customer_type') == 'Company' and not (request.form.get('contact_person') or '').strip():
+            flash('Contact Person is required for a Company client', 'error')
+            return redirect(url_for('add_customer'))
         # Validate required fields
         if not request.form.get('lead_id'):
             if not request.form.get('source'):
@@ -2097,6 +2100,9 @@ def edit_customer(customer_id):
     sources = Source.query.order_by(Source.name).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations','admin'])).all()
     if request.method == 'POST':
+        if request.form.get('customer_type') == 'Company' and not (request.form.get('contact_person') or '').strip():
+            flash('Contact Person is required for a Company client', 'error')
+            return redirect(url_for('edit_customer', customer_id=customer_id))
         customer.name = request.form.get('name', '').strip() or customer.name
         customer.company = request.form.get('company', '').strip()
         customer.phone = request.form.get('phone', '').strip()

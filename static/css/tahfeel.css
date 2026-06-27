@@ -893,12 +893,9 @@ body .btn-view:hover {
   color: white !important;
 }
 
-/* Ensure filter buttons and period selectors are readable */
-button[class*="btn"], button[type="button"], button[type="submit"],
-a[class*="btn-"], a[class*="filter"] {
-  /* Inherit parent text color for contrast */
-  color: currentColor;
-}
+/* (Removed a `color: currentColor` rule here that made outline buttons
+   inherit ambient text colour and become invisible/low-contrast on many
+   pages. Buttons now use their own .btn-* class colours.) */
 
 /* ────────────────────────────────────────────────────────────────────
 .sum-card {
@@ -1475,14 +1472,15 @@ html, body {
   color: var(--accent) !important;
 }
 
-/* Buttons */
-button, .btn, .btn-primary, .btn-filter, input[type="submit"] {
+/* Buttons — only force the solid primary classes; leave outline/custom
+   buttons (.btn-sm, .ib, inline-styled) to their own colours so they stay visible */
+.btn-primary, .btn-filter, input[type="submit"] {
   background-color: var(--primary) !important;
   color: white !important;
   border-color: var(--primary) !important;
 }
 
-button:hover, .btn:hover {
+.btn-primary:hover, .btn-filter:hover {
   background-color: var(--primary-dark) !important;
   border-color: var(--primary-dark) !important;
 }
