@@ -111,7 +111,8 @@ def save_lead_to_crm(lead_data, raw_meta):
         email        = email,
         service      = service,
         address      = city,
-        source       = f'Meta Ads — {platform}',
+        source       = 'Meta',
+        sub_source   = platform,        # Facebook / Instagram
         campaign     = campaign,
         lead_type    = 'New',
         status       = 'New',

@@ -113,6 +113,12 @@ class Lead(db.Model):
     phone2 = db.Column(db.String(20))
     campaign = db.Column(db.String(100))
     meta_lead_id = db.Column(db.String(50), nullable=True, unique=True)  # Prevents duplicate Meta leads
+    # ── Lead redesign: quality flag (manual) + channel + timing ──
+    genuine = db.Column(db.String(20))            # Genuine / Junk / Unreachable / None (unreviewed)
+    junk_reason = db.Column(db.String(100))       # reason when marked Junk/Unreachable
+    sub_source = db.Column(db.String(50))         # channel within a source, e.g. Facebook / Instagram
+    first_contacted_at = db.Column(db.DateTime)   # first time the lead was actually reached
+    attempts = db.Column(db.Integer, default=0)   # contact-attempt counter (info only, never auto-acts)
     assignee = db.relationship('User', foreign_keys=[assigned_to])
     updates = db.relationship('LeadUpdate', backref='lead', lazy=True, order_by='LeadUpdate.created_at.desc()')
 
@@ -120,6 +126,7 @@ class LeadUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lead_id = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=False)
     stage = db.Column(db.String(50))
+    activity_type = db.Column(db.String(50))  # Call—connected / Call—no answer / WhatsApp / Email / Quote / Meeting / Note
     remark = db.Column(db.Text, nullable=False)
     staff_name = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -571,7 +578,13 @@ def apply_lead_filters(leads, args, now):
     
     if source_filter:
         leads = [l for l in leads if l.source == source_filter]
-    
+
+    quality_filter = args.get('quality')
+    if quality_filter == 'unreviewed':
+        leads = [l for l in leads if not l.genuine]
+    elif quality_filter:
+        leads = [l for l in leads if l.genuine == quality_filter]
+
     return leads
 
 @app.route('/')
@@ -1101,7 +1114,7 @@ def all_leads():
     role = session.get('role')
     user_id = session.get('user_id')
 
-    FILTER_KEYS = ['date', 'status', 'staff', 'search', 'from', 'to', 'due', 'source']
+    FILTER_KEYS = ['date', 'status', 'staff', 'search', 'from', 'to', 'due', 'source', 'quality']
 
     # If reset requested — clear saved filters and redirect clean
     if request.args.get('reset') == '1':
@@ -1253,6 +1266,7 @@ def lead_detail(lead_id):
     lead = Lead.query.get_or_404(lead_id)
     if request.method == 'POST':
         stage = request.form['stage']
+        activity_type = request.form.get('activity_type') or None
         remark = request.form['remark']
         followup = request.form.get('followup_date')
         followup_dt = datetime.strptime(followup, '%Y-%m-%d') if followup else None
@@ -1261,12 +1275,18 @@ def lead_detail(lead_id):
             flash('Please pick a future revisit date for a Future lead.')
             return redirect(url_for('lead_detail', lead_id=lead_id))
         update = LeadUpdate(
-            lead_id=lead.id, stage=stage, remark=remark,
+            lead_id=lead.id, stage=stage, activity_type=activity_type, remark=remark,
             staff_name=session['user_name'], followup_date=followup_dt,
             lost_reason=request.form.get('lost_reason'),
             future_potential=request.form.get('future_potential')
         )
         lead.status = stage
+        # Attempt counter (info only) + first-contact timestamp, driven by the activity
+        act = (activity_type or '').lower()
+        if 'no answer' in act or 'not reach' in act:
+            lead.attempts = (lead.attempts or 0) + 1
+        if ('connected' in act or 'meeting' in act) and not lead.first_contacted_at:
+            lead.first_contacted_at = now_dubai()
         # Update lead's due_date with new followup date
         if followup_dt:
             lead.due_date = followup_dt
@@ -1277,6 +1297,26 @@ def lead_detail(lead_id):
         flash('Update saved')
         return redirect(url_for('lead_detail', lead_id=lead_id))
     return render_template('lead_detail.html', lead=lead, now=now)
+
+@app.route('/leads/<int:lead_id>/quality', methods=['POST'])
+@login_required
+def set_lead_quality(lead_id):
+    """Manually mark lead quality (Genuine / Junk / Unreachable). Never automatic."""
+    lead = Lead.query.get_or_404(lead_id)
+    value = request.form.get('genuine')
+    if value not in ('Genuine', 'Junk', 'Unreachable', ''):
+        flash('Invalid quality value')
+        return redirect(url_for('lead_detail', lead_id=lead_id))
+    lead.genuine = value or None
+    lead.junk_reason = request.form.get('junk_reason') or None
+    # Record the judgment in the lead history for the audit trail
+    note = LeadUpdate(lead_id=lead.id, stage=lead.status, activity_type='Quality',
+                      remark=f'Marked {value or "unreviewed"}' + (f' — {lead.junk_reason}' if lead.junk_reason else ''),
+                      staff_name=session['user_name'])
+    db.session.add(note)
+    db.session.commit()
+    flash(f'Lead marked {value or "unreviewed"}')
+    return redirect(url_for('lead_detail', lead_id=lead_id))
 
 @app.route('/leads/import', methods=['GET', 'POST'])
 @login_required
@@ -4273,6 +4313,21 @@ def init_db():
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS ac_opening_date DATE',
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS uae_pass_number VARCHAR(50)',
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS uae_pass_name VARCHAR(100)',
+            # Lead redesign: quality flag + channel + timing + per-update activity
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS genuine VARCHAR(20)',
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS junk_reason VARCHAR(100)',
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS sub_source VARCHAR(50)',
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS first_contacted_at TIMESTAMP',
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 0',
+            'ALTER TABLE lead_update ADD COLUMN IF NOT EXISTS activity_type VARCHAR(50)',
+            # One-time map of old activity-statuses -> clean pipeline stages
+            "UPDATE lead SET status='Contacted' WHERE status IN ('Called — No Answer','Customer Not Responding','Call Connected','Sent WhatsApp','Sent Mail','Called — Callback Requested')",
+            "UPDATE lead SET status='Qualified' WHERE status='Potential Lead'",
+            "UPDATE lead SET status='Proposal' WHERE status IN ('Meeting Scheduled','Quotation Sent')",
+            # Normalize legacy free-text Meta source -> clean 'Meta' + channel
+            "UPDATE lead SET sub_source='Facebook' WHERE sub_source IS NULL AND source LIKE 'Meta%Facebook%'",
+            "UPDATE lead SET sub_source='Instagram' WHERE sub_source IS NULL AND source LIKE 'Meta%Instagram%'",
+            "UPDATE lead SET source='Meta' WHERE source LIKE 'Meta Ads%' OR source LIKE 'Meta —%'",
             # Document -> employee link (employee/owner tables auto-created by create_all)
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS employee_id INTEGER',
 
@@ -4311,6 +4366,11 @@ def init_db():
                     db.session.add(Source(name=s))
                 db.session.commit()
                 print('Default sources created')
+            # Always ensure 'Meta' source exists (leads from Meta Lead Ads)
+            if not Source.query.filter_by(name='Meta').first():
+                db.session.add(Source(name='Meta'))
+                db.session.commit()
+                print("Ensured 'Meta' source exists")
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(ServiceType(name=jt))

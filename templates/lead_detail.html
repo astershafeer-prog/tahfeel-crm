@@ -22,8 +22,15 @@
     <div class="card card-leads">
       <div class="card-header">
         <h2>Customer Details</h2>
-        <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="badge b-{{ lead.status|lower|replace(' ','')|replace('—','') }}">{{ lead.status }}</span>
+          {% if lead.genuine == 'Genuine' %}<span class="badge" style="background:#E1F5EE;color:#0F6E56;">✓ Genuine</span>
+          {% elif lead.genuine == 'Junk' %}<span class="badge" style="background:#FCEBEB;color:#791F1F;">✕ Junk</span>
+          {% elif lead.genuine == 'Unreachable' %}<span class="badge" style="background:#FAEEDA;color:#854F0B;">⊘ Unreachable</span>{% endif %}
+          {% set last = lead.updates[0] if lead.updates else None %}
+          {% if lead.status not in ['Converted','Lost'] and last and last.followup_date and last.followup_date.date() <= now.date() %}
+            <span class="badge" style="background:#FAEEDA;color:#854F0B;">⏳ Follow-up due</span>
+          {% endif %}
           <a href="/leads/{{ lead.id }}/edit" class="ib" title="Edit">✏</a>
         </div>
       </div>
@@ -78,11 +85,11 @@
             </div>
             <div>
               <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Source</div>
-              <div style="font-size:14px;color:var(--text-primary);">{{ lead.source or '—' }}</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.source or '—' }}{% if lead.sub_source %} · {{ lead.sub_source }}{% endif %}</div>
             </div>
             <div>
-              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Lead Type</div>
-              <div style="font-size:14px;color:var(--text-primary);">{{ lead.lead_type }}</div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Contact Attempts</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.attempts or 0 }}{% if lead.first_contacted_at %} · 1st reached {{ lead.first_contacted_at.strftime('%d %b') }}{% endif %}</div>
             </div>
             <div>
               <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Assigned To</div>
@@ -102,30 +109,66 @@
       </div>
     </div>
       <div class="card">
+        <div class="card-header"><h2>Lead quality</h2><span style="font-size:11px;color:var(--text-muted);">set manually — never automatic</span></div>
+        <div class="card-body">
+          <form method="POST" action="/leads/{{ lead.id }}/quality" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            {% set q = lead.genuine %}
+            <button name="genuine" value="Genuine" class="qbtn" style="flex:1;min-width:120px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid {{ '#0F6E56' if q=='Genuine' else '#CBD5E1' }};background:{{ '#E1F5EE' if q=='Genuine' else '#fff' }};color:{{ '#0F6E56' if q=='Genuine' else '#475569' }};">✓ Genuine</button>
+            <button name="genuine" value="Junk" class="qbtn" style="flex:1;min-width:120px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid {{ '#791F1F' if q=='Junk' else '#CBD5E1' }};background:{{ '#FCEBEB' if q=='Junk' else '#fff' }};color:{{ '#791F1F' if q=='Junk' else '#475569' }};">✕ Junk</button>
+            <button name="genuine" value="Unreachable" class="qbtn" style="flex:1;min-width:120px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid {{ '#854F0B' if q=='Unreachable' else '#CBD5E1' }};background:{{ '#FAEEDA' if q=='Unreachable' else '#fff' }};color:{{ '#854F0B' if q=='Unreachable' else '#475569' }};">⊘ Unreachable</button>
+            <select name="junk_reason" style="flex:1;min-width:160px;">
+              <option value="">Reason (if Junk/Unreachable)…</option>
+              <option {% if lead.junk_reason=='Wrong number' %}selected{% endif %}>Wrong number</option>
+              <option {% if lead.junk_reason=='No answer after attempts' %}selected{% endif %}>No answer after attempts</option>
+              <option {% if lead.junk_reason=='Spam / fake' %}selected{% endif %}>Spam / fake</option>
+              <option {% if lead.junk_reason=='Duplicate' %}selected{% endif %}>Duplicate</option>
+              <option {% if lead.junk_reason=='Test entry' %}selected{% endif %}>Test entry</option>
+            </select>
+          </form>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-header"><h2>Update this lead</h2></div>
         <div class="card-body">
+          <!-- pipeline strip (context) -->
+          <div style="display:flex;gap:4px;margin-bottom:14px;">
+            {% set stages = ['New','Contacted','Qualified','Proposal','Converted'] %}
+            {% set idx = stages.index(lead.status) if lead.status in stages else -1 %}
+            {% for s in stages %}
+            <div style="flex:1;text-align:center;font-size:11px;font-weight:600;padding:6px 2px;border-radius:6px;background:{{ '#185FA5' if s==lead.status else ('#E6F1FB' if loop.index0 < idx else '#F1F5F9') }};color:{{ '#fff' if s==lead.status else ('#185FA5' if loop.index0 < idx else '#94A3B8') }};">{{ s }}</div>
+            {% endfor %}
+          </div>
           <form method="POST" id="updateForm">
             <div class="form-group">
               <label>Customer story</label>
               <textarea name="customer_story" placeholder="Brief profile — e.g. Big businessman, 50 staff">{{ lead.customer_story or '' }}</textarea>
             </div>
-            <div class="form-group">
-              <label>Stage / Status <span style="color:var(--danger);">*</span></label>
-              <select name="stage" id="stageSelect" onchange="handleStageChange()">
-                <option value="New" {% if lead.status == 'New' %}selected{% endif %}>New</option>
-                <option value="Called — No Answer" {% if lead.status == 'Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
-                <option value="Customer Not Responding" {% if lead.status == 'Customer Not Responding' %}selected{% endif %}>Customer Not Responding</option>
-                <option value="Call Connected" {% if lead.status == 'Call Connected' %}selected{% endif %}>Call Connected</option>
-                <option value="Sent WhatsApp" {% if lead.status == 'Sent WhatsApp' %}selected{% endif %}>Sent WhatsApp</option>
-                <option value="Sent Mail" {% if lead.status == 'Sent Mail' %}selected{% endif %}>Sent Mail</option>
-                <option value="Called — Callback Requested" {% if lead.status == 'Called — Callback Requested' %}selected{% endif %}>Called — Callback Requested</option>
-                <option value="Meeting Scheduled" {% if lead.status == 'Meeting Scheduled' %}selected{% endif %}>Meeting Scheduled</option>
-                <option value="Quotation Sent" {% if lead.status == 'Quotation Sent' %}selected{% endif %}>Quotation Sent</option>
-                <option value="Potential Lead" {% if lead.status == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
-                <option value="Converted" {% if lead.status == 'Converted' %}selected{% endif %}>Converted</option>
-                <option value="Lost" {% if lead.status == 'Lost' %}selected{% endif %}>Lost</option>
-                <option value="Future" {% if lead.status == 'Future' %}selected{% endif %}>🔮 Future — Revisit Later</option>
-              </select>
+            <div class="form-row-2" style="gap:12px;">
+              <div class="form-group">
+                <label>Pipeline stage <span style="color:var(--danger);">*</span></label>
+                <select name="stage" id="stageSelect" onchange="handleStageChange()">
+                  <option value="New" {% if lead.status == 'New' %}selected{% endif %}>New</option>
+                  <option value="Contacted" {% if lead.status == 'Contacted' %}selected{% endif %}>Contacted</option>
+                  <option value="Qualified" {% if lead.status == 'Qualified' %}selected{% endif %}>Qualified</option>
+                  <option value="Proposal" {% if lead.status == 'Proposal' %}selected{% endif %}>Proposal / Quotation</option>
+                  <option value="Converted" {% if lead.status == 'Converted' %}selected{% endif %}>Converted (Won)</option>
+                  <option value="Lost" {% if lead.status == 'Lost' %}selected{% endif %}>Lost</option>
+                  <option value="Future" {% if lead.status == 'Future' %}selected{% endif %}>🔮 Future — Revisit Later</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Activity (what did you do?)</label>
+                <select name="activity_type">
+                  <option value="">— None —</option>
+                  <option>Call — connected</option>
+                  <option>Call — no answer</option>
+                  <option>WhatsApp sent</option>
+                  <option>Email sent</option>
+                  <option>Quote sent</option>
+                  <option>Meeting</option>
+                  <option>Note</option>
+                </select>
+              </div>
             </div>
             <div class="lost-fields" id="lostFields" style="display:none;">
               <div class="form-group">
@@ -134,9 +177,10 @@
                   <option value="">— Select reason —</option>
                   <option>Price too high</option>
                   <option>Went with competitor</option>
+                  <option>Went cold after quote</option>
                   <option>Not interested</option>
                   <option>Not looking now - Later</option>
-                  <option>No response</option>
+                  <option>Unreachable</option>
                   <option>Other</option>
                 </select>
               </div>
@@ -171,17 +215,18 @@
         <div class="timeline-item">
           <div class="timeline-top">
             <span class="timeline-stage">
-              {% set stage_lower = update.stage|lower %}
-              {% if 'whatsapp' in stage_lower or 'whatsup' in stage_lower %}💬
-              {% elif 'mail' in stage_lower or 'email' in stage_lower %}📧
-              {% elif 'call' in stage_lower %}📞
-              {% elif 'converted' in stage_lower %}✅
-              {% elif 'future' in stage_lower %}🔮
-              {% elif 'lost' in stage_lower %}❌
-              {% elif 'meeting' in stage_lower %}🤝
-              {% elif 'quotation' in stage_lower %}📄
+              {% set al = (update.activity_type or update.stage or '')|lower %}
+              {% if 'whatsapp' in al %}💬
+              {% elif 'mail' in al or 'email' in al %}📧
+              {% elif 'call' in al %}📞
+              {% elif 'quote' in al or 'quotation' in al %}📄
+              {% elif 'meeting' in al %}🤝
+              {% elif 'quality' in al %}🏷️
+              {% elif 'converted' in al %}✅
+              {% elif 'future' in al %}🔮
+              {% elif 'lost' in al %}❌
               {% else %}📝{% endif %}
-              {{ update.stage }}
+              {% if update.activity_type %}{{ update.activity_type }} · {% endif %}<span style="color:var(--text-muted);font-weight:600;">{{ update.stage }}</span>
             </span>
             <span class="timeline-meta">{{ update.staff_name }} · {{ update.created_at.strftime('%d %b %Y') }}</span>
           </div>

@@ -76,20 +76,26 @@
           <label>Status</label>
           {% set active_status = request.args.get('status') or sf.get('status') %}
           <select name="status">
-            <option value="">All statuses</option>
+            <option value="">All stages</option>
             <option value="New" {% if active_status == 'New' %}selected{% endif %}>New</option>
-            <option value="Call Connected" {% if active_status == 'Call Connected' %}selected{% endif %}>Call Connected</option>
-            <option value="Called — No Answer" {% if active_status == 'Called — No Answer' %}selected{% endif %}>Called — No Answer</option>
-            <option value="Customer Not Responding" {% if active_status == 'Customer Not Responding' %}selected{% endif %}>Customer Not Responding</option>
-            <option value="Sent WhatsApp" {% if active_status == 'Sent WhatsApp' %}selected{% endif %}>Sent WhatsApp</option>
-            <option value="Sent Mail" {% if active_status == 'Sent Mail' %}selected{% endif %}>Sent Mail</option>
-            <option value="Potential Lead" {% if active_status == 'Potential Lead' %}selected{% endif %}>Potential Lead</option>
-            <option value="Meeting Scheduled" {% if active_status == 'Meeting Scheduled' %}selected{% endif %}>Meeting Scheduled</option>
-            <option value="Quotation Sent" {% if active_status == 'Quotation Sent' %}selected{% endif %}>Quotation Sent</option>
-            <option value="Converted" {% if active_status == 'Converted' %}selected{% endif %}>Converted</option>
+            <option value="Contacted" {% if active_status == 'Contacted' %}selected{% endif %}>Contacted</option>
+            <option value="Qualified" {% if active_status == 'Qualified' %}selected{% endif %}>Qualified</option>
+            <option value="Proposal" {% if active_status == 'Proposal' %}selected{% endif %}>Proposal / Quotation</option>
+            <option value="Converted" {% if active_status == 'Converted' %}selected{% endif %}>Converted (Won)</option>
             <option value="Lost" {% if active_status == 'Lost' %}selected{% endif %}>Lost</option>
             <option value="Future" {% if active_status == 'Future' %}selected{% endif %}>🔮 Future</option>
             <option value="Overdue" {% if active_status == 'Overdue' %}selected{% endif %}>⚠ Overdue</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Quality</label>
+          {% set active_quality = request.args.get('quality') or sf.get('quality') %}
+          <select name="quality">
+            <option value="">All quality</option>
+            <option value="Genuine" {% if active_quality == 'Genuine' %}selected{% endif %}>✓ Genuine</option>
+            <option value="Junk" {% if active_quality == 'Junk' %}selected{% endif %}>✕ Junk</option>
+            <option value="Unreachable" {% if active_quality == 'Unreachable' %}selected{% endif %}>⊘ Unreachable</option>
+            <option value="unreviewed" {% if active_quality == 'unreviewed' %}selected{% endif %}>Unreviewed</option>
           </select>
         </div>
         <div class="filter-group">
@@ -201,9 +207,18 @@
                       <span style="background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif lead.status == 'New' %}
                       <span style="background:#EBF2FF;color:#1A3B8B;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif lead.status == 'Qualified' %}
+                      <span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif lead.status == 'Proposal' %}
+                      <span style="background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                    {% elif lead.status == 'Contacted' %}
+                      <span style="background:#F0FDF4;color:#16A34A;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% else %}
                       <span style="background:#F1F5F9;color:#475569;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% endif %}
+                    {% if lead.genuine == 'Junk' %}<span title="Junk" style="margin-left:4px;color:#B91C1C;font-size:11px;font-weight:700;">✕</span>
+                    {% elif lead.genuine == 'Unreachable' %}<span title="Unreachable" style="margin-left:4px;color:#B45309;font-size:11px;font-weight:700;">⊘</span>
+                    {% elif lead.genuine == 'Genuine' %}<span title="Genuine" style="margin-left:4px;color:#059669;font-size:11px;font-weight:700;">✓</span>{% endif %}
                   </td>
                   <td>
                     <div style="display:flex;gap:4px;align-items:center;">
