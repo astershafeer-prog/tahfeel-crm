@@ -20,11 +20,11 @@
     .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;}
     @media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr);}}
     @media(max-width:540px){.stats{grid-template-columns:repeat(2,1fr);}}
-    .stat{padding:14px 12px;text-align:center;}
+    .stat{padding:16px 12px;text-align:center;border-radius:16px;}
     .stat .lbl{font-size:11px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
-    .stat .num{font-size:26px;font-weight:800;line-height:1;margin:6px 0 1px;}
+    .stat .num{font-size:28px;font-weight:800;line-height:1;margin:7px 0 1px;}
     .stat .sub{font-size:10px;color:#94A3B8;}
-    .stat .ico{width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:7px;}
+    .stat .ico{width:42px;height:42px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:9px;color:#fff;box-shadow:0 5px 13px rgba(15,23,42,.16);}
     .sec-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #EEF2F7;}
     .sec-head h2{margin:0;font-size:14px;color:#0F2660;font-weight:700;display:flex;align-items:center;gap:8px;}
     .legend{display:flex;gap:12px;font-size:11px;color:#64748B;}
@@ -160,23 +160,23 @@
         <div style="color:{{ hcol }};font-weight:700;font-size:12px;">✓ {{ band }}</div>
         {% else %}<div class="num" style="color:#94A3B8;">—</div><div class="sub">No documents</div>{% endif %}
       </div>
-      <div class="hc-card stat">
-        <div class="ico" style="background:#EBF2FF;color:#1A3B8B;">📁</div>
+      <div class="hc-card stat" style="background:linear-gradient(160deg,#fff,#EEF2FF);">
+        <div class="ico" style="background:linear-gradient(135deg,#6366F1,#1A3B8B);">📁</div>
         <div class="num" style="color:#1A3B8B;">{{ total }}</div>
         <div class="lbl">Total Docs</div><div class="sub">Tracked items</div>
       </div>
-      <div class="hc-card stat">
-        <div class="ico" style="background:#ECFDF5;color:#059669;">✓</div>
+      <div class="hc-card stat" style="background:linear-gradient(160deg,#fff,#ECFDF5);">
+        <div class="ico" style="background:linear-gradient(135deg,#34D399,#059669);">✓</div>
         <div class="num" style="color:#059669;">{{ valid|length }}</div>
         <div class="lbl">Valid</div><div class="sub">All up to date</div>
       </div>
-      <div class="hc-card stat">
-        <div class="ico" style="background:#FFFBEB;color:#B45309;">⏳</div>
+      <div class="hc-card stat" style="background:linear-gradient(160deg,#fff,#FFFBEB);">
+        <div class="ico" style="background:linear-gradient(135deg,#FBBF24,#D97706);">⏳</div>
         <div class="num" style="color:#B45309;">{{ expiring|length }}</div>
         <div class="lbl">Expiring Soon</div><div class="sub">Within 90 days</div>
       </div>
-      <div class="hc-card stat">
-        <div class="ico" style="background:#FEF2F2;color:#DC2626;">✕</div>
+      <div class="hc-card stat" style="background:linear-gradient(160deg,#fff,#FEF2F2);">
+        <div class="ico" style="background:linear-gradient(135deg,#FB7185,#DC2626);">✕</div>
         <div class="num" style="color:#DC2626;">{{ expired|length }}</div>
         <div class="lbl">Expired</div><div class="sub">Needs action</div>
       </div>

@@ -7,33 +7,43 @@
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
   <style>
+    .cc-wrap{max-width:1120px;margin:0 auto;}
+    .cc-head{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+    .cc-head .ic{width:50px;height:50px;border-radius:15px;background:linear-gradient(135deg,#4F46E5,#1A3B8B);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 6px 16px rgba(79,70,229,.32);}
+    .cc-head h2{margin:0;font-size:22px;font-weight:800;color:#0F2660;}
+    .cc-head p{margin:2px 0 0;font-size:13px;color:#64748B;}
+
     .cc-search{position:relative;flex:1;min-width:220px;}
-    .cc-search input{width:100%;padding:11px 14px 11px 38px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;box-sizing:border-box;}
-    .cc-search input:focus{outline:none;border-color:var(--primary);}
-    .cc-search .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:#94A3B8;}
-    .cc-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
+    .cc-search input{width:100%;padding:13px 14px 13px 42px;border:1.5px solid #E2E8F0;border-radius:14px;font-size:14px;box-sizing:border-box;background:#fff;transition:border-color .15s,box-shadow .15s;}
+    .cc-search input:focus{outline:none;border-color:#4F46E5;box-shadow:0 0 0 4px rgba(79,70,229,.12);}
+    .cc-search .ic{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:16px;}
+
+    .cc-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
     @media(max-width:760px){.cc-chips{grid-template-columns:repeat(2,1fr);}}
-    .cc-chip{text-decoration:none;background:#fff;border-radius:12px;border:0.5px solid #E2E8F0;padding:12px 14px;box-shadow:0 2px 8px rgba(0,0,0,.05);display:block;}
-    .cc-chip .lbl{font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.3px;}
-    .cc-chip .num{font-size:24px;font-weight:800;line-height:1.1;margin-top:2px;}
-    .cc-list{background:#fff;border:0.5px solid #E2E8F0;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.05);overflow:hidden;}
-    .cc-hd{display:grid;grid-template-columns:1fr 150px 130px 90px;gap:12px;padding:12px 18px;border-bottom:1px solid #EEF2F7;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;}
-    .cc-row{display:grid;grid-template-columns:1fr 150px 130px 90px;gap:12px;align-items:center;padding:14px 18px;border-bottom:1px solid #F1F5F9;border-left:4px solid transparent;}
+    .cc-chip{position:relative;text-decoration:none;border-radius:16px;padding:15px 16px;overflow:hidden;border:1px solid rgba(0,0,0,.04);box-shadow:0 4px 14px rgba(15,23,42,.06);transition:transform .15s,box-shadow .15s;display:block;}
+    .cc-chip:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(15,23,42,.12);}
+    .cc-chip .cico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:10px;}
+    .cc-chip .lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;}
+    .cc-chip .num{font-size:30px;font-weight:800;line-height:1;margin-top:3px;}
+    .cc-chip.sel{outline:3px solid rgba(0,0,0,.12);outline-offset:1px;}
+
+    .cc-list{background:#fff;border:1px solid #EEF2F7;border-radius:18px;box-shadow:0 4px 18px rgba(15,23,42,.06);overflow:hidden;}
+    .cc-hd{display:grid;grid-template-columns:1fr 150px 120px 96px;gap:12px;padding:13px 20px;background:#F8FAFC;border-bottom:1px solid #EEF2F7;font-size:11px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;}
+    .cc-row{display:grid;grid-template-columns:1fr 150px 120px 96px;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid #F4F6FA;border-left:5px solid transparent;transition:background .12s;}
     .cc-row:last-child{border-bottom:none;}
-    .cc-row:hover{background:#F8FAFC;}
-    .cc-name{font-size:15px;font-weight:700;color:#1A2333;line-height:1.2;}
-    .cc-sub{font-size:11px;color:#94A3B8;margin-top:2px;display:flex;gap:8px;align-items:center;}
-    .cc-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#64748B;}
-    .cc-score{font-size:20px;font-weight:800;line-height:1;}
-    .cc-scbar{height:5px;border-radius:5px;background:#EEF2F7;margin-top:6px;overflow:hidden;}
-    .cc-scbar i{display:block;height:100%;border-radius:5px;}
-    .cc-view{display:inline-flex;align-items:center;gap:5px;background:var(--primary);color:#fff !important;padding:7px 16px;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;justify-self:end;border:none;cursor:pointer;}
-    .cc-view:hover{background:var(--primary-dark);color:#fff !important;}
-    .cc-view:visited{color:#fff !important;}
+    .cc-row:hover{background:#FAFBFE;}
+    .cc-who{display:flex;align-items:center;gap:13px;}
+    .cc-av{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+    .cc-name{font-size:15px;font-weight:700;color:#0F2660;line-height:1.2;}
+    .cc-sub{font-size:11.5px;color:#94A3B8;margin-top:3px;}
+    .cc-sub .tag{font-weight:800;text-transform:uppercase;letter-spacing:.3px;font-size:10px;}
+    .cc-stat{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:30px;font-size:11.5px;font-weight:700;}
+    .cc-view{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:11px;font-size:12.5px;font-weight:700;text-decoration:none;color:#fff !important;background:linear-gradient(135deg,#4F46E5,#1A3B8B);justify-self:end;box-shadow:0 4px 12px rgba(79,70,229,.3);transition:transform .12s,box-shadow .12s;}
+    .cc-view:hover{transform:translateY(-1px);box-shadow:0 7px 16px rgba(79,70,229,.42);color:#fff !important;}
     @media(max-width:680px){
       .cc-hd{display:none;}
-      .cc-row{grid-template-columns:1fr auto;grid-template-areas:'name view' 'score view';row-gap:8px;}
-      .cc-cell-name{grid-area:name;} .cc-cell-status{display:none;} .cc-cell-score{grid-area:score;} .cc-cell-view{grid-area:view;align-self:center;}
+      .cc-row{grid-template-columns:1fr auto;grid-template-areas:'who view' 'score view';row-gap:10px;}
+      .cc-c-who{grid-area:who;} .cc-c-status{display:none;} .cc-c-score{grid-area:score;} .cc-c-view{grid-area:view;align-self:center;}
     }
   </style>
 </head>
@@ -46,69 +56,91 @@
       {% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    <div class="page-header" style="align-items:flex-start;">
+  <div class="cc-wrap">
+    <div class="cc-head">
+      <div class="ic">🛡️</div>
       <div>
-        <h2>🛡 Compliance Center</h2>
-        <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">Full document-compliance report per client</div>
+        <h2>Compliance Center</h2>
+        <p>Document-compliance health at a glance — per client</p>
       </div>
     </div>
 
-    {% macro badge(days) %}
-      {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Expired {{ -days }}d</span>
-      {% elif days <= 30 %}<span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
-      {% elif days <= 60 %}<span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
-      {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Healthy</span>{% endif %}
-    {% endmacro %}
-
-    <!-- Search + filter -->
-    <form method="GET" action="/health-check" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+    <!-- Search + filters -->
+    <form method="GET" action="/health-check" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
       {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
       <div class="cc-search">
         <span class="ic">🔍</span>
         <input type="text" name="q" value="{{ search or '' }}" placeholder="Search by client name or AC code…" autocomplete="off">
       </div>
-      <select name="type" onchange="this.form.submit()" style="padding:11px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;">
+      <select name="type" onchange="this.form.submit()" style="padding:13px 14px;border:1.5px solid #E2E8F0;border-radius:14px;font-size:13px;background:#fff;">
         <option value="">All types</option>
         <option value="Individual" {% if type_filter=='Individual' %}selected{% endif %}>Individual</option>
         <option value="Company" {% if type_filter=='Company' %}selected{% endif %}>Company</option>
         <option value="Investor" {% if type_filter=='Investor' %}selected{% endif %}>Investor</option>
         <option value="Staff" {% if type_filter=='Staff' %}selected{% endif %}>Staff</option>
       </select>
-      <button type="submit" class="cc-view" style="justify-self:auto;">Search</button>
+      <button type="submit" class="cc-view" style="justify-self:auto;border:none;cursor:pointer;">Search</button>
       {% if status_filter or type_filter or search %}<a href="/health-check" class="btn-sm">Clear</a>{% endif %}
     </form>
 
-    <!-- Clickable status chips -->
+    <!-- Vibrant status chips -->
+    {% set q = '&q=' ~ search if search else '' %}{% set t = '&type=' ~ type_filter if type_filter else '' %}
     <div class="cc-chips">
-      <a class="cc-chip" href="/health-check?status=expired{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&q={{ search }}{% endif %}" style="border-top:4px solid #B91C1C;{% if status_filter=='expired' %}outline:2px solid #B91C1C;{% endif %}"><div class="lbl">Expired</div><div class="num" style="color:#B91C1C;">{{ n_expired }}</div></a>
-      <a class="cc-chip" href="/health-check?status=red{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&q={{ search }}{% endif %}" style="border-top:4px solid #DC2626;{% if status_filter=='red' %}outline:2px solid #DC2626;{% endif %}"><div class="lbl">≤ 30 days</div><div class="num" style="color:#DC2626;">{{ n_red }}</div></a>
-      <a class="cc-chip" href="/health-check?status=amber{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&q={{ search }}{% endif %}" style="border-top:4px solid #B45309;{% if status_filter=='amber' %}outline:2px solid #B45309;{% endif %}"><div class="lbl">31–60 days</div><div class="num" style="color:#B45309;">{{ n_amber }}</div></a>
-      <a class="cc-chip" href="/health-check?status=green{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&q={{ search }}{% endif %}" style="border-top:4px solid #059669;{% if status_filter=='green' %}outline:2px solid #059669;{% endif %}"><div class="lbl">Healthy (60+)</div><div class="num" style="color:#059669;">{{ n_green }}</div></a>
-      <div class="cc-chip" style="border-top:4px solid #1A3B8B;"><div class="lbl">Total Docs</div><div class="num" style="color:#1A3B8B;">{{ total }}</div></div>
+      <a class="cc-chip {% if status_filter=='expired' %}sel{% endif %}" href="/health-check?status=expired{{ t }}{{ q }}" style="background:linear-gradient(135deg,#FFF1F2,#FFE4E6);color:#9F1239 !important;">
+        <div class="cico" style="background:#FB7185;color:#fff;">⛔</div><div class="lbl">Expired</div><div class="num">{{ n_expired }}</div>
+      </a>
+      <a class="cc-chip {% if status_filter=='red' %}sel{% endif %}" href="/health-check?status=red{{ t }}{{ q }}" style="background:linear-gradient(135deg,#FEF2F2,#FEE2E2);color:#B91C1C !important;">
+        <div class="cico" style="background:#F87171;color:#fff;">⏰</div><div class="lbl">≤ 30 days</div><div class="num">{{ n_red }}</div>
+      </a>
+      <a class="cc-chip {% if status_filter=='amber' %}sel{% endif %}" href="/health-check?status=amber{{ t }}{{ q }}" style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);color:#B45309 !important;">
+        <div class="cico" style="background:#FBBF24;color:#fff;">⏳</div><div class="lbl">31–60 days</div><div class="num">{{ n_amber }}</div>
+      </a>
+      <a class="cc-chip {% if status_filter=='green' %}sel{% endif %}" href="/health-check?status=green{{ t }}{{ q }}" style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);color:#047857 !important;">
+        <div class="cico" style="background:#34D399;color:#fff;">✅</div><div class="lbl">Healthy (60+)</div><div class="num">{{ n_green }}</div>
+      </a>
+      <div class="cc-chip" style="background:linear-gradient(135deg,#EEF2FF,#E0E7FF);color:#3730A3;">
+        <div class="cico" style="background:#6366F1;color:#fff;">📦</div><div class="lbl">Total Docs</div><div class="num">{{ total }}</div>
+      </div>
     </div>
 
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">{{ rows|length }} client{{ 's' if rows|length != 1 else '' }}</div>
+    <div style="font-size:12.5px;color:#64748B;margin-bottom:10px;font-weight:600;">{{ rows|length }} client{{ 's' if rows|length != 1 else '' }}</div>
 
     {% if rows %}
     <div class="cc-list">
-      <div class="cc-hd"><span>Name</span><span>Status</span><span>Compliance Score</span><span style="text-align:right;">Action</span></div>
+      <div class="cc-hd"><span>Client</span><span>Status</span><span>Score</span><span style="text-align:right;">Action</span></div>
       {% for r in rows %}
-      {% set edge = '#DC2626' if r.worst <= 30 else ('#B45309' if r.worst <= 60 else '#059669') %}
-      {% set scol = '#059669' if (r.score is not none and r.score >= 70) else ('#B45309' if (r.score is not none and r.score >= 50) else '#DC2626') %}
+      {% set edge = '#EF4444' if r.worst <= 30 else ('#F59E0B' if r.worst <= 60 else '#10B981') %}
+      {% set scol = '#10B981' if (r.score is not none and r.score >= 70) else ('#F59E0B' if (r.score is not none and r.score >= 50) else '#EF4444') %}
+      {% if r.owner_type == 'Company' %}{% set av_bg='#EEF2FF' %}{% set av_ic='🏢' %}
+      {% elif r.owner_type == 'Staff' %}{% set av_bg='#ECFDF5' %}{% set av_ic='👔' %}
+      {% elif r.owner_type == 'Investor' %}{% set av_bg='#FFFBEB' %}{% set av_ic='💼' %}
+      {% else %}{% set av_bg='#FDF2F8' %}{% set av_ic='👤' %}{% endif %}
       <div class="cc-row" style="border-left-color:{{ edge }};">
-        <div class="cc-cell-name">
-          <div class="cc-sub"><span class="cc-tag">{% if r.owner_type == 'Company' %}🏢 Company{% elif r.owner_type == 'Staff' %}👔 Staff{% elif r.owner_type == 'Investor' %}💼 Investor{% else %}👤 Individual{% endif %}</span></div>
-          <div class="cc-name">{{ r.owner_name }}</div>
-          <div class="cc-sub">{% if r.ac_code %}<span style="color:#059669;font-weight:600;">{{ r.ac_code }}</span> · {% endif %}{{ r.count }} doc{{ 's' if r.count != 1 else '' }}</div>
+        <div class="cc-c-who">
+          <div class="cc-who">
+            <div class="cc-av" style="background:{{ av_bg }};">{{ av_ic }}</div>
+            <div>
+              <div class="cc-name">{{ r.owner_name }}</div>
+              <div class="cc-sub"><span class="tag" style="color:{{ edge }};">{{ r.owner_type or 'Individual' }}</span>{% if r.ac_code %} · <span style="color:#059669;font-weight:700;">{{ r.ac_code }}</span>{% endif %} · {{ r.count }} doc{{ 's' if r.count != 1 else '' }}</div>
+            </div>
+          </div>
         </div>
-        <div class="cc-cell-status">{{ badge(r.worst) }}</div>
-        <div class="cc-cell-score">
+        <div class="cc-c-status">
+          {% if r.worst < 0 %}<span class="cc-stat" style="background:#FEE2E2;color:#B91C1C;">⛔ Expired {{ -r.worst }}d</span>
+          {% elif r.worst <= 30 %}<span class="cc-stat" style="background:#FEE2E2;color:#DC2626;">⏰ {{ r.worst }}d left</span>
+          {% elif r.worst <= 60 %}<span class="cc-stat" style="background:#FEF3C7;color:#B45309;">⏳ {{ r.worst }}d left</span>
+          {% else %}<span class="cc-stat" style="background:#D1FAE5;color:#047857;">✅ Healthy</span>{% endif %}
+        </div>
+        <div class="cc-c-score">
           {% if r.score is not none %}
-            <span class="cc-score" style="color:{{ scol }};">{{ r.score }}%</span>
-            <div class="cc-scbar"><i style="width:{{ r.score }}%;background:{{ scol }};"></i></div>
+          <svg width="48" height="48" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="19" fill="none" stroke="#EEF2F7" stroke-width="5"/>
+            <circle cx="24" cy="24" r="19" fill="none" stroke="{{ scol }}" stroke-width="5" stroke-linecap="round" stroke-dasharray="{{ (119.4 * r.score / 100)|round(1) }} 119.4" transform="rotate(-90 24 24)"/>
+            <text x="24" y="28" text-anchor="middle" font-size="13" font-weight="800" fill="{{ scol }}">{{ r.score }}%</text>
+          </svg>
           {% else %}<span style="color:#CBD5E1;font-size:13px;">—</span>{% endif %}
         </div>
-        <div class="cc-cell-view">
+        <div class="cc-c-view">
           {% if r.customer_id %}<a class="cc-view" href="/customers/{{ r.customer_id }}/health">View →</a>
           {% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}
         </div>
@@ -118,6 +150,7 @@
     {% else %}
       <div class="card"><div class="empty">No documents with expiry dates match. Add documents (with an expiry date) to clients to see compliance here.</div></div>
     {% endif %}
+  </div>
   </div>
 </body>
 </html>
