@@ -3657,17 +3657,35 @@ def send_email(to_list, subject, html_body):
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject; msg['From'] = sender; msg['To'] = ', '.join(recipients)
     msg.attach(MIMEText(html_body, 'html'))
-    try:
-        if port == 465:
-            with smtplib.SMTP_SSL(host, port, timeout=25) as s:
-                s.login(user, pwd); s.sendmail(sender, recipients, msg.as_string())
-        else:
-            with smtplib.SMTP(host, port, timeout=25) as s:
-                s.starttls(); s.login(user, pwd); s.sendmail(sender, recipients, msg.as_string())
-        return True, 'sent'
-    except Exception as e:
-        print(f'[email] send failed: {e}')
-        return False, str(e)
+
+    import socket as _socket
+    def _send_via(use_ssl, p):
+        # Force IPv4 — some hosts (e.g. Railway) have broken IPv6 egress which
+        # surfaces as "[Errno 101] Network is unreachable" on SMTP connect.
+        _orig_gai = _socket.getaddrinfo
+        _socket.getaddrinfo = lambda h, pt, fam=0, *a, **k: _orig_gai(h, pt, _socket.AF_INET, *a, **k)
+        try:
+            if use_ssl:
+                with smtplib.SMTP_SSL(host, p, timeout=25) as s:
+                    s.login(user, pwd); s.sendmail(sender, recipients, msg.as_string())
+            else:
+                with smtplib.SMTP(host, p, timeout=25) as s:
+                    s.ehlo(); s.starttls(); s.ehlo()
+                    s.login(user, pwd); s.sendmail(sender, recipients, msg.as_string())
+        finally:
+            _socket.getaddrinfo = _orig_gai
+
+    # Try the configured transport first, then fall back to the other port/mode.
+    attempts = [(True, 465), (False, 587)] if port == 465 else [(False, port), (True, 465)]
+    last_err = None
+    for use_ssl, p in attempts:
+        try:
+            _send_via(use_ssl, p)
+            return True, 'sent'
+        except Exception as e:
+            last_err = e
+            print(f'[email] {"SSL" if use_ssl else "STARTTLS"}:{p} failed: {e}')
+    return False, str(last_err)
 
 def _expiring_items(customer_id, within_days=30):
     today = now_dubai().date()
