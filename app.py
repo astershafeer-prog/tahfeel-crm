@@ -3659,17 +3659,27 @@ def send_email(to_list, subject, html_body):
     msg.attach(MIMEText(html_body, 'html'))
 
     import socket as _socket
+    _orig_gai = _socket.getaddrinfo
+    def _gai_ipv4(*a, **k):
+        # Force IPv4 regardless of how getaddrinfo is called (positional or
+        # keyword family) — avoids "multiple values for 'family'" / signature errors.
+        a = list(a)
+        if len(a) >= 3:
+            a[2] = _socket.AF_INET
+        else:
+            k['family'] = _socket.AF_INET
+        return _orig_gai(*a, **k)
+
     def _send_via(use_ssl, p):
-        # Force IPv4 — some hosts (e.g. Railway) have broken IPv6 egress which
-        # surfaces as "[Errno 101] Network is unreachable" on SMTP connect.
-        _orig_gai = _socket.getaddrinfo
-        _socket.getaddrinfo = lambda h, pt, fam=0, *a, **k: _orig_gai(h, pt, _socket.AF_INET, *a, **k)
+        # Some hosts (e.g. Railway) have broken IPv6 egress which surfaces as
+        # "[Errno 101] Network is unreachable" on SMTP connect → force IPv4.
+        _socket.getaddrinfo = _gai_ipv4
         try:
             if use_ssl:
-                with smtplib.SMTP_SSL(host, p, timeout=25) as s:
+                with smtplib.SMTP_SSL(host, p, timeout=12) as s:
                     s.login(user, pwd); s.sendmail(sender, recipients, msg.as_string())
             else:
-                with smtplib.SMTP(host, p, timeout=25) as s:
+                with smtplib.SMTP(host, p, timeout=12) as s:
                     s.ehlo(); s.starttls(); s.ehlo()
                     s.login(user, pwd); s.sendmail(sender, recipients, msg.as_string())
         finally:
@@ -3738,14 +3748,18 @@ def cron_expiry_alerts():
 @login_required
 def email_health(customer_id):
     c = Customer.query.get_or_404(customer_id)
-    items = _expiring_items(c.id, 36500)  # all documents that have an expiry date
-    if not items:
-        flash('No documents with expiry dates to report.')
-        return redirect(url_for('customer_health', customer_id=customer_id))
-    ok, msg = send_email([c.alert_email or c.email, os.environ.get('ALERT_ADMIN_EMAIL')],
-                         f'Health Report — {c.name}',
-                         _doc_table_html(c, items, f'full document status report ({len(items)} documents):'))
-    flash('📧 Health report emailed.' if ok else f'Email failed: {msg}')
+    try:
+        items = _expiring_items(c.id, 36500)  # all documents that have an expiry date
+        if not items:
+            flash('No documents with expiry dates to report.')
+            return redirect(url_for('customer_health', customer_id=customer_id))
+        ok, msg = send_email([c.alert_email or c.email, os.environ.get('ALERT_ADMIN_EMAIL')],
+                             f'Compliance Report — {c.name}',
+                             _doc_table_html(c, items, f'full document status report ({len(items)} documents):'))
+        flash('📧 Compliance report emailed.' if ok else f'Email failed: {msg}')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash(f'Email failed: {e}')
     return redirect(url_for('customer_health', customer_id=customer_id))
 
 @app.route('/health-check')
