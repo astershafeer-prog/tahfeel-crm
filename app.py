@@ -192,6 +192,8 @@ class Customer(db.Model):
     whatsapp = db.Column(db.String(30))
     website = db.Column(db.String(120))
     ac_opening_date = db.Column(db.Date)
+    uae_pass_number = db.Column(db.String(50))   # UAE Pass access / account number
+    uae_pass_name = db.Column(db.String(100))    # name on the UAE Pass account
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -2002,7 +2004,7 @@ def add_customer():
         db.session.flush()  # get customer.id before commit
 
         # Company profile fields (UAE) — applied for any customer; blank for individuals
-        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website']:
+        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website','uae_pass_number','uae_pass_name']:
             setattr(customer, _f, request.form.get(_f, '').strip() or None)
         _aod = request.form.get('ac_opening_date', '').strip()
         customer.ac_opening_date = datetime.strptime(_aod, '%Y-%m-%d').date() if _aod else None
@@ -2092,6 +2094,7 @@ def customer_health(customer_id):
         band = 'Poor'
     company_docs = sorted([d for d in all_docs if not d.employee_id], key=lambda d: (d.expiry_date or datetime.max))
     employees = Employee.query.filter_by(customer_id=customer_id).order_by(Employee.name).all()
+    owners_count = Owner.query.filter_by(customer_id=customer_id).count()  # partners / UBO
     # Employee document summary (across all employees of this company)
     emp_docs = [d for d in all_docs if d.employee_id and d.expiry_date]
     emp_valid = len([d for d in emp_docs if dleft(d) > 90])
@@ -2103,7 +2106,8 @@ def customer_health(customer_id):
                            total=total, valid=valid, expiring=expiring, expired=expired,
                            score=score, band=band, company_docs=company_docs, employees=employees,
                            emp_docs_total=len(emp_docs), emp_valid=emp_valid, emp_expiring=emp_expiring,
-                           emp_expired=emp_expired, wa_number=wa_number, from_email=from_email)
+                           emp_expired=emp_expired, owners_count=owners_count,
+                           wa_number=wa_number, from_email=from_email)
 
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -2131,7 +2135,7 @@ def edit_customer(customer_id):
         customer.alert_whatsapp = request.form.get('alert_whatsapp', '').strip() or None
         customer.alerts_enabled = bool(request.form.get('alerts_enabled'))
         # Company profile fields (UAE)
-        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website']:
+        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website','uae_pass_number','uae_pass_name']:
             setattr(customer, _f, request.form.get(_f, '').strip() or None)
         _aod = request.form.get('ac_opening_date', '').strip()
         customer.ac_opening_date = datetime.strptime(_aod, '%Y-%m-%d').date() if _aod else None
@@ -4213,6 +4217,8 @@ def init_db():
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(30)',
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS website VARCHAR(120)',
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS ac_opening_date DATE',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS uae_pass_number VARCHAR(50)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS uae_pass_name VARCHAR(100)',
             # Document -> employee link (employee/owner tables auto-created by create_all)
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS employee_id INTEGER',
 

@@ -182,7 +182,10 @@
         {% if customer.contact_person %}<div class="row"><span class="k">🧑 Contact Person</span><span class="v">{{ customer.contact_person }}</span></div>{% endif %}
         <div class="row"><span class="k">📞 Phone</span><span class="v">{{ customer.phone or customer.mobile or '—' }}</span></div>
         <div class="row"><span class="k">👤 Account Manager</span><span class="v">{{ customer.rep.name if customer.rep else '—' }}</span></div>
+        <div class="row"><span class="k">🤝 Partners / UBO</span><span class="v">{{ owners_count }}</span></div>
         <div class="row"><span class="k">👔 Employees</span><span class="v">{{ employees|length }}</span></div>
+        {% if customer.uae_pass_number %}<div class="row"><span class="k">🪪 UAE Pass No.</span><span class="v">{{ customer.uae_pass_number }}</span></div>{% endif %}
+        {% if customer.uae_pass_name %}<div class="row"><span class="k">🪪 UAE Pass Name</span><span class="v">{{ customer.uae_pass_name }}</span></div>{% endif %}
       </div>
       <div class="hc-card">
         <div class="sec-head"><h2>📋 Summary</h2></div>
