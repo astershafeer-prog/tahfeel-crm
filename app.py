@@ -2092,11 +2092,18 @@ def customer_health(customer_id):
         band = 'Poor'
     company_docs = sorted([d for d in all_docs if not d.employee_id], key=lambda d: (d.expiry_date or datetime.max))
     employees = Employee.query.filter_by(customer_id=customer_id).order_by(Employee.name).all()
+    # Employee document summary (across all employees of this company)
+    emp_docs = [d for d in all_docs if d.employee_id and d.expiry_date]
+    emp_valid = len([d for d in emp_docs if dleft(d) > 90])
+    emp_expiring = len([d for d in emp_docs if 0 <= dleft(d) <= 90])
+    emp_expired = len([d for d in emp_docs if dleft(d) < 0])
     wa_number = (customer.whatsapp or customer.mobile or customer.phone or '').replace(' ', '').replace('+', '')
+    from_email = os.environ.get('SMTP_FROM') or os.environ.get('SMTP_USER') or 'info@tahfeel.ae'
     return render_template('customer_health.html', customer=customer, now=now, today=today,
                            total=total, valid=valid, expiring=expiring, expired=expired,
                            score=score, band=band, company_docs=company_docs, employees=employees,
-                           wa_number=wa_number)
+                           emp_docs_total=len(emp_docs), emp_valid=emp_valid, emp_expiring=emp_expiring,
+                           emp_expired=emp_expired, wa_number=wa_number, from_email=from_email)
 
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -2182,7 +2189,9 @@ def toggle_customer_alerts(customer_id):
     c = Customer.query.get_or_404(customer_id)
     c.alerts_enabled = not c.alerts_enabled
     db.session.commit()
-    flash(('🔔 Document alerts ON' if c.alerts_enabled else '🔕 Document alerts OFF') + f' for {c.name}')
+    flash(('🔔 Periodic compliance emails ON' if c.alerts_enabled else '🔕 Periodic compliance emails OFF') + f' for {c.name}')
+    if request.args.get('next') == 'health':
+        return redirect(url_for('customer_health', customer_id=customer_id))
     return redirect(url_for('customer_detail', customer_id=customer_id))
 
 @app.route('/customers/<int:customer_id>/delete')
@@ -3744,21 +3753,35 @@ def health_check():
     for key, dl in groups.items():
         dl_sorted = sorted(dl, key=lambda d: d.expiry_date)
         worst = min(days_left(d) for d in dl)
+        # Compliance score: valid (>90d)=1.0, expiring (0–90d)=0.5, expired=0 → avg %
+        n_valid = len([d for d in dl if days_left(d) > 90])
+        n_soon = len([d for d in dl if 0 <= days_left(d) <= 90])
+        score = round(100 * (n_valid + 0.5 * n_soon) / len(dl)) if dl else None
+        band = ('Excellent' if score >= 90 else 'Good' if score >= 70
+                else 'Average' if score >= 50 else 'Poor') if score is not None else 'No data'
         if isinstance(key, int):
             c = customers_by_id.get(key)
             owner_name = c.name if c else 'Unknown'
             owner_type = (c.customer_type if c and c.customer_type else 'Individual')
             cid = key
+            ac_code = c.ac_code if c else None
         else:
             owner_name = key.split('staff:', 1)[1]
             owner_type = 'Staff'
             cid = None
+            ac_code = None
         rows.append({'owner_name': owner_name, 'owner_type': owner_type, 'customer_id': cid,
-                     'docs': dl_sorted, 'count': len(dl), 'worst': worst})
+                     'ac_code': ac_code, 'docs': dl_sorted, 'count': len(dl), 'worst': worst,
+                     'score': score, 'band': band})
     rows.sort(key=lambda r: r['worst'])  # most urgent first
 
     status_filter = request.args.get('status', '')
     type_filter = request.args.get('type', '')
+    search = request.args.get('q', '').strip()
+    if search:
+        sl = search.lower()
+        rows = [r for r in rows if sl in (r['owner_name'] or '').lower()
+                or sl in (r['ac_code'] or '').lower()]
     if type_filter:
         rows = [r for r in rows if r['owner_type'] == type_filter]
     if status_filter == 'expired':
@@ -3772,7 +3795,8 @@ def health_check():
 
     return render_template('health_check.html', rows=rows, now=now, today=today,
                            n_expired=n_expired, n_red=n_red, n_amber=n_amber, n_green=n_green,
-                           total=len(docs), status_filter=status_filter, type_filter=type_filter)
+                           total=len(docs), status_filter=status_filter, type_filter=type_filter,
+                           search=search)
 
 @app.route('/documents')
 @login_required

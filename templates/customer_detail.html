@@ -29,7 +29,7 @@
 <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Task</a>
             <a href="/documents/add?customer_id={{ customer.id }}" class="btn-sm" style="background:white;border-color:var(--primary);color:var(--primary);">📄 Add Document</a>
-            <a href="/customers/{{ customer.id }}/health" class="btn-sm" style="background:white;border-color:#059669;color:#059669;">🩺 Health Report</a>
+            <a href="/customers/{{ customer.id }}/health" class="btn-sm" style="background:white;border-color:#059669;color:#059669;">🛡 Compliance Report</a>
             <form method="POST" action="/customers/{{ customer.id }}/toggle-alerts" style="margin:0;display:inline;">
               <button type="submit" class="btn-sm" style="border-color:{{ '#16A34A' if customer.alerts_enabled else '#94A3B8' }};color:{{ '#16A34A' if customer.alerts_enabled else '#64748B' }};">{{ '🔔 Alerts ON' if customer.alerts_enabled else '🔕 Alerts OFF' }}</button>
             </form>

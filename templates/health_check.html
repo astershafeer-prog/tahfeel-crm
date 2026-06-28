@@ -3,9 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tahfeel CRM — Health Check</title>
+  <title>Tahfeel CRM — Compliance</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .cc-search{position:relative;flex:1;min-width:220px;}
+    .cc-search input{width:100%;padding:11px 14px 11px 38px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;box-sizing:border-box;}
+    .cc-search input:focus{outline:none;border-color:var(--primary);}
+    .cc-search .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:#94A3B8;}
+    .cc-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
+    @media(max-width:760px){.cc-chips{grid-template-columns:repeat(2,1fr);}}
+    .cc-chip{text-decoration:none;background:#fff;border-radius:12px;border:0.5px solid #E2E8F0;padding:12px 14px;box-shadow:0 2px 8px rgba(0,0,0,.05);display:block;}
+    .cc-chip .lbl{font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.3px;}
+    .cc-chip .num{font-size:24px;font-weight:800;line-height:1.1;margin-top:2px;}
+    .cc-list{background:#fff;border:0.5px solid #E2E8F0;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.05);overflow:hidden;}
+    .cc-hd{display:grid;grid-template-columns:1fr 150px 130px 90px;gap:12px;padding:12px 18px;border-bottom:1px solid #EEF2F7;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;}
+    .cc-row{display:grid;grid-template-columns:1fr 150px 130px 90px;gap:12px;align-items:center;padding:14px 18px;border-bottom:1px solid #F1F5F9;border-left:4px solid transparent;}
+    .cc-row:last-child{border-bottom:none;}
+    .cc-row:hover{background:#F8FAFC;}
+    .cc-name{font-size:15px;font-weight:700;color:#1A2333;line-height:1.2;}
+    .cc-sub{font-size:11px;color:#94A3B8;margin-top:2px;display:flex;gap:8px;align-items:center;}
+    .cc-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#64748B;}
+    .cc-score{font-size:20px;font-weight:800;line-height:1;}
+    .cc-scbar{height:5px;border-radius:5px;background:#EEF2F7;margin-top:6px;overflow:hidden;}
+    .cc-scbar i{display:block;height:100%;border-radius:5px;}
+    .cc-view{display:inline-flex;align-items:center;gap:5px;background:var(--primary);color:#fff;padding:7px 14px;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;justify-self:end;}
+    .cc-view:hover{background:var(--primary-dark);color:#fff;}
+    @media(max-width:680px){
+      .cc-hd{display:none;}
+      .cc-row{grid-template-columns:1fr auto;grid-template-areas:'name view' 'score view';row-gap:8px;}
+      .cc-cell-name{grid-area:name;} .cc-cell-status{display:none;} .cc-cell-score{grid-area:score;} .cc-cell-view{grid-area:view;align-self:center;}
+    }
+  </style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
@@ -16,87 +45,77 @@
       {% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    <div class="page-header">
-      <h2>🩺 Document Health Check</h2>
-      <form method="GET" action="/health-check" style="display:flex;gap:8px;align-items:center;">
-        {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
-        <select name="type" onchange="this.form.submit()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;">
-          <option value="">All types</option>
-          <option value="Individual" {% if type_filter=='Individual' %}selected{% endif %}>Individual</option>
-          <option value="Company" {% if type_filter=='Company' %}selected{% endif %}>Company</option>
-          <option value="Investor" {% if type_filter=='Investor' %}selected{% endif %}>Investor</option>
-          <option value="Staff" {% if type_filter=='Staff' %}selected{% endif %}>Staff</option>
-        </select>
-        {% if status_filter or type_filter %}<a href="/health-check" class="btn-sm">Clear</a>{% endif %}
-      </form>
-    </div>
-
-    <!-- Summary cards (click to filter) -->
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
-      <a href="/health-check?status=expired{% if type_filter %}&type={{ type_filter }}{% endif %}" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B91C1C;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);{% if status_filter=='expired' %}outline:2px solid #B91C1C;{% endif %}">
-        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Expired</div>
-        <div style="font-size:26px;font-weight:800;color:#B91C1C;">{{ n_expired }}</div>
-      </a>
-      <a href="/health-check?status=red{% if type_filter %}&type={{ type_filter }}{% endif %}" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #DC2626;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);{% if status_filter=='red' %}outline:2px solid #DC2626;{% endif %}">
-        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">≤ 30 days</div>
-        <div style="font-size:26px;font-weight:800;color:#DC2626;">{{ n_red }}</div>
-      </a>
-      <a href="/health-check?status=amber{% if type_filter %}&type={{ type_filter }}{% endif %}" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B45309;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);{% if status_filter=='amber' %}outline:2px solid #B45309;{% endif %}">
-        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">31–60 days</div>
-        <div style="font-size:26px;font-weight:800;color:#B45309;">{{ n_amber }}</div>
-      </a>
-      <a href="/health-check?status=green{% if type_filter %}&type={{ type_filter }}{% endif %}" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #059669;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);{% if status_filter=='green' %}outline:2px solid #059669;{% endif %}">
-        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Healthy (60+)</div>
-        <div style="font-size:26px;font-weight:800;color:#059669;">{{ n_green }}</div>
-      </a>
-      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;">Total Docs</div>
-        <div style="font-size:26px;font-weight:800;color:#1A3B8B;">{{ total }}</div>
+    <div class="page-header" style="align-items:flex-start;">
+      <div>
+        <h2>🛡 Compliance Center</h2>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">Full document-compliance report per client</div>
       </div>
     </div>
 
-    {% macro status_badge(days) %}
-      {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Expired {{ -days }}d ago</span>
+    {% macro badge(days) %}
+      {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Expired {{ -days }}d</span>
       {% elif days <= 30 %}<span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
       {% elif days <= 60 %}<span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
-      {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>{% endif %}
+      {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Healthy</span>{% endif %}
     {% endmacro %}
 
+    <!-- Search + filter -->
+    <form method="GET" action="/health-check" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+      <div class="cc-search">
+        <span class="ic">🔍</span>
+        <input type="text" name="q" value="{{ search or '' }}" placeholder="Search by client name or AC code…" autocomplete="off">
+      </div>
+      <select name="type" onchange="this.form.submit()" style="padding:11px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;">
+        <option value="">All types</option>
+        <option value="Individual" {% if type_filter=='Individual' %}selected{% endif %}>Individual</option>
+        <option value="Company" {% if type_filter=='Company' %}selected{% endif %}>Company</option>
+        <option value="Investor" {% if type_filter=='Investor' %}selected{% endif %}>Investor</option>
+        <option value="Staff" {% if type_filter=='Staff' %}selected{% endif %}>Staff</option>
+      </select>
+      <button type="submit" class="cc-view" style="justify-self:auto;">Search</button>
+      {% if status_filter or type_filter or search %}<a href="/health-check" class="btn-sm">Clear</a>{% endif %}
+    </form>
+
+    <!-- Clickable status chips -->
+    <div class="cc-chips">
+      <a class="cc-chip" href="/health-check?status=expired{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&q={{ search }}{% endif %}" style="border-top:4px solid #B91C1C;{% if status_filter=='expired' %}outline:2px solid #B91C1C;{% endif %}"><div class="lbl">Expired</div><div class="num" style="color:#B91C1C;">{{ n_expired }}</div></a>
+      <a class="cc-chip" href="/health-check?status=red{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&q={{ search }}{% endif %}" style="border-top:4px solid #DC2626;{% if status_filter=='red' %}outline:2px solid #DC2626;{% endif %}"><div class="lbl">≤ 30 days</div><div class="num" style="color:#DC2626;">{{ n_red }}</div></a>
+      <a class="cc-chip" href="/health-check?status=amber{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&q={{ search }}{% endif %}" style="border-top:4px solid #B45309;{% if status_filter=='amber' %}outline:2px solid #B45309;{% endif %}"><div class="lbl">31–60 days</div><div class="num" style="color:#B45309;">{{ n_amber }}</div></a>
+      <a class="cc-chip" href="/health-check?status=green{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&q={{ search }}{% endif %}" style="border-top:4px solid #059669;{% if status_filter=='green' %}outline:2px solid #059669;{% endif %}"><div class="lbl">Healthy (60+)</div><div class="num" style="color:#059669;">{{ n_green }}</div></a>
+      <div class="cc-chip" style="border-top:4px solid #1A3B8B;"><div class="lbl">Total Docs</div><div class="num" style="color:#1A3B8B;">{{ total }}</div></div>
+    </div>
+
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">{{ rows|length }} client{{ 's' if rows|length != 1 else '' }}</div>
+
     {% if rows %}
+    <div class="cc-list">
+      <div class="cc-hd"><span>Name</span><span>Status</span><span>Compliance Score</span><span style="text-align:right;">Action</span></div>
       {% for r in rows %}
-      <div class="card" style="margin-bottom:12px;border-left:5px solid {% if r.worst < 0 or r.worst <= 30 %}#DC2626{% elif r.worst <= 60 %}#B45309{% else %}#059669{% endif %};">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <h2 style="margin:0;">{% if r.owner_type == 'Company' %}🏢{% elif r.owner_type == 'Staff' %}👔{% else %}👤{% endif %} {{ r.owner_name }}</h2>
-            <span class="badge b-{{ (r.owner_type or 'individual')|lower }}">{{ r.owner_type }}</span>
-            <span style="font-size:12px;color:var(--text-muted);">{{ r.count }} doc{{ 's' if r.count != 1 else '' }}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;">
-            {{ status_badge(r.worst) }}
-            {% if r.customer_id %}<a href="/customers/{{ r.customer_id }}/health" class="btn-sm" style="border-color:#059669;color:#059669;">🩺 Health</a>
-            <a href="/customers/{{ r.customer_id }}" class="btn-sm">Open →</a>{% endif %}
-          </div>
+      {% set edge = '#DC2626' if r.worst <= 30 else ('#B45309' if r.worst <= 60 else '#059669') %}
+      {% set scol = '#059669' if (r.score is not none and r.score >= 70) else ('#B45309' if (r.score is not none and r.score >= 50) else '#DC2626') %}
+      <div class="cc-row" style="border-left-color:{{ edge }};">
+        <div class="cc-cell-name">
+          <div class="cc-sub"><span class="cc-tag">{% if r.owner_type == 'Company' %}🏢 Company{% elif r.owner_type == 'Staff' %}👔 Staff{% elif r.owner_type == 'Investor' %}💼 Investor{% else %}👤 Individual{% endif %}</span></div>
+          <div class="cc-name">{{ r.owner_name }}</div>
+          <div class="cc-sub">{% if r.ac_code %}<span style="color:#059669;font-weight:600;">{{ r.ac_code }}</span> · {% endif %}{{ r.count }} doc{{ 's' if r.count != 1 else '' }}</div>
         </div>
-        <div class="card-body" style="padding-top:0;">
-          <table>
-            <thead><tr><th>Document</th><th>Expiry Date</th><th>Status</th><th>File</th></tr></thead>
-            <tbody>
-              {% for d in r.docs %}
-              {% set days = (d.expiry_date.date() - today).days %}
-              <tr>
-                <td style="font-weight:600;">{{ d.doc_type }}</td>
-                <td style="font-size:13px;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
-                <td>{{ status_badge(days) }}</td>
-                <td>{% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div class="cc-cell-status">{{ badge(r.worst) }}</div>
+        <div class="cc-cell-score">
+          {% if r.score is not none %}
+            <span class="cc-score" style="color:{{ scol }};">{{ r.score }}%</span>
+            <div class="cc-scbar"><i style="width:{{ r.score }}%;background:{{ scol }};"></i></div>
+          {% else %}<span style="color:#CBD5E1;font-size:13px;">—</span>{% endif %}
+        </div>
+        <div class="cc-cell-view">
+          {% if r.customer_id %}<a class="cc-view" href="/customers/{{ r.customer_id }}/health">View →</a>
+          {% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}
         </div>
       </div>
       {% endfor %}
+    </div>
     {% else %}
-      <div class="card"><div class="empty">No documents with expiry dates yet. Add documents (with an expiry date) to customers to see their health here.</div></div>
+      <div class="card"><div class="empty">No documents with expiry dates match. Add documents (with an expiry date) to clients to see compliance here.</div></div>
     {% endif %}
   </div>
 </body>
