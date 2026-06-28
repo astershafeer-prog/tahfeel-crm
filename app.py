@@ -3650,10 +3650,32 @@ def send_email(to_list, subject, html_body):
     host = os.environ.get('SMTP_HOST'); user = os.environ.get('SMTP_USER'); pwd = os.environ.get('SMTP_PASS')
     port = int(os.environ.get('SMTP_PORT', '465')); sender = os.environ.get('SMTP_FROM', user or '')
     recipients = [r for r in to_list if r]
-    if not (host and user and pwd):
-        return False, 'SMTP not configured (set SMTP_HOST/USER/PASS in Railway)'
     if not recipients:
         return False, 'No recipient email on file'
+
+    # Preferred transport: Resend HTTP API (port 443) — works on Railway where
+    # outbound SMTP ports are blocked. Falls back to SMTP if no API key set.
+    resend_key = os.environ.get('RESEND_API_KEY')
+    if resend_key:
+        import requests as _rq
+        from_addr = os.environ.get('RESEND_FROM') or sender or 'info@tahfeel.ae'
+        if '<' not in from_addr:
+            from_addr = f'Tahfeel Business Solutions <{from_addr}>'
+        try:
+            resp = _rq.post('https://api.resend.com/emails',
+                            headers={'Authorization': f'Bearer {resend_key}',
+                                     'Content-Type': 'application/json'},
+                            json={'from': from_addr, 'to': recipients,
+                                  'subject': subject, 'html': html_body},
+                            timeout=15)
+            if resp.status_code in (200, 201):
+                return True, 'sent'
+            return False, f'Resend {resp.status_code}: {resp.text[:200]}'
+        except Exception as e:
+            return False, f'Resend error: {e}'
+
+    if not (host and user and pwd):
+        return False, 'Email not configured (set RESEND_API_KEY, or SMTP_HOST/USER/PASS)'
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject; msg['From'] = sender; msg['To'] = ', '.join(recipients)
     msg.attach(MIMEText(html_body, 'html'))
