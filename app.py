@@ -46,7 +46,7 @@ app = Flask(__name__)
 # (it is public in git history) so set SECRET_KEY in Railway to override it.
 app.secret_key = os.environ.get('SECRET_KEY') or 'tahfeel2026secretkey'
 if app.secret_key == 'tahfeel2026secretkey':
-    print('⚠️  SECURITY WARNING: SECRET_KEY env var not set — using insecure public fallback. '
+    print('[!] SECURITY WARNING: SECRET_KEY env var not set - using insecure public fallback. '
           'Set SECRET_KEY in Railway and redeploy to secure sessions.')
 # Session configuration for custom domain support
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -4912,15 +4912,6 @@ app.register_blueprint(reports_bp)
 from meta_webhook import meta_bp
 app.register_blueprint(meta_bp)
 
-if __name__ == '__main__':
-    init_db()
-    # debug defaults OFF; enable locally with FLASK_DEBUG=true. Never enable in production
-    # (the Werkzeug debugger allows remote code execution). Railway runs via gunicorn anyway.
-    _debug = os.environ.get('FLASK_DEBUG', '').lower() == 'true'
-    app.run(debug=_debug, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-else:
-    init_db()
-
 @app.route('/partners')
 @login_required
 def partners():
@@ -5323,17 +5314,11 @@ def add_tahfeel_doc():
             flash('No valid documents to add.', 'error')
         
         return redirect(url_for('tahfeel_doc'))
-        
+
     except Exception as e:
         db.session.rollback()
         flash(f'Error: {str(e)}', 'error')
         print(f"Error adding documents: {e}")
-        return redirect(url_for('tahfeel_doc'))
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
-        print(f"Error adding document: {e}")
         return redirect(url_for('tahfeel_doc'))
 
 @app.route('/tahfeel-doc/<int:doc_id>/edit', methods=['POST'])
@@ -5624,3 +5609,15 @@ def admin_delete_partner(partner_id):
 # TEMPORARY ADMIN ROUTE - Fix April 30 Revenue Dates
 # ══════════════════════════════════════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════════════
+
+# ── App entry point (MUST stay at the very end so every @app.route above is
+#    registered before the server starts; gunicorn imports the module, which
+#    runs the else branch).
+if __name__ == '__main__':
+    init_db()
+    # debug defaults OFF; enable locally with FLASK_DEBUG=true. Never enable in production
+    # (the Werkzeug debugger allows remote code execution). Railway runs via gunicorn anyway.
+    _debug = os.environ.get('FLASK_DEBUG', '').lower() == 'true'
+    app.run(debug=_debug, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+else:
+    init_db()

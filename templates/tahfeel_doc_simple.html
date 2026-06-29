@@ -156,9 +156,9 @@
               </td>
               <td>
                 <div class="actions">
-                  <button class="btn-sm" onclick="openViewModal({{ doc.id }}, '{{ doc.name }}', '{{ doc.doc_type }}', '{{ doc.owner }}', '{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}', '{{ doc.issue_date.strftime('%Y-%m-%d') if doc.issue_date else '' }}', '{{ doc.authority }}', '{{ doc.document_url or '' }}')">View</button>
-                  <button class="btn-sm" onclick="openEditModal({{ doc.id }}, '{{ doc.name }}', '{{ doc.doc_type }}', '{{ doc.owner }}', '{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}', '{{ doc.issue_date.strftime('%Y-%m-%d') if doc.issue_date else '' }}', '{{ doc.authority }}')">Edit</button>
-                  <button class="btn-delete" onclick="if(confirm('Delete {{ doc.name }}?')) fetch('/tahfeel-doc/{{ doc.id }}/delete', {method:'POST'}).then(()=>location.reload())">Delete</button>
+                  <button class="btn-sm" onclick='openViewModal({{ doc.id }}, {{ (doc.name or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }}, {{ (doc.document_url or "")|tojson }})'>View</button>
+                  <button class="btn-sm" onclick='openEditModal({{ doc.id }}, {{ (doc.name or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }})'>Edit</button>
+                  <button class="btn-delete" onclick='if(confirm("Delete " + {{ (doc.name or "")|tojson }} + "?")) fetch("/tahfeel-doc/{{ doc.id }}/delete", {method:"POST"}).then(()=>location.reload())'>Delete</button>
                 </div>
               </td>
             </tr>
