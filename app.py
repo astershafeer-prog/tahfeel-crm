@@ -1232,7 +1232,11 @@ def add_lead():
     if request.method == 'POST':
         due = request.form.get('due_date')
         lead_date = request.form.get('lead_date')
-        created_dt = datetime.strptime(lead_date, '%Y-%m-%d') if lead_date else now_dubai()
+        # Capture the actual time the lead is entered (combine chosen date with current time)
+        if lead_date:
+            created_dt = datetime.combine(datetime.strptime(lead_date, '%Y-%m-%d').date(), now_dubai().time())
+        else:
+            created_dt = now_dubai()
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else created_dt + timedelta(days=1)
         lead = Lead(
             name=request.form['name'],

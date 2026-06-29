@@ -191,10 +191,23 @@ def export_lead_report():
     ws.title = "Lead Detail"
 
     cols = ['#', 'Lead Name', 'Company', 'Phone', 'Service', 'Source',
-            'Assigned To', 'Status', 'Created Date', 'Due Date',
-            'Days Open', 'Interactions', 'Status History']
+            'Assigned To', 'Status', 'Created (Date & Time)', 'Initiated At',
+            'Time to Initiate', 'Due Date', 'Days Open', 'Interactions', 'Status History']
     _title_block(ws, "LEAD DETAIL REPORT", df, dt, len(cols))
     _headers(ws, cols)
+
+    def _fmt_delta(d):
+        secs = int(d.total_seconds())
+        if secs < 0:
+            return ''
+        days, rem = divmod(secs, 86400)
+        hrs, rem = divmod(rem, 3600)
+        mins = rem // 60
+        if days:
+            return f"{days}d {hrs}h"
+        if hrs:
+            return f"{hrs}h {mins}m"
+        return f"{mins}m"
 
     rows = []
     for i, lead in enumerate(leads, 1):
@@ -206,12 +219,17 @@ def export_lead_report():
             ts = u.created_at.strftime('%d/%m/%y %H:%M') if u.created_at else ''
             hist.append(f"[{ts}] {u.stage or ''} — {u.remark or ''} ({u.staff_name or ''})")
         days_open = (datetime.now() - lead.created_at).days if lead.created_at else ''
+        # First real action by a salesperson = "initiated" (skip the system Meta-lead note)
+        first_action = next((u for u in updates if (u.staff_name or '') != 'System (Meta Ads)' and u.created_at), None)
+        initiated_at = first_action.created_at.strftime('%d/%m/%Y %H:%M') if first_action else ''
+        time_to_initiate = _fmt_delta(first_action.created_at - lead.created_at) if (first_action and lead.created_at) else ''
         rows.append([
             i, lead.name or '', lead.company or '', lead.phone or '',
             lead.service or '', lead.source or '',
             users.get(lead.assigned_to, '—'),
             lead.status or '',
-            lead.created_at.strftime('%d/%m/%Y') if lead.created_at else '',
+            lead.created_at.strftime('%d/%m/%Y %H:%M') if lead.created_at else '',
+            initiated_at, time_to_initiate,
             lead.due_date.strftime('%d/%m/%Y') if lead.due_date else '',
             days_open, len(updates),
             " | ".join(hist),
@@ -220,7 +238,7 @@ def export_lead_report():
     nr = _write_rows(ws, rows)
     # No total row needed (removed potential_value column)
 
-    _col_widths(ws, [4, 22, 22, 15, 18, 14, 18, 14, 13, 13, 10, 12, 70])
+    _col_widths(ws, [4, 22, 22, 15, 18, 14, 18, 14, 18, 17, 14, 13, 10, 12, 70])
     _freeze(ws); _filter(ws, len(cols))
     return _respond(wb, f"Lead_Detail_{df}_{dt}.xlsx")
 
