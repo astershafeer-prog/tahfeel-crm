@@ -83,6 +83,8 @@
     .doc-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
     .pane-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .pane-head .pane-title { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+    .btn-wa { border-color: #25D366 !important; color: #128C4B !important; }
+    .btn-wa:hover { background: #25D366 !important; color: #fff !important; }
   </style>
 </head>
 <body>
@@ -156,6 +158,8 @@
         <td>
           <div class="actions">
             <button class="btn-sm" onclick='openViewModal({{ doc.id }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }}, {{ (doc.document_url or "")|tojson }})'>View</button>
+            {% if doc.document_url %}<a class="btn-sm" href="{{ doc.document_url.replace('/upload/', '/upload/fl_attachment/') }}" target="_blank">⬇ Download</a>{% endif %}
+            <button class="btn-sm btn-wa" onclick='shareWhatsApp({{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%d %b %Y") if doc.expiry_date else "")|tojson }}, {{ (doc.document_url or "")|tojson }})'>WhatsApp</button>
             <button class="btn-sm" onclick='openEditModal({{ doc.id }}, {{ (doc.category or "Tahfeel")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.staff_id or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }})'>Edit</button>
             <button class="btn-delete" onclick='if(confirm("Delete this document?")) fetch("/tahfeel-doc/{{ doc.id }}/delete", {method:"POST"}).then(()=>location.reload())'>Delete</button>
           </div>
@@ -443,6 +447,16 @@
 
     function closeModal(id) {
       document.getElementById(id).classList.remove('show');
+    }
+
+    // Share a document over WhatsApp (opens the share picker with details + file link)
+    function shareWhatsApp(docType, owner, expiry, fileUrl) {
+      let msg = '*Tahfeel Document*\n';
+      if (owner && owner !== 'Tahfeel') msg += 'Name: ' + owner + '\n';
+      msg += 'Type: ' + docType + '\n';
+      if (expiry) msg += 'Expiry: ' + expiry + '\n';
+      msg += fileUrl ? ('\nDocument: ' + fileUrl) : '\n(No file attached)';
+      window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
     }
 
     document.getElementById('docForm').addEventListener('submit', function(e) {
