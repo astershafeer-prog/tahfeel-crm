@@ -68,6 +68,13 @@
     .modal-cancel:hover { background: #e0e0e0; }
     .modal-submit { background: var(--primary); color: white; }
     .modal-submit:hover { opacity: 0.9; }
+    .cat-tabs { display: flex; gap: 8px; }
+    .cat-tab { flex: 1; padding: 10px; border: 1.5px solid var(--border); background: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all .15s; }
+    .cat-tab:hover { border-color: var(--primary); }
+    .cat-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .section-head { padding: 12px 16px; font-size: 14px; font-weight: 700; color: var(--primary); background: #f8f9fa; border-bottom: 1px solid #eee; }
+    .section-head .count { color: #999; font-weight: 400; font-size: 12px; }
+    .exp-chip { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -130,51 +137,49 @@
       </div>
     </div>
 
-    <div class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>Document Name</th>
-            <th>Authority</th>
-            <th>Issue Date</th>
-            <th>Expiry Date</th>
-            <th>File Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if all_docs %}
-            {% for doc in all_docs|sort(attribute='expiry_date') %}
+    {% set cat_meta = [('Tahfeel','🏢 Tahfeel'), ('Staff','👤 Staff'), ('Management','🧑‍💼 Management')] %}
+    {% for key, label in cat_meta %}
+      {% set docs = groups[key] %}
+      {% if docs %}
+      <div class="card" style="margin-bottom:18px;">
+        <div class="section-head">{{ label }} <span class="count">({{ docs|length }})</span></div>
+        <table>
+          <thead>
             <tr>
-              <td>
-                <strong>{{ doc.name }}</strong>
-                <br><span style="color:#999;font-size:12px;">Owner: {{ doc.owner }}</span>
-              </td>
-              <td>{{ doc.authority or '—' }}</td>
-              <td>{{ doc.issue_date.strftime('%d %b %Y') if doc.issue_date else '—' }}</td>
-              <td>{{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '—' }}</td>
-              <td>
-                {% if doc.document_url %}
-                  <span class="badge badge-complete">✓ Complete</span>
-                {% else %}
-                  <span style="color: #999; font-size: 12px;">Pending</span>
-                {% endif %}
+              <th>Document Type</th>
+              <th>Owner Name</th>
+              <th>Expiry Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in docs|sort(attribute='expiry_date') %}
+            {% set st = doc.expiry_status() %}
+            <tr>
+              <td><strong>{{ doc.doc_type }}</strong></td>
+              <td>{{ doc.owner }}</td>
+              <td style="font-weight:600;color:{% if st in ['expired','critical'] %}#c0392b{% elif st=='warning' %}#b35c00{% else %}#27500A{% endif %};">
+                {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '—' }}
+                {% if st=='expired' %}<span class="exp-chip" style="background:#FCEBEB;color:#791F1F;">Expired</span>
+                {% elif st in ['critical','warning'] %}<span class="exp-chip" style="background:#FAEEDA;color:#633806;">{{ doc.days_until_expiry() }}d left</span>{% endif %}
               </td>
               <td>
                 <div class="actions">
-                  <button class="btn-sm" onclick='openViewModal({{ doc.id }}, {{ (doc.name or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }}, {{ (doc.document_url or "")|tojson }})'>View</button>
-                  <button class="btn-sm" onclick='openEditModal({{ doc.id }}, {{ (doc.name or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }})'>Edit</button>
-                  <button class="btn-delete" onclick='if(confirm("Delete " + {{ (doc.name or "")|tojson }} + "?")) fetch("/tahfeel-doc/{{ doc.id }}/delete", {method:"POST"}).then(()=>location.reload())'>Delete</button>
+                  <button class="btn-sm" onclick='openViewModal({{ doc.id }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }}, {{ (doc.document_url or "")|tojson }})'>View</button>
+                  <button class="btn-sm" onclick='openEditModal({{ doc.id }}, {{ (doc.category or "Tahfeel")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }})'>Edit</button>
+                  <button class="btn-delete" onclick='if(confirm("Delete this document?")) fetch("/tahfeel-doc/{{ doc.id }}/delete", {method:"POST"}).then(()=>location.reload())'>Delete</button>
                 </div>
               </td>
             </tr>
             {% endfor %}
-          {% else %}
-            <tr><td colspan="6" class="empty">No documents found. <button class="btn-add" onclick="openAddModal()" style="padding: 5px 10px; font-size: 12px; margin-left: 12px;">+ Add Document</button></td></tr>
-          {% endif %}
-        </tbody>
-      </table>
-    </div>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    {% endfor %}
+    {% if not all_docs %}
+      <div class="card"><div class="empty">No documents yet. <button class="btn-add" onclick="openAddModal()" style="padding: 5px 10px; font-size: 12px; margin-left: 12px;">+ Add Document</button></div></div>
+    {% endif %}
   </div>
 
   <!-- VIEW MODAL -->
@@ -232,35 +237,56 @@
       <div class="modal-title" id="addEditTitle"></div>
       
       <form id="docForm">
-        <div class="modal-field">
-          <label>Document Name *</label>
-          <input type="text" id="inputName" required>
-        </div>
+        <input type="hidden" id="inputCategory">
 
         <div class="modal-field">
-          <label>Document Type *</label>
-          <input type="text" id="inputType" required>
-        </div>
-
-        <div class="modal-field">
-          <label>Owner *</label>
-          <input type="text" id="inputOwner" required>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-          <div class="modal-field" style="margin-bottom: 0;">
-            <label>Issue Date</label>
-            <input type="date" id="inputIssueDate">
-          </div>
-          <div class="modal-field" style="margin-bottom: 0;">
-            <label>Expiry Date *</label>
-            <input type="date" id="inputExpiryDate" required>
+          <label>Whose document? *</label>
+          <div class="cat-tabs">
+            <button type="button" class="cat-tab" data-cat="Tahfeel" onclick="selectCategory('Tahfeel')">🏢 Tahfeel</button>
+            <button type="button" class="cat-tab" data-cat="Staff" onclick="selectCategory('Staff')">👤 Staff</button>
+            <button type="button" class="cat-tab" data-cat="Management" onclick="selectCategory('Management')">🧑‍💼 Management</button>
           </div>
         </div>
 
-        <div class="modal-field">
-          <label>Authority</label>
-          <input type="text" id="inputAuthority">
+        <div id="formBody" style="display:none;">
+          <div class="modal-field" id="ownerField" style="display:none;">
+            <label id="ownerLabel">Name *</label>
+            <input type="text" id="inputOwner" placeholder="Full name">
+          </div>
+
+          <div class="modal-field">
+            <label>Document Type *</label>
+            <select id="inputType" onchange="toggleOtherType()"></select>
+          </div>
+          <div class="modal-field" id="typeOtherField" style="display:none;">
+            <label>Specify Document Type *</label>
+            <input type="text" id="inputTypeOther" placeholder="Type the document name">
+          </div>
+
+          <div class="modal-field" id="authField" style="display:none;">
+            <label>Authority</label>
+            <select id="inputAuthority" onchange="toggleOtherAuth()"></select>
+          </div>
+          <div class="modal-field" id="authOtherField" style="display:none;">
+            <label>Specify Authority</label>
+            <input type="text" id="inputAuthorityOther" placeholder="Type the authority">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div class="modal-field" style="margin-bottom: 0;">
+              <label>Issue Date</label>
+              <input type="date" id="inputIssueDate">
+            </div>
+            <div class="modal-field" style="margin-bottom: 0;">
+              <label>Expiry Date *</label>
+              <input type="date" id="inputExpiryDate">
+            </div>
+          </div>
+
+          <div class="modal-field">
+            <label>Attach File (optional)</label>
+            <input type="file" id="inputFile">
+          </div>
         </div>
 
         <div class="modal-buttons">
@@ -273,6 +299,48 @@
 
   <script>
     let editDocId = null;
+
+    const DOC_TYPES = {
+      Tahfeel: ['Trade License','MOA','Ejari','Emigration Card','Labor Card','Chamber','Others'],
+      Staff: ['Passport','Visa','Emirates ID','Driving License','Others'],
+      Management: ['Passport','Visa','Emirates ID','Driving License','Others']
+    };
+    const AUTHORITIES = ['Dubai Economic','Chamber of Commerce','Land Department','MOL','MOI','GDRFA','Others'];
+
+    function fillSelect(sel, options, placeholder) {
+      sel.innerHTML = '<option value="">' + placeholder + '</option>' +
+        options.map(o => '<option value="' + o + '">' + o + '</option>').join('');
+    }
+
+    function selectCategory(cat) {
+      document.getElementById('inputCategory').value = cat;
+      document.querySelectorAll('.cat-tab').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+      document.getElementById('formBody').style.display = 'block';
+      // Owner name: implicit for Tahfeel, required for Staff/Management
+      const ownerField = document.getElementById('ownerField');
+      if (cat === 'Tahfeel') {
+        ownerField.style.display = 'none';
+      } else {
+        ownerField.style.display = 'block';
+        document.getElementById('ownerLabel').textContent = cat + ' Name *';
+      }
+      // Authority: Tahfeel company docs only
+      document.getElementById('authField').style.display = (cat === 'Tahfeel') ? 'block' : 'none';
+      document.getElementById('authOtherField').style.display = 'none';
+      // Document-type options for this category
+      fillSelect(document.getElementById('inputType'), DOC_TYPES[cat], '— Select —');
+      document.getElementById('typeOtherField').style.display = 'none';
+      if (cat === 'Tahfeel') fillSelect(document.getElementById('inputAuthority'), AUTHORITIES, '— Select —');
+    }
+
+    function toggleOtherType() {
+      document.getElementById('typeOtherField').style.display =
+        (document.getElementById('inputType').value === 'Others') ? 'block' : 'none';
+    }
+    function toggleOtherAuth() {
+      document.getElementById('authOtherField').style.display =
+        (document.getElementById('inputAuthority').value === 'Others') ? 'block' : 'none';
+    }
 
     function openViewModal(docId, name, type, owner, expiryDate, issueDate, authority, fileUrl) {
       document.getElementById('viewTitle').textContent = name;
@@ -294,18 +362,39 @@
       document.getElementById('viewModal').classList.add('show');
     }
 
-    function openEditModal(docId, name, type, owner, expiryDate, issueDate, authority) {
+    function openEditModal(docId, category, type, owner, expiryDate, issueDate, authority) {
       editDocId = docId;
       document.getElementById('addEditTitle').textContent = 'Edit Document';
       document.getElementById('submitBtn').textContent = 'Update Document';
-      
-      document.getElementById('inputName').value = name;
-      document.getElementById('inputType').value = type;
-      document.getElementById('inputOwner').value = owner;
-      document.getElementById('inputIssueDate').value = issueDate;
-      document.getElementById('inputExpiryDate').value = expiryDate;
-      document.getElementById('inputAuthority').value = authority;
+      document.getElementById('docForm').reset();
+      category = category || 'Tahfeel';
+      selectCategory(category);
 
+      // Document type (use dropdown if known, otherwise Others + free text)
+      const typeSel = document.getElementById('inputType');
+      if (DOC_TYPES[category].includes(type)) {
+        typeSel.value = type;
+      } else if (type) {
+        typeSel.value = 'Others';
+        document.getElementById('typeOtherField').style.display = 'block';
+        document.getElementById('inputTypeOther').value = type;
+      }
+
+      if (category !== 'Tahfeel') {
+        document.getElementById('inputOwner').value = owner || '';
+      } else {
+        const authSel = document.getElementById('inputAuthority');
+        if (AUTHORITIES.includes(authority)) {
+          authSel.value = authority;
+        } else if (authority) {
+          authSel.value = 'Others';
+          document.getElementById('authOtherField').style.display = 'block';
+          document.getElementById('inputAuthorityOther').value = authority;
+        }
+      }
+
+      document.getElementById('inputIssueDate').value = issueDate || '';
+      document.getElementById('inputExpiryDate').value = expiryDate || '';
       document.getElementById('addEditModal').classList.add('show');
     }
 
@@ -314,6 +403,11 @@
       document.getElementById('addEditTitle').textContent = 'Add Document';
       document.getElementById('submitBtn').textContent = 'Add Document';
       document.getElementById('docForm').reset();
+      document.getElementById('inputCategory').value = '';
+      document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+      document.getElementById('formBody').style.display = 'none';
+      document.getElementById('typeOtherField').style.display = 'none';
+      document.getElementById('authOtherField').style.display = 'none';
       document.getElementById('addEditModal').classList.add('show');
     }
 
@@ -324,16 +418,40 @@
     document.getElementById('docForm').addEventListener('submit', function(e) {
       e.preventDefault();
 
+      const cat = document.getElementById('inputCategory').value;
+      if (!cat) { alert('Please choose Tahfeel, Staff, or Management.'); return; }
+
+      let docType = document.getElementById('inputType').value;
+      if (docType === 'Others') docType = document.getElementById('inputTypeOther').value.trim();
+      if (!docType) { alert('Please select or specify the document type.'); return; }
+
+      const expiry = document.getElementById('inputExpiryDate').value;
+      if (!expiry) { alert('Please enter the expiry date.'); return; }
+
+      let owner = 'Tahfeel';
+      if (cat !== 'Tahfeel') {
+        owner = document.getElementById('inputOwner').value.trim();
+        if (!owner) { alert('Please enter the name.'); return; }
+      }
+
+      let authority = '';
+      if (cat === 'Tahfeel') {
+        authority = document.getElementById('inputAuthority').value;
+        if (authority === 'Others') authority = document.getElementById('inputAuthorityOther').value.trim();
+      }
+
       const form = new FormData();
-      form.append('name', document.getElementById('inputName').value);
-      form.append('doc_type', document.getElementById('inputType').value);
-      form.append('owner', document.getElementById('inputOwner').value);
+      form.append('category', cat);
+      form.append('doc_type', docType);
+      form.append('owner', owner);
+      form.append('authority', authority);
       form.append('issue_date', document.getElementById('inputIssueDate').value);
-      form.append('expiry_date', document.getElementById('inputExpiryDate').value);
-      form.append('authority', document.getElementById('inputAuthority').value);
+      form.append('expiry_date', expiry);
+      const fileEl = document.getElementById('inputFile');
+      if (fileEl && fileEl.files[0]) form.append('file', fileEl.files[0]);
 
       const url = editDocId ? `/tahfeel-doc/${editDocId}/edit` : '/tahfeel-doc/add';
-      
+
       fetch(url, { method: 'POST', body: form })
         .then(r => r.text())
         .then(() => location.reload())
