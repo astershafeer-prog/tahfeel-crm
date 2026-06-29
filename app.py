@@ -5212,23 +5212,37 @@ def tahfeel_doc():
         warning_count = len([d for d in all_docs if d.expiry_status() == 'warning'])
         expired_count = len([d for d in all_docs if d.expiry_status() == 'expired'])
 
-        # Group by category for the sectioned list (legacy/null category -> Tahfeel)
+        # Group by category (legacy/null category -> Tahfeel)
         groups = {'Tahfeel': [], 'Staff': [], 'Management': []}
         for d in all_docs:
             cat = d.category if d.category in groups else 'Tahfeel'
             groups[cat].append(d)
+
+        # Tahfeel = flat list; Staff/Management = grouped under each person's name
+        def by_owner(docs):
+            grouped = {}
+            for d in docs:
+                grouped.setdefault(d.owner or '—', []).append(d)
+            return dict(sorted(grouped.items(), key=lambda kv: kv[0].lower()))
+        tahfeel_docs = groups['Tahfeel']
+        staff_by_owner = by_owner(groups['Staff'])
+        mgmt_by_owner = by_owner(groups['Management'])
 
     except Exception as e:
         print(f"Error loading documents: {e}")
         all_docs = []
         expiring_docs = []
         critical_count = warning_count = expired_count = 0
-        groups = {'Tahfeel': [], 'Staff': [], 'Management': []}
+        tahfeel_docs = []
+        staff_by_owner = {}
+        mgmt_by_owner = {}
 
     return render_template('tahfeel_doc_simple.html',
                           all_docs=all_docs,
                           expiring_docs=expiring_docs,
-                          groups=groups,
+                          tahfeel_docs=tahfeel_docs,
+                          staff_by_owner=staff_by_owner,
+                          mgmt_by_owner=mgmt_by_owner,
                           critical_count=critical_count,
                           warning_count=warning_count,
                           expired_count=expired_count)

@@ -75,6 +75,8 @@
     .section-head { padding: 12px 16px; font-size: 14px; font-weight: 700; color: var(--primary); background: #f8f9fa; border-bottom: 1px solid #eee; }
     .section-head .count { color: #999; font-weight: 400; font-size: 12px; }
     .exp-chip { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .owner-row td { background: #eef2fb; font-weight: 700; color: var(--primary); font-size: 12px; padding: 8px 16px; }
+    .owner-row .count { color: #7a8aa8; font-weight: 500; }
   </style>
 </head>
 <body>
@@ -137,46 +139,56 @@
       </div>
     </div>
 
-    {% set cat_meta = [('Tahfeel','🏢 Tahfeel'), ('Staff','👤 Staff'), ('Management','🧑‍💼 Management')] %}
-    {% for key, label in cat_meta %}
-      {% set docs = groups[key] %}
-      {% if docs %}
+    {% macro doc_row(doc) %}
+      {% set st = doc.expiry_status() %}
+      <tr>
+        <td><strong>{{ doc.doc_type }}</strong></td>
+        <td style="font-weight:600;color:{% if st in ['expired','critical'] %}#c0392b{% elif st=='warning' %}#b35c00{% else %}#27500A{% endif %};">
+          {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '—' }}
+          {% if st=='expired' %}<span class="exp-chip" style="background:#FCEBEB;color:#791F1F;">Expired</span>
+          {% elif st in ['critical','warning'] %}<span class="exp-chip" style="background:#FAEEDA;color:#633806;">{{ doc.days_until_expiry() }}d left</span>{% endif %}
+        </td>
+        <td>
+          <div class="actions">
+            <button class="btn-sm" onclick='openViewModal({{ doc.id }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }}, {{ (doc.document_url or "")|tojson }})'>View</button>
+            <button class="btn-sm" onclick='openEditModal({{ doc.id }}, {{ (doc.category or "Tahfeel")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }})'>Edit</button>
+            <button class="btn-delete" onclick='if(confirm("Delete this document?")) fetch("/tahfeel-doc/{{ doc.id }}/delete", {method:"POST"}).then(()=>location.reload())'>Delete</button>
+          </div>
+        </td>
+      </tr>
+    {% endmacro %}
+
+    {# ── Tahfeel: flat list (single owner) ── #}
+    {% if tahfeel_docs %}
+    <div class="card" style="margin-bottom:18px;">
+      <div class="section-head">🏢 Tahfeel <span class="count">({{ tahfeel_docs|length }})</span></div>
+      <table>
+        <thead><tr><th>Document Type</th><th>Expiry Date</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for doc in tahfeel_docs|sort(attribute='expiry_date') %}{{ doc_row(doc) }}{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {# ── Staff & Management: grouped under each person's name ── #}
+    {% for label, owners in [('👤 Staff', staff_by_owner), ('🧑‍💼 Management', mgmt_by_owner)] %}
+      {% if owners %}
       <div class="card" style="margin-bottom:18px;">
-        <div class="section-head">{{ label }} <span class="count">({{ docs|length }})</span></div>
+        <div class="section-head">{{ label }} <span class="count">({{ owners|length }} {{ 'person' if owners|length == 1 else 'people' }})</span></div>
         <table>
-          <thead>
-            <tr>
-              <th>Document Type</th>
-              <th>Owner Name</th>
-              <th>Expiry Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Document Type</th><th>Expiry Date</th><th>Actions</th></tr></thead>
           <tbody>
-            {% for doc in docs|sort(attribute='expiry_date') %}
-            {% set st = doc.expiry_status() %}
-            <tr>
-              <td><strong>{{ doc.doc_type }}</strong></td>
-              <td>{{ doc.owner }}</td>
-              <td style="font-weight:600;color:{% if st in ['expired','critical'] %}#c0392b{% elif st=='warning' %}#b35c00{% else %}#27500A{% endif %};">
-                {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '—' }}
-                {% if st=='expired' %}<span class="exp-chip" style="background:#FCEBEB;color:#791F1F;">Expired</span>
-                {% elif st in ['critical','warning'] %}<span class="exp-chip" style="background:#FAEEDA;color:#633806;">{{ doc.days_until_expiry() }}d left</span>{% endif %}
-              </td>
-              <td>
-                <div class="actions">
-                  <button class="btn-sm" onclick='openViewModal({{ doc.id }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }}, {{ (doc.document_url or "")|tojson }})'>View</button>
-                  <button class="btn-sm" onclick='openEditModal({{ doc.id }}, {{ (doc.category or "Tahfeel")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }})'>Edit</button>
-                  <button class="btn-delete" onclick='if(confirm("Delete this document?")) fetch("/tahfeel-doc/{{ doc.id }}/delete", {method:"POST"}).then(()=>location.reload())'>Delete</button>
-                </div>
-              </td>
-            </tr>
+            {% for owner, docs in owners.items() %}
+              <tr class="owner-row"><td colspan="3">{{ owner }} <span class="count">({{ docs|length }} doc{{ 's' if docs|length != 1 else '' }})</span></td></tr>
+              {% for doc in docs|sort(attribute='expiry_date') %}{{ doc_row(doc) }}{% endfor %}
             {% endfor %}
           </tbody>
         </table>
       </div>
       {% endif %}
     {% endfor %}
+
     {% if not all_docs %}
       <div class="card"><div class="empty">No documents yet. <button class="btn-add" onclick="openAddModal()" style="padding: 5px 10px; font-size: 12px; margin-left: 12px;">+ Add Document</button></div></div>
     {% endif %}
