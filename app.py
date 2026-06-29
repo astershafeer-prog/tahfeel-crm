@@ -409,6 +409,8 @@ class CompanyDocument(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.String(100))
     category = db.Column(db.String(20))  # Tahfeel / Staff / Management
+    staff_id = db.Column(db.Integer, db.ForeignKey('tahfeel_staff.id'), nullable=True)  # for Staff/Management docs
+    staff = db.relationship('TahfeelStaff')
 
     def days_until_expiry(self):
         if self.expiry_date:
@@ -428,6 +430,14 @@ class CompanyDocument(db.Model):
             return 'warning'  # Yellow
         else:
             return 'ok'  # Green
+
+class TahfeelStaff(db.Model):
+    """A person (Staff or Management) that Tahfeel documents belong to."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    category = db.Column(db.String(20), nullable=False)  # Staff / Management
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
 class MonthlyTarget(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -4335,8 +4345,9 @@ def init_db():
             "UPDATE lead SET source='Meta' WHERE source LIKE 'Meta Ads%' OR source LIKE 'Meta —%'",
             # Document -> employee link (employee/owner tables auto-created by create_all)
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS employee_id INTEGER',
-            # Tahfeel Doc: category (Tahfeel / Staff / Management)
+            # Tahfeel Doc: category (Tahfeel / Staff / Management) + person link
             'ALTER TABLE company_document ADD COLUMN IF NOT EXISTS category VARCHAR(20)',
+            'ALTER TABLE company_document ADD COLUMN IF NOT EXISTS staff_id INTEGER',
 
         ]
         for sql in migrations:
@@ -4393,6 +4404,31 @@ def init_db():
                     db.session.add(DocType(name=dt))
                 db.session.commit()
                 print('Default doc types created')
+            # Backfill: link legacy Staff/Management docs (free-text owner) to person records
+            try:
+                legacy = CompanyDocument.query.filter(
+                    CompanyDocument.category.in_(['Staff', 'Management']),
+                    CompanyDocument.staff_id.is_(None)
+                ).all()
+                if legacy:
+                    cache = {}
+                    for d in legacy:
+                        nm = (d.owner or '').strip()
+                        if not nm or nm.lower() == 'tahfeel':
+                            continue
+                        key = (d.category, nm.lower())
+                        person = cache.get(key) or TahfeelStaff.query.filter_by(category=d.category, name=nm).first()
+                        if not person:
+                            person = TahfeelStaff(name=nm, category=d.category)
+                            db.session.add(person)
+                            db.session.flush()
+                        cache[key] = person
+                        d.staff_id = person.id
+                    db.session.commit()
+                    print(f'Backfilled {len(legacy)} legacy staff/mgmt docs into person records')
+            except Exception as e:
+                db.session.rollback()
+                print(f'Staff backfill skipped: {e}')
         except Exception as e:
             db.session.rollback()
             print(f'Init db error: {e}')
@@ -5195,38 +5231,48 @@ def edit_partner_revenue(job_id):
 @app.route('/tahfeel-doc')
 @login_required
 def tahfeel_doc():
-    # Allow: Admin role OR Saada (saadatahfeel@gmail.com)
-    if session['role'] not in ['admin', 'finance'] and session.get('user_email') != 'saadatahfeel@gmail.com':
+    # Access: Admin OR Saada only
+    if session.get('role') != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
         flash('Access denied.')
         return redirect(url_for('dashboard'))
-    
+
     try:
-        # Get all documents
         all_docs = CompanyDocument.query.order_by(CompanyDocument.expiry_date).all()
-        
-        # Separate expiring documents (< 60 days) for card view
         expiring_docs = [d for d in all_docs if d.expiry_status() in ['critical', 'warning', 'expired']]
-        
-        # Count by status
         critical_count = len([d for d in all_docs if d.expiry_status() == 'critical'])
         warning_count = len([d for d in all_docs if d.expiry_status() == 'warning'])
         expired_count = len([d for d in all_docs if d.expiry_status() == 'expired'])
 
-        # Group by category (legacy/null category -> Tahfeel)
-        groups = {'Tahfeel': [], 'Staff': [], 'Management': []}
-        for d in all_docs:
-            cat = d.category if d.category in groups else 'Tahfeel'
-            groups[cat].append(d)
+        # Tahfeel = company docs (legacy/null category counts as Tahfeel)
+        tahfeel_docs = [d for d in all_docs if (d.category or 'Tahfeel') == 'Tahfeel']
 
-        # Tahfeel = flat list; Staff/Management = grouped under each person's name
-        def by_owner(docs):
-            grouped = {}
-            for d in docs:
-                grouped.setdefault(d.owner or '—', []).append(d)
-            return dict(sorted(grouped.items(), key=lambda kv: kv[0].lower()))
-        tahfeel_docs = groups['Tahfeel']
-        staff_by_owner = by_owner(groups['Staff'])
-        mgmt_by_owner = by_owner(groups['Management'])
+        # Staff/Management: group docs under each person record; returns [(name, [docs]), ...]
+        def grouped(cat):
+            people = {p.id: p for p in TahfeelStaff.query.filter_by(category=cat).all()}
+            by_id, no_person = {}, {}
+            for d in all_docs:
+                if d.category != cat:
+                    continue
+                if d.staff_id:
+                    by_id.setdefault(d.staff_id, []).append(d)
+                else:
+                    no_person.setdefault(d.owner or '—', []).append(d)
+            result = []
+            for pid, docs in by_id.items():
+                person = people.get(pid)
+                result.append((person.name if person else (docs[0].owner or '—'), docs))
+            for nm, docs in no_person.items():
+                result.append((nm, docs))
+            result.sort(key=lambda x: x[0].lower())
+            return result
+        staff_groups = grouped('Staff')
+        mgmt_groups = grouped('Management')
+
+        # Active people for the add-document dropdowns
+        staff_people = [{'id': p.id, 'name': p.name} for p in
+                        TahfeelStaff.query.filter_by(category='Staff', active=True).order_by(TahfeelStaff.name).all()]
+        mgmt_people = [{'id': p.id, 'name': p.name} for p in
+                       TahfeelStaff.query.filter_by(category='Management', active=True).order_by(TahfeelStaff.name).all()]
 
     except Exception as e:
         print(f"Error loading documents: {e}")
@@ -5234,15 +5280,17 @@ def tahfeel_doc():
         expiring_docs = []
         critical_count = warning_count = expired_count = 0
         tahfeel_docs = []
-        staff_by_owner = {}
-        mgmt_by_owner = {}
+        staff_groups = mgmt_groups = []
+        staff_people = mgmt_people = []
 
     return render_template('tahfeel_doc_simple.html',
                           all_docs=all_docs,
                           expiring_docs=expiring_docs,
                           tahfeel_docs=tahfeel_docs,
-                          staff_by_owner=staff_by_owner,
-                          mgmt_by_owner=mgmt_by_owner,
+                          staff_groups=staff_groups,
+                          mgmt_groups=mgmt_groups,
+                          staff_people=staff_people,
+                          mgmt_people=mgmt_people,
                           critical_count=critical_count,
                           warning_count=warning_count,
                           expired_count=expired_count)
@@ -5250,28 +5298,34 @@ def tahfeel_doc():
 @app.route('/tahfeel-doc/add', methods=['POST'])
 @login_required
 def add_tahfeel_doc():
-    if session['role'] != 'admin':
-        flash('Only admin can add documents.')
+    if session.get('role') != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
+        flash('Access denied.')
         return redirect(url_for('tahfeel_doc'))
-    
+
     try:
         category = request.form.get('category', '').strip()
         doc_type = request.form.get('doc_type', '').strip()
         authority = request.form.get('authority', '').strip()
-        owner = request.form.get('owner', '').strip()
         issue_date = request.form.get('issue_date')
         expiry_date = request.form.get('expiry_date')
 
-        # Tahfeel = the company itself; owner is implicit
-        if category == 'Tahfeel':
-            owner = 'Tahfeel'
-        else:
-            authority = ''  # authority only applies to Tahfeel company docs
-
-        # Validation
-        if category not in ('Tahfeel', 'Staff', 'Management') or not doc_type or not expiry_date or not owner:
+        if category not in ('Tahfeel', 'Staff', 'Management') or not doc_type or not expiry_date:
             flash('Please fill all required fields.', 'error')
             return redirect(url_for('tahfeel_doc'))
+
+        # Resolve owner: Tahfeel = company itself; Staff/Management = a person record
+        staff_id = None
+        owner = 'Tahfeel'
+        if category == 'Tahfeel':
+            pass  # keep authority
+        else:
+            authority = ''  # authority only applies to Tahfeel company docs
+            person = _resolve_tahfeel_person(category)
+            if person is None:
+                flash('Please select a person or add a new one.', 'error')
+                return redirect(url_for('tahfeel_doc'))
+            staff_id = person.id
+            owner = person.name
 
         # Parse dates
         try:
@@ -5300,6 +5354,7 @@ def add_tahfeel_doc():
             name=doc_type,            # name field kept for compatibility = the doc type
             doc_type=doc_type,
             category=category,
+            staff_id=staff_id,
             issue_date=issue_dt,
             expiry_date=expiry_dt,
             authority=authority,
@@ -5319,32 +5374,59 @@ def add_tahfeel_doc():
         print(f"Error adding document: {e}")
         return redirect(url_for('tahfeel_doc'))
 
+
+def _resolve_tahfeel_person(category):
+    """Resolve the person for a Staff/Management doc from the submitted form.
+    Returns a TahfeelStaff (existing or newly-created), or None if neither given."""
+    sid = (request.form.get('staff_id') or '').strip()
+    new_name = (request.form.get('new_person_name') or '').strip()
+    if sid:
+        return TahfeelStaff.query.get(int(sid))
+    if new_name:
+        person = TahfeelStaff.query.filter_by(name=new_name, category=category).first()
+        if not person:
+            person = TahfeelStaff(name=new_name, category=category)
+            db.session.add(person)
+            db.session.flush()
+        return person
+    return None
+
 @app.route('/tahfeel-doc/<int:doc_id>/edit', methods=['POST'])
 @login_required
 def edit_tahfeel_doc(doc_id):
-    # Allow: Admin OR Saada (saadatahfeel@gmail.com)
-    if session['role'] != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
-        flash('Only admin can edit documents.')
+    # Access: Admin OR Saada only
+    if session.get('role') != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
+        flash('Access denied.')
         return redirect(url_for('tahfeel_doc'))
-    
+
     doc = CompanyDocument.query.get_or_404(doc_id)
-    
+
     try:
         category = request.form.get('category', '').strip() or doc.category or 'Tahfeel'
         doc_type = request.form.get('doc_type', '').strip()
         issue_date = request.form.get('issue_date')
         expiry_date = request.form.get('expiry_date')
         authority = request.form.get('authority', '').strip()
-        owner = request.form.get('owner', '').strip()
 
-        # Tahfeel = the company itself; owner implicit, authority applies
+        # Resolve owner/person
+        staff_id = doc.staff_id
+        owner = 'Tahfeel'
         if category == 'Tahfeel':
-            owner = 'Tahfeel'
+            staff_id = None
         else:
             authority = ''
+            person = _resolve_tahfeel_person(category)
+            if person is not None:
+                staff_id = person.id
+                owner = person.name
+            elif doc.staff and doc.category == category:
+                owner = doc.staff.name  # unchanged person
+            else:
+                flash('Please select a person or add a new one.', 'error')
+                return redirect(url_for('tahfeel_doc'))
 
         # Validation
-        if not doc_type or not expiry_date or not owner:
+        if not doc_type or not expiry_date:
             flash('All required fields must be filled.', 'error')
             return redirect(url_for('tahfeel_doc'))
 
@@ -5360,6 +5442,7 @@ def edit_tahfeel_doc(doc_id):
         doc.name = doc_type
         doc.doc_type = doc_type
         doc.category = category
+        doc.staff_id = staff_id
         doc.issue_date = issue_dt
         doc.expiry_date = expiry_dt
         doc.authority = authority
@@ -5399,8 +5482,8 @@ def edit_tahfeel_doc(doc_id):
 @app.route('/tahfeel-doc/<int:doc_id>/upload', methods=['POST'])
 @login_required
 def upload_tahfeel_doc_file(doc_id):
-    if session['role'] != 'admin':
-        flash('Only admin can upload files.', 'error')
+    if session.get('role') != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
+        flash('Access denied.', 'error')
         return redirect(url_for('tahfeel_doc'))
     
     doc = CompanyDocument.query.get_or_404(doc_id)
