@@ -69,6 +69,16 @@ def set_security_headers(resp):
     resp.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     return resp
 
+@app.before_request
+def restrict_marketing_role():
+    # External Marketing-Ext users are sandboxed to the read-only lead report only.
+    if session.get('role') != 'marketing':
+        return
+    allowed = {'marketing_report', 'marketing_export', 'logout', 'static'}
+    if (request.endpoint or '') in allowed:
+        return
+    return redirect(url_for('marketing_report'))
+
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
@@ -92,6 +102,7 @@ class User(db.Model):
     active = db.Column(db.Boolean, default=True)
     phone = db.Column(db.String(20), nullable=True)
     on_leave = db.Column(db.Boolean, default=False)  # Excludes from Meta lead rotation
+    report_from = db.Column(db.Date, nullable=True)  # Marketing-Ext: earliest lead date this user may see
 
 class Lead(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -636,6 +647,8 @@ def login():
             except:
                 session['unread_mentions'] = 0
             _login_attempts[ip] = []  # reset on success
+            if user.role == 'marketing':
+                return redirect(url_for('marketing_report'))
             return redirect(url_for('dashboard'))
         _login_attempts[ip].append(now_ts)  # record failed attempt
         flash('Invalid email or password')
@@ -1591,6 +1604,90 @@ def admin_panel():
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners)
 
+
+# ── Marketing-Ext: read-only lead report for the external marketing agency ──
+def _mask_phone(p):
+    if not p:
+        return '—'
+    d = ''.join(c for c in p if c.isdigit())
+    if len(d) < 2:
+        return '••••'
+    prefix = ('+971 ' + d[3:5]) if (d.startswith('971') and len(d) >= 5) else d[:2]
+    return prefix + ' ••• ••' + d[-2:]
+
+def _marketing_leads():
+    """Leads for the Marketing-Ext report: per-user date floor + optional UI from/to filter."""
+    user = User.query.get(session['user_id'])
+    floor = user.report_from if (user and user.role == 'marketing') else None
+    from_str = (request.args.get('from') or '').strip()
+    to_str = (request.args.get('to') or '').strip()
+    q = Lead.query
+    if floor:
+        q = q.filter(Lead.created_at >= datetime.combine(floor, datetime.min.time()))
+    try:
+        if from_str:
+            q = q.filter(Lead.created_at >= datetime.strptime(from_str, '%Y-%m-%d'))
+        if to_str:
+            q = q.filter(Lead.created_at < datetime.strptime(to_str, '%Y-%m-%d') + timedelta(days=1))
+    except ValueError:
+        pass
+    return q.order_by(Lead.created_at.desc()).all(), floor, from_str, to_str
+
+@app.route('/marketing-report')
+@login_required
+def marketing_report():
+    if session.get('role') not in ('marketing', 'admin'):
+        flash('Access denied.')
+        return redirect(url_for('dashboard'))
+    leads, floor, from_str, to_str = _marketing_leads()
+    rows = []
+    for l in leads:
+        latest = (l.updates[0].remark if l.updates else l.remarks) or ''
+        rows.append({
+            'date': l.created_at, 'name': l.name or '—', 'phone': _mask_phone(l.phone),
+            'source': l.sub_source or l.source or '—', 'stage': l.status or 'New',
+            'genuine': l.genuine or '', 'remark': latest,
+        })
+    counts = {
+        'total': len(leads),
+        'contacted': sum(1 for l in leads if l.status == 'Contacted'),
+        'qualified': sum(1 for l in leads if l.status == 'Qualified'),
+        'converted': sum(1 for l in leads if l.status == 'Converted'),
+        'junk': sum(1 for l in leads if l.genuine == 'Junk'),
+    }
+    return render_template('marketing_report.html', rows=rows, counts=counts,
+                           floor=floor, from_str=from_str, to_str=to_str)
+
+@app.route('/marketing-report/export')
+@login_required
+def marketing_export():
+    if session.get('role') not in ('marketing', 'admin'):
+        flash('Access denied.')
+        return redirect(url_for('dashboard'))
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    leads, floor, from_str, to_str = _marketing_leads()
+    wb = Workbook(); ws = wb.active; ws.title = 'Leads'
+    headers = ['Date', 'Name', 'Phone', 'Source', 'Stage', 'Status', 'Latest Remark', 'Remarks History']
+    for i, h in enumerate(headers, 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    for l in leads:
+        history = ' | '.join((u.remark or '').strip() for u in l.updates if u.remark) if l.updates else (l.remarks or '')
+        latest = (l.updates[0].remark if l.updates else l.remarks) or ''
+        ws.append([
+            l.created_at.strftime('%d/%m/%Y') if l.created_at else '',
+            l.name or '', _mask_phone(l.phone), l.sub_source or l.source or '',
+            l.status or 'New', l.genuine or '', latest, history,
+        ])
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = min(max(len(str(col[0].value or '')), 12), 50)
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return send_file(buf, download_name='tahfeel_leads.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 # TEMPORARILY DISABLED - WILL RE-ADD AFTER FIXING
 # @app.route('/admin/import-data')
 # @login_required
@@ -1828,12 +1925,14 @@ def admin_add_staff():
         flash('This email already exists')
         return redirect(url_for('admin_panel'))
     try:
+        rf = request.form.get('report_from', '').strip()
         user = User(
             name=request.form['name'],
             email=email,
             password=generate_password_hash(request.form['password']),
             role=request.form.get('role', 'staff'),
-            phone=request.form.get('phone', '').strip() or None
+            phone=request.form.get('phone', '').strip() or None,
+            report_from=datetime.strptime(rf, '%Y-%m-%d').date() if rf else None
         )
         db.session.add(user)
         db.session.commit()
@@ -1860,11 +1959,13 @@ def admin_edit_staff(user_id):
             flash('That email is already in use')
             return redirect(url_for('admin_panel'))
         user.email = email
-    if new_role in ['staff', 'sales', 'operations', 'admin', 'finance']:
+    if new_role in ['staff', 'sales', 'operations', 'admin', 'finance', 'marketing']:
         user.role = new_role
     if new_password:
         user.password = generate_password_hash(new_password)
     user.phone = request.form.get('phone', '').strip() or None
+    rf = request.form.get('report_from', '').strip()
+    user.report_from = datetime.strptime(rf, '%Y-%m-%d').date() if rf else None
     db.session.commit()
     flash('Staff member updated successfully')
     return redirect(url_for('admin_panel'))
@@ -4299,6 +4400,7 @@ def init_db():
             'ALTER TABLE activity_type ADD COLUMN IF NOT EXISTS weekly_target FLOAT DEFAULT 5',
             "UPDATE \"user\" SET role = 'sales' WHERE role = 'staff'",
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS on_leave BOOLEAN DEFAULT FALSE',
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS report_from DATE',
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS meta_lead_id VARCHAR(50)',
             # Company entity + document linkage (company table itself created by create_all)
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS company_id INTEGER',

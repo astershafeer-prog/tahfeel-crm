@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel — Lead Report</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; color: #1e293b; }
+    .topbar { background: #1A3B8B; color: #fff; padding: 12px 22px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar .brand { font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+    .topbar .brand span { font-size: 12px; font-weight: 400; color: #b8c5e0; margin-left: 8px; }
+    .topbar .right { display: flex; align-items: center; gap: 14px; font-size: 12px; color: #d8e0f0; }
+    .topbar a { color: #fff; text-decoration: none; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 18px 22px; }
+    h2 { font-size: 18px; color: #0F2660; font-weight: 700; }
+    .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 16px 0; }
+    .chip { background: #fff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; }
+    .chip .l { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .4px; }
+    .chip .v { font-size: 21px; font-weight: 700; color: #0F2660; }
+    .filter { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .filter label { display: block; font-size: 11px; color: #64748b; margin-bottom: 3px; }
+    .filter input[type=date] { border: 0.5px solid #cbd5e1; border-radius: 6px; padding: 7px 10px; font-size: 13px; }
+    .btn { border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn-apply { background: #1A3B8B; color: #fff; }
+    .btn-dl { background: #1a8d4e; color: #fff; }
+    .card { background: #fff; border: 0.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8fafc; color: #64748b; text-align: left; font-weight: 600; padding: 9px 12px; font-size: 12px; }
+    td { padding: 9px 12px; border-top: 0.5px solid #f1f5f9; color: #334155; vertical-align: top; }
+    .mono { font-family: 'Courier New', monospace; color: #64748b; }
+    .badge { padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .empty { padding: 40px; text-align: center; color: #94a3b8; }
+    .foot { font-size: 11px; color: #94a3b8; margin-top: 8px; text-align: right; }
+    .flash { background: #FCEBEB; color: #791F1F; padding: 9px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  {% macro stage_badge(s) %}
+    {% set m = {'New':('#F1EFE8','#5F5E5A'),'Contacted':('#E6F1FB','#185FA5'),'Qualified':('#FAEEDA','#854F0B'),'Proposal':('#EEEDFE','#534AB7'),'Converted':('#EAF3DE','#27500A'),'Lost':('#FCEBEB','#A32D2D'),'Future':('#E1F5EE','#0F6E56')} %}
+    {% set c = m.get(s, ('#F1EFE8','#5F5E5A')) %}
+    <span class="badge" style="background:{{ c[0] }};color:{{ c[1] }};">{{ s }}</span>
+  {% endmacro %}
+  {% macro status_badge(g) %}
+    {% if g == 'Genuine' %}<span class="badge" style="background:#EAF3DE;color:#27500A;">Genuine</span>
+    {% elif g == 'Junk' %}<span class="badge" style="background:#FCEBEB;color:#A32D2D;">Junk</span>
+    {% elif g == 'Unreachable' %}<span class="badge" style="background:#F1EFE8;color:#5F5E5A;">Unreachable</span>
+    {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+  {% endmacro %}
+
+  <div class="topbar">
+    <div class="brand">TAHFEEL <span>Marketing portal</span></div>
+    <div class="right">
+      <span>{{ session.user_name }}</span>
+      <span style="opacity:.5;">|</span>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <h2>Lead report</h2>
+    <div class="sub">Read-only{% if floor %} · showing leads from {{ floor.strftime('%d %b %Y') }}{% endif %}</div>
+
+    <div class="chips">
+      <div class="chip"><div class="l">Total</div><div class="v">{{ counts.total }}</div></div>
+      <div class="chip"><div class="l">Contacted</div><div class="v" style="color:#185FA5;">{{ counts.contacted }}</div></div>
+      <div class="chip"><div class="l">Qualified</div><div class="v" style="color:#854F0B;">{{ counts.qualified }}</div></div>
+      <div class="chip"><div class="l">Converted</div><div class="v" style="color:#27500A;">{{ counts.converted }}</div></div>
+      <div class="chip"><div class="l">Junk</div><div class="v" style="color:#A32D2D;">{{ counts.junk }}</div></div>
+    </div>
+
+    <form class="filter" method="get" action="/marketing-report">
+      <div><label>From</label><input type="date" name="from" value="{{ from_str }}"></div>
+      <div><label>To</label><input type="date" name="to" value="{{ to_str }}"></div>
+      <button type="submit" class="btn btn-apply">Apply</button>
+      <div style="flex:1;"></div>
+      <a class="btn btn-dl" href="/marketing-report/export?from={{ from_str }}&to={{ to_str }}">⬇ Download Excel</a>
+    </form>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:70px;">Date</th>
+            <th>Name</th>
+            <th style="width:120px;">Phone</th>
+            <th style="width:80px;">Source</th>
+            <th style="width:90px;">Stage</th>
+            <th style="width:80px;">Status</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td style="color:#94a3b8;">{{ r.date.strftime('%d %b') if r.date else '—' }}</td>
+            <td>{{ r.name }}</td>
+            <td class="mono">{{ r.phone }}</td>
+            <td style="color:#64748b;">{{ r.source }}</td>
+            <td>{{ stage_badge(r.stage) }}</td>
+            <td>{{ status_badge(r.genuine) }}</td>
+            <td style="color:#475569;">{{ r.remark or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="empty">No leads in this range.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="foot">Showing {{ rows|length }} lead{{ 's' if rows|length != 1 else '' }} · phone numbers masked · view only</div>
+  </div>
+</body>
+</html>
