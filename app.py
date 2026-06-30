@@ -2338,7 +2338,8 @@ def edit_customer(customer_id):
             flash('Contact Person is required for a Company client', 'error')
             return redirect(url_for('edit_customer', customer_id=customer_id))
         customer.name = request.form.get('name', '').strip() or customer.name
-        customer.company = request.form.get('company', '').strip()
+        if 'company' in request.form:
+            customer.company = request.form.get('company', '').strip()
         customer.phone = request.form.get('phone', '').strip()
         customer.phone2 = request.form.get('phone2', '').strip() or None
         customer.email = request.form.get('email', '').strip()
@@ -2352,9 +2353,11 @@ def edit_customer(customer_id):
         customer.alert_email = request.form.get('alert_email', '').strip() or None
         customer.alert_whatsapp = request.form.get('alert_whatsapp', '').strip() or None
         customer.alerts_enabled = bool(request.form.get('alerts_enabled'))
-        # Company profile fields (UAE)
+        # Company profile fields (UAE) — only update fields actually present in the
+        # submitted form, so trimmed/removed fields keep their existing values (no wipe).
         for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website','uae_pass_number','uae_pass_name']:
-            setattr(customer, _f, request.form.get(_f, '').strip() or None)
+            if _f in request.form:
+                setattr(customer, _f, request.form.get(_f, '').strip() or None)
         _aod = request.form.get('ac_opening_date', '').strip()
         customer.ac_opening_date = datetime.strptime(_aod, '%Y-%m-%d').date() if _aod else None
         try:
