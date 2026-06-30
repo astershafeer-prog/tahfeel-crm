@@ -91,7 +91,8 @@
             <th style="width:120px;">Phone</th>
             <th style="width:80px;">Source</th>
             <th style="width:90px;">Stage</th>
-            <th style="width:80px;">Status</th>
+            <th style="width:96px;">Lead Quality</th>
+            <th style="width:54px;">Attempts</th>
             <th>Remarks</th>
           </tr>
         </thead>
@@ -103,11 +104,20 @@
             <td class="mono">{{ r.phone }}</td>
             <td style="color:#64748b;">{{ r.source }}</td>
             <td>{{ stage_badge(r.stage) }}</td>
-            <td>{{ status_badge(r.genuine) }}</td>
-            <td style="color:#475569;">{{ r.remark or '—' }}</td>
+            <td>{{ status_badge(r.genuine) }}{% if r.junk_reason %}<div style="font-size:10px;color:#94a3b8;margin-top:2px;">{{ r.junk_reason }}</div>{% endif %}</td>
+            <td style="text-align:center;color:#475569;">{{ r.attempts }}</td>
+            <td style="color:#475569;">
+              {% if r.remarks %}
+                {% for rm in r.remarks %}
+                <div style="margin-bottom:4px;{% if not loop.last %}padding-bottom:4px;border-bottom:0.5px dashed #eef2f7;{% endif %}">
+                  <span style="color:#94a3b8;font-size:11px;">{{ rm.when.strftime('%d %b %H:%M') }}</span><br>{{ rm.text }}
+                </div>
+                {% endfor %}
+              {% else %}<span style="color:#94a3b8;">No staff update yet</span>{% endif %}
+            </td>
           </tr>
           {% else %}
-          <tr><td colspan="7" class="empty">No leads in this range.</td></tr>
+          <tr><td colspan="8" class="empty">No leads in this range.</td></tr>
           {% endfor %}
         </tbody>
       </table>

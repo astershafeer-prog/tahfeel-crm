@@ -1615,6 +1615,16 @@ def _mask_phone(p):
     prefix = ('+971 ' + d[3:5]) if (d.startswith('971') and len(d) >= 5) else d[:2]
     return prefix + ' ••• ••' + d[-2:]
 
+def _staff_remarks(lead):
+    """Only staff-typed update remarks (exclude the auto Meta note + system 'Marked …'), newest first."""
+    out = []
+    for u in lead.updates:  # ordered newest-first by the model relationship
+        rm = (u.remark or '').strip()
+        if not rm or rm.lower().startswith(('auto-received', 'marked ')):
+            continue
+        out.append({'when': u.created_at, 'text': rm})
+    return out
+
 def _marketing_leads():
     """Leads for the Marketing-Ext report: per-user date floor + optional UI from/to filter."""
     user = User.query.get(session['user_id'])
@@ -1642,11 +1652,11 @@ def marketing_report():
     leads, floor, from_str, to_str = _marketing_leads()
     rows = []
     for l in leads:
-        latest = (l.updates[0].remark if l.updates else l.remarks) or ''
         rows.append({
             'date': l.created_at, 'name': l.name or '—', 'phone': _mask_phone(l.phone),
             'source': l.sub_source or l.source or '—', 'stage': l.status or 'New',
-            'genuine': l.genuine or '', 'remark': latest,
+            'genuine': l.genuine or '', 'junk_reason': l.junk_reason or '',
+            'attempts': l.attempts or 0, 'remarks': _staff_remarks(l),
         })
     counts = {
         'total': len(leads),
@@ -1666,24 +1676,33 @@ def marketing_export():
         return redirect(url_for('dashboard'))
     import io
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
+    from openpyxl.styles import Font, PatternFill, Alignment
     from flask import send_file
     leads, floor, from_str, to_str = _marketing_leads()
     wb = Workbook(); ws = wb.active; ws.title = 'Leads'
-    headers = ['Date', 'Name', 'Phone', 'Source', 'Stage', 'Status', 'Latest Remark', 'Remarks History']
+    headers = ['Date', 'Name', 'Phone', 'Source', 'Stage', 'Lead Quality', 'Attempts', 'Remarks (staff updates, with time)']
     for i, h in enumerate(headers, 1):
         ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
         ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
     for l in leads:
-        history = ' | '.join((u.remark or '').strip() for u in l.updates if u.remark) if l.updates else (l.remarks or '')
-        latest = (l.updates[0].remark if l.updates else l.remarks) or ''
+        quality = l.genuine or ''
+        if l.genuine == 'Junk' and l.junk_reason:
+            quality = f'Junk — {l.junk_reason}'
+        # Full staff-update history, each line timestamped (newest first)
+        history = '\n'.join(
+            f"{r['when'].strftime('%d %b %Y %H:%M')} — {r['text']}" for r in _staff_remarks(l)
+        )
         ws.append([
             l.created_at.strftime('%d/%m/%Y') if l.created_at else '',
             l.name or '', _mask_phone(l.phone), l.sub_source or l.source or '',
-            l.status or 'New', l.genuine or '', latest, history,
+            l.status or 'New', quality, l.attempts or 0, history,
         ])
-    for col in ws.columns:
-        ws.column_dimensions[col[0].column_letter].width = min(max(len(str(col[0].value or '')), 12), 50)
+    widths = [11, 22, 16, 10, 12, 18, 9, 70]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[ws.cell(1, i).column_letter].width = w
+    # wrap the remarks column so multi-update history expands the row
+    for row in ws.iter_rows(min_row=2, min_col=8, max_col=8):
+        row[0].alignment = Alignment(wrap_text=True, vertical='top')
     buf = io.BytesIO(); wb.save(buf); buf.seek(0)
     return send_file(buf, download_name='tahfeel_leads.xlsx', as_attachment=True,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

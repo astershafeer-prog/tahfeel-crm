@@ -118,6 +118,8 @@
             <button name="genuine" value="Unreachable" class="qbtn" style="flex:1;min-width:120px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid {{ '#854F0B' if q=='Unreachable' else '#CBD5E1' }};background:{{ '#FAEEDA' if q=='Unreachable' else '#fff' }};color:{{ '#854F0B' if q=='Unreachable' else '#475569' }};">⊘ Unreachable</button>
             <select name="junk_reason" style="flex:1;min-width:160px;">
               <option value="">Reason (if Junk/Unreachable)…</option>
+              <option {% if lead.junk_reason=='Career' %}selected{% endif %}>Career</option>
+              <option {% if lead.junk_reason=='General Enquiry' %}selected{% endif %}>General Enquiry</option>
               <option {% if lead.junk_reason=='Wrong number' %}selected{% endif %}>Wrong number</option>
               <option {% if lead.junk_reason=='No answer after attempts' %}selected{% endif %}>No answer after attempts</option>
               <option {% if lead.junk_reason=='Spam / fake' %}selected{% endif %}>Spam / fake</option>
