@@ -4568,6 +4568,11 @@ def init_db():
                     db.session.add(DocType(name=dt))
                 db.session.commit()
                 print('Default doc types created')
+            # Ensure newer doc types exist (idempotent on existing deploys)
+            for dt in ['Establishment Card', 'Labor Card', 'ILOE Insurance', 'Other']:
+                if not DocType.query.filter_by(name=dt).first():
+                    db.session.add(DocType(name=dt))
+            db.session.commit()
             # Backfill: link legacy Staff/Management docs (free-text owner) to person records
             try:
                 legacy = CompanyDocument.query.filter(
