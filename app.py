@@ -2363,13 +2363,18 @@ def customer_health(customer_id):
     emp_valid = len([d for d in emp_docs if dleft(d) > 90])
     emp_expiring = len([d for d in emp_docs if 0 <= dleft(d) <= 90])
     emp_expired = len([d for d in emp_docs if dleft(d) < 0])
+    # Upcoming renewals = anything due within the next 30 days (docs + tax filings)
+    renewals_30 = len([d for d in docs if 0 <= dleft(d) <= 30])
+    for _due in (customer.vat_due_date, customer.corp_tax_due_date):
+        if _due and 0 <= (_due - today).days <= 30:
+            renewals_30 += 1
     wa_number = (customer.whatsapp or customer.mobile or customer.phone or '').replace(' ', '').replace('+', '')
     from_email = os.environ.get('SMTP_FROM') or os.environ.get('SMTP_USER') or 'info@tahfeel.ae'
     return render_template('customer_health.html', customer=customer, now=now, today=today,
                            total=total, valid=valid, expiring=expiring, expired=expired,
                            score=score, band=band, company_docs=company_docs, employees=employees,
                            emp_docs_total=len(emp_docs), emp_valid=emp_valid, emp_expiring=emp_expiring,
-                           emp_expired=emp_expired, owners_count=owners_count,
+                           emp_expired=emp_expired, owners_count=owners_count, renewals_30=renewals_30,
                            wa_number=wa_number, from_email=from_email)
 
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])

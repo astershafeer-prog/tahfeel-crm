@@ -17,16 +17,16 @@
     .hc-btn:hover{background:#F1F5F9;}
     .hc-btn.wa{border-color:#25D366;color:#0F8A3C !important;}
     .hc-card{background:#fff;border:0.5px solid #E2E8F0;border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.05);}
-    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;}
+    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px;}
     @media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr);}}
     @media(max-width:540px){.stats{grid-template-columns:repeat(2,1fr);}}
-    .stat{padding:14px 12px;text-align:center;border-radius:14px;}
-    .stat .lbl{font-size:11px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
-    .stat .num{font-size:26px;font-weight:800;line-height:1;margin:6px 0 1px;}
-    .stat .sub{font-size:10px;color:#94A3B8;}
-    .stat .ico{width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:8px;}
-    .sec-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #EEF2F7;}
-    .sec-head h2{margin:0;font-size:14px;color:#0F2660;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .stat{padding:10px 8px;text-align:center;border-radius:12px;}
+    .stat .lbl{font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+    .stat .num{font-size:19px;font-weight:800;line-height:1;margin:4px 0 1px;}
+    .stat .sub{font-size:9px;color:#94A3B8;}
+    .stat .ico{width:28px;height:28px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:5px;}
+    .sec-head{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid #EEF2F7;}
+    .sec-head h2{margin:0;font-size:13px;color:#0F2660;font-weight:700;display:flex;align-items:center;gap:7px;}
     .legend{display:flex;gap:12px;font-size:11px;color:#64748B;}
     .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
     .dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:14px;}
@@ -39,9 +39,9 @@
     .dtile .file{position:absolute;top:12px;right:12px;font-size:13px;text-decoration:none;opacity:.7;}
     .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-top:10px;}
     .pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;}
-    .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
     @media(max-width:820px){.two{grid-template-columns:1fr;}}
-    .row{display:flex;justify-content:space-between;align-items:center;padding:11px 18px;border-bottom:1px solid #F1F5F9;font-size:13px;}
+    .row{display:flex;justify-content:space-between;align-items:center;padding:7px 14px;border-bottom:1px solid #F1F5F9;font-size:12px;}
     .row:last-child{border-bottom:none;}
     .row .k{color:#64748B;display:flex;align-items:center;gap:8px;}
     .row .v{color:#1A2333;font-weight:700;}
@@ -134,10 +134,10 @@
     <!-- Branded letterhead (prints) -->
     <div class="hc-brand">
       <div style="display:flex;align-items:center;gap:14px;">
-        <img src="/static/img/logo.jpg" alt="Tahfeel" style="height:52px;object-fit:contain;" onerror="this.style.display='none'">
+        <img src="/static/img/logo.jpg" alt="Tahfeel" style="height:40px;object-fit:contain;" onerror="this.style.display='none'">
         <div>
-          <div style="font-size:11px;font-weight:800;color:#1A3B8B;letter-spacing:1.5px;">COMPLIANCE REPORT</div>
-          <div style="font-size:22px;font-weight:800;color:#0F2660;line-height:1.15;">{% if customer.customer_type == 'Company' %}🏢{% else %}👤{% endif %} {{ customer.name }}</div>
+          <div style="font-size:10px;font-weight:800;color:#1A3B8B;letter-spacing:1.5px;">COMPLIANCE REPORT</div>
+          <div style="font-size:17px;font-weight:800;color:#0F2660;line-height:1.15;">{% if customer.customer_type == 'Company' %}🏢{% else %}👤{% endif %} {{ customer.name }}</div>
           <div style="font-size:11px;color:#64748B;margin-top:2px;">{% if customer.ac_code %}{{ customer.ac_code }} · {% endif %}Last checked: {{ now.strftime('%d %b %Y') }}</div>
         </div>
       </div>
@@ -152,7 +152,7 @@
       <div class="hc-card stat">
         <div class="lbl">Overall Health</div>
         {% if score is not none %}{% set c1=276.5 %}
-        <svg width="86" height="86" viewBox="0 0 110 110" style="margin:5px 0;">
+        <svg width="62" height="62" viewBox="0 0 110 110" style="margin:3px 0;">
           <circle cx="55" cy="55" r="44" fill="none" stroke="#E5E7EB" stroke-width="10"/>
           <circle cx="55" cy="55" r="44" fill="none" stroke="{{ hcol }}" stroke-width="10" stroke-linecap="round" stroke-dasharray="{{ (c1*score/100)|round(1) }} {{ c1 }}" transform="rotate(-90 55 55)"/>
           <text x="55" y="61" text-anchor="middle" font-size="22" font-weight="800" fill="{{ hcol }}">{{ score }}%</text>
@@ -218,93 +218,76 @@
       </div>
     </div>
 
-    <!-- Company documents -->
-    <div class="hc-card" style="margin-bottom:16px;">
-      <div class="sec-head"><h2>🧾 Tax &amp; Compliance</h2></div>
-      <div class="dgrid">
-        {% for label, icon, status, due in [
-            ('Tax Filing (VAT)', '🧾', customer.vat_status, customer.vat_due_date),
-            ('Corporate Tax', '🏛', customer.corp_tax_status, customer.corp_tax_due_date)
-        ] %}
-          {% set days = (due - today).days if due else None %}
-          {% set col = '#94A3B8' if days is none else ('#DC2626' if days < 0 else ('#B45309' if days <= 30 else '#059669')) %}
-          {% set bg = '#F1F5F9' if days is none else ('#FCEBEB' if days < 0 else ('#FAEEDA' if days <= 30 else '#E1F5EE')) %}
-          {% set txt = (status or 'Not set') if days is none else (('Overdue · ' ~ due.strftime('%d %b %Y')) if days < 0 else ('Due ' ~ due.strftime('%d %b %Y'))) %}
-          <div class="dtile" style="border-top-color:{{ col }};">
-            <div class="dico" style="background:{{ bg }};color:{{ col }};">{{ icon }}</div>
-            <div class="dt">{{ label }}</div>
-            <div class="ex" style="color:{{ col }};">{{ txt }}</div>
+    <!-- Documents + Tax (same row) -->
+    <div class="two" style="grid-template-columns:1.7fr 1fr;">
+      <div class="hc-card">
+        <div class="sec-head">
+          <h2>🗂 Documents</h2>
+          <div class="legend"><span><i style="background:#059669;"></i>Valid</span><span><i style="background:#B45309;"></i>Expiring</span><span><i style="background:#DC2626;"></i>Expired</span></div>
+        </div>
+        {% if company_docs %}
+        <div class="dgrid">
+          {% for d in company_docs %}
+          <div class="dtile" style="border-top-color:{{ edgecol(d, today) }};">
+            {% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" class="file" title="Open file">📎</a>{% endif %}
+            <div class="dico" style="background:{{ edgebg(d, today) }};color:{{ edgecol(d, today) }};">{{ dicon(d.doc_type) }}</div>
+            <div class="dt">{{ d.doc_type }}</div>
+            {% if d.owner_name and d.owner_name != customer.name %}<div class="ow">{{ d.owner_name }}</div>{% endif %}
+            {% if d.expiry_date %}<div class="ex">📅 {{ d.expiry_date.strftime('%d %b %Y') }}</div>{% endif %}
+            {{ pill(d, today) }}
           </div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="hc-card" style="margin-bottom:16px;">
-      <div class="sec-head">
-        <h2>🗂 Documents</h2>
-        <div class="legend"><span><i style="background:#059669;"></i>Valid</span><span><i style="background:#B45309;"></i>Expiring</span><span><i style="background:#DC2626;"></i>Expired</span></div>
-      </div>
-      {% if company_docs %}
-      <div class="dgrid">
-        {% for d in company_docs %}
-        <div class="dtile" style="border-top-color:{{ edgecol(d, today) }};">
-          {% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" class="file" title="Open file">📎</a>{% endif %}
-          <div class="dico" style="background:{{ edgebg(d, today) }};color:{{ edgecol(d, today) }};">{{ dicon(d.doc_type) }}</div>
-          <div class="dt">{{ d.doc_type }}</div>
-          {% if d.owner_name and d.owner_name != customer.name %}<div class="ow">{{ d.owner_name }}</div>{% endif %}
-          {% if d.expiry_date %}<div class="ex">📅 {{ d.expiry_date.strftime('%d %b %Y') }}</div>{% endif %}
-          {{ pill(d, today) }}
+          {% endfor %}
         </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty" style="padding:20px;">No company documents yet. <a href="/documents/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add one →</a></div>
-      {% endif %}
-    </div>
-
-    <!-- Employees -->
-    {% if customer.customer_type == 'Company' %}
-    <div class="hc-card" style="margin-bottom:30px;">
-      <div class="sec-head">
-        <h2>👔 Employees &amp; Their Documents <span style="font-weight:400;color:#94A3B8;">({{ employees|length }})</span></h2>
-        {% if emp_docs_total %}
-        <div style="display:flex;gap:8px;font-size:11px;font-weight:700;">
-          <span style="background:#ECFDF5;color:#059669;padding:4px 10px;border-radius:20px;">✓ {{ emp_valid }} valid</span>
-          <span style="background:#FFFBEB;color:#B45309;padding:4px 10px;border-radius:20px;">⏳ {{ emp_expiring }} expiring</span>
-          <span style="background:#FEF2F2;color:#DC2626;padding:4px 10px;border-radius:20px;">✕ {{ emp_expired }} expired</span>
-        </div>
+        {% else %}
+        <div class="empty" style="padding:20px;">No company documents yet. <a href="/documents/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add one →</a></div>
         {% endif %}
       </div>
-      {% if emp_docs_total %}
-      <div style="padding:12px 18px 0;font-size:12px;color:#64748B;">{{ emp_docs_total }} employee document{{ 's' if emp_docs_total != 1 else '' }} tracked across {{ employees|length }} employee{{ 's' if employees|length != 1 else '' }}.</div>
-      {% endif %}
-      {% if employees %}
-        {% for e in employees %}
-        <div class="empcard">
-          <div class="eh">
-            <div>
-              <span class="en">{{ e.name }}</span>
-              <span class="ed">· {{ e.designation or '—' }}{% if e.nationality %} · {{ e.nationality }}{% endif %}</span>
+      <div class="hc-card">
+        <div class="sec-head"><h2>🧾 Tax &amp; Compliance</h2></div>
+        <div class="dgrid">
+          {% for label, icon, status, due in [
+              ('Tax Filing (VAT)', '🧾', customer.vat_status, customer.vat_due_date),
+              ('Corporate Tax', '🏛', customer.corp_tax_status, customer.corp_tax_due_date)
+          ] %}
+            {% set days = (due - today).days if due else None %}
+            {% set col = '#94A3B8' if days is none else ('#DC2626' if days < 0 else ('#B45309' if days <= 30 else '#059669')) %}
+            {% set bg = '#F1F5F9' if days is none else ('#FCEBEB' if days < 0 else ('#FAEEDA' if days <= 30 else '#E1F5EE')) %}
+            {% set txt = (status or 'Not set') if days is none else (('Overdue · ' ~ due.strftime('%d %b %Y')) if days < 0 else ('Due ' ~ due.strftime('%d %b %Y'))) %}
+            <div class="dtile" style="border-top-color:{{ col }};">
+              <div class="dico" style="background:{{ bg }};color:{{ col }};">{{ icon }}</div>
+              <div class="dt">{{ label }}</div>
+              <div class="ex" style="color:{{ col }};">{{ txt }}</div>
             </div>
-            <a href="/employees/{{ e.id }}" class="hc-btn" style="padding:4px 12px;font-size:12px;">Open →</a>
-          </div>
-          <div style="margin-top:8px;">
-            {% for d in e.documents %}
-              {% set days = (d.expiry_date.date()-today).days if d.expiry_date else None %}
-              {% if days is none %}{% set bg='#F1F5F9' %}{% set fg='#64748B' %}{% set lab='No expiry' %}
-              {% elif days<0 %}{% set bg='#FEF2F2' %}{% set fg='#B91C1C' %}{% set lab='Expired' %}
-              {% elif days<=90 %}{% set bg='#FFFBEB' %}{% set fg='#B45309' %}{% set lab=days ~ 'd' %}
-              {% else %}{% set bg='#ECFDF5' %}{% set fg='#059669' %}{% set lab='Valid' %}{% endif %}
-              <span class="echip" style="background:{{ bg }};color:{{ fg }};">{{ dicon(d.doc_type) }} {{ d.doc_type }} · {{ lab }}</span>
-            {% else %}
-              <span style="font-size:12px;color:#94A3B8;">No documents added. <a href="/employees/{{ e.id }}" style="color:var(--primary);">Add →</a></span>
-            {% endfor %}
-          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-      {% else %}
-      <div class="empty" style="padding:20px;">No employees yet. Add them on the client page.</div>
-      {% endif %}
+      </div>
+    </div>
+
+    <!-- People Compliance + Upcoming Renewals -->
+    {% if customer.customer_type == 'Company' %}
+    <div class="two" style="margin-bottom:18px;">
+      <div class="hc-card" style="padding:14px 16px;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+          <div style="width:30px;height:30px;border-radius:9px;background:#EEF2FF;color:#1A3B8B;display:inline-flex;align-items:center;justify-content:center;font-size:16px;">👥</div>
+          <div style="font-size:13px;font-weight:700;color:#0F2660;">People Compliance</div>
+        </div>
+        <div style="font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.3px;">Total Employees</div>
+        <div style="font-size:26px;font-weight:800;color:#1A2333;line-height:1;margin:2px 0 11px;">{{ employees|length }}</div>
+        <div style="display:flex;gap:22px;border-top:1px solid #F1F5F9;padding-top:9px;">
+          <div><div style="font-size:18px;font-weight:800;color:#059669;line-height:1;">{{ emp_valid }}</div><div style="font-size:10px;color:#64748B;margin-top:3px;">Valid</div></div>
+          <div><div style="font-size:18px;font-weight:800;color:#B45309;line-height:1;">{{ emp_expiring }}</div><div style="font-size:10px;color:#64748B;margin-top:3px;">Expiring Soon</div></div>
+          <div><div style="font-size:18px;font-weight:800;color:#DC2626;line-height:1;">{{ emp_expired }}</div><div style="font-size:10px;color:#64748B;margin-top:3px;">Expired</div></div>
+        </div>
+      </div>
+      <div class="hc-card" style="padding:14px 16px;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+          <div style="width:30px;height:30px;border-radius:9px;background:#FFF7ED;color:#B45309;display:inline-flex;align-items:center;justify-content:center;font-size:16px;">📅</div>
+          <div style="font-size:13px;font-weight:700;color:#0F2660;">Upcoming Renewals</div>
+        </div>
+        <div style="font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.3px;">Next 30 Days</div>
+        <div style="font-size:26px;font-weight:800;color:{{ '#DC2626' if renewals_30 else '#1A2333' }};line-height:1;margin:2px 0 11px;">{{ renewals_30 }}</div>
+        <a href="/health-check" class="hc-btn no-print" style="margin-top:auto;justify-content:center;background:#F8FAFF;border-color:#DBE4FF;font-size:12px;">View All Renewals →</a>
+      </div>
     </div>
     {% endif %}
 
