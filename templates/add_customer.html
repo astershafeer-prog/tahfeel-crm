@@ -160,6 +160,7 @@
         </div>
       </div>
 
+      <input type="hidden" name="allow_duplicate" id="allowDup" value="">
       <div class="form-actions">
         <button type="submit" class="btn-primary">Save Customer</button>
         <a href="/customers" class="btn-cancel">Cancel</a>
@@ -275,6 +276,32 @@ document.querySelector('input[name="phone"]').addEventListener('input', function
 (function() {
   var d = document.querySelector('input[name="ac_opening_date"]');
   if (d && !d.value) { d.value = new Date().toISOString().slice(0, 10); }
+})();
+
+// Duplicate-phone soft warning: confirm popup you can dismiss, no data lost
+(function() {
+  var form = document.querySelector('form[enctype]');
+  if (!form) return;
+  form.addEventListener('submit', function(e) {
+    if (form.dataset.dupOk) return;  // already confirmed
+    var ph = form.querySelector('input[name="phone"]');
+    var phone = ph ? ph.value.trim() : '';
+    if (!phone || phone === '+971') return;
+    e.preventDefault();
+    fetch('/api/customer-phone-exists?phone=' + encodeURIComponent(phone))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.exists) {
+          if (confirm('⚠ This number already belongs to "' + d.name + '".\n\nAdd this client anyway?')) {
+            document.getElementById('allowDup').value = '1';
+            form.dataset.dupOk = '1'; form.submit();
+          }
+        } else {
+          form.dataset.dupOk = '1'; form.submit();
+        }
+      })
+      .catch(function() { form.dataset.dupOk = '1'; form.submit(); });
+  });
 })();
 </script>
 </body>

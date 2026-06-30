@@ -2159,6 +2159,16 @@ def customers():
                            total=total, search=request.args.get('search',''),
                            birthdays_today=birthdays_today, now=now, birthday_filter=birthday_filter)
 
+@app.route('/api/customer-phone-exists')
+@login_required
+def api_customer_phone_exists():
+    from flask import jsonify
+    phone = (request.args.get('phone') or '').strip()
+    if not phone:
+        return jsonify({'exists': False, 'name': ''})
+    c = Customer.query.filter_by(phone=phone).first()
+    return jsonify({'exists': bool(c), 'name': c.name if c else ''})
+
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required
 def add_customer():
@@ -2188,10 +2198,10 @@ def add_customer():
         else:
             phone_to_check = request.form.get('phone', '').strip()
         
-        if phone_to_check:
+        if phone_to_check and not request.form.get('allow_duplicate'):
             existing_customer = Customer.query.filter_by(phone=phone_to_check).first()
             if existing_customer:
-                flash(f'⚠️ Duplicate customer! Phone number {phone_to_check} already exists for customer: {existing_customer.name}', 'error')
+                flash(f'⚠️ Phone {phone_to_check} already exists for "{existing_customer.name}". Submit again to add anyway.', 'error')
                 users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
                 return render_template('add_customer.html', users=users, sources=sources, converted_leads=converted_leads)
         
