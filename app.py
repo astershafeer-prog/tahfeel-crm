@@ -1627,11 +1627,13 @@ def _staff_remarks(lead):
 
 def _marketing_leads():
     """Leads for the Marketing-Ext report: per-user date floor + optional UI from/to filter."""
+    from sqlalchemy import or_
     user = User.query.get(session['user_id'])
     floor = user.report_from if (user and user.role == 'marketing') else None
     from_str = (request.args.get('from') or '').strip()
     to_str = (request.args.get('to') or '').strip()
-    q = Lead.query
+    # Meta ads only: leads that came from Meta (have a meta_lead_id or a Meta* source)
+    q = Lead.query.filter(or_(Lead.meta_lead_id.isnot(None), Lead.source.like('Meta%')))
     if floor:
         q = q.filter(Lead.created_at >= datetime.combine(floor, datetime.min.time()))
     try:
