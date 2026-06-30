@@ -30,13 +30,40 @@
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { background: #f8fafc; color: #64748b; text-align: left; font-weight: 600; padding: 9px 12px; font-size: 12px; }
     td { padding: 12px 14px; border-top: 0.5px solid #eef2f7; color: #334155; vertical-align: top; line-height: 1.5; }
-    tbody tr:nth-child(even) { background: #fafbfc; }
-    tbody tr:hover { background: #f4f7fb; }
     .mono { font-family: 'Courier New', monospace; color: #64748b; white-space: nowrap; }
     .badge { padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
     .empty { padding: 40px; text-align: center; color: #94a3b8; }
     .foot { font-size: 11px; color: #94a3b8; margin-top: 8px; text-align: right; }
     .flash { background: #FCEBEB; color: #791F1F; padding: 9px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+    .presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 14px 0 10px; }
+    .presets .pl { font-size: 11px; color: #94a3b8; margin-right: 4px; }
+    .pbtn { background: #fff; border: 0.5px solid #cbd5e1; border-radius: 20px; padding: 5px 13px; font-size: 12px; color: #475569; cursor: pointer; }
+    .pbtn:hover { border-color: #1A3B8B; color: #1A3B8B; }
+    .analytics { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; margin-bottom: 14px; }
+    .acard { background: #fff; border: 0.5px solid #e2e8f0; border-radius: 12px; padding: 14px; }
+    .ahead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; font-size: 13px; font-weight: 600; color: #0F2660; }
+    .ahead .rate { font-weight: 400; font-size: 12px; color: #64748b; }
+    .ahead .rate b { font-size: 22px; font-weight: 700; color: #27500A; }
+    .funnel { display: flex; flex-direction: column; gap: 7px; }
+    .frow { display: flex; align-items: center; gap: 8px; }
+    .frow .fl { width: 72px; font-size: 11px; color: #64748b; }
+    .fbar { height: 22px; border-radius: 5px; display: flex; align-items: center; padding-left: 8px; min-width: 30px; }
+    .fbar span { font-size: 11px; font-weight: 700; }
+    .qbar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; margin-bottom: 12px; background: #f1f5f9; }
+    .qlist { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+    .qrow { display: flex; justify-content: space-between; }
+    .qrow b { color: #334155; }
+    .qrow span:last-child { color: #64748b; }
+    .qrow.sub span:first-child { padding-left: 10px; }
+    .lead-row { cursor: pointer; }
+    .lead-row:hover { background: #f4f7fb; }
+    .chev { font-size: 11px; }
+    .detail { background: #fff; border: 0.5px solid #dbe6f3; border-radius: 8px; padding: 12px; margin-top: 2px; }
+    .dmeta { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 10px; font-size: 11px; color: #64748b; }
+    .dmeta b { color: #334155; font-weight: 600; }
+    .dlabel { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 5px; }
+    .dupd { font-size: 12px; color: #475569; margin-bottom: 4px; }
+    .dupd span { color: #94a3b8; }
   </style>
 </head>
 <body>
@@ -69,12 +96,12 @@
     <h2>Lead report</h2>
     <div class="sub">Read-only{% if floor %} · showing leads from {{ floor.strftime('%d %b %Y') }}{% endif %}</div>
 
-    <div class="chips">
-      <div class="chip"><div class="l">Total</div><div class="v">{{ counts.total }}</div></div>
-      <div class="chip"><div class="l">Contacted</div><div class="v" style="color:#185FA5;">{{ counts.contacted }}</div></div>
-      <div class="chip"><div class="l">Qualified</div><div class="v" style="color:#854F0B;">{{ counts.qualified }}</div></div>
-      <div class="chip"><div class="l">Converted</div><div class="v" style="color:#27500A;">{{ counts.converted }}</div></div>
-      <div class="chip"><div class="l">Junk</div><div class="v" style="color:#A32D2D;">{{ counts.junk }}</div></div>
+    <div class="presets">
+      <span class="pl">Quick range:</span>
+      <button type="button" class="pbtn" data-days="0">Today</button>
+      <button type="button" class="pbtn" data-days="7">7 days</button>
+      <button type="button" class="pbtn" data-days="30">30 days</button>
+      <button type="button" class="pbtn" data-month="1">This month</button>
     </div>
 
     <form class="filter" method="get" action="/marketing-report">
@@ -107,48 +134,104 @@
       <a class="btn btn-dl" href="/marketing-report/export?q={{ f.q|urlencode }}&stage={{ f.stage }}&quality={{ f.quality }}&src={{ f.src|urlencode }}&from={{ f.from }}&to={{ f.to }}">⬇ Download Excel</a>
     </form>
 
+    <div class="analytics">
+      <div class="acard">
+        <div class="ahead"><span>Conversion funnel</span><span class="rate"><b>{{ funnel.rate }}%</b> converted</span></div>
+        <div class="funnel">
+          <div class="frow"><span class="fl">New</span><div class="fbar" style="width:100%;background:#E6F1FB;"><span style="color:#185FA5;">{{ funnel.new }}</span></div></div>
+          <div class="frow"><span class="fl">Contacted</span><div class="fbar" style="width:{{ [funnel.p_contacted, 6]|max }}%;background:#B5D4F4;"><span style="color:#0C447C;">{{ funnel.contacted }}</span></div></div>
+          <div class="frow"><span class="fl">Qualified</span><div class="fbar" style="width:{{ [funnel.p_qualified, 6]|max }}%;background:#FAC775;"><span style="color:#633806;">{{ funnel.qualified }}</span></div></div>
+          <div class="frow"><span class="fl">Converted</span><div class="fbar" style="width:{{ [funnel.p_converted, 6]|max }}%;background:#97C459;"><span style="color:#173404;">{{ funnel.converted }}</span></div></div>
+        </div>
+      </div>
+      <div class="acard">
+        <div class="ahead"><span>Lead quality</span><span class="rate" style="font-size:12px;color:#64748b;">avg response {{ avg_response }}</span></div>
+        <div class="qbar">
+          <div style="width:{{ quality.p_genuine }}%;background:#97C459;"></div>
+          <div style="width:{{ quality.p_junk }}%;background:#E24B4A;"></div>
+          <div style="width:{{ quality.p_unreachable }}%;background:#FAC775;"></div>
+        </div>
+        <div class="qlist">
+          <div class="qrow"><span style="color:#27500A;">● Genuine</span><b>{{ quality.genuine }}</b></div>
+          {% for reason, cnt in quality.junk_reasons %}
+          <div class="qrow sub"><span style="color:#A32D2D;">● Junk — {{ reason }}</span><span>{{ cnt }}</span></div>
+          {% endfor %}
+          {% if quality.unreachable %}<div class="qrow"><span style="color:#854F0B;">● Unreachable</span><span>{{ quality.unreachable }}</span></div>{% endif %}
+          {% if not quality.junk_reasons and not quality.genuine and not quality.unreachable %}<div style="color:#94a3b8;">Not reviewed yet</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <table>
         <thead>
           <tr>
             <th style="width:70px;">Date</th>
             <th>Name</th>
-            <th style="width:120px;">Phone</th>
             <th style="width:80px;">Source</th>
-            <th style="width:90px;">Stage</th>
-            <th style="width:96px;">Lead Quality</th>
-            <th style="width:54px;">Attempts</th>
-            <th>Remarks</th>
+            <th style="width:96px;">Stage</th>
+            <th style="width:130px;">Lead Quality</th>
+            <th style="width:70px;text-align:center;">Attempts</th>
+            <th style="width:28px;"></th>
           </tr>
         </thead>
         <tbody>
           {% for r in rows %}
-          <tr>
+          <tr class="lead-row" onclick="toggleRow(this)">
             <td style="color:#94a3b8;">{{ r.date.strftime('%d %b') if r.date else '—' }}</td>
             <td>{{ r.name }}</td>
-            <td class="mono">{{ r.phone }}</td>
             <td style="color:#64748b;">{{ r.source }}</td>
             <td>{{ stage_badge(r.stage) }}</td>
-            <td>{{ status_badge(r.genuine) }}{% if r.junk_reason %}<div style="font-size:10px;color:#94a3b8;margin-top:2px;">{{ r.junk_reason }}</div>{% endif %}</td>
+            <td>{{ status_badge(r.genuine) }}{% if r.junk_reason %}<span style="font-size:10px;color:#94a3b8;"> · {{ r.junk_reason }}</span>{% endif %}</td>
             <td style="text-align:center;color:#475569;">{{ r.attempts }}</td>
-            <td style="color:#475569;">
+            <td style="color:#94a3b8;"><span class="chev">▸</span></td>
+          </tr>
+          <tr class="detail-row" style="display:none;"><td colspan="7" style="padding:0 14px 12px;background:#f8fbff;">
+            <div class="detail">
+              <div class="dmeta">
+                <span>Phone<br><b class="mono">{{ r.phone }}</b></span>
+                <span>Source<br><b>{{ r.source }}</b></span>
+                <span>Campaign<br><b>{{ r.campaign }}</b></span>
+                <span>Response time<br><b>{{ r.response }}</b></span>
+              </div>
+              <div class="dlabel">Staff updates</div>
               {% if r.remarks %}
                 {% for rm in r.remarks %}
-                <div style="margin-bottom:4px;{% if not loop.last %}padding-bottom:4px;border-bottom:0.5px dashed #eef2f7;{% endif %}">
-                  <span style="color:#94a3b8;font-size:11px;">{{ rm.when.strftime('%d %b %H:%M') }}</span><br>{{ rm.text }}
-                </div>
+                <div class="dupd"><span>{{ rm.when.strftime('%d %b %H:%M') }}</span> — {{ rm.text }}</div>
                 {% endfor %}
-              {% else %}<span style="color:#94a3b8;">No staff update yet</span>{% endif %}
-            </td>
-          </tr>
+              {% else %}<div style="color:#94a3b8;font-size:12px;">No staff update yet</div>{% endif %}
+            </div>
+          </td></tr>
           {% else %}
-          <tr><td colspan="8" class="empty">No leads in this range.</td></tr>
+          <tr><td colspan="7" class="empty">No leads in this range.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <div class="foot">Showing {{ rows|length }} lead{{ 's' if rows|length != 1 else '' }} · phone numbers masked · view only</div>
+    <div class="foot">Showing {{ rows|length }} lead{{ 's' if rows|length != 1 else '' }} · click a row for full history · phone numbers masked · view only</div>
   </div>
+  <script>
+    function toggleRow(tr) {
+      var d = tr.nextElementSibling;
+      if (!d || !d.classList.contains('detail-row')) return;
+      var open = d.style.display !== 'none';
+      d.style.display = open ? 'none' : 'table-row';
+      var c = tr.querySelector('.chev');
+      if (c) c.textContent = open ? '▸' : '▾';
+    }
+    function _fmtDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+    document.querySelectorAll('.pbtn').forEach(function(b) {
+      b.addEventListener('click', function() {
+        var to = new Date(), from = new Date();
+        if (b.dataset.month) { from = new Date(to.getFullYear(), to.getMonth(), 1); }
+        else { from.setDate(to.getDate() - parseInt(b.dataset.days || '0')); }
+        var form = document.querySelector('form.filter');
+        form.querySelector('input[name=from]').value = _fmtDate(from);
+        form.querySelector('input[name=to]').value = _fmtDate(to);
+        form.submit();
+      });
+    });
+  </script>
 </body>
 </html>

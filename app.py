@@ -1615,6 +1615,17 @@ def _mask_phone(p):
     prefix = ('+971 ' + d[3:5]) if (d.startswith('971') and len(d) >= 5) else d[:2]
     return prefix + ' ••• ••' + d[-2:]
 
+def _fmt_duration(seconds):
+    if seconds is None:
+        return '—'
+    s = max(int(seconds), 0)
+    d, rem = divmod(s, 86400); h, rem = divmod(rem, 3600); m, _ = divmod(rem, 60)
+    if d:
+        return f'{d}d {h}h'
+    if h:
+        return f'{h}h {m}m'
+    return f'{m}m'
+
 def _staff_remarks(lead):
     """Only staff-typed update remarks (exclude the auto Meta note + system 'Marked …'), newest first."""
     out = []
@@ -1660,27 +1671,45 @@ def marketing_report():
         flash('Access denied.')
         return redirect(url_for('dashboard'))
     from sqlalchemy import or_
+    from collections import Counter
     leads, floor, f = _marketing_leads()
     rows = []
     for l in leads:
+        resp = (l.first_contacted_at - l.created_at).total_seconds() if (l.first_contacted_at and l.created_at) else None
         rows.append({
             'date': l.created_at, 'name': l.name or '—', 'phone': _mask_phone(l.phone),
             'source': l.sub_source or l.source or '—', 'stage': l.status or 'New',
             'genuine': l.genuine or '', 'junk_reason': l.junk_reason or '',
             'attempts': l.attempts or 0, 'remarks': _staff_remarks(l),
+            'campaign': l.campaign or '—', 'response': _fmt_duration(resp),
         })
-    counts = {
-        'total': len(leads),
-        'contacted': sum(1 for l in leads if l.status == 'Contacted'),
-        'qualified': sum(1 for l in leads if l.status == 'Qualified'),
-        'converted': sum(1 for l in leads if l.status == 'Converted'),
-        'junk': sum(1 for l in leads if l.genuine == 'Junk'),
-    }
-    # Source-channel options for the filter (all Meta leads, unfiltered)
+    n = len(leads)
+    n_contacted = sum(1 for l in leads if l.status in ('Contacted', 'Qualified', 'Proposal', 'Converted', 'Lost'))
+    n_qualified = sum(1 for l in leads if l.status in ('Qualified', 'Proposal', 'Converted'))
+    n_converted = sum(1 for l in leads if l.status == 'Converted')
+    pct = lambda x: round(100 * x / n) if n else 0
+    funnel = {'new': n, 'contacted': n_contacted, 'qualified': n_qualified, 'converted': n_converted,
+              'rate': pct(n_converted), 'p_contacted': pct(n_contacted), 'p_qualified': pct(n_qualified),
+              'p_converted': pct(n_converted)}
+    # Lead-quality breakdown
+    genuine = sum(1 for l in leads if l.genuine == 'Genuine')
+    unreachable = sum(1 for l in leads if l.genuine == 'Unreachable')
+    junk = sum(1 for l in leads if l.genuine == 'Junk')
+    junk_reasons = sorted(Counter((l.junk_reason or 'Unspecified') for l in leads if l.genuine == 'Junk').items(),
+                          key=lambda x: -x[1])
+    reviewed = genuine + unreachable + junk
+    quality = {'genuine': genuine, 'unreachable': unreachable, 'junk': junk, 'junk_reasons': junk_reasons,
+               'p_genuine': round(100 * genuine / reviewed) if reviewed else 0,
+               'p_junk': round(100 * junk / reviewed) if reviewed else 0,
+               'p_unreachable': round(100 * unreachable / reviewed) if reviewed else 0}
+    resp_secs = [(l.first_contacted_at - l.created_at).total_seconds()
+                 for l in leads if l.first_contacted_at and l.created_at]
+    avg_response = _fmt_duration(sum(resp_secs) / len(resp_secs)) if resp_secs else '—'
+    counts = {'total': n, 'contacted': n_contacted, 'qualified': n_qualified, 'converted': n_converted, 'junk': junk}
     src_options = sorted({r[0] for r in db.session.query(Lead.sub_source).filter(
         or_(Lead.meta_lead_id.isnot(None), Lead.source.like('Meta%'))).all() if r[0]})
-    return render_template('marketing_report.html', rows=rows, counts=counts,
-                           floor=floor, f=f, src_options=src_options)
+    return render_template('marketing_report.html', rows=rows, counts=counts, funnel=funnel,
+                           quality=quality, avg_response=avg_response, floor=floor, f=f, src_options=src_options)
 
 @app.route('/marketing-report/export')
 @login_required
