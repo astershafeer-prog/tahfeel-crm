@@ -78,6 +78,13 @@
   <script>
     var cb = document.getElementById('chatbox');
     if (cb) cb.scrollTop = cb.scrollHeight;
+    // Auto-refresh every 8s so new messages appear live — but NEVER while the
+    // user is typing a reply (don't clobber unsent text or steal focus).
+    setInterval(function () {
+      var inp = document.querySelector('input[name="body"]');
+      var typing = inp && (document.activeElement === inp || inp.value.trim() !== '');
+      if (!typing && !document.hidden) location.reload();
+    }, 8000);
   </script>
 </body>
 </html>

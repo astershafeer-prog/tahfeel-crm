@@ -55,5 +55,9 @@
       {% endif %}
     </div>
   </div>
+  <script>
+    // Auto-refresh the conversation list every 15s (pauses when tab is hidden)
+    setInterval(function () { if (!document.hidden) location.reload(); }, 15000);
+  </script>
 </body>
 </html>
