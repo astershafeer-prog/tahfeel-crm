@@ -129,6 +129,12 @@
             <div class="form-group company-only"><label>Website</label><input type="text" name="website" value="{{ customer.website or '' }}" placeholder="www.company.com"></div>
             <div class="form-group company-only"><label>UAE Pass Access Number</label><input type="text" name="uae_pass_number" value="{{ customer.uae_pass_number or '' }}" placeholder="+971 5X XXX XXXX"></div>
 
+            <div class="form-group" style="grid-column:1/-1;"><div class="section-label" style="margin-top:8px;">🧾 Tax &amp; Compliance</div></div>
+            <div class="form-group"><label>VAT / Tax Filing</label><select name="vat_status"><option value="">— N/A —</option><option value="Not filed" {% if customer.vat_status=='Not filed' %}selected{% endif %}>Not filed</option><option value="Filed">Filed → roll to next quarter</option></select></div>
+            <div class="form-group"><label>VAT Due Date</label><input type="date" name="vat_due_date" value="{{ customer.vat_due_date.strftime('%Y-%m-%d') if customer.vat_due_date else '' }}"></div>
+            <div class="form-group"><label>Corporate Tax</label><select name="corp_tax_status"><option value="">— N/A —</option><option value="Not filed" {% if customer.corp_tax_status=='Not filed' %}selected{% endif %}>Not filed</option><option value="Filed">Filed → roll to next year</option></select></div>
+            <div class="form-group"><label>Corporate Tax Due Date</label><input type="date" name="corp_tax_due_date" value="{{ customer.corp_tax_due_date.strftime('%Y-%m-%d') if customer.corp_tax_due_date else '' }}"></div>
+
             <div class="form-group">
               <label>Source</label>
               <select name="source">

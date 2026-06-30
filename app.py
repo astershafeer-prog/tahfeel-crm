@@ -212,6 +212,11 @@ class Customer(db.Model):
     ac_opening_date = db.Column(db.Date)
     uae_pass_number = db.Column(db.String(50))   # UAE Pass access / account number
     uae_pass_name = db.Column(db.String(100))    # name on the UAE Pass account
+    # Tax filing tracking (shown as Compliance cards; auto-roll on Filed)
+    vat_status = db.Column(db.String(20))        # 'Filed' / 'Not filed'
+    vat_due_date = db.Column(db.Date)            # next VAT filing due
+    corp_tax_status = db.Column(db.String(20))   # 'Filed' / 'Not filed'
+    corp_tax_due_date = db.Column(db.Date)       # next corporate-tax filing due
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -2169,6 +2174,35 @@ def api_customer_phone_exists():
     c = Customer.query.filter_by(phone=phone).first()
     return jsonify({'exists': bool(c), 'name': c.name if c else ''})
 
+
+def _add_months(d, months):
+    import calendar
+    m = d.month - 1 + months
+    y = d.year + m // 12
+    m = m % 12 + 1
+    return d.replace(year=y, month=m, day=min(d.day, calendar.monthrange(y, m)[1]))
+
+def _save_tax_fields(customer):
+    """Save VAT + Corporate-tax filing status/due from the form.
+    Auto-roll: marking 'Filed' advances the due date one period (VAT quarterly,
+    corp tax yearly) and resets status to 'Not filed' (next period now due)."""
+    for prefix, months in (('vat', 3), ('corp_tax', 12)):
+        if (prefix + '_status') not in request.form and (prefix + '_due_date') not in request.form:
+            continue  # form didn't include these — preserve existing values
+        status = (request.form.get(prefix + '_status') or '').strip()
+        due_str = (request.form.get(prefix + '_due_date') or '').strip()
+        due = None
+        if due_str:
+            try:
+                due = datetime.strptime(due_str, '%Y-%m-%d').date()
+            except ValueError:
+                due = None
+        if status == 'Filed' and due:
+            due = _add_months(due, months)
+            status = 'Not filed'
+        setattr(customer, prefix + '_status', status or None)
+        setattr(customer, prefix + '_due_date', due)
+
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required
 def add_customer():
@@ -2236,6 +2270,7 @@ def add_customer():
             setattr(customer, _f, request.form.get(_f, '').strip() or None)
         _aod = request.form.get('ac_opening_date', '').strip()
         customer.ac_opening_date = datetime.strptime(_aod, '%Y-%m-%d').date() if _aod else None
+        _save_tax_fields(customer)
 
         # Save inline documents
         doc_types_inline = request.form.getlist('doc_type[]')
@@ -2370,6 +2405,7 @@ def edit_customer(customer_id):
                 setattr(customer, _f, request.form.get(_f, '').strip() or None)
         _aod = request.form.get('ac_opening_date', '').strip()
         customer.ac_opening_date = datetime.strptime(_aod, '%Y-%m-%d').date() if _aod else None
+        _save_tax_fields(customer)
         try:
             customer.assigned_to = int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None
         except:
@@ -4505,6 +4541,10 @@ def init_db():
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS ac_opening_date DATE',
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS uae_pass_number VARCHAR(50)',
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS uae_pass_name VARCHAR(100)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS vat_status VARCHAR(20)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS vat_due_date DATE',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS corp_tax_status VARCHAR(20)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS corp_tax_due_date DATE',
             # Lead redesign: quality flag + channel + timing + per-update activity
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS genuine VARCHAR(20)',
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS junk_reason VARCHAR(100)',

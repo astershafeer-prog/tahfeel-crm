@@ -29,13 +29,13 @@
     .sec-head h2{margin:0;font-size:14px;color:#0F2660;font-weight:700;display:flex;align-items:center;gap:8px;}
     .legend{display:flex;gap:12px;font-size:11px;color:#64748B;}
     .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
-    .dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;padding:18px;}
-    .dtile{background:#fff;border:1px solid #EEF2F7;border-radius:14px;border-top:4px solid #94A3B8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:box-shadow .15s,transform .15s;position:relative;}
-    .dtile:hover{box-shadow:0 6px 18px rgba(0,0,0,.08);transform:translateY(-2px);}
-    .dtile .dico{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:10px;}
-    .dtile .dt{font-size:13.5px;font-weight:700;color:#1A2333;line-height:1.25;}
-    .dtile .ow{font-size:11px;color:#94A3B8;margin-top:3px;}
-    .dtile .ex{font-size:12px;color:#475569;margin-top:8px;display:flex;align-items:center;gap:5px;}
+    .dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:14px;}
+    .dtile{background:#fff;border:1px solid #EEF2F7;border-radius:11px;border-top:3px solid #94A3B8;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .15s,transform .15s;position:relative;}
+    .dtile:hover{box-shadow:0 5px 14px rgba(0,0,0,.08);transform:translateY(-2px);}
+    .dtile .dico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:7px;}
+    .dtile .dt{font-size:12px;font-weight:700;color:#1A2333;line-height:1.2;}
+    .dtile .ow{font-size:10px;color:#94A3B8;margin-top:2px;}
+    .dtile .ex{font-size:11px;color:#475569;margin-top:6px;display:flex;align-items:center;gap:4px;}
     .dtile .file{position:absolute;top:12px;right:12px;font-size:13px;text-decoration:none;opacity:.7;}
     .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-top:10px;}
     .pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;}
@@ -219,6 +219,26 @@
     </div>
 
     <!-- Company documents -->
+    <div class="hc-card" style="margin-bottom:16px;">
+      <div class="sec-head"><h2>🧾 Tax &amp; Compliance</h2></div>
+      <div class="dgrid">
+        {% for label, icon, status, due in [
+            ('Tax Filing (VAT)', '🧾', customer.vat_status, customer.vat_due_date),
+            ('Corporate Tax', '🏛', customer.corp_tax_status, customer.corp_tax_due_date)
+        ] %}
+          {% set days = (due - today).days if due else None %}
+          {% set col = '#94A3B8' if days is none else ('#DC2626' if days < 0 else ('#B45309' if days <= 30 else '#059669')) %}
+          {% set bg = '#F1F5F9' if days is none else ('#FCEBEB' if days < 0 else ('#FAEEDA' if days <= 30 else '#E1F5EE')) %}
+          {% set txt = (status or 'Not set') if days is none else (('Overdue · ' ~ due.strftime('%d %b %Y')) if days < 0 else ('Due ' ~ due.strftime('%d %b %Y'))) %}
+          <div class="dtile" style="border-top-color:{{ col }};">
+            <div class="dico" style="background:{{ bg }};color:{{ col }};">{{ icon }}</div>
+            <div class="dt">{{ label }}</div>
+            <div class="ex" style="color:{{ col }};">{{ txt }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
     <div class="hc-card" style="margin-bottom:16px;">
       <div class="sec-head">
         <h2>🗂 Documents</h2>
