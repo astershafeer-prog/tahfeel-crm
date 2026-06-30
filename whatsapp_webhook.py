@@ -289,8 +289,10 @@ def wa_verify():
 # ── Webhook: receiver (POST) ──────────────────────────────────────────────────
 @wa_bp.route('/webhook/whatsapp', methods=['POST'])
 def wa_receive():
-    # Verify the request genuinely came from Meta (same app secret as leads)
-    app_secret = _cfg('META_APP_SECRET')
+    # Verify the request genuinely came from Meta. The WhatsApp number lives under
+    # a SEPARATE Meta app ("Tahfeel watsup") from the lead webhook, so it is signed
+    # with that app's secret — use WA_APP_SECRET, falling back to META_APP_SECRET.
+    app_secret = _cfg('WA_APP_SECRET') or _cfg('META_APP_SECRET')
     if app_secret:
         sig = request.headers.get('X-Hub-Signature-256', '')
         expected = 'sha256=' + hmac.new(
