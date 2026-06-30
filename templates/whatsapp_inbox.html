@@ -22,6 +22,10 @@
 
     <div class="page-header">
       <h2>💬 WhatsApp <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ threads|length }} conversation{{ 's' if threads|length != 1 }})</span></h2>
+      <span style="font-size:12px;color:#1B7A3D;display:flex;align-items:center;gap:6px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:#25D366;display:inline-block;"></span>
+        Live · updated {{ now.strftime('%H:%M:%S') }}
+      </span>
     </div>
 
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #25D366;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
