@@ -860,8 +860,8 @@ tr.selected td { background: var(--info-bg) !important; }
   opacity: 0.9;
 }
 
-/* Force white text for all button content */
-.btn-view *, .btn-edit *, .btn-delete * {
+/* Force white text only for solid-background buttons */
+.btn-view * {
   color: white !important;
 }
 
@@ -879,8 +879,8 @@ tr.selected td { background: var(--info-bg) !important; }
 }
 
 /* All buttons with white text on colored backgrounds */
-.btn-view, .btn-edit, .btn-delete, .btn-add, .btn-save, 
-.btn-primary, .btn-secondary, .btn-approve {
+.btn-view, .btn-add, .btn-save,
+.btn-primary, .btn-approve {
   color: white !important;
 }
 
