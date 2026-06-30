@@ -142,6 +142,15 @@ def save_lead_to_crm(lead_data, raw_meta):
 
     assigned_name = assigned_user.name if assigned_user else 'Nobody (no sales staff available)'
     print(f'[Meta] ✓ Lead saved: {name} → assigned to {assigned_name}')
+
+    # Flow A — auto-greet the new lead on WhatsApp (approved template).
+    # No-ops safely if WhatsApp isn't configured or the lead has no phone.
+    try:
+        from whatsapp_webhook import notify_new_lead
+        notify_new_lead(lead)
+    except Exception as e:
+        print(f'[Meta] WhatsApp greet skipped: {e}')
+
     return lead
 
 

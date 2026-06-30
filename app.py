@@ -403,6 +403,23 @@ class ActivityType(db.Model):
     sort_order = db.Column(db.Integer, default=0)
     active = db.Column(db.Boolean, default=True)
 
+class WhatsAppMessage(db.Model):
+    """One WhatsApp message (in or out). Threaded by wa_id (the contact's number)."""
+    id           = db.Column(db.Integer, primary_key=True)
+    wa_id        = db.Column(db.String(30), index=True)   # contact phone (digits only)
+    contact_name = db.Column(db.String(120))              # WhatsApp profile name
+    direction    = db.Column(db.String(4))                # 'in' / 'out'
+    body         = db.Column(db.Text)
+    msg_type     = db.Column(db.String(20), default='text')  # text / template / image…
+    wam_id       = db.Column(db.String(80), index=True)   # WhatsApp message id (dedupe)
+    status       = db.Column(db.String(20))               # sent/delivered/read/failed
+    handled_by   = db.Column(db.String(40), default='bot')  # 'bot' or staff name
+    lead_id      = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=True)
+    customer_id  = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)
+    created_at   = db.Column(db.DateTime, default=now_dubai)
+    lead         = db.relationship('Lead', foreign_keys=[lead_id])
+    customer     = db.relationship('Customer', foreign_keys=[customer_id])
+
 class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
@@ -5177,6 +5194,107 @@ from reports import reports_bp
 app.register_blueprint(reports_bp)
 from meta_webhook import meta_bp
 app.register_blueprint(meta_bp)
+from whatsapp_webhook import wa_bp
+app.register_blueprint(wa_bp)
+
+# ── WhatsApp inbox (CRM-side UI) ──────────────────────────────────────────────
+WA_WINDOW = timedelta(hours=24)  # Meta free-reply window after last inbound
+
+@app.route('/whatsapp')
+@login_required
+def whatsapp_inbox():
+    """List of WhatsApp conversations, newest activity first."""
+    msgs = WhatsAppMessage.query.order_by(WhatsAppMessage.created_at.desc()).all()
+    threads = {}
+    for m in msgs:
+        if m.wa_id not in threads:
+            threads[m.wa_id] = {
+                'wa_id': m.wa_id,
+                'name': m.contact_name,
+                'last_body': m.body,
+                'last_at': m.created_at,
+                'last_dir': m.direction,
+                'lead_id': None, 'customer_id': None, 'unread': 0,
+            }
+        t = threads[m.wa_id]
+        if m.lead_id and not t['lead_id']:
+            t['lead_id'] = m.lead_id
+        if m.customer_id and not t['customer_id']:
+            t['customer_id'] = m.customer_id
+        if not t['name'] and m.contact_name:
+            t['name'] = m.contact_name
+    # attach linked names
+    for t in threads.values():
+        t['lead'] = Lead.query.get(t['lead_id']) if t['lead_id'] else None
+        t['customer'] = Customer.query.get(t['customer_id']) if t['customer_id'] else None
+    thread_list = sorted(threads.values(), key=lambda x: x['last_at'], reverse=True)
+    return render_template('whatsapp_inbox.html', threads=thread_list, now=now_dubai())
+
+@app.route('/whatsapp/<wa_id>')
+@login_required
+def whatsapp_thread(wa_id):
+    msgs = WhatsAppMessage.query.filter_by(wa_id=wa_id)\
+            .order_by(WhatsAppMessage.created_at.asc()).all()
+    if not msgs:
+        flash('Conversation not found')
+        return redirect(url_for('whatsapp_inbox'))
+    last_in = WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in')\
+            .order_by(WhatsAppMessage.created_at.desc()).first()
+    window_open = bool(last_in) and (now_dubai() - last_in.created_at) < WA_WINDOW
+    name = next((m.contact_name for m in msgs if m.contact_name), None)
+    lead_id = next((m.lead_id for m in msgs if m.lead_id), None)
+    customer_id = next((m.customer_id for m in msgs if m.customer_id), None)
+    return render_template('whatsapp_thread.html',
+        wa_id=wa_id, messages=msgs, name=name, window_open=window_open,
+        lead=Lead.query.get(lead_id) if lead_id else None,
+        customer=Customer.query.get(customer_id) if customer_id else None,
+        now=now_dubai())
+
+@app.route('/whatsapp/<wa_id>/reply', methods=['POST'])
+@login_required
+def whatsapp_reply(wa_id):
+    from whatsapp_webhook import send_text, log_message
+    body = (request.form.get('body') or '').strip()
+    if not body:
+        return redirect(url_for('whatsapp_thread', wa_id=wa_id))
+    last_in = WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in')\
+            .order_by(WhatsAppMessage.created_at.desc()).first()
+    if not last_in or (now_dubai() - last_in.created_at) >= WA_WINDOW:
+        flash('24-hour reply window has closed — only an approved template can be sent now.', 'warning')
+        return redirect(url_for('whatsapp_thread', wa_id=wa_id))
+    wam = send_text(wa_id, body)
+    log_message(wa_id, 'out', body, wam_id=wam,
+                handled_by=session.get('user_name', 'staff'), status='sent')
+    return redirect(url_for('whatsapp_thread', wa_id=wa_id))
+
+@app.route('/whatsapp/<wa_id>/convert', methods=['POST'])
+@login_required
+def whatsapp_convert(wa_id):
+    """Flow B — staff turns a logged conversation into a CRM lead (round-robin assigned)."""
+    from meta_webhook import get_next_sales_staff
+    existing = WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in')\
+            .order_by(WhatsAppMessage.created_at.asc()).first()
+    name = (request.form.get('name') or
+            next((m.contact_name for m in WhatsAppMessage.query.filter_by(wa_id=wa_id).all() if m.contact_name), None) or
+            f'WhatsApp {wa_id}')
+    assigned = get_next_sales_staff(db, User, Lead)
+    lead = Lead(
+        name=name.title(), phone=wa_id, source='WhatsApp', sub_source='WhatsApp Bot',
+        lead_type='New', status='New', representative=session.get('user_name'),
+        assigned_to=assigned.id if assigned else None,
+        created_at=now_dubai(), due_date=now_dubai() + timedelta(days=1),
+        remarks='Created from WhatsApp conversation.',
+    )
+    db.session.add(lead)
+    db.session.flush()
+    # link this contact's whole history to the new lead
+    WhatsAppMessage.query.filter_by(wa_id=wa_id).update({'lead_id': lead.id})
+    db.session.add(LeadUpdate(lead_id=lead.id, stage='New — WhatsApp',
+        remark='Lead created from WhatsApp inbox.', staff_name=session.get('user_name', 'System'),
+        created_at=now_dubai()))
+    db.session.commit()
+    flash(f'Lead created and assigned to {assigned.name if assigned else "nobody"}.')
+    return redirect(url_for('lead_detail', lead_id=lead.id))
 
 @app.route('/partners')
 @login_required

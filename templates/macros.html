@@ -221,6 +221,7 @@ loadTheme();
   {% endif %}
   <a href="/jobs" {% if active=='jobs' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">✓ Tasks</a>
   <a href="/customers" {% if active=='customers' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">👥 Clients</a>
+  <a href="/whatsapp" {% if active=='whatsapp' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">💬 WhatsApp</a>
   <a href="/documents" {% if active=='documents' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Documents</a>
   <a href="/health-check" {% if active=='health-check' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🛡 Compliance</a>
   {% if session.role in ['admin', 'sales'] %}

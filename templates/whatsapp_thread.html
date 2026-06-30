@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — WhatsApp Chat</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('whatsapp') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'warning' %}warning{% elif cat == 'error' %}error{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="margin-bottom:12px;"><a href="/whatsapp" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to WhatsApp</a></div>
+
+    <!-- Header -->
+    <div style="background:white;border-radius:12px 12px 0 0;border:0.5px solid #E2E8F0;border-bottom:none;padding:14px 18px;display:flex;align-items:center;gap:14px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:#25D366;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">{{ (name or wa_id)[:2]|upper }}</div>
+      <div style="flex:1;">
+        <strong style="color:#0F2660;font-size:16px;">{{ name or ('+' + wa_id) }}</strong>
+        <div style="font-size:12px;color:var(--text-muted);">+{{ wa_id }}</div>
+      </div>
+      <div>
+        {% if lead %}<a href="/leads/{{ lead.id }}" style="font-size:11px;background:#E6EEFF;color:#1A3B8B;padding:4px 12px;border-radius:20px;text-decoration:none;">◉ Lead: {{ lead.name }}</a>
+        {% elif customer %}<a href="/customers/{{ customer.id }}" style="font-size:11px;background:#E7F6EC;color:#1B7A3D;padding:4px 12px;border-radius:20px;text-decoration:none;">👤 Client: {{ customer.name }}</a>
+        {% else %}
+        <form method="POST" action="/whatsapp/{{ wa_id }}/convert" style="display:inline;" onsubmit="return confirm('Create a new lead from this conversation and assign it to the next sales staff?');">
+          <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border:none;">+ Convert to Lead</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div style="background:#ECE5DD;border-left:0.5px solid #E2E8F0;border-right:0.5px solid #E2E8F0;padding:18px;min-height:280px;max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;" id="chatbox">
+      {% for m in messages %}
+        {% if m.direction == 'in' %}
+          <div style="align-self:flex-start;max-width:72%;background:white;padding:8px 12px;border-radius:8px;border-top-left-radius:0;box-shadow:0 1px 1px rgba(0,0,0,.08);">
+            <div style="white-space:pre-wrap;font-size:14px;color:#111;">{{ m.body }}</div>
+            <div style="text-align:right;font-size:10px;color:#999;margin-top:2px;">{{ m.created_at.strftime('%H:%M') }}</div>
+          </div>
+        {% else %}
+          <div style="align-self:flex-end;max-width:72%;background:#DCF8C6;padding:8px 12px;border-radius:8px;border-top-right-radius:0;box-shadow:0 1px 1px rgba(0,0,0,.08);">
+            {% if m.msg_type == 'template' %}<div style="font-size:10px;color:#1B7A3D;font-weight:700;margin-bottom:2px;">TEMPLATE</div>{% endif %}
+            <div style="white-space:pre-wrap;font-size:14px;color:#111;">{{ m.body }}</div>
+            <div style="text-align:right;font-size:10px;color:#5a8a4a;margin-top:2px;">
+              {{ m.handled_by }} · {{ m.created_at.strftime('%H:%M') }}{% if m.status %} · {{ m.status }}{% endif %}
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Reply box -->
+    <div style="background:white;border-radius:0 0 12px 12px;border:0.5px solid #E2E8F0;border-top:none;padding:14px 18px;">
+      {% if window_open %}
+      <form method="POST" action="/whatsapp/{{ wa_id }}/reply" style="display:flex;gap:8px;">
+        <input type="text" name="body" placeholder="Type a reply…" autocomplete="off" required
+               style="flex:1;padding:10px 14px;border:1px solid #CBD5E1;border-radius:24px;font-size:14px;">
+        <button type="submit" style="background:#25D366;color:white;border:none;border-radius:24px;padding:10px 22px;font-weight:700;cursor:pointer;">Send</button>
+      </form>
+      {% else %}
+      <div style="text-align:center;color:#854F0B;background:#FEF3C7;border-radius:8px;padding:12px;font-size:13px;">
+        ⏱️ The 24-hour reply window has closed. To message this contact again you must send an approved template (free-text replies are blocked by WhatsApp).
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <script>
+    var cb = document.getElementById('chatbox');
+    if (cb) cb.scrollTop = cb.scrollHeight;
+  </script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — WhatsApp</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('whatsapp') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'warning' %}warning{% elif cat == 'error' %}error{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>💬 WhatsApp <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ threads|length }} conversation{{ 's' if threads|length != 1 }})</span></h2>
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #25D366;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
+      {% if not threads %}
+        <div style="padding:48px 20px;text-align:center;color:var(--text-muted);">
+          <div style="font-size:40px;">💬</div>
+          <p style="margin-top:8px;">No WhatsApp messages yet.<br>Incoming chats to your business number will appear here.</p>
+        </div>
+      {% else %}
+        {% for t in threads %}
+        <a href="/whatsapp/{{ t.wa_id }}" style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #F1F5F9;text-decoration:none;color:inherit;">
+          <div style="width:44px;height:44px;border-radius:50%;background:#25D366;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;">
+            {{ (t.name or t.wa_id)[:2]|upper }}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+              <strong style="color:#0F2660;">{{ t.name or ('+' + t.wa_id) }}</strong>
+              <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">{{ t.last_at.strftime('%d %b, %H:%M') }}</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {% if t.last_dir == 'out' %}<span style="color:#25D366;">↗</span> {% endif %}{{ t.last_body }}
+            </div>
+            <div style="margin-top:3px;display:flex;gap:6px;">
+              {% if t.lead %}<span style="font-size:10px;background:#E6EEFF;color:#1A3B8B;padding:1px 8px;border-radius:20px;">◉ Lead: {{ t.lead.name }}</span>
+              {% elif t.customer %}<span style="font-size:10px;background:#E7F6EC;color:#1B7A3D;padding:1px 8px;border-radius:20px;">👤 Client: {{ t.customer.name }}</span>
+              {% else %}<span style="font-size:10px;background:#FEF3C7;color:#854F0B;padding:1px 8px;border-radius:20px;">Unmatched</span>{% endif %}
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
