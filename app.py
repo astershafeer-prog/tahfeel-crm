@@ -1626,24 +1626,32 @@ def _staff_remarks(lead):
     return out
 
 def _marketing_leads():
-    """Leads for the Marketing-Ext report: per-user date floor + optional UI from/to filter."""
+    """Leads for the Marketing-Ext report: Meta-only + per-user date floor + UI filters.
+    Returns (leads, floor, filters_dict)."""
     from sqlalchemy import or_
     user = User.query.get(session['user_id'])
     floor = user.report_from if (user and user.role == 'marketing') else None
-    from_str = (request.args.get('from') or '').strip()
-    to_str = (request.args.get('to') or '').strip()
+    f = {k: (request.args.get(k) or '').strip() for k in ('from', 'to', 'q', 'stage', 'quality', 'src')}
     # Meta ads only: leads that came from Meta (have a meta_lead_id or a Meta* source)
     q = Lead.query.filter(or_(Lead.meta_lead_id.isnot(None), Lead.source.like('Meta%')))
     if floor:
         q = q.filter(Lead.created_at >= datetime.combine(floor, datetime.min.time()))
     try:
-        if from_str:
-            q = q.filter(Lead.created_at >= datetime.strptime(from_str, '%Y-%m-%d'))
-        if to_str:
-            q = q.filter(Lead.created_at < datetime.strptime(to_str, '%Y-%m-%d') + timedelta(days=1))
+        if f['from']:
+            q = q.filter(Lead.created_at >= datetime.strptime(f['from'], '%Y-%m-%d'))
+        if f['to']:
+            q = q.filter(Lead.created_at < datetime.strptime(f['to'], '%Y-%m-%d') + timedelta(days=1))
     except ValueError:
         pass
-    return q.order_by(Lead.created_at.desc()).all(), floor, from_str, to_str
+    if f['q']:
+        q = q.filter(Lead.name.ilike('%' + f['q'] + '%'))
+    if f['stage']:
+        q = q.filter(Lead.status == f['stage'])
+    if f['quality']:
+        q = q.filter(Lead.genuine == f['quality'])
+    if f['src']:
+        q = q.filter(Lead.sub_source == f['src'])
+    return q.order_by(Lead.created_at.desc()).all(), floor, f
 
 @app.route('/marketing-report')
 @login_required
@@ -1651,7 +1659,8 @@ def marketing_report():
     if session.get('role') not in ('marketing', 'admin'):
         flash('Access denied.')
         return redirect(url_for('dashboard'))
-    leads, floor, from_str, to_str = _marketing_leads()
+    from sqlalchemy import or_
+    leads, floor, f = _marketing_leads()
     rows = []
     for l in leads:
         rows.append({
@@ -1667,8 +1676,11 @@ def marketing_report():
         'converted': sum(1 for l in leads if l.status == 'Converted'),
         'junk': sum(1 for l in leads if l.genuine == 'Junk'),
     }
+    # Source-channel options for the filter (all Meta leads, unfiltered)
+    src_options = sorted({r[0] for r in db.session.query(Lead.sub_source).filter(
+        or_(Lead.meta_lead_id.isnot(None), Lead.source.like('Meta%'))).all() if r[0]})
     return render_template('marketing_report.html', rows=rows, counts=counts,
-                           floor=floor, from_str=from_str, to_str=to_str)
+                           floor=floor, f=f, src_options=src_options)
 
 @app.route('/marketing-report/export')
 @login_required
@@ -1680,7 +1692,7 @@ def marketing_export():
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment
     from flask import send_file
-    leads, floor, from_str, to_str = _marketing_leads()
+    leads, floor, f = _marketing_leads()
     wb = Workbook(); ws = wb.active; ws.title = 'Leads'
     headers = ['Date', 'Name', 'Phone', 'Source', 'Stage', 'Lead Quality', 'Attempts', 'Remarks (staff updates, with time)']
     for i, h in enumerate(headers, 1):

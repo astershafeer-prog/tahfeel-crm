@@ -21,15 +21,18 @@
     .chip .v { font-size: 21px; font-weight: 700; color: #0F2660; }
     .filter { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
     .filter label { display: block; font-size: 11px; color: #64748b; margin-bottom: 3px; }
-    .filter input[type=date] { border: 0.5px solid #cbd5e1; border-radius: 6px; padding: 7px 10px; font-size: 13px; }
+    .filter input, .filter select { border: 0.5px solid #cbd5e1; border-radius: 6px; padding: 7px 10px; font-size: 13px; background: #fff; }
+    .btn-reset { background: #e2e8f0; color: #475569; }
     .btn { border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
     .btn-apply { background: #1A3B8B; color: #fff; }
     .btn-dl { background: #1a8d4e; color: #fff; }
     .card { background: #fff; border: 0.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { background: #f8fafc; color: #64748b; text-align: left; font-weight: 600; padding: 9px 12px; font-size: 12px; }
-    td { padding: 9px 12px; border-top: 0.5px solid #f1f5f9; color: #334155; vertical-align: top; }
-    .mono { font-family: 'Courier New', monospace; color: #64748b; }
+    td { padding: 12px 14px; border-top: 0.5px solid #eef2f7; color: #334155; vertical-align: top; line-height: 1.5; }
+    tbody tr:nth-child(even) { background: #fafbfc; }
+    tbody tr:hover { background: #f4f7fb; }
+    .mono { font-family: 'Courier New', monospace; color: #64748b; white-space: nowrap; }
     .badge { padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
     .empty { padding: 40px; text-align: center; color: #94a3b8; }
     .foot { font-size: 11px; color: #94a3b8; margin-top: 8px; text-align: right; }
@@ -75,11 +78,33 @@
     </div>
 
     <form class="filter" method="get" action="/marketing-report">
-      <div><label>From</label><input type="date" name="from" value="{{ from_str }}"></div>
-      <div><label>To</label><input type="date" name="to" value="{{ to_str }}"></div>
+      <div><label>Search name</label><input type="text" name="q" value="{{ f.q }}" placeholder="Name…" style="min-width:150px;"></div>
+      <div><label>Stage</label>
+        <select name="stage">
+          <option value="">All stages</option>
+          {% for s in ['New','Contacted','Qualified','Proposal','Converted','Lost','Future'] %}<option value="{{ s }}" {% if f.stage==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div><label>Lead quality</label>
+        <select name="quality">
+          <option value="">All</option>
+          {% for s in ['Genuine','Junk','Unreachable'] %}<option value="{{ s }}" {% if f.quality==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      {% if src_options %}
+      <div><label>Source</label>
+        <select name="src">
+          <option value="">All sources</option>
+          {% for s in src_options %}<option value="{{ s }}" {% if f.src==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div><label>From</label><input type="date" name="from" value="{{ f.from }}"></div>
+      <div><label>To</label><input type="date" name="to" value="{{ f.to }}"></div>
       <button type="submit" class="btn btn-apply">Apply</button>
+      <a class="btn btn-reset" href="/marketing-report">Reset</a>
       <div style="flex:1;"></div>
-      <a class="btn btn-dl" href="/marketing-report/export?from={{ from_str }}&to={{ to_str }}">⬇ Download Excel</a>
+      <a class="btn btn-dl" href="/marketing-report/export?q={{ f.q|urlencode }}&stage={{ f.stage }}&quality={{ f.quality }}&src={{ f.src|urlencode }}&from={{ f.from }}&to={{ f.to }}">⬇ Download Excel</a>
     </form>
 
     <div class="card">
