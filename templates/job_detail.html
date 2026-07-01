@@ -219,11 +219,17 @@
             </div>
 
             <div id="regularRevenueFields" style="display:none;">
-              <div class="form-group">
-                <label>Revenue/Profit (AED) <span style="color:#EF4444;font-weight:700;">* REQUIRED</span></label>
-                <input type="number" name="revenue" id="revenueInput" min="0" step="0.01" placeholder="Enter profit amount">
-                <small style="color:#059669;display:block;margin-top:4px;">✓ Revenue will be counted immediately when task closes</small>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Revenue/Profit (AED) <span style="color:#EF4444;font-weight:700;">* REQUIRED</span></label>
+                  <input type="number" name="revenue" id="revenueInput" min="0" step="0.01" placeholder="Enter profit amount">
+                </div>
+                <div class="form-group">
+                  <label>Revenue Date</label>
+                  <input type="date" name="revenue_date" id="revenueDateInput" value="{{ now.strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}">
+                </div>
               </div>
+              <small style="color:#059669;display:block;margin-top:-8px;margin-bottom:8px;">✓ Backdate this if the work/payment was actually completed on an earlier date (e.g. late entry for last month).</small>
             </div>
 
             <div id="partnerCommissionFields" style="display:none;">

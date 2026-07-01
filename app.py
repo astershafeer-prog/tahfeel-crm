@@ -3156,7 +3156,14 @@ def close_job(job_id):
             rev = request.form.get('revenue')
             if rev:
                 job.revenue = float(rev)
-                job.revenue_date = now_dubai().date()  # Revenue counted today (cash-basis)
+                # Revenue is cash-basis, dated by when the work/payment actually
+                # happened — defaults to today but finance can backdate it
+                # (e.g. entering a late June closure on July 1st).
+                rev_date_str = request.form.get('revenue_date', '').strip()
+                if rev_date_str:
+                    job.revenue_date = datetime.strptime(rev_date_str, '%Y-%m-%d').date()
+                else:
+                    job.revenue_date = now_dubai().date()
             else:
                 flash('Revenue is required for regular tasks.', 'error')
                 return redirect(url_for('job_detail', job_id=job_id))
@@ -3171,7 +3178,7 @@ def close_job(job_id):
         job.partner_status = None
         job.status = 'Closed'
         
-        remark = f'Task CLOSED by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue:,.0f} (counted for {now_dubai().strftime("%B %Y")})'
+        remark = f'Task CLOSED by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Revenue: AED {job.revenue:,.0f} (counted for {job.revenue_date.strftime("%B %Y")})'
         
     elif partner_choice == 'yes':
         # PARTNER COMMISSION TASK - Revenue = 0 until partner pays
