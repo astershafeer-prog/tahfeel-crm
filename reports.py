@@ -932,62 +932,83 @@ def export_revenue():
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Revenue Report"
-    
-    # Headers
-    headers = ["Customer", "Company", "Task Type", "Representative (Sales)", 
-               "Assigned To (Ops)", "Revenue (AED)", "Status", "Revenue Date"]
+
+    # Headers — "Task Ref" + "Revenue Type" make it obvious when a task earned
+    # revenue across multiple payments (partial + final) instead of looking
+    # like the same task was duplicated by mistake.
+    headers = ["Task Ref", "Customer", "Company", "Task Type", "Representative (Sales)",
+               "Assigned To (Ops)", "Revenue Type", "Revenue (AED)", "Status", "Revenue Date"]
     for idx, h in enumerate(headers, 1):
         ws.cell(1, idx, h)
         _hdr(ws.cell(1, idx))
-    
-    # Data
-    row = 2
-    total_revenue = 0
+
     users_map = {u.id: u.name for u in User.query.all()}
-    
-    # Add closed tasks
+
+    # Combine final-close revenue + every partial-revenue entry into one list
+    # of line items per job, so multi-payment tasks can be grouped together
+    # instead of split into two disconnected report sections.
+    by_job = {}
     for job in jobs:
-        customer = job.customer
-        rep_name = users_map.get(customer.assigned_to, '') if customer and customer.assigned_to else ''
-        assigned_name = users_map.get(job.assigned_to, '') if job.assigned_to else ''
-        
-        ws.cell(row, 1, customer.name if customer else '')
-        ws.cell(row, 2, customer.company if customer else '')
-        ws.cell(row, 3, job.job_type)
-        ws.cell(row, 4, rep_name)
-        ws.cell(row, 5, assigned_name)
-        ws.cell(row, 6, job.revenue or 0)
-        ws.cell(row, 6).number_format = '#,##0.00'
-        ws.cell(row, 7, job.status)
-        ws.cell(row, 8, job.revenue_date.strftime('%Y-%m-%d') if job.revenue_date else '')
-        
-        total_revenue += (job.revenue or 0)
-        row += 1
-    
-    # Add partial revenues
+        by_job.setdefault(job.id, {'job': job, 'lines': []})
+        if job.revenue:
+            by_job[job.id]['lines'].append({
+                'amount': job.revenue, 'date': job.revenue_date,
+                'type': 'Final (Task Closed)',
+            })
     for pr in partial_revenues:
         job = pr.job
+        by_job.setdefault(job.id, {'job': job, 'lines': []})
+        by_job[job.id]['lines'].append({
+            'amount': pr.amount, 'date': pr.revenue_date, 'type': 'Partial Revenue',
+        })
+
+    # Sort tasks by their earliest revenue date; sort each task's lines by date
+    def _earliest(entry):
+        dates = [l['date'] for l in entry['lines'] if l['date']]
+        return min(dates) if dates else date.min
+    task_groups = sorted(by_job.values(), key=_earliest)
+
+    row = 2
+    total_revenue = 0
+    for entry in task_groups:
+        job = entry['job']
+        lines = sorted(entry['lines'], key=lambda l: l['date'] or date.min)
+        if not lines:
+            continue
         customer = job.customer
         rep_name = users_map.get(customer.assigned_to, '') if customer and customer.assigned_to else ''
         assigned_name = users_map.get(job.assigned_to, '') if job.assigned_to else ''
-        
-        ws.cell(row, 1, customer.name if customer else '')
-        ws.cell(row, 2, customer.company if customer else '')
-        ws.cell(row, 3, job.job_type)
-        ws.cell(row, 4, rep_name)
-        ws.cell(row, 5, assigned_name)
-        ws.cell(row, 6, pr.amount)
-        ws.cell(row, 6).number_format = '#,##0.00'
-        ws.cell(row, 7, f"Partial Revenue - {job.status}")
-        ws.cell(row, 8, pr.revenue_date.strftime('%Y-%m-%d'))
-        
-        total_revenue += pr.amount
-        row += 1
-    
+        task_ref = f"JOB-{job.id}"
+        task_total = sum(l['amount'] for l in lines)
+
+        for line in lines:
+            ws.cell(row, 1, task_ref)
+            ws.cell(row, 2, customer.name if customer else '')
+            ws.cell(row, 3, customer.company if customer else '')
+            ws.cell(row, 4, job.job_type)
+            ws.cell(row, 5, rep_name)
+            ws.cell(row, 6, assigned_name)
+            ws.cell(row, 7, line['type'])
+            ws.cell(row, 8, line['amount'])
+            ws.cell(row, 8).number_format = '#,##0.00'
+            ws.cell(row, 9, job.status)
+            ws.cell(row, 10, line['date'].strftime('%Y-%m-%d') if line['date'] else '')
+            total_revenue += line['amount']
+            row += 1
+
+        # Subtotal row — only shown when a task has more than one payment,
+        # so it reads as "one task, N payments, total X" rather than a
+        # repeated/duplicated line.
+        if len(lines) > 1:
+            ws.cell(row, 6, f"↳ Task Total ({len(lines)} payments):").font = Font(bold=True, italic=True)
+            ws.cell(row, 8, task_total).font = Font(bold=True)
+            ws.cell(row, 8).number_format = '#,##0.00'
+            row += 1
+
     # Total row
     row += 1
-    ws.cell(row, 5, "TOTAL:").font = Font(bold=True)
-    ws.cell(row, 6, total_revenue).font = Font(bold=True)
-    ws.cell(row, 6).number_format = '#,##0.00'
-    
+    ws.cell(row, 7, "TOTAL:").font = Font(bold=True)
+    ws.cell(row, 8, total_revenue).font = Font(bold=True)
+    ws.cell(row, 8).number_format = '#,##0.00'
+
     return _respond(wb, f"Revenue_Report_{df}_{dt}.xlsx")
