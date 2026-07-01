@@ -94,8 +94,8 @@
     </div>
   </div>
   <script>
-    // Auto-refresh the conversation list every 15s (pauses when tab is hidden)
-    setInterval(function () { if (!document.hidden) location.reload(); }, 15000);
+    // Auto-refresh the conversation list every 30s (pauses when tab is hidden)
+    setInterval(function () { if (!document.hidden) location.reload(); }, 30000);
 
     // --- New-message alert: sound + browser notification, survives the 15s reload via localStorage ---
     var CURRENT_UNREAD = {{ counts.unread }};

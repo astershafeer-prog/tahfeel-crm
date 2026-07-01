@@ -1530,13 +1530,15 @@ tbody td {
   border-bottom-color: var(--border);
 }
 
-/* Text */
+/* Text — no !important here so inline-styled links (badges, pills, filter
+   tabs) keep their intended colour; plain links still default to --primary
+   since inline styles always win the cascade regardless. */
 a {
-  color: var(--primary) !important;
+  color: var(--primary);
 }
 
 a:hover {
-  color: var(--primary-dark) !important;
+  color: var(--primary-dark);
 }
 
 h1, h2, h3, h4, h5, h6 {
