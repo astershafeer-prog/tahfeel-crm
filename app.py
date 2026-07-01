@@ -422,6 +422,14 @@ class WhatsAppMessage(db.Model):
     lead         = db.relationship('Lead', foreign_keys=[lead_id])
     customer     = db.relationship('Customer', foreign_keys=[customer_id])
 
+class WhatsAppThread(db.Model):
+    """Thread-level state for a WhatsApp conversation (one row per contact)."""
+    __tablename__ = 'whats_app_thread'
+    wa_id       = db.Column(db.String(30), primary_key=True)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    assigned_at = db.Column(db.DateTime, nullable=True)
+    assignee    = db.relationship('User', foreign_keys=[assigned_to])
+
 class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
@@ -5255,8 +5263,9 @@ WA_WINDOW = timedelta(hours=24)  # Meta free-reply window after last inbound
 def whatsapp_inbox():
     """List of WhatsApp conversations, newest activity first. Supports search + filter."""
     q = (request.args.get('q') or '').strip()
-    flt = request.args.get('filter', 'all')   # all | unread | unmatched
+    flt = request.args.get('filter', 'all')   # all | unread | unmatched | mine
     msgs = WhatsAppMessage.query.order_by(WhatsAppMessage.created_at.desc()).all()
+    thread_assignments = {t.wa_id: t for t in WhatsAppThread.query.all()}
     threads = {}
     for m in msgs:
         if m.wa_id not in threads:
@@ -5280,6 +5289,8 @@ def whatsapp_inbox():
     for t in threads.values():
         t['lead'] = Lead.query.get(t['lead_id']) if t['lead_id'] else None
         t['customer'] = Customer.query.get(t['customer_id']) if t['customer_id'] else None
+        wt = thread_assignments.get(t['wa_id'])
+        t['assignee'] = wt.assignee if wt else None
     thread_list = sorted(threads.values(), key=lambda x: x['last_at'], reverse=True)
 
     # counts for the filter tabs (before filtering)
@@ -5287,6 +5298,7 @@ def whatsapp_inbox():
         'all': len(thread_list),
         'unread': sum(1 for t in thread_list if t['unread']),
         'unmatched': sum(1 for t in thread_list if not t['lead'] and not t['customer']),
+        'mine': sum(1 for t in thread_list if t['assignee'] and t['assignee'].id == session.get('user_id')),
     }
     # apply search
     if q:
@@ -5298,9 +5310,12 @@ def whatsapp_inbox():
         thread_list = [t for t in thread_list if t['unread']]
     elif flt == 'unmatched':
         thread_list = [t for t in thread_list if not t['lead'] and not t['customer']]
+    elif flt == 'mine':
+        thread_list = [t for t in thread_list if t['assignee'] and t['assignee'].id == session.get('user_id')]
 
+    staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).order_by(User.name).all()
     return render_template('whatsapp_inbox.html', threads=thread_list, now=now_dubai(),
-                           q=q, flt=flt, counts=counts)
+                           q=q, flt=flt, counts=counts, staff=staff)
 
 @app.route('/whatsapp/<wa_id>')
 @login_required
@@ -5328,12 +5343,34 @@ def whatsapp_thread(wa_id):
     name = next((m.contact_name for m in msgs if m.contact_name), None)
     lead_id = next((m.lead_id for m in msgs if m.lead_id), None)
     customer_id = next((m.customer_id for m in msgs if m.customer_id), None)
+    thread = WhatsAppThread.query.get(wa_id)
+    staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).order_by(User.name).all()
     return render_template('whatsapp_thread.html',
         wa_id=wa_id, messages=msgs, name=name, window_open=window_open,
         window_left=window_left,
         lead=Lead.query.get(lead_id) if lead_id else None,
         customer=Customer.query.get(customer_id) if customer_id else None,
+        assignee=thread.assignee if thread else None, staff=staff,
         now=now_dubai())
+
+@app.route('/whatsapp/<wa_id>/assign', methods=['POST'])
+@login_required
+def whatsapp_assign(wa_id):
+    """Assign (or reassign / unassign) a WhatsApp conversation to a staff member."""
+    staff_id = request.form.get('staff_id')
+    thread = WhatsAppThread.query.get(wa_id)
+    if not thread:
+        thread = WhatsAppThread(wa_id=wa_id)
+        db.session.add(thread)
+    thread.assigned_to = int(staff_id) if staff_id else None
+    thread.assigned_at = now_dubai() if staff_id else None
+    db.session.commit()
+    if staff_id:
+        assignee = User.query.get(int(staff_id))
+        flash(f'Conversation assigned to {assignee.name if assignee else "staff"}.')
+    else:
+        flash('Conversation unassigned.')
+    return redirect(request.referrer or url_for('whatsapp_thread', wa_id=wa_id))
 
 @app.route('/whatsapp/<wa_id>/reply', methods=['POST'])
 @login_required

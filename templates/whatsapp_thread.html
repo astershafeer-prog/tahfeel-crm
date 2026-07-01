@@ -35,7 +35,17 @@
         <strong style="color:#0F2660;font-size:16px;">{{ name or ('+' + wa_id) }}</strong>
         <div style="font-size:12px;color:var(--text-muted);">+{{ wa_id }}</div>
       </div>
-      <div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <form method="POST" action="/whatsapp/{{ wa_id }}/assign" style="display:flex;align-items:center;gap:4px;">
+          <label style="font-size:11px;color:var(--text-muted);">🧑‍💼</label>
+          <select name="staff_id" onchange="this.form.submit()"
+                  style="font-size:12px;padding:5px 8px;border-radius:8px;border:1px solid #CBD5E1;color:#334155;">
+            <option value="">Unassigned</option>
+            {% for s in staff %}
+            <option value="{{ s.id }}" {% if assignee and assignee.id == s.id %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </form>
         {% if lead %}<a href="/leads/{{ lead.id }}" style="font-size:11px;background:#E6EEFF;color:#1A3B8B;padding:4px 12px;border-radius:20px;text-decoration:none;">◉ Lead: {{ lead.name }}</a>
         {% elif customer %}<a href="/customers/{{ customer.id }}" style="font-size:11px;background:#E7F6EC;color:#1B7A3D;padding:4px 12px;border-radius:20px;text-decoration:none;">👤 Client: {{ customer.name }}</a>
         {% else %}

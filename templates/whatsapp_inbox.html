@@ -23,6 +23,7 @@
     <div class="page-header">
       <h2>💬 WhatsApp <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ threads|length }} conversation{{ 's' if threads|length != 1 }})</span></h2>
       <span style="font-size:12px;color:#1B7A3D;display:flex;align-items:center;gap:6px;">
+        <span id="notif-toggle" style="cursor:pointer;font-size:16px;" title="Click to enable sound + browser notifications for new messages">🔔</span>
         <span style="width:8px;height:8px;border-radius:50%;background:#25D366;display:inline-block;"></span>
         Live · updated {{ now.strftime('%H:%M:%S') }}
       </span>
@@ -31,7 +32,7 @@
     <!-- Search + filter tabs -->
     <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div style="display:flex;gap:6px;">
-        {% set tabs = [('all','All',counts.all), ('unread','Unread',counts.unread), ('unmatched','Unmatched',counts.unmatched)] %}
+        {% set tabs = [('all','All',counts.all), ('unread','Unread',counts.unread), ('mine','Mine',counts.mine), ('unmatched','Unmatched',counts.unmatched)] %}
         {% for key, label, c in tabs %}
         <a href="/whatsapp?filter={{ key }}{% if q %}&q={{ q }}{% endif %}"
            style="font-size:13px;padding:6px 14px;border-radius:20px;text-decoration:none;
@@ -56,26 +57,38 @@
         </div>
       {% else %}
         {% for t in threads %}
-        <a href="/whatsapp/{{ t.wa_id }}" style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #F1F5F9;text-decoration:none;color:inherit;{% if t.unread %}background:#F0FBF4;{% endif %}">
-          <div style="width:44px;height:44px;border-radius:50%;background:#25D366;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;">
-            {{ (t.name or t.wa_id)[:2]|upper }}
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-              <strong style="color:#0F2660;">{{ t.name or ('+' + t.wa_id) }}</strong>
-              <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">{{ t.last_at.strftime('%d %b, %H:%M') }}</span>
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #F1F5F9;{% if t.unread %}background:#F0FBF4;{% endif %}">
+          <a href="/whatsapp/{{ t.wa_id }}" style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;text-decoration:none;color:inherit;">
+            <div style="width:44px;height:44px;border-radius:50%;background:#25D366;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;">
+              {{ (t.name or t.wa_id)[:2]|upper }}
             </div>
-            <div style="font-size:13px;{% if t.unread %}color:#0F2660;font-weight:600;{% else %}color:var(--text-muted);{% endif %}white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              {% if t.last_dir == 'out' %}<span style="color:#25D366;">↗</span> {% endif %}{{ t.last_body }}
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+                <strong style="color:#0F2660;">{{ t.name or ('+' + t.wa_id) }}</strong>
+                <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">{{ t.last_at.strftime('%d %b, %H:%M') }}</span>
+              </div>
+              <div style="font-size:13px;{% if t.unread %}color:#0F2660;font-weight:600;{% else %}color:var(--text-muted);{% endif %}white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                {% if t.last_dir == 'out' %}<span style="color:#25D366;">↗</span> {% endif %}{{ t.last_body }}
+              </div>
+              <div style="margin-top:3px;display:flex;gap:6px;flex-wrap:wrap;">
+                {% if t.lead %}<span style="font-size:10px;background:#E6EEFF;color:#1A3B8B;padding:1px 8px;border-radius:20px;">◉ Lead: {{ t.lead.name }}</span>
+                {% elif t.customer %}<span style="font-size:10px;background:#E7F6EC;color:#1B7A3D;padding:1px 8px;border-radius:20px;">👤 Client: {{ t.customer.name }}</span>
+                {% else %}<span style="font-size:10px;background:#FEF3C7;color:#854F0B;padding:1px 8px;border-radius:20px;">Unmatched</span>{% endif %}
+                {% if t.assignee %}<span style="font-size:10px;background:#F3E8FF;color:#6B21A8;padding:1px 8px;border-radius:20px;">🧑‍💼 {{ t.assignee.name }}</span>{% endif %}
+              </div>
             </div>
-            <div style="margin-top:3px;display:flex;gap:6px;">
-              {% if t.lead %}<span style="font-size:10px;background:#E6EEFF;color:#1A3B8B;padding:1px 8px;border-radius:20px;">◉ Lead: {{ t.lead.name }}</span>
-              {% elif t.customer %}<span style="font-size:10px;background:#E7F6EC;color:#1B7A3D;padding:1px 8px;border-radius:20px;">👤 Client: {{ t.customer.name }}</span>
-              {% else %}<span style="font-size:10px;background:#FEF3C7;color:#854F0B;padding:1px 8px;border-radius:20px;">Unmatched</span>{% endif %}
-            </div>
-          </div>
+          </a>
+          <form method="POST" action="/whatsapp/{{ t.wa_id }}/assign" onclick="event.stopPropagation();" style="flex-shrink:0;">
+            <select name="staff_id" onchange="this.form.submit()"
+                    style="font-size:11px;padding:4px 6px;border-radius:8px;border:1px solid #CBD5E1;color:#334155;max-width:110px;">
+              <option value="">Unassigned</option>
+              {% for s in staff %}
+              <option value="{{ s.id }}" {% if t.assignee and t.assignee.id == s.id %}selected{% endif %}>{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </form>
           {% if t.unread %}<span style="background:#25D366;color:white;font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;min-width:20px;text-align:center;flex-shrink:0;">{{ t.unread }}</span>{% endif %}
-        </a>
+        </div>
         {% endfor %}
       {% endif %}
     </div>
@@ -83,6 +96,63 @@
   <script>
     // Auto-refresh the conversation list every 15s (pauses when tab is hidden)
     setInterval(function () { if (!document.hidden) location.reload(); }, 15000);
+
+    // --- New-message alert: sound + browser notification, survives the 15s reload via localStorage ---
+    var CURRENT_UNREAD = {{ counts.unread }};
+    var notifBell = document.getElementById('notif-toggle');
+
+    function beep() {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start(); osc.stop(ctx.currentTime + 0.35);
+      } catch (e) {}
+    }
+
+    function notifsEnabled() { return localStorage.getItem('wa_notifs_enabled') === '1'; }
+
+    function updateBellIcon() {
+      if (notifBell) notifBell.textContent = notifsEnabled() ? '🔔' : '🔕';
+    }
+    updateBellIcon();
+
+    if (notifBell) {
+      notifBell.addEventListener('click', function () {
+        if (!notifsEnabled()) {
+          if (window.Notification && Notification.permission !== 'granted') {
+            Notification.requestPermission().then(function () {
+              localStorage.setItem('wa_notifs_enabled', '1');
+              updateBellIcon();
+              beep();
+            });
+          } else {
+            localStorage.setItem('wa_notifs_enabled', '1');
+            updateBellIcon();
+            beep();
+          }
+        } else {
+          localStorage.setItem('wa_notifs_enabled', '0');
+          updateBellIcon();
+        }
+      });
+    }
+
+    var prevUnread = parseInt(localStorage.getItem('wa_last_unread') || '0', 10);
+    if (notifsEnabled() && CURRENT_UNREAD > prevUnread) {
+      beep();
+      if (window.Notification && Notification.permission === 'granted') {
+        new Notification('New WhatsApp message', {
+          body: (CURRENT_UNREAD - prevUnread) + ' new message(s) waiting in the CRM inbox',
+          icon: '/static/img/logo_white.png'
+        });
+      }
+    }
+    localStorage.setItem('wa_last_unread', CURRENT_UNREAD);
   </script>
 </body>
 </html>
