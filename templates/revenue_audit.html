@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Revenue Audit</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('reports') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'error' %}error{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>🔍 Revenue Audit <span style="font-size:13px;color:var(--text-muted);font-weight:400;">— see exactly what a task contributes to the Revenue Report</span></h2>
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:14px 18px;margin-bottom:14px;">
+      <form method="GET" action="/reports/revenue-audit" style="display:flex;gap:8px;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search task type, customer or company name…"
+               style="flex:1;padding:9px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:14px;">
+        <button type="submit" class="btn-primary">Search</button>
+      </form>
+    </div>
+
+    {% if q and not rows %}
+      <div style="background:white;border-radius:12px;padding:30px;text-align:center;color:var(--text-muted);">No matching tasks found.</div>
+    {% endif %}
+
+    {% for r in rows %}
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;{% if r.report_lines > 1 %}border-top:5px solid #DC2626;{% else %}border-top:5px solid #25D366;{% endif %}padding:16px 18px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+        <div>
+          <strong style="font-size:15px;color:#0F2660;">{{ r.job.job_type }}</strong> — {{ r.customer.name if r.customer else 'Unknown' }}{% if r.customer and r.customer.company %} ({{ r.customer.company }}){% endif %}
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Job #{{ r.job.id }} · Status: {{ r.job.status }} · Created {{ r.job.created_at.strftime('%d %b %Y') }}</div>
+        </div>
+        {% if r.report_lines > 1 %}
+          <span style="background:#FEE2E2;color:#991B1B;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">⚠ Appears {{ r.report_lines }}x in Revenue Report</span>
+        {% else %}
+          <span style="background:#DCFCE7;color:#166534;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">✓ Appears once</span>
+        {% endif %}
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px;">
+        <div style="background:#F8FAFC;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Final Revenue (on close)</div>
+          <div style="font-size:16px;font-weight:700;">AED {{ '{:,.0f}'.format(r.job.revenue or 0) }}</div>
+          <div style="font-size:11px;color:var(--text-muted);">{{ r.job.revenue_date.strftime('%d %b %Y') if r.job.revenue_date else '—' }}</div>
+        </div>
+        <div style="background:#F8FAFC;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Partial Revenue Total</div>
+          <div style="font-size:16px;font-weight:700;">AED {{ '{:,.0f}'.format(r.partial_total) }}</div>
+          <div style="font-size:11px;color:var(--text-muted);">{{ r.partials|length }} entr{{ 'y' if r.partials|length == 1 else 'ies' }}</div>
+        </div>
+        <div style="background:#F8FAFC;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Amount Received</div>
+          <div style="font-size:16px;font-weight:700;">AED {{ '{:,.0f}'.format(r.job.amount_received or 0) }}</div>
+        </div>
+        <div style="background:{% if r.report_total > (r.job.amount_received or 0) %}#FEE2E2{% else %}#F8FAFC{% endif %};border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Total Counted in Reports</div>
+          <div style="font-size:16px;font-weight:700;{% if r.report_total > (r.job.amount_received or 0) %}color:#991B1B;{% endif %}">AED {{ '{:,.0f}'.format(r.report_total) }}</div>
+          {% if r.report_total > (r.job.amount_received or 0) %}<div style="font-size:11px;color:#991B1B;">exceeds amount received</div>{% endif %}
+        </div>
+      </div>
+
+      {% if r.partials %}
+      <table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;">
+        <thead><tr style="border-bottom:2px solid #E5E7EB;">
+          <th style="text-align:left;padding:6px;font-size:11px;color:#6B7280;">Partial Revenue Date</th>
+          <th style="text-align:right;padding:6px;font-size:11px;color:#6B7280;">Amount</th>
+          <th style="text-align:left;padding:6px;font-size:11px;color:#6B7280;">Notes</th>
+        </tr></thead>
+        <tbody>
+          {% for p in r.partials %}
+          <tr style="border-bottom:1px solid #F3F4F6;">
+            <td style="padding:6px;">{{ p.revenue_date.strftime('%d %b %Y') }}</td>
+            <td style="padding:6px;text-align:right;font-weight:600;">AED {{ '{:,.0f}'.format(p.amount) }}</td>
+            <td style="padding:6px;color:#6B7280;">{{ p.notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</body>
+</html>

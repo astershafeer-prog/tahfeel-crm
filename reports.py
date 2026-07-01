@@ -170,6 +170,40 @@ def reports_index():
     return render_template('reports.html', defaults=defaults, role=role)
 
 
+# ── Revenue audit (diagnostic): shows exactly what a job contributes to the
+# Revenue Report — its own closed revenue PLUS every partial-revenue row —
+# so a finance/admin can see why a task appears more than once in reports.
+@reports_bp.route('/reports/revenue-audit')
+def revenue_audit():
+    if session.get('role') not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('dashboard'))
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
+    from app import PartialRevenue
+    from sqlalchemy import or_
+    q = (request.args.get('q') or '').strip()
+    jobs = []
+    if q:
+        like = f'%{q}%'
+        jobs = (Job.query.join(Customer, Job.customer_id == Customer.id)
+                .filter(or_(Job.job_type.ilike(like), Customer.name.ilike(like),
+                            Customer.company.ilike(like)))
+                .order_by(Job.created_at.desc()).all())
+    rows = []
+    for job in jobs:
+        partials = PartialRevenue.query.filter_by(job_id=job.id).order_by(PartialRevenue.revenue_date).all()
+        partial_total = sum(p.amount for p in partials)
+        report_lines = (1 if (job.revenue and job.status in
+                        ('Closed', 'Closed - Pending Partner Commission')) else 0) + len(partials)
+        rows.append({
+            'job': job, 'customer': job.customer, 'partials': partials,
+            'partial_total': partial_total,
+            'report_lines': report_lines,
+            'report_total': (job.revenue or 0) + partial_total,
+        })
+    return render_template('revenue_audit.html', q=q, rows=rows)
+
+
 # ── 1. Lead Detail Report
 @reports_bp.route('/reports/leads/export')
 def export_lead_report():
