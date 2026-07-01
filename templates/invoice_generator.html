@@ -144,7 +144,10 @@
           <div class="inv-ff"><label>Phone <span class="req">*</span></label><input type="text" id="invCustPhone" placeholder="+971 XX XXX XXXX"></div>
           <div class="inv-ff"><label>Email <span class="opt">(optional)</span></label><input type="email" id="invCustEmail" placeholder="email@example.com"></div>
         </div>
-        <div class="inv-row"><div class="inv-ff"><label>Address <span class="opt">(optional)</span></label><input type="text" id="invCustAddr" placeholder="Customer address"></div></div>
+        <div class="inv-row c2">
+          <div class="inv-ff"><label>Address <span class="opt">(optional)</span></label><input type="text" id="invCustAddr" placeholder="Customer address"></div>
+          <div class="inv-ff"><label>VAT TRN <span class="opt">(optional)</span></label><input type="text" id="invCustTrn" placeholder="e.g. 100123456700003"></div>
+        </div>
       </div>
       <div class="inv-card green">
         <h3>Services / Items</h3>
@@ -214,7 +217,10 @@
           <div class="inv-ff"><label>Email <span class="opt">(optional)</span></label><input type="email" id="invsCustEmail" placeholder="customer@email.com"></div>
           <div class="inv-ff"><label>Phone <span class="opt">(optional)</span></label><input type="text" id="invsCustPhone" placeholder="+971 XX XXX XXXX"></div>
         </div>
-        <div class="inv-row"><div class="inv-ff"><label>Address <span class="opt">(optional)</span></label><input type="text" id="invsCustAddr" placeholder="Customer address"></div></div>
+        <div class="inv-row c2">
+          <div class="inv-ff"><label>Address <span class="opt">(optional)</span></label><input type="text" id="invsCustAddr" placeholder="Customer address"></div>
+          <div class="inv-ff"><label>VAT TRN <span class="opt">(optional)</span></label><input type="text" id="invsCustTrn" placeholder="e.g. 100123456700003"></div>
+        </div>
       </div>
       <div class="inv-card green">
         <h3>Services / Items</h3>
@@ -728,10 +734,12 @@ function previewInv() {
   var co=document.getElementById('invCustCo').value;
   var em=document.getElementById('invCustEmail').value;
   var ad=document.getElementById('invCustAddr').value;
+  var trn=document.getElementById('invCustTrn').value;
   if(co) billTo+='<br>'+co;
   if(cp) billTo+='<br>'+cp;
   if(em) billTo+='<br>'+em;
   if(ad) billTo+='<br>'+ad;
+  if(trn) billTo+='<br>VAT TRN: '+trn;
   var html=PV_CSS+'<div style="width:210mm;min-height:297mm;position:relative;box-sizing:border-box;display:flex;flex-direction:column;">'+
     docHeader('INVOICE',document.getElementById('invNo').value,document.getElementById('invDate').value,document.getElementById('invNote').value,billTo,null)+
     itemsTable(d.items)+
@@ -751,9 +759,11 @@ function previewInvs() {
   var billTo='<strong>'+cn+'</strong>';
   var em=document.getElementById('invsCustEmail').value;
   var ad=document.getElementById('invsCustAddr').value;
+  var trn=document.getElementById('invsCustTrn').value;
   if(cp) billTo+='<br>'+cp;
   if(em) billTo+='<br>'+em;
   if(ad) billTo+='<br>'+ad;
+  if(trn) billTo+='<br>VAT TRN: '+trn;
   var html=PV_CSS+'<div style="width:210mm;min-height:297mm;position:relative;box-sizing:border-box;display:flex;flex-direction:column;">'+
     docHeader('INVOICE',document.getElementById('invsNo').value,document.getElementById('invsDate').value,document.getElementById('invsNote').value,billTo,null)+
     itemsTable(d.items, false)+
@@ -877,7 +887,7 @@ function printDoc() {
 
 function resetInv() {
   if(!confirm('Clear invoice?')) return;
-  ['invCustName','invCustCo','invCustPhone','invCustEmail','invCustAddr','invNote'].forEach(function(id){document.getElementById(id).value='';});
+  ['invCustName','invCustCo','invCustPhone','invCustEmail','invCustAddr','invCustTrn','invNote'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('invItemsBody').innerHTML='';
   document.getElementById('invRemList').innerHTML='';
   invRowN=0;
@@ -893,7 +903,7 @@ function resetInv() {
 
 function resetInvs() {
   if(!confirm('Clear invoice?')) return;
-  ['invsType','invsNo','invsNote','invsCustName','invsCustEmail','invsCustPhone','invsCustAddr'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['invsType','invsNo','invsNote','invsCustName','invsCustEmail','invsCustPhone','invsCustAddr','invsCustTrn'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('invsType').value='INVOICE';
   document.getElementById('invsItemsBody').innerHTML='';
   document.getElementById('invsRemList').innerHTML='';
