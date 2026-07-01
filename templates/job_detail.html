@@ -167,6 +167,13 @@
     </div>
     {% endif %}
 
+    <!-- Awaiting partner commission banner — still an ACTIVE task, not closed -->
+    {% if job.status == 'Pending Partner Commission' %}
+    <div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:var(--radius-md);padding:12px 18px;margin-bottom:12px;font-size:13px;color:#6B21A8;font-weight:600;">
+      💰 Work is done, invoice settled with the customer — waiting on <strong>{{ job.partner_name }}</strong> to pay their commission (AED {{ '{:,.0f}'.format(job.partner_amount or 0) }}{% if job.partner_due_date %}, expected {{ job.partner_due_date.strftime('%d %b %Y') }}{% endif %}). This task stays active until Finance marks the commission received.
+    </div>
+    {% endif %}
+
     <!-- Finance: Approval form -->
     {% if session.role in ['finance','admin'] and job.status == 'Pending Finance Approval' %}
     <div class="card" style="margin-bottom:12px;">

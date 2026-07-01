@@ -2828,13 +2828,6 @@ def add_job():
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else None
         amount_invoiced = request.form.get('amount_invoiced') or 0
         assigned = request.form.get('assigned_to')
-        # Task Date — lets ops backdate a late entry (e.g. adding yesterday's
-        # task today) without affecting due_date or anything else.
-        task_date_str = request.form.get('task_date', '').strip()
-        if task_date_str:
-            created_dt = datetime.combine(datetime.strptime(task_date_str, '%Y-%m-%d').date(), now_dubai().time())
-        else:
-            created_dt = now_dubai()
         job = Job(
             customer_id=int(request.form['customer_id']),
             job_type=request.form['job_type'],
@@ -2847,7 +2840,6 @@ def add_job():
             amount_received=0,
             num_persons=int(request.form.get('num_persons') or 1),
             created_by=session['user_id'],
-            created_at=created_dt,
             status='Pending Finance Approval'
         )
         db.session.add(job)
@@ -2914,8 +2906,7 @@ def add_job():
                 internal_notes=extra_notes[i] if i < len(extra_notes) else None,
                 service_note=extra_service_notes[i].strip() if i < len(extra_service_notes) and extra_service_notes[i].strip() else None,
                 status='Pending Finance Approval',
-                created_by=session['user_id'],
-                created_at=created_dt
+                created_by=session['user_id']
             )
             db.session.add(extra_job)
 
@@ -2924,11 +2915,10 @@ def add_job():
         flash(f'{count} task(s) created successfully')
         return redirect(url_for('jobs'))
     tomorrow = (now_dubai() + timedelta(days=1)).strftime('%Y-%m-%d')
-    today = now_dubai().strftime('%Y-%m-%d')
     import json
     service_days = {jt.name: (getattr(jt, 'default_days', None) or 1) for jt in job_types}
     all_jobs = Job.query.order_by(Job.created_at.desc()).all()
-    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, today=today, service_days=json.dumps(service_days), all_jobs=all_jobs)
+    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days=json.dumps(service_days), all_jobs=all_jobs)
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
 @login_required
@@ -3230,9 +3220,12 @@ def close_job(job_id):
         job.partner_due_date = partner_due_date
         job.partner_status = 'Pending'
         job.revenue = 0  # Revenue NOT counted yet
-        job.status = 'Closed - Pending Partner Commission'
-        
-        remark = f'Task CLOSED by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Partner Commission: {partner_name} - AED {partner_amount:,.0f} (pending). Revenue will be counted when partner pays.'
+        # NOTE: intentionally NOT 'Closed' — the task stays active/visible
+        # (not treated as closed anywhere) until Finance marks the partner
+        # commission as received, which is when it truly becomes 'Closed'.
+        job.status = 'Pending Partner Commission'
+
+        remark = f'Finance settled with customer. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} / Awaiting partner commission from {partner_name}: AED {partner_amount:,.0f}. Task remains active until commission is received.'
 
     elif partner_choice == 'complimentary':
         # COMPLIMENTARY TASK - free service, no revenue, no partner commission
