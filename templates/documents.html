@@ -45,24 +45,46 @@
 
     <!-- Filters -->
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:4px solid #64748B;padding:14px 18px;margin-bottom:14px;">
-      <form method="get" style="display:grid;grid-template-columns:1fr 200px auto auto;gap:10px;align-items:end;">
-        <div>
+      <form method="get">
+        <div style="margin-bottom:12px;">
           <label style="font-size:11px;color:#64748B;font-weight:600;display:block;margin-bottom:4px;">Search</label>
           <input type="text" name="search" value="{{ search }}" placeholder="Name, company or document type…"
                  style="width:100%;padding:9px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
         </div>
-        <div>
-          <label style="font-size:11px;color:#64748B;font-weight:600;display:block;margin-bottom:4px;">Expiry Window</label>
-          <select name="expiry" style="width:100%;padding:9px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
-            <option value="">All (within 90 days)</option>
-            <option value="expired" {% if expiry_filter=='expired' %}selected{% endif %}>Expired</option>
-            <option value="30" {% if expiry_filter=='30' %}selected{% endif %}>≤ 30 Days</option>
-            <option value="60" {% if expiry_filter=='60' %}selected{% endif %}>31–60 Days</option>
-            <option value="90" {% if expiry_filter=='90' %}selected{% endif %}>61–90 Days</option>
-          </select>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;">
+          <div>
+            <label style="font-size:11px;color:#64748B;font-weight:600;display:block;margin-bottom:4px;">Expiry Window</label>
+            <select name="expiry" style="width:100%;padding:9px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+              <option value="">All (within 90 days)</option>
+              <option value="expired" {% if expiry_filter=='expired' %}selected{% endif %}>Expired</option>
+              <option value="30" {% if expiry_filter=='30' %}selected{% endif %}>≤ 30 Days</option>
+              <option value="60" {% if expiry_filter=='60' %}selected{% endif %}>31–60 Days</option>
+              <option value="90" {% if expiry_filter=='90' %}selected{% endif %}>61–90 Days</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:#64748B;font-weight:600;display:block;margin-bottom:4px;">Belongs To</label>
+            <select name="belongs_to" style="width:100%;padding:9px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+              <option value="">All Types</option>
+              <option value="Individual" {% if belongs_filter=='Individual' %}selected{% endif %}>👤 Individual</option>
+              <option value="Company" {% if belongs_filter=='Company' %}selected{% endif %}>🏢 Company</option>
+              <option value="Staff" {% if belongs_filter=='Staff' %}selected{% endif %}>👔 Staff</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:#64748B;font-weight:600;display:block;margin-bottom:4px;">Document Type</label>
+            <select name="doc_type" style="width:100%;padding:9px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+              <option value="">All Document Types</option>
+              {% for dt in doc_types %}
+              <option value="{{ dt.name }}" {% if doc_type_filter==dt.name %}selected{% endif %}>{{ dt.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button type="submit" style="height:38px;padding:0 22px;background:#1A3B8B;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Apply</button>
+            <a href="/documents" style="height:38px;display:flex;align-items:center;padding:0 16px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-weight:600;color:#334155;text-decoration:none;">Reset</a>
+          </div>
         </div>
-        <button type="submit" style="height:38px;padding:0 22px;background:#1A3B8B;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Apply</button>
-        <a href="/documents" style="height:38px;display:flex;align-items:center;padding:0 16px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-weight:600;color:#334155;text-decoration:none;">Reset</a>
       </form>
     </div>
 

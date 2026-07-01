@@ -2155,6 +2155,9 @@ def customers():
     now = now_dubai()
     search = request.args.get('search', '').strip().lower()
     birthday_filter = request.args.get('birthday', '')
+    rep_filter = request.args.get('representative', '')
+    type_filter = request.args.get('type', '')
+    status_filter = request.args.get('status', '')
     birthdays_today = []
     try:
         # Ensure columns exist first
@@ -2174,6 +2177,12 @@ def customers():
             customer_list = [c for c in customer_list if c.date_of_birth and
                              c.date_of_birth.month == now.month and
                              c.date_of_birth.day == now.day]
+        if rep_filter:
+            customer_list = [c for c in customer_list if c.assigned_to == int(rep_filter)]
+        if type_filter:
+            customer_list = [c for c in customer_list if (c.customer_type or 'Individual') == type_filter]
+        if status_filter:
+            customer_list = [c for c in customer_list if c.ac_status == status_filter]
         try:
             bday_list = Customer.query.filter(Customer.date_of_birth != None).all()
             birthdays_today = [c for c in bday_list if c.date_of_birth and
@@ -2189,9 +2198,11 @@ def customers():
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
     paginated = customer_list[(page-1)*per_page : page*per_page]
+    users = User.query.filter_by(active=True).order_by(User.name).all()
     return render_template('customers.html', customers=paginated, page=page, total_pages=total_pages,
                            total=total, search=request.args.get('search',''),
-                           birthdays_today=birthdays_today, now=now, birthday_filter=birthday_filter)
+                           birthdays_today=birthdays_today, now=now, birthday_filter=birthday_filter,
+                           users=users, rep_filter=rep_filter, type_filter=type_filter, status_filter=status_filter)
 
 @app.route('/api/customer-phone-exists')
 @login_required
@@ -4210,6 +4221,8 @@ def documents():
     now = now_dubai()
     search = request.args.get('search', '').strip().lower()
     expiry_filter = request.args.get('expiry', '')
+    belongs_filter = request.args.get('belongs_to', '')
+    doc_type_filter = request.args.get('doc_type', '')
 
     try:
         all_docs = Document.query.filter(Document.expiry_date.isnot(None)).order_by(Document.expiry_date).all()
@@ -4250,6 +4263,10 @@ def documents():
         doc_list = [d for d in doc_list if 30 < days_left(d) <= 60]
     elif expiry_filter == '90':
         doc_list = [d for d in doc_list if 60 < days_left(d) <= 90]
+    if belongs_filter:
+        doc_list = [d for d in doc_list if d.belongs_to == belongs_filter]
+    if doc_type_filter:
+        doc_list = [d for d in doc_list if d.doc_type == doc_type_filter]
 
     # Pagination
     page = int(request.args.get('page', 1))
@@ -4259,11 +4276,14 @@ def documents():
     page = max(1, min(page, total_pages))
     paginated = doc_list[(page-1)*per_page: page*per_page]
 
+    doc_types = DocType.query.order_by(DocType.name).all()
     return render_template('documents.html',
                            documents=paginated,
                            expired_count=expired_count, count_30=count_30,
                            count_60=count_60, count_90=count_90,
                            search=search, expiry_filter=expiry_filter,
+                           belongs_filter=belongs_filter, doc_type_filter=doc_type_filter,
+                           doc_types=doc_types,
                            total=total, page=page, total_pages=total_pages,
                            now=now)
 

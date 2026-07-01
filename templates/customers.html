@@ -60,15 +60,45 @@
     <div class="filter-card" style="border-top:4px solid #1A3B8B;">
       <div class="filter-card-head">
         <div class="filter-card-title">⊟ Filters</div>
-        {% if search %}<a href="/customers" class="btn-reset" style="font-size:11px;">Reset</a>{% endif %}
+        {% if search or rep_filter or type_filter or status_filter %}<a href="/customers" class="btn-reset" style="font-size:11px;">Reset</a>{% endif %}
       </div>
-      <form method="get" style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end;">
-        <div class="ff">
+      <form method="get">
+        <div class="ff" style="margin-bottom:12px;">
           <label>Search</label>
-          <input type="text" name="search" value="{{ search }}" placeholder="Name, company, phone or email...">
+          <input type="text" name="search" value="{{ search }}" placeholder="Name, company or mobile number...">
         </div>
-        <button type="submit" class="btn-primary" style="height:36px;padding:0 20px;white-space:nowrap;">Search</button>
-        <a href="/customers" class="btn-reset" style="height:36px;display:flex;align-items:center;padding:0 14px;">Reset</a>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:flex-end;">
+          <div class="ff">
+            <label>Representative</label>
+            <select name="representative">
+              <option value="">All Representatives</option>
+              {% for u in users %}
+              <option value="{{ u.id }}" {% if rep_filter==u.id|string %}selected{% endif %}>{{ u.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="ff">
+            <label>Type</label>
+            <select name="type">
+              <option value="">All Types</option>
+              <option value="Individual" {% if type_filter=='Individual' %}selected{% endif %}>👤 Individual</option>
+              <option value="Company" {% if type_filter=='Company' %}selected{% endif %}>🏢 Company</option>
+              <option value="Investor" {% if type_filter=='Investor' %}selected{% endif %}>💼 Investor</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label>Status</label>
+            <select name="status">
+              <option value="">All Statuses</option>
+              <option value="Active" {% if status_filter=='Active' %}selected{% endif %}>Active</option>
+              <option value="Inactive" {% if status_filter=='Inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button type="submit" class="btn-primary" style="height:36px;padding:0 20px;white-space:nowrap;">Apply</button>
+            <a href="/customers" class="btn-reset" style="height:36px;display:flex;align-items:center;padding:0 14px;">Reset</a>
+          </div>
+        </div>
       </form>
     </div>
 
@@ -133,17 +163,25 @@
     <!-- Pagination -->
     {% if total_pages > 1 %}
     <div class="pagination">
-      {% if page > 1 %}<a href="?page={{ page-1 }}&search={{ search }}" class="page-btn">← Prev</a>{% endif %}
+      {% set args = request.args.to_dict() %}
+      {% if page > 1 %}
+        {% set _ = args.update({'page': page-1}) %}
+        <a href="?{{ args|urlencode }}" class="page-btn">← Prev</a>
+      {% endif %}
       {% for p in range(1, total_pages+1) %}
         {% if p == page %}
           <span class="page-btn active">{{ p }}</span>
         {% elif p == 1 or p == total_pages or (p >= page-2 and p <= page+2) %}
-          <a href="?page={{ p }}&search={{ search }}" class="page-btn">{{ p }}</a>
+          {% set _ = args.update({'page': p}) %}
+          <a href="?{{ args|urlencode }}" class="page-btn">{{ p }}</a>
         {% elif p == page-3 or p == page+3 %}
           <span style="padding:0 4px;color:var(--text-muted);">…</span>
         {% endif %}
       {% endfor %}
-      {% if page < total_pages %}<a href="?page={{ page+1 }}&search={{ search }}" class="page-btn">Next →</a>{% endif %}
+      {% if page < total_pages %}
+        {% set _ = args.update({'page': page+1}) %}
+        <a href="?{{ args|urlencode }}" class="page-btn">Next →</a>
+      {% endif %}
     </div>
     {% endif %}
 
