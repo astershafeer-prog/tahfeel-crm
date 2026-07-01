@@ -92,6 +92,13 @@
               <div style="font-size:14px;color:var(--text-primary);">{{ lead.attempts or 0 }}{% if lead.first_contacted_at %} · 1st reached {{ lead.first_contacted_at.strftime('%d %b') }}{% endif %}</div>
             </div>
             <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Last Activity</div>
+              {% set latest_activity = lead.updates[0].activity_type if lead.updates else None %}
+              <div style="font-size:14px;font-weight:600;{% if latest_activity == 'Call — no answer' %}color:#B91C1C;{% elif latest_activity == 'Call — connected' %}color:#059669;{% else %}color:var(--text-primary);{% endif %}">
+                {% if latest_activity == 'Call — no answer' %}☎ No Answer{% elif latest_activity == 'Call — connected' %}☎ Connected{% elif latest_activity %}{{ latest_activity }}{% else %}—{% endif %}
+              </div>
+            </div>
+            <div>
               <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Assigned To</div>
               <div style="font-size:14px;color:var(--text-primary);">{{ lead.assignee.name if lead.assignee else '—' }}</div>
             </div>

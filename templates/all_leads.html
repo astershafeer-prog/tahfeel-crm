@@ -219,6 +219,14 @@
                     {% if lead.genuine == 'Junk' %}<span title="Junk" style="margin-left:4px;color:#B91C1C;font-size:11px;font-weight:700;">✕</span>
                     {% elif lead.genuine == 'Unreachable' %}<span title="Unreachable" style="margin-left:4px;color:#B45309;font-size:11px;font-weight:700;">⊘</span>
                     {% elif lead.genuine == 'Genuine' %}<span title="Genuine" style="margin-left:4px;color:#059669;font-size:11px;font-weight:700;">✓</span>{% endif %}
+                    {% set latest_activity = lead.updates[0].activity_type if lead.updates else None %}
+                    {% if latest_activity == 'Call — no answer' %}
+                    <div style="font-size:10px;color:#B91C1C;font-weight:700;margin-top:3px;">☎ No Answer</div>
+                    {% elif latest_activity == 'Call — connected' %}
+                    <div style="font-size:10px;color:#059669;font-weight:700;margin-top:3px;">☎ Connected</div>
+                    {% elif latest_activity %}
+                    <div style="font-size:10px;color:#64748B;font-weight:600;margin-top:3px;">{{ latest_activity }}</div>
+                    {% endif %}
                   </td>
                   <td>
                     <div style="display:flex;gap:4px;align-items:center;">
