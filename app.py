@@ -3265,9 +3265,13 @@ def edit_finance(job_id):
         if ar: job.amount_received = float(ar)
         if rev:
             job.revenue = float(rev)
-            # Update revenue_date when revenue is edited
             if not job.revenue_date:
                 job.revenue_date = now_dubai().date()
+        # Revenue date is directly editable (e.g. correcting which month's
+        # revenue this counts toward), independent of the revenue amount.
+        rev_date_str = request.form.get('revenue_date', '').strip()
+        if rev_date_str:
+            job.revenue_date = datetime.strptime(rev_date_str, '%Y-%m-%d').date()
     except:
         flash('Invalid finance values.')
         return redirect(url_for('job_detail', job_id=job_id))

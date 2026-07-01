@@ -122,8 +122,11 @@
                 <div class="form-group"><label>Final Invoice Amount (AED)</label><input type="number" name="amount_invoiced" value="{{ job.amount_invoiced or '' }}" min="0" step="0.01"></div>
                 <div class="form-group"><label>Total Received (AED)</label><input type="number" name="amount_received" value="{{ job.amount_received or '' }}" min="0" step="0.01"></div>
               </div>
-              <div class="form-group"><label>Revenue/Profit (AED)</label><input type="number" name="revenue" value="{{ job.revenue or '' }}" min="0" step="0.01"></div>
-              
+              <div class="form-row-2">
+                <div class="form-group"><label>Revenue/Profit (AED)</label><input type="number" name="revenue" value="{{ job.revenue or '' }}" min="0" step="0.01"></div>
+                <div class="form-group"><label>Revenue Date</label><input type="date" name="revenue_date" value="{{ (job.revenue_date or now.date()).strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}"></div>
+              </div>
+
               <div class="form-group"><label>Additional Finance Notes (optional)</label><input type="text" name="finance_notes" maxlength="30" placeholder="Max 30 characters..."></div>
               <div style="display:flex;gap:8px;">
                 <button type="submit" class="btn-primary">Save Changes</button>
