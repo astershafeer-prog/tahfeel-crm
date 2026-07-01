@@ -59,7 +59,11 @@
             {% if m.msg_type == 'template' %}<div style="font-size:10px;color:#1B7A3D;font-weight:700;margin-bottom:2px;">TEMPLATE</div>{% endif %}
             <div style="white-space:pre-wrap;font-size:14px;color:#111;">{{ m.body }}</div>
             <div style="text-align:right;font-size:10px;color:#5a8a4a;margin-top:2px;">
-              {{ m.handled_by }} · {{ m.created_at.strftime('%H:%M') }}{% if m.status %} · {{ m.status }}{% endif %}
+              {{ m.handled_by }} · {{ m.created_at.strftime('%H:%M') }}
+              {% if m.status == 'read' %}<span style="color:#34B7F1;font-weight:700;" title="Read">✓✓</span>
+              {% elif m.status == 'delivered' %}<span title="Delivered">✓✓</span>
+              {% elif m.status == 'sent' %}<span title="Sent">✓</span>
+              {% elif m.status == 'failed' %}<span style="color:#c0392b;" title="Failed">⚠</span>{% endif %}
             </div>
           </div>
         {% endif %}
@@ -69,6 +73,10 @@
     <!-- Reply box -->
     <div style="background:white;border-radius:0 0 12px 12px;border:0.5px solid #E2E8F0;border-top:none;padding:14px 18px;">
       {% if window_open %}
+      <div style="font-size:11px;color:#1B7A3D;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#25D366;display:inline-block;"></span>
+        Reply window open · <strong>{{ window_left }}</strong> left to reply freely
+      </div>
       <form method="POST" action="/whatsapp/{{ wa_id }}/reply" style="display:flex;gap:8px;">
         <input type="text" name="body" placeholder="Type a reply…" autocomplete="off" required
                style="flex:1;padding:10px 14px;border:1px solid #CBD5E1;border-radius:24px;font-size:14px;">

@@ -405,6 +405,7 @@ class ActivityType(db.Model):
 
 class WhatsAppMessage(db.Model):
     """One WhatsApp message (in or out). Threaded by wa_id (the contact's number)."""
+    __tablename__ = 'whats_app_message'
     id           = db.Column(db.Integer, primary_key=True)
     wa_id        = db.Column(db.String(30), index=True)   # contact phone (digits only)
     contact_name = db.Column(db.String(120))              # WhatsApp profile name
@@ -414,6 +415,7 @@ class WhatsAppMessage(db.Model):
     wam_id       = db.Column(db.String(80), index=True)   # WhatsApp message id (dedupe)
     status       = db.Column(db.String(20))               # sent/delivered/read/failed
     handled_by   = db.Column(db.String(40), default='bot')  # 'bot' or staff name
+    is_read      = db.Column(db.Boolean, default=False)   # inbound: has a staff seen it?
     lead_id      = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=True)
     customer_id  = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)
     created_at   = db.Column(db.DateTime, default=now_dubai)
@@ -509,6 +511,16 @@ def inject_globals():
     except:
         pass
     return result
+
+def wa_unread_count():
+    """Number of unread incoming WhatsApp messages — shown as a badge on the nav."""
+    try:
+        if 'user_id' not in session:
+            return 0
+        return WhatsAppMessage.query.filter_by(direction='in', is_read=False).count()
+    except Exception:
+        return 0
+app.jinja_env.globals['wa_unread_count'] = wa_unread_count
 
 @app.context_processor
 def inject_birthdays():
@@ -4587,6 +4599,8 @@ def init_db():
             # Tahfeel Doc: category (Tahfeel / Staff / Management) + person link
             'ALTER TABLE company_document ADD COLUMN IF NOT EXISTS category VARCHAR(20)',
             'ALTER TABLE company_document ADD COLUMN IF NOT EXISTS staff_id INTEGER',
+            # WhatsApp inbox: unread tracking
+            'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT FALSE',
 
         ]
         for sql in migrations:
@@ -5203,7 +5217,9 @@ WA_WINDOW = timedelta(hours=24)  # Meta free-reply window after last inbound
 @app.route('/whatsapp')
 @login_required
 def whatsapp_inbox():
-    """List of WhatsApp conversations, newest activity first."""
+    """List of WhatsApp conversations, newest activity first. Supports search + filter."""
+    q = (request.args.get('q') or '').strip()
+    flt = request.args.get('filter', 'all')   # all | unread | unmatched
     msgs = WhatsAppMessage.query.order_by(WhatsAppMessage.created_at.desc()).all()
     threads = {}
     for m in msgs:
@@ -5217,18 +5233,38 @@ def whatsapp_inbox():
                 'lead_id': None, 'customer_id': None, 'unread': 0,
             }
         t = threads[m.wa_id]
+        if m.direction == 'in' and not m.is_read:
+            t['unread'] += 1
         if m.lead_id and not t['lead_id']:
             t['lead_id'] = m.lead_id
         if m.customer_id and not t['customer_id']:
             t['customer_id'] = m.customer_id
         if not t['name'] and m.contact_name:
             t['name'] = m.contact_name
-    # attach linked names
     for t in threads.values():
         t['lead'] = Lead.query.get(t['lead_id']) if t['lead_id'] else None
         t['customer'] = Customer.query.get(t['customer_id']) if t['customer_id'] else None
     thread_list = sorted(threads.values(), key=lambda x: x['last_at'], reverse=True)
-    return render_template('whatsapp_inbox.html', threads=thread_list, now=now_dubai())
+
+    # counts for the filter tabs (before filtering)
+    counts = {
+        'all': len(thread_list),
+        'unread': sum(1 for t in thread_list if t['unread']),
+        'unmatched': sum(1 for t in thread_list if not t['lead'] and not t['customer']),
+    }
+    # apply search
+    if q:
+        ql = q.lower()
+        thread_list = [t for t in thread_list
+                       if ql in (t['name'] or '').lower() or ql in (t['wa_id'] or '')]
+    # apply filter
+    if flt == 'unread':
+        thread_list = [t for t in thread_list if t['unread']]
+    elif flt == 'unmatched':
+        thread_list = [t for t in thread_list if not t['lead'] and not t['customer']]
+
+    return render_template('whatsapp_inbox.html', threads=thread_list, now=now_dubai(),
+                           q=q, flt=flt, counts=counts)
 
 @app.route('/whatsapp/<wa_id>')
 @login_required
@@ -5238,14 +5274,27 @@ def whatsapp_thread(wa_id):
     if not msgs:
         flash('Conversation not found')
         return redirect(url_for('whatsapp_inbox'))
+    # Mark this conversation's incoming messages as read (clears the unread badge)
+    WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in', is_read=False)\
+            .update({'is_read': True})
+    db.session.commit()
+
     last_in = WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in')\
             .order_by(WhatsAppMessage.created_at.desc()).first()
     window_open = bool(last_in) and (now_dubai() - last_in.created_at) < WA_WINDOW
+    # Human-friendly countdown for the 24h free-reply window
+    window_left = ''
+    if window_open:
+        rem = WA_WINDOW - (now_dubai() - last_in.created_at)
+        hrs = int(rem.total_seconds() // 3600)
+        mins = int((rem.total_seconds() % 3600) // 60)
+        window_left = f'{hrs}h {mins}m'
     name = next((m.contact_name for m in msgs if m.contact_name), None)
     lead_id = next((m.lead_id for m in msgs if m.lead_id), None)
     customer_id = next((m.customer_id for m in msgs if m.customer_id), None)
     return render_template('whatsapp_thread.html',
         wa_id=wa_id, messages=msgs, name=name, window_open=window_open,
+        window_left=window_left,
         lead=Lead.query.get(lead_id) if lead_id else None,
         customer=Customer.query.get(customer_id) if customer_id else None,
         now=now_dubai())
