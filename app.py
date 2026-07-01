@@ -1,6 +1,6 @@
 # v19
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import cloudinary
 import cloudinary.uploader
@@ -5716,12 +5716,21 @@ def tahfeel_doc():
                           warning_count=warning_count,
                           expired_count=expired_count)
 
+def _is_ajax():
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
 @app.route('/tahfeel-doc/add', methods=['POST'])
 @login_required
 def add_tahfeel_doc():
-    if session.get('role') != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
-        flash('Access denied.')
+    ajax = _is_ajax()
+    def fail(msg):
+        if ajax:
+            return jsonify(success=False, message=msg)
+        flash(msg, 'error')
         return redirect(url_for('tahfeel_doc'))
+
+    if session.get('role') != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
+        return fail('Access denied.')
 
     try:
         category = request.form.get('category', '').strip()
@@ -5731,8 +5740,7 @@ def add_tahfeel_doc():
         expiry_date = request.form.get('expiry_date')
 
         if category not in ('Tahfeel', 'Staff', 'Management') or not doc_type or not expiry_date:
-            flash('Please fill all required fields.', 'error')
-            return redirect(url_for('tahfeel_doc'))
+            return fail('Please fill all required fields.')
 
         # Resolve owner: Tahfeel = company itself; Staff/Management = a person record
         staff_id = None
@@ -5743,8 +5751,7 @@ def add_tahfeel_doc():
             authority = ''  # authority only applies to Tahfeel company docs
             person = _resolve_tahfeel_person(category)
             if person is None:
-                flash('Please select a person or add a new one.', 'error')
-                return redirect(url_for('tahfeel_doc'))
+                return fail('Please select a person or add a new one.')
             staff_id = person.id
             owner = person.name
 
@@ -5753,13 +5760,13 @@ def add_tahfeel_doc():
             issue_dt = datetime.strptime(issue_date, '%Y-%m-%d').date() if issue_date else None
             expiry_dt = datetime.strptime(expiry_date, '%Y-%m-%d').date()
         except ValueError:
-            flash('Invalid date format.', 'error')
-            return redirect(url_for('tahfeel_doc'))
+            return fail('Invalid date format.')
 
         # Handle optional file upload
         doc_url = None
         cloudinary_id = None
         file = request.files.get('file')
+        upload_warning = None
         if file and file.filename:
             try:
                 upload_result = cloudinary.uploader.upload(
@@ -5769,7 +5776,7 @@ def add_tahfeel_doc():
                 cloudinary_id = upload_result['public_id']
             except Exception as e:
                 print(f"Cloudinary upload error: {e}")
-                flash('File could not be uploaded — document saved without attachment.', 'warning')
+                upload_warning = 'File could not be uploaded — document saved without attachment.'
 
         doc = CompanyDocument(
             name=doc_type,            # name field kept for compatibility = the doc type
@@ -5786,14 +5793,19 @@ def add_tahfeel_doc():
         )
         db.session.add(doc)
         db.session.commit()
+
+        if ajax:
+            return jsonify(success=True, message=upload_warning or 'Document added successfully.',
+                            warning=bool(upload_warning), person_id=staff_id)
+        if upload_warning:
+            flash(upload_warning, 'warning')
         flash('✓ Document added successfully.')
         return redirect(url_for('tahfeel_doc'))
 
     except Exception as e:
         db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
         print(f"Error adding document: {e}")
-        return redirect(url_for('tahfeel_doc'))
+        return fail(f'Error: {str(e)}')
 
 
 def _resolve_tahfeel_person(category):
@@ -5815,10 +5827,16 @@ def _resolve_tahfeel_person(category):
 @app.route('/tahfeel-doc/<int:doc_id>/edit', methods=['POST'])
 @login_required
 def edit_tahfeel_doc(doc_id):
+    ajax = _is_ajax()
+    def fail(msg):
+        if ajax:
+            return jsonify(success=False, message=msg)
+        flash(msg, 'error')
+        return redirect(url_for('tahfeel_doc'))
+
     # Access: Admin OR Saada only
     if session.get('role') != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
-        flash('Access denied.')
-        return redirect(url_for('tahfeel_doc'))
+        return fail('Access denied.')
 
     doc = CompanyDocument.query.get_or_404(doc_id)
 
@@ -5843,21 +5861,18 @@ def edit_tahfeel_doc(doc_id):
             elif doc.staff and doc.category == category:
                 owner = doc.staff.name  # unchanged person
             else:
-                flash('Please select a person or add a new one.', 'error')
-                return redirect(url_for('tahfeel_doc'))
+                return fail('Please select a person or add a new one.')
 
         # Validation
         if not doc_type or not expiry_date:
-            flash('All required fields must be filled.', 'error')
-            return redirect(url_for('tahfeel_doc'))
+            return fail('All required fields must be filled.')
 
         # Parse dates
         try:
             issue_dt = datetime.strptime(issue_date, '%Y-%m-%d').date() if issue_date else None
             expiry_dt = datetime.strptime(expiry_date, '%Y-%m-%d').date()
         except ValueError:
-            flash('Invalid date format.', 'error')
-            return redirect(url_for('tahfeel_doc'))
+            return fail('Invalid date format.')
 
         # Update document
         doc.name = doc_type
@@ -5868,7 +5883,8 @@ def edit_tahfeel_doc(doc_id):
         doc.expiry_date = expiry_dt
         doc.authority = authority
         doc.owner = owner
-        
+
+        upload_warning = None
         # Handle file replacement
         if 'file' in request.files:
             file = request.files['file']
@@ -5888,17 +5904,21 @@ def edit_tahfeel_doc(doc_id):
                     doc.cloudinary_public_id = upload_result['public_id']
                 except Exception as e:
                     print(f"Cloudinary upload error: {e}")
-                    flash('File update failed, but record updated.', 'warning')
-        
+                    upload_warning = 'File update failed, but record updated.'
+
         db.session.commit()
-        flash(f'✓ Document "{name}" updated successfully.')
+        if ajax:
+            return jsonify(success=True, message=upload_warning or 'Document updated successfully.',
+                            warning=bool(upload_warning), person_id=staff_id)
+        if upload_warning:
+            flash(upload_warning, 'warning')
+        flash(f'✓ Document "{doc_type}" updated successfully.')
         return redirect(url_for('tahfeel_doc'))
-        
+
     except Exception as e:
         db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
         print(f"Error editing document: {e}")
-        return redirect(url_for('tahfeel_doc'))
+        return fail(f'Error: {str(e)}')
 
 @app.route('/tahfeel-doc/<int:doc_id>/upload', methods=['POST'])
 @login_required

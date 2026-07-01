@@ -313,8 +313,10 @@
 
         <div class="modal-buttons">
           <button type="button" class="modal-cancel" onclick="closeModal('addEditModal')">Cancel</button>
-          <button type="submit" class="modal-submit" id="submitBtn">Add Document</button>
+          <button type="button" class="modal-submit" id="addAnotherBtn" style="background:#8B5CF6;" onclick="submitDoc(true)">Save &amp; Add Another</button>
+          <button type="button" class="modal-submit" id="submitBtn" onclick="submitDoc(false)">Add Document</button>
         </div>
+        <div id="addAnotherNote" style="display:none;margin-top:10px;font-size:12px;color:#059669;font-weight:600;">✓ Document added — form kept ready for the next one.</div>
       </form>
     </div>
   </div>
@@ -403,6 +405,8 @@
       editDocId = docId;
       document.getElementById('addEditTitle').textContent = 'Edit Document';
       document.getElementById('submitBtn').textContent = 'Update Document';
+      document.getElementById('addAnotherBtn').style.display = 'none';
+      document.getElementById('addAnotherNote').style.display = 'none';
       document.getElementById('docForm').reset();
       category = category || 'Tahfeel';
       configureCategory(category);
@@ -440,6 +444,8 @@
       editDocId = null;
       document.getElementById('addEditTitle').textContent = 'Add ' + cat + ' Document';
       document.getElementById('submitBtn').textContent = 'Add Document';
+      document.getElementById('addAnotherBtn').style.display = 'inline-block';
+      document.getElementById('addAnotherNote').style.display = 'none';
       document.getElementById('docForm').reset();
       configureCategory(cat);
       document.getElementById('addEditModal').classList.add('show');
@@ -459,9 +465,7 @@
       window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
     }
 
-    document.getElementById('docForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-
+    function submitDoc(addAnother) {
       const cat = document.getElementById('inputCategory').value;
       if (!cat) { alert('Please choose a category.'); return; }
 
@@ -478,12 +482,14 @@
       form.append('issue_date', document.getElementById('inputIssueDate').value);
       form.append('expiry_date', expiry);
 
+      let newPersonName = null;
       if (cat !== 'Tahfeel') {
         const personVal = document.getElementById('inputPerson').value;
         if (personVal === '__new__') {
           const nm = document.getElementById('inputNewPerson').value.trim();
           if (!nm) { alert('Please enter the new person\'s name.'); return; }
           form.append('new_person_name', nm);
+          newPersonName = nm;
         } else if (personVal) {
           form.append('staff_id', personVal);
         } else {
@@ -499,12 +505,36 @@
       if (fileEl && fileEl.files[0]) form.append('file', fileEl.files[0]);
 
       const url = editDocId ? `/tahfeel-doc/${editDocId}/edit` : '/tahfeel-doc/add';
+      const [saveBtn, anotherBtn] = [document.getElementById('submitBtn'), document.getElementById('addAnotherBtn')];
+      saveBtn.disabled = true; anotherBtn.disabled = true;
 
-      fetch(url, { method: 'POST', body: form })
-        .then(r => r.text())
-        .then(() => location.reload())
-        .catch(err => alert('Error saving document'));
-    });
+      fetch(url, { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json())
+        .then(data => {
+          saveBtn.disabled = false; anotherBtn.disabled = false;
+          if (!data.success) { alert(data.message || 'Error saving document'); return; }
+          if (data.warning) alert(data.message);
+          if (addAnother && !editDocId) {
+            // Keep category + person selected; only clear the document-specific fields
+            // so the next document for the same person is quick to add.
+            if (newPersonName && data.person_id) {
+              PEOPLE[cat].push({ id: data.person_id, name: newPersonName });
+              fillPersonSelect(cat, data.person_id);
+              toggleNewPerson();
+            }
+            document.getElementById('inputType').value = '';
+            document.getElementById('inputTypeOther').value = '';
+            document.getElementById('typeOtherField').style.display = 'none';
+            document.getElementById('inputIssueDate').value = '';
+            document.getElementById('inputExpiryDate').value = '';
+            if (fileEl) fileEl.value = '';
+            document.getElementById('addAnotherNote').style.display = 'block';
+          } else {
+            location.reload();
+          }
+        })
+        .catch(err => { saveBtn.disabled = false; anotherBtn.disabled = false; alert('Error saving document'); });
+    }
 
     function updateFileLabel() {
       const file = document.getElementById('docFile').files[0];
