@@ -324,11 +324,11 @@
   <script>
     let editDocId = null;
 
-    const DOC_TYPES = {
-      Tahfeel: ['Trade License','MOA','Ejari','Emigration Card','Labor Card','Chamber','Others'],
-      Staff: ['Passport','Visa','Emirates ID','Driving License','Others'],
-      Management: ['Passport','Visa','Emirates ID','Driving License','Others']
-    };
+    // Same admin-managed Document Type list used by the customer/company
+    // Documents feature (Admin Panel → Document Types) — one list, not two.
+    const ADMIN_DOC_TYPES = {{ doc_type_names|tojson }};
+    const TYPE_LIST = ADMIN_DOC_TYPES.filter(t => t !== 'Others').concat(['Others']);
+    const DOC_TYPES = { Tahfeel: TYPE_LIST, Staff: TYPE_LIST, Management: TYPE_LIST };
     const AUTHORITIES = ['Dubai Economic','Chamber of Commerce','Land Department','MOL','MOI','GDRFA','Others'];
     const PEOPLE = { Staff: {{ staff_people|tojson }}, Management: {{ mgmt_people|tojson }} };
 

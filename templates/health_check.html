@@ -88,12 +88,15 @@
     <div class="cc-chips">
       <a class="cc-chip {% if status_filter=='expired' %}sel{% endif %}" href="/health-check?status=expired{{ t }}{{ q }}" style="border-top-color:#B91C1C;">
         <div class="cico" style="background:#FEF2F2;color:#B91C1C;">⛔</div><div class="lbl">Expired</div><div class="num" style="color:#B91C1C;">{{ n_expired }}</div>
+        {% if staff_expired %}<div style="font-size:10px;color:#B91C1C;margin-top:2px;line-height:1.3;">👔 {{ staff_expired|join(', ') }}</div>{% endif %}
       </a>
       <a class="cc-chip {% if status_filter=='red' %}sel{% endif %}" href="/health-check?status=red{{ t }}{{ q }}" style="border-top-color:#DC2626;">
         <div class="cico" style="background:#FEF2F2;color:#DC2626;">⏰</div><div class="lbl">≤ 30 days</div><div class="num" style="color:#DC2626;">{{ n_red }}</div>
+        {% if staff_red %}<div style="font-size:10px;color:#DC2626;margin-top:2px;line-height:1.3;">👔 {{ staff_red|join(', ') }}</div>{% endif %}
       </a>
       <a class="cc-chip {% if status_filter=='amber' %}sel{% endif %}" href="/health-check?status=amber{{ t }}{{ q }}" style="border-top-color:#B45309;">
         <div class="cico" style="background:#FFFBEB;color:#B45309;">⏳</div><div class="lbl">31–60 days</div><div class="num" style="color:#B45309;">{{ n_amber }}</div>
+        {% if staff_amber %}<div style="font-size:10px;color:#B45309;margin-top:2px;line-height:1.3;">👔 {{ staff_amber|join(', ') }}</div>{% endif %}
       </a>
       <a class="cc-chip {% if status_filter=='green' %}sel{% endif %}" href="/health-check?status=green{{ t }}{{ q }}" style="border-top-color:#059669;">
         <div class="cico" style="background:#ECFDF5;color:#059669;">✅</div><div class="lbl">Healthy (60+)</div><div class="num" style="color:#059669;">{{ n_green }}</div>

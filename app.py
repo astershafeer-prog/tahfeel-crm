@@ -2232,26 +2232,31 @@ def _save_tax_fields(customer):
         setattr(customer, prefix + '_status', status or None)
         setattr(customer, prefix + '_due_date', due)
 
+def _customer_type_template(ctype):
+    return 'add_customer_company.html' if ctype == 'Company' else 'add_customer_individual.html'
+
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required
 def add_customer():
     converted_leads = Lead.query.filter_by(status='Converted').order_by(Lead.name).all()
     sources = Source.query.order_by(Source.name).all()
     if request.method == 'POST':
-        if request.form.get('customer_type') == 'Company' and not (request.form.get('contact_person') or '').strip():
+        ctype = request.form.get('customer_type', 'Individual')
+        doc_types = DocType.query.order_by(DocType.name).all()
+        if ctype == 'Company' and not (request.form.get('contact_person') or '').strip():
             flash('Contact Person is required for a Company client', 'error')
-            return redirect(url_for('add_customer'))
+            return redirect(url_for('add_customer', type=ctype))
         # Validate required fields
         if not request.form.get('lead_id'):
             if not request.form.get('source'):
                 flash('Source is required', 'error')
                 users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-                return render_template('add_customer.html', users=users, sources=sources, converted_leads=converted_leads)
+                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types)
             if not request.form.get('assigned_to'):
                 flash('Primary Representative is required', 'error')
                 users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-                return render_template('add_customer.html', users=users, sources=sources, converted_leads=converted_leads)
-        
+                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types)
+
         # Check for duplicate phone number
         phone_to_check = None
         lead_id = request.form.get('lead_id') or None
@@ -2260,13 +2265,13 @@ def add_customer():
             phone_to_check = lead.phone
         else:
             phone_to_check = request.form.get('phone', '').strip()
-        
+
         if phone_to_check and not request.form.get('allow_duplicate'):
             existing_customer = Customer.query.filter_by(phone=phone_to_check).first()
             if existing_customer:
                 flash(f'⚠️ Phone {phone_to_check} already exists for "{existing_customer.name}". Submit again to add anyway.', 'error')
                 users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-                return render_template('add_customer.html', users=users, sources=sources, converted_leads=converted_leads)
+                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types)
         
         if lead_id:
             customer = Customer(
@@ -2339,7 +2344,10 @@ def add_customer():
         return redirect(url_for('customer_detail', customer_id=customer.id))
     users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations','admin'])).all()
     doc_types = DocType.query.order_by(DocType.name).all()
-    return render_template('add_customer.html', converted_leads=converted_leads, sources=sources, users=users, doc_types=doc_types)
+    ctype = request.args.get('type', '')
+    if ctype not in ('Individual', 'Company'):
+        return render_template('add_customer_choose.html', converted_leads=converted_leads)
+    return render_template(_customer_type_template(ctype), converted_leads=converted_leads, sources=sources, users=users, doc_types=doc_types)
 
 @app.route('/customers/<int:customer_id>')
 @login_required
@@ -4128,6 +4136,14 @@ def health_check():
     n_amber = len([d for d in docs if 30 < days_left(d) <= 60])
     n_green = len([d for d in docs if days_left(d) > 60])
 
+    # Staff names behind each bucket — so an expiring staff document (e.g. a
+    # visa) is visible right in the summary, not just buried in the full list.
+    def staff_names(bucket_docs):
+        return sorted({d.owner_name for d in bucket_docs if d.belongs_to == 'Staff' and d.owner_name})
+    staff_expired = staff_names([d for d in docs if days_left(d) < 0])
+    staff_red = staff_names([d for d in docs if 0 <= days_left(d) <= 30])
+    staff_amber = staff_names([d for d in docs if 30 < days_left(d) <= 60])
+
     # Group documents by owner (customer/company, or staff name when no customer)
     customers_by_id = {c.id: c for c in Customer.query.all()}
     groups = {}
@@ -4181,6 +4197,7 @@ def health_check():
 
     return render_template('health_check.html', rows=rows, now=now, today=today,
                            n_expired=n_expired, n_red=n_red, n_amber=n_amber, n_green=n_green,
+                           staff_expired=staff_expired, staff_red=staff_red, staff_amber=staff_amber,
                            total=len(docs), status_filter=status_filter, type_filter=type_filter,
                            search=search)
 
@@ -4419,7 +4436,8 @@ def delete_document(doc_id):
     db.session.delete(doc)
     db.session.commit()
     flash('Document removed')
-    return redirect(url_for('documents'))
+    next_url = request.args.get('next')
+    return redirect(next_url) if next_url else redirect(url_for('documents'))
 
 # ── Admin — Document Types ────────────────────────────────────────────────────
 
@@ -5704,6 +5722,10 @@ def tahfeel_doc():
         staff_groups = mgmt_groups = []
         staff_people = mgmt_people = []
 
+    # Same admin-managed Document Type list used by the customer/company
+    # Documents feature, so there's one list to maintain, not two.
+    doc_type_names = [dt.name for dt in DocType.query.order_by(DocType.name).all()]
+
     return render_template('tahfeel_doc_simple.html',
                           all_docs=all_docs,
                           expiring_docs=expiring_docs,
@@ -5712,6 +5734,7 @@ def tahfeel_doc():
                           mgmt_groups=mgmt_groups,
                           staff_people=staff_people,
                           mgmt_people=mgmt_people,
+                          doc_type_names=doc_type_names,
                           critical_count=critical_count,
                           warning_count=warning_count,
                           expired_count=expired_count)
