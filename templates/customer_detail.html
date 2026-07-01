@@ -274,7 +274,7 @@
       {% if documents %}
       <table>
         <thead>
-          <tr><th>Document Type</th><th>Owner Name</th><th>Belongs To</th><th>Expiry Date</th><th>File</th>{% if session.role == 'admin' %}<th>Actions</th>{% endif %}</tr>
+          <tr><th>Document Type</th><th>Owner Name</th><th>Belongs To</th><th>Expiry Date</th><th>File</th><th>Actions</th></tr>
         </thead>
         <tbody>
           {% for doc in documents %}
@@ -299,13 +299,11 @@
                 <span style="color:var(--text-light);font-size:12px;">No file</span>
               {% endif %}
             </td>
-            {% if session.role == 'admin' %}
             <td>
               <a href="/documents/{{ doc.id }}/delete?next=/customers/{{ customer.id }}"
                  onclick="return confirm('Remove this document?')"
                  style="color:var(--danger);font-size:12px;text-decoration:none;font-weight:600;">🗑 Delete</a>
             </td>
-            {% endif %}
           </tr>
           {% endfor %}
         </tbody>

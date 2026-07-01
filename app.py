@@ -4430,7 +4430,6 @@ def edit_document(doc_id):
 
 @app.route('/documents/<int:doc_id>/delete')
 @login_required
-@admin_required
 def delete_document(doc_id):
     doc = Document.query.get_or_404(doc_id)
     db.session.delete(doc)
