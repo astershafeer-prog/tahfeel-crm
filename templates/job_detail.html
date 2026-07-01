@@ -218,6 +218,7 @@
                 <option value="">— Select —</option>
                 <option value="no">No - Regular task (enter revenue now)</option>
                 <option value="yes">Yes - Partner will pay commission later</option>
+                <option value="complimentary">Complimentary — Free service (no revenue/amount)</option>
               </select>
             </div>
 
@@ -297,8 +298,13 @@
             partnerAmount.required = true;
             partnerDueDate.required = true;
           } else {
+            // '' or 'complimentary' — no revenue/partner fields needed
             regularFields.style.display = 'none';
             partnerFields.style.display = 'none';
+            revenueInput.required = false;
+            partnerNameSelect.required = false;
+            partnerAmount.required = false;
+            partnerDueDate.required = false;
           }
         });
 
