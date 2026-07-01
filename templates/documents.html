@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tahfeel CRM — Documents</title>
+  <title>Tahfeel CRM — Document Alerts</title>
     <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, birthday_banner, welcome -%}
+    {%- from 'macros.html' import topbar, nav, birthday_banner -%}
   {{ topbar() }}
   {{ birthday_banner(birthdays_today, now) }}
   {{ nav('documents') }}
@@ -19,106 +19,97 @@
     {% endwith %}
 
     <div class="page-header">
-      <h2>Documents</h2>
-      <div style="display:flex;gap:8px;">
-        <a href="/documents/export" class="btn-add" style="background:var(--success);border-color:var(--success);">⬇ Export</a>
-        <a href="/documents/add" class="btn-add">+ Add Document</a>
-      </div>
+      <h2>🔔 Document Alerts <span style="font-size:13px;color:var(--text-muted);font-weight:400;">— documents expiring within 90 days</span></h2>
+      <a href="/documents/export" style="background:#059669;color:white;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">⬇ Export</a>
     </div>
 
     <!-- Summary cards -->
-    <div class="cards-4" style="margin-bottom:14px;">
-      <a href="/documents" class="sum-card"><div class="lbl">Total Docs</div><div class="val">{{ total_docs }}</div></a>
-      <a href="/documents?expiry=30" class="sum-card red"><div class="lbl">≤30 Days</div><div class="val">{{ expiring_30 }}</div></a>
-      <a href="/documents?expiry=60" class="sum-card amber"><div class="lbl">31–60 Days</div><div class="val">{{ expiring_60 }}</div></a>
-      <a href="/documents?expiry=90" class="sum-card" style="border-top-color:#4A5568;"><div class="lbl">61–90 Days</div><div class="val" style="color:#4A5568;">{{ expiring_90 }}</div></a>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
+      <a href="/documents?expiry=expired" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B91C1C;padding:16px 18px;">
+        <div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:700;letter-spacing:.4px;">Expired</div>
+        <div style="font-size:26px;font-weight:700;color:#B91C1C;">{{ expired_count }}</div>
+      </a>
+      <a href="/documents?expiry=30" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #DC2626;padding:16px 18px;">
+        <div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:700;letter-spacing:.4px;">≤ 30 Days</div>
+        <div style="font-size:26px;font-weight:700;color:#DC2626;">{{ count_30 }}</div>
+      </a>
+      <a href="/documents?expiry=60" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B45309;padding:16px 18px;">
+        <div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:700;letter-spacing:.4px;">31–60 Days</div>
+        <div style="font-size:26px;font-weight:700;color:#B45309;">{{ count_60 }}</div>
+      </a>
+      <a href="/documents?expiry=90" style="text-decoration:none;background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #4A5568;padding:16px 18px;">
+        <div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:700;letter-spacing:.4px;">61–90 Days</div>
+        <div style="font-size:26px;font-weight:700;color:#4A5568;">{{ count_90 }}</div>
+      </a>
     </div>
 
     <!-- Filters -->
-    <div class="filter-card" style="border-top:4px solid #64748B;">
-      <div class="filter-card-head">
-        <div class="filter-card-title">⊟ Filters</div>
-      </div>
-      <form method="get">
-        <div class="ff" style="margin-bottom:12px;">
-          <label>Search</label>
-          <input type="text" name="search" value="{{ request.args.get('search','') }}" placeholder="Customer name, doc type, owner...">
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:4px solid #64748B;padding:14px 18px;margin-bottom:14px;">
+      <form method="get" style="display:grid;grid-template-columns:1fr 200px auto auto;gap:10px;align-items:end;">
+        <div>
+          <label style="font-size:11px;color:#64748B;font-weight:600;display:block;margin-bottom:4px;">Search</label>
+          <input type="text" name="search" value="{{ search }}" placeholder="Name, company or document type…"
+                 style="width:100%;padding:9px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end;">
-          <div class="ff">
-            <label>Expiry</label>
-            <select name="expiry">
-              <option value="">All Documents</option>
-              <option value="30" {% if request.args.get('expiry')=='30' %}selected{% endif %}>≤30 Days</option>
-              <option value="60" {% if request.args.get('expiry')=='60' %}selected{% endif %}>31–60 Days</option>
-              <option value="90" {% if request.args.get('expiry')=='90' %}selected{% endif %}>61–90 Days</option>
-            </select>
-          </div>
-          <button type="submit" class="btn-primary" style="height:36px;padding:0 20px;white-space:nowrap;">Apply</button>
-          <a href="/documents" class="btn-reset" style="height:36px;display:flex;align-items:center;padding:0 14px;">Reset</a>
+        <div>
+          <label style="font-size:11px;color:#64748B;font-weight:600;display:block;margin-bottom:4px;">Expiry Window</label>
+          <select name="expiry" style="width:100%;padding:9px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+            <option value="">All (within 90 days)</option>
+            <option value="expired" {% if expiry_filter=='expired' %}selected{% endif %}>Expired</option>
+            <option value="30" {% if expiry_filter=='30' %}selected{% endif %}>≤ 30 Days</option>
+            <option value="60" {% if expiry_filter=='60' %}selected{% endif %}>31–60 Days</option>
+            <option value="90" {% if expiry_filter=='90' %}selected{% endif %}>61–90 Days</option>
+          </select>
         </div>
+        <button type="submit" style="height:38px;padding:0 22px;background:#1A3B8B;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Apply</button>
+        <a href="/documents" style="height:38px;display:flex;align-items:center;padding:0 16px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-weight:600;color:#334155;text-decoration:none;">Reset</a>
       </form>
     </div>
 
-    <div class="card card-documents">
-      <table>
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;">
         <thead>
-          <tr><th>Document Type</th><th>Owner Name</th><th>Belongs To</th><th>Customer</th><th>Expiry Date</th><th>File</th><th>Added By</th><th>Actions</th></tr>
+          <tr style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">
+            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Name</th>
+            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Company</th>
+            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Document Type</th>
+            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Expiry Date</th>
+            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Action</th>
+          </tr>
         </thead>
         <tbody>
           {% for doc in documents %}
-          {% set days = ((doc.expiry_date - now).days) if doc.expiry_date else 999 %}
-          <tr class="{% if doc.expiry_date and doc.expiry_date < now %}expired{% elif days <= 30 %}expiring{% elif days <= 60 %}near-expiring{% endif %}">
-            <td><strong>{{ doc.doc_type }}</strong></td>
-            <td>{{ doc.owner_name }}</td>
-            <td><span class="badge b-{{ doc.belongs_to|lower }}">{% if doc.belongs_to == 'Individual' %}👤{% elif doc.belongs_to == 'Company' %}🏢{% elif doc.belongs_to == 'Staff' %}👔{% else %}{{ doc.belongs_to }}{% endif %}</span></td>
-            <td>{% if doc.customer %}<a href="/customers/{{ doc.customer_id }}" style="color:var(--primary);text-decoration:none;">{{ doc.customer.name }}</a>{% else %}—{% endif %}</td>
-            <td>
-              {% if doc.expiry_date %}
+          {% set days = (doc.expiry_date - now).days %}
+          <tr style="border-bottom:1px solid #F1F5F9;{% if days < 0 %}background:#FEF2F2;{% elif days <= 30 %}background:#FFFBFB;{% endif %}">
+            <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#1A2333;">{{ doc.owner_name }}</td>
+            <td style="padding:10px 14px;font-size:13px;color:#334155;">
+              {% if doc.customer %}<a href="/customers/{{ doc.customer_id }}" style="color:#1A3B8B;text-decoration:none;">{{ doc.customer.company or doc.customer.name }}</a>{% else %}—{% endif %}
+            </td>
+            <td style="padding:10px 14px;font-size:13px;color:#334155;">{{ doc.doc_type }}</td>
+            <td style="padding:10px 14px;font-size:13px;">
+              <span style="font-weight:600;{% if days < 0 %}color:#B91C1C;{% elif days <= 30 %}color:#DC2626;{% elif days <= 60 %}color:#B45309;{% else %}color:#334155;{% endif %}">
                 {{ doc.expiry_date.strftime('%d %b %Y') }}
-                {% if doc.expiry_date < now %}
-                  <span style="color:#c0392b;font-size:10px;font-weight:600;"> EXPIRED</span>
-                {% elif days <= 30 %}
-                  <span style="color:#c0392b;font-size:10px;font-weight:600;"> ⚠ {{ days }}d</span>
-                {% elif days <= 60 %}
-                  <span style="color:#854F0B;font-size:10px;font-weight:600;"> {{ days }}d</span>
-                {% endif %}
-              {% else %}—{% endif %}
+              </span>
+              {% if days < 0 %}<span style="background:#FEE2E2;color:#991B1B;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px;">EXPIRED</span>
+              {% elif days <= 60 %}<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px;">{{ days }}d left</span>{% endif %}
             </td>
-            <td>
-              {% if doc.customer_id and customer_doc_count[doc.customer_id] > 1 %}
-              {# Multiple documents for this customer - show attachments button #}
-              <button onclick="showCustomerDocs({{ doc.customer_id }})" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1A3B8B;font-weight:600;background:#EBF2FF;padding:3px 9px;border-radius:6px;border:none;cursor:pointer;">📎📎 {{ customer_doc_count[doc.customer_id] }} files</button>
-              {% elif doc.file_url %}
-              {# Single document - show view file button #}
-              <a href="{{ doc.file_url }}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1A3B8B;font-weight:600;text-decoration:none;background:#EBF2FF;padding:3px 9px;border-radius:6px;">📎 View File</a>
-              {% elif doc.file_name %}
-              <span style="color:#94A3B8;font-size:11px;">📎 {{ doc.file_name[:20] }}{% if doc.file_name|length > 20 %}…{% endif %}</span>
-              {% else %}
-              <span style="color:#CBD5E1;font-size:11px;">No file</span>
-              {% endif %}
-            </td>
-            <td>{{ doc.uploader.name if doc.uploader else '—' }}</td>
-            <td>
-              <div style="display:flex;gap:5px;align-items:center;">
-                {% if doc.customer and doc.customer.phone and days <= 30 %}
-                {% if doc.customer.phone and doc.expiry_date %}
-{% set doc_rep = (doc.customer.rep.name + '%0A📞 ' + doc.customer.rep.phone|replace(' ','')|replace('+','%2B') + '%0ATahfeel Business Setup Services%0A📞 +971 50 394 5656') if doc.customer.rep and doc.customer.rep.phone else 'Tahfeel Business Setup Services%0A📞 +971 50 394 5656' %}
-<a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ doc.customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0AWe%20would%20like%20to%20remind%20you%20that%20your%20*{{ doc.doc_type|replace(' ','%20') }}*%20is%20due%20to%20expire%20on%20*{{ doc.expiry_date.strftime('%d %b %Y')|replace(' ','%20') }}*.%0A%0ATo%20avoid%20any%20penalties%20or%20service%20disruptions%2C%20kindly%20get%20in%20touch%20with%20us%20at%20your%20earliest%20convenience%20so%20we%20can%20assist%20with%20the%20renewal%20process.%0A%0AWarm%20regards%2C%0A{{ doc_rep }}" target="_blank" class="btn-sm" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WA</a>
-{% endif %}
-                {% endif %}
+            <td style="padding:10px 14px;">
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                 {% if doc.file_url %}
-                <a href="{{ doc.file_url }}" target="_blank" download class="ib" title="Download File">⬇</a>
+                <a href="{{ doc.file_url }}" target="_blank" style="background:#EBF2FF;color:#1A3B8B;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;">📎 View</a>
                 {% endif %}
-                <a href="/documents/{{ doc.id }}/edit" class="ib" title="Edit">✏</a>
-                {% if session.role == 'admin' %}
-                <a href="/documents/{{ doc.id }}/delete" class="ib ib-del" onclick="return confirm('Remove this document?')" title="Delete">🗑</a>
+                {% if doc.customer and doc.customer.phone and days <= 30 %}
+{% set doc_rep = (doc.customer.rep.name + '%0A📞 ' + doc.customer.rep.phone|replace(' ','')|replace('+','%2B') + '%0ATahfeel Business Setup Services%0A📞 +971 50 394 5656') if doc.customer.rep and doc.customer.rep.phone else 'Tahfeel Business Setup Services%0A📞 +971 50 394 5656' %}
+                <a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ doc.customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0AWe%20would%20like%20to%20remind%20you%20that%20your%20*{{ doc.doc_type|replace(' ','%20') }}*%20is%20due%20to%20expire%20on%20*{{ doc.expiry_date.strftime('%d %b %Y')|replace(' ','%20') }}*.%0A%0ATo%20avoid%20any%20penalties%20or%20service%20disruptions%2C%20kindly%20get%20in%20touch%20with%20us%20at%20your%20earliest%20convenience%20so%20we%20can%20assist%20with%20the%20renewal%20process.%0A%0AWarm%20regards%2C%0A{{ doc_rep }}"
+                   target="_blank" style="background:#25D366;color:white;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;">💬 WhatsApp</a>
                 {% endif %}
+                <a href="/documents/{{ doc.id }}/edit" style="background:#F1F5F9;color:#334155;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;">✏ Edit</a>
+                <a href="/documents/{{ doc.id }}/delete" onclick="return confirm('Remove this document?')" style="background:#FEE2E2;color:#B91C1C;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;">🗑 Delete</a>
               </div>
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="8" class="empty">No documents found.</td></tr>
+          <tr><td colspan="5" style="padding:40px;text-align:center;color:#94A3B8;">No documents expiring within 90 days. 🎉</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -150,62 +141,5 @@
     </div>
     {% endif %}
   </div>
-
-  <!-- Popup Modal for Multiple Documents -->
-  <div id="docsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
-    <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #E2E8F0;padding-bottom:12px;">
-        <h3 style="margin:0;font-size:18px;color:#1A3B8B;">Customer Documents</h3>
-        <button onclick="closeDocsModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#94A3B8;">&times;</button>
-      </div>
-      <div id="docsModalContent"></div>
-    </div>
-  </div>
-
-  <script>
-  const customerDocsData = {{ customer_docs|tojson|safe }};
-  
-  function showCustomerDocs(customerId) {
-    const docs = customerDocsData[customerId];
-    if (!docs || docs.length === 0) {
-      alert('No documents found');
-      return;
-    }
-    
-    let html = '<div style="display:flex;flex-direction:column;gap:12px;">';
-    docs.forEach(doc => {
-      const docType = doc.doc_type || 'Document';
-      const fileName = doc.file_name || 'Unnamed file';
-      const fileUrl = doc.file_url;
-      
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0;">';
-      html += '<div>';
-      html += '<div style="font-weight:600;color:#1A3B8B;font-size:14px;">' + docType + '</div>';
-      html += '<div style="font-size:12px;color:#64748B;margin-top:2px;">' + fileName + '</div>';
-      html += '</div>';
-      
-      if (fileUrl) {
-        html += '<a href="' + fileUrl + '" target="_blank" download style="background:#1A3B8B;color:white;padding:6px 16px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">⬇ Download</a>';
-      } else {
-        html += '<span style="color:#CBD5E1;font-size:11px;">No file</span>';
-      }
-      
-      html += '</div>';
-    });
-    html += '</div>';
-    
-    document.getElementById('docsModalContent').innerHTML = html;
-    document.getElementById('docsModal').style.display = 'flex';
-  }
-  
-  function closeDocsModal() {
-    document.getElementById('docsModal').style.display = 'none';
-  }
-  
-  // Close on background click
-  document.getElementById('docsModal').onclick = function(e) {
-    if (e.target === this) closeDocsModal();
-  };
-  </script>
 </body>
 </html>

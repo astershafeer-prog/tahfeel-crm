@@ -4204,15 +4204,15 @@ def health_check():
 @app.route('/documents')
 @login_required
 def documents():
+    """Document Alerts — a filtered list of documents expiring within 90 days
+    (including already-expired). Adding documents happens at the customer/
+    company level now, so this page is alert-only, not a general browser."""
     now = now_dubai()
     search = request.args.get('search', '').strip().lower()
-    belongs_filter = request.args.get('belongs_to', '')
-    doc_type_filter = request.args.get('doc_type', '')
-    customer_filter = request.args.get('customer_id', '')
     expiry_filter = request.args.get('expiry', '')
 
     try:
-        doc_list = Document.query.order_by(Document.expiry_date).all()
+        all_docs = Document.query.filter(Document.expiry_date.isnot(None)).order_by(Document.expiry_date).all()
     except Exception:
         # Run missing column migrations inline
         try:
@@ -4224,34 +4224,32 @@ def documents():
         flash('System updated. Please refresh.')
         return redirect(url_for('dashboard'))
 
-    # Summary counts (all docs)
-    total_docs = len(doc_list)
-    expiring_30 = [d for d in doc_list if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30]
-    expiring_60 = [d for d in doc_list if d.expiry_date and 30 < (d.expiry_date - now).days <= 60]
-    expiring_90 = [d for d in doc_list if d.expiry_date and 60 < (d.expiry_date - now).days <= 90]
-    expired_docs = [d for d in doc_list if d.expiry_date and d.expiry_date < now]
+    def days_left(d):
+        return (d.expiry_date - now).days
 
-    # Apply filters
+    # Alert scope: only documents expiring within 90 days (expired included)
+    alert_docs = [d for d in all_docs if days_left(d) <= 90]
+
+    expired_count = len([d for d in alert_docs if days_left(d) < 0])
+    count_30 = len([d for d in alert_docs if 0 <= days_left(d) <= 30])
+    count_60 = len([d for d in alert_docs if 30 < days_left(d) <= 60])
+    count_90 = len([d for d in alert_docs if 60 < days_left(d) <= 90])
+
+    doc_list = alert_docs
     if search:
         doc_list = [d for d in doc_list if
                     search in (d.owner_name or '').lower() or
                     search in (d.doc_type or '').lower() or
                     (d.customer and search in d.customer.name.lower()) or
                     (d.customer and d.customer.company and search in d.customer.company.lower())]
-    if belongs_filter:
-        doc_list = [d for d in doc_list if d.belongs_to == belongs_filter]
-    if doc_type_filter:
-        doc_list = [d for d in doc_list if d.doc_type == doc_type_filter]
-    if customer_filter:
-        doc_list = [d for d in doc_list if d.customer_id == int(customer_filter)]
-    if expiry_filter == '30':
-        doc_list = [d for d in doc_list if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30]
+    if expiry_filter == 'expired':
+        doc_list = [d for d in doc_list if days_left(d) < 0]
+    elif expiry_filter == '30':
+        doc_list = [d for d in doc_list if 0 <= days_left(d) <= 30]
     elif expiry_filter == '60':
-        doc_list = [d for d in doc_list if d.expiry_date and 30 < (d.expiry_date - now).days <= 60]
+        doc_list = [d for d in doc_list if 30 < days_left(d) <= 60]
     elif expiry_filter == '90':
-        doc_list = [d for d in doc_list if d.expiry_date and 60 < (d.expiry_date - now).days <= 90]
-    elif expiry_filter == 'expired':
-        doc_list = [d for d in doc_list if d.expiry_date and d.expiry_date < now]
+        doc_list = [d for d in doc_list if 60 < days_left(d) <= 90]
 
     # Pagination
     page = int(request.args.get('page', 1))
@@ -4261,39 +4259,13 @@ def documents():
     page = max(1, min(page, total_pages))
     paginated = doc_list[(page-1)*per_page: page*per_page]
 
-    customers = Customer.query.order_by(Customer.name).all()
-    doc_types = DocType.query.order_by(DocType.name).all()
-    
-    # Count documents per customer (for showing multiple file indicator)
-    from collections import defaultdict
-    customer_doc_count = defaultdict(int)
-    all_docs = Document.query.all()
-    for d in all_docs:
-        if d.customer_id:
-            customer_doc_count[d.customer_id] += 1
-    
-    # Get all documents grouped by customer for popup (convert to dicts for JSON)
-    customer_docs = defaultdict(list)
-    for d in all_docs:
-        if d.customer_id and d.file_url:
-            customer_docs[d.customer_id].append({
-                'doc_type': d.doc_type or 'Document',
-                'file_name': d.file_name or 'Unnamed file',
-                'file_url': d.file_url
-            })
-    
     return render_template('documents.html',
-                           documents=paginated, customers=customers, doc_types=doc_types,
-                           total_docs=total_docs, expiring_30=len(expiring_30),
-                           expiring_60=len(expiring_60), expiring_90=len(expiring_90),
-                           expired_count=len(expired_docs),
-                           search=search, belongs_filter=belongs_filter,
-                           doc_type_filter=doc_type_filter, customer_filter=customer_filter,
-                           expiry_filter=expiry_filter,
+                           documents=paginated,
+                           expired_count=expired_count, count_30=count_30,
+                           count_60=count_60, count_90=count_90,
+                           search=search, expiry_filter=expiry_filter,
                            total=total, page=page, total_pages=total_pages,
-                           now=now,
-                           customer_doc_count=dict(customer_doc_count),
-                           customer_docs=dict(customer_docs))
+                           now=now)
 
 
 @app.route('/documents/export')
