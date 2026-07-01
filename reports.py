@@ -204,6 +204,78 @@ def revenue_audit():
     return render_template('revenue_audit.html', q=q, rows=rows)
 
 
+# ── Revenue reconcile (diagnostic): the Dashboard's "Revenue" KPI and the
+# Revenue Report export use slightly different queries for which closed jobs
+# count. This recomputes both, for the same date range, against live data,
+# and shows exactly which jobs differ — so a totals mismatch can be traced
+# to a specific record instead of guessed at.
+@reports_bp.route('/reports/revenue-reconcile')
+def revenue_reconcile():
+    if session.get('role') not in ['admin', 'finance']:
+        flash('Access denied.')
+        return redirect(url_for('dashboard'))
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
+    from app import PartialRevenue
+    from sqlalchemy import or_, and_
+
+    df = request.args.get('from', '')
+    dt = request.args.get('to', '')
+    if not df or not dt:
+        today = date.today()
+        df = today.replace(day=1).strftime('%Y-%m-%d')
+        dt = today.strftime('%Y-%m-%d')
+    from_d = datetime.strptime(df, '%Y-%m-%d').date()
+    to_d = datetime.strptime(dt, '%Y-%m-%d').date()
+    from_dt = datetime.combine(from_d, datetime.min.time())
+    to_dt = datetime.combine(to_d, datetime.max.time())
+
+    closed_statuses = ['Closed', 'Closed - Pending Partner Commission']
+
+    # Method A — Dashboard: revenue_date must be SET and within range (no fallback)
+    method_a_jobs = Job.query.filter(
+        Job.status.in_(closed_statuses),
+        Job.revenue_date.isnot(None),
+        Job.revenue_date >= from_d, Job.revenue_date <= to_d
+    ).all()
+
+    # Method B — Revenue Report export: revenue_date in range, OR (revenue_date
+    # is NULL and created_at falls in range) as a fallback
+    method_b_jobs = Job.query.filter(
+        Job.status.in_(closed_statuses),
+        or_(
+            and_(Job.revenue_date.isnot(None), Job.revenue_date >= from_d, Job.revenue_date <= to_d),
+            and_(Job.revenue_date.is_(None), Job.created_at >= from_dt, Job.created_at <= to_dt)
+        )
+    ).all()
+
+    a_ids = {j.id for j in method_a_jobs}
+    b_ids = {j.id for j in method_b_jobs}
+    only_in_b = [j for j in method_b_jobs if j.id not in a_ids]   # revenue_date-null fallback catches
+    only_in_a = [j for j in method_a_jobs if j.id not in b_ids]   # sanity check — should normally be empty
+
+    a_total_final = sum(j.revenue or 0 for j in method_a_jobs)
+    b_total_final = sum(j.revenue or 0 for j in method_b_jobs)
+    a_received = sum(j.amount_received or 0 for j in method_a_jobs)
+    b_received = sum(j.amount_received or 0 for j in method_b_jobs)
+
+    # Partial revenue — identical formula on both the dashboard and the export
+    # (any job status, revenue_date in range) so shown once, not per-method.
+    partials = PartialRevenue.query.filter(
+        PartialRevenue.revenue_date >= from_d, PartialRevenue.revenue_date <= to_d
+    ).order_by(PartialRevenue.revenue_date).all()
+    partial_total = sum(p.amount for p in partials)
+
+    return render_template('revenue_reconcile.html',
+        df=df, dt=dt,
+        a_total_final=a_total_final, b_total_final=b_total_final,
+        a_received=a_received, b_received=b_received,
+        partial_total=partial_total, partials=partials,
+        a_grand=a_total_final + partial_total, b_grand=b_total_final + partial_total,
+        only_in_b=only_in_b, only_in_a=only_in_a,
+        a_count=len(method_a_jobs), b_count=len(method_b_jobs),
+    )
+
+
 # ── 1. Lead Detail Report
 @reports_bp.route('/reports/leads/export')
 def export_lead_report():

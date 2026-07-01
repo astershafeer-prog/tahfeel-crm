@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Revenue Reconcile</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('reports') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'error' %}error{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <h2>⚖️ Revenue Reconcile <span style="font-size:13px;color:var(--text-muted);font-weight:400;">— compares the Dashboard's Revenue KPI vs the Revenue Report export, for the same range</span></h2>
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;padding:14px 18px;margin-bottom:14px;">
+      <form method="GET" action="/reports/revenue-reconcile" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
+        <div><label style="font-size:11px;color:var(--text-muted);display:block;">From</label><input type="date" name="from" value="{{ df }}"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);display:block;">To</label><input type="date" name="to" value="{{ dt }}"></div>
+        <button type="submit" class="btn-primary">Reconcile</button>
+      </form>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;padding:16px 18px;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Method A — Dashboard formula</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Closed jobs with Revenue Date set + in range ({{ a_count }} jobs) + partial revenue</div>
+        <div style="font-size:24px;font-weight:700;color:#0F2660;">AED {{ '{:,.2f}'.format(a_grand) }}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Final revenue: AED {{ '{:,.2f}'.format(a_total_final) }} + Partial: AED {{ '{:,.2f}'.format(partial_total) }}</div>
+        <div style="font-size:12px;color:var(--text-muted);">Amount received (closed jobs): AED {{ '{:,.2f}'.format(a_received) }}</div>
+      </div>
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #25D366;padding:16px 18px;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Method B — Revenue Report export formula</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Same, but also includes closed jobs with no Revenue Date (falls back to Created Date) ({{ b_count }} jobs) + partial revenue</div>
+        <div style="font-size:24px;font-weight:700;color:#0F2660;">AED {{ '{:,.2f}'.format(b_grand) }}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Final revenue: AED {{ '{:,.2f}'.format(b_total_final) }} + Partial: AED {{ '{:,.2f}'.format(partial_total) }}</div>
+        <div style="font-size:12px;color:var(--text-muted);">Amount received (closed jobs): AED {{ '{:,.2f}'.format(b_received) }}</div>
+      </div>
+    </div>
+
+    {% set delta = a_grand - b_grand %}
+    <div style="background:{% if delta == 0 %}#DCFCE7{% else %}#FEF3C7{% endif %};border-radius:12px;padding:14px 18px;margin-bottom:14px;font-size:14px;font-weight:600;color:{% if delta == 0 %}#166534{% else %}#92400E{% endif %};">
+      {% if delta == 0 %}✓ Both methods match exactly — AED {{ '{:,.2f}'.format(a_grand) }}
+      {% else %}Difference between methods: AED {{ '{:,.2f}'.format(delta|abs) }}{% endif %}
+    </div>
+
+    {% if only_in_b %}
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #F59E0B;padding:16px 18px;margin-bottom:14px;">
+      <div style="font-weight:700;color:#92400E;margin-bottom:8px;">Jobs counted by Method B only ({{ only_in_b|length }}) — closed with no Revenue Date, included via Created Date fallback</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="border-bottom:2px solid #E5E7EB;">
+          <th style="text-align:left;padding:6px;font-size:11px;color:#6B7280;">Job #</th>
+          <th style="text-align:left;padding:6px;font-size:11px;color:#6B7280;">Customer</th>
+          <th style="text-align:left;padding:6px;font-size:11px;color:#6B7280;">Task Type</th>
+          <th style="text-align:right;padding:6px;font-size:11px;color:#6B7280;">Revenue</th>
+          <th style="text-align:left;padding:6px;font-size:11px;color:#6B7280;">Created</th>
+        </tr></thead>
+        <tbody>
+          {% for j in only_in_b %}
+          <tr style="border-bottom:1px solid #F3F4F6;">
+            <td style="padding:6px;"><a href="/jobs/{{ j.id }}">#{{ j.id }}</a></td>
+            <td style="padding:6px;">{{ j.customer.name if j.customer else '' }}</td>
+            <td style="padding:6px;">{{ j.job_type }}</td>
+            <td style="padding:6px;text-align:right;font-weight:600;">AED {{ '{:,.2f}'.format(j.revenue or 0) }}</td>
+            <td style="padding:6px;">{{ j.created_at.strftime('%d %b %Y') if j.created_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if only_in_a %}
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #DC2626;padding:16px 18px;margin-bottom:14px;">
+      <div style="font-weight:700;color:#991B1B;margin-bottom:8px;">⚠ Jobs counted by Method A only ({{ only_in_a|length }}) — unexpected, worth checking</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tbody>
+          {% for j in only_in_a %}
+          <tr style="border-bottom:1px solid #F3F4F6;">
+            <td style="padding:6px;"><a href="/jobs/{{ j.id }}">#{{ j.id }}</a></td>
+            <td style="padding:6px;">{{ j.customer.name if j.customer else '' }} — {{ j.job_type }}</td>
+            <td style="padding:6px;text-align:right;font-weight:600;">AED {{ '{:,.2f}'.format(j.revenue or 0) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if not only_in_a and not only_in_b %}
+    <div style="background:white;border-radius:12px;padding:16px 18px;color:var(--text-muted);font-size:13px;">
+      Both methods selected the exact same set of closed jobs for this range. If the Dashboard number you compared against still doesn't match this, it may be reading a different KPI (e.g. "Amount Received" or "Completed Value" instead of "Revenue") — those include full invoice/government-fee amounts, not just profit, and will naturally be higher.
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>
