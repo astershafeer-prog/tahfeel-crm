@@ -649,14 +649,20 @@ function totalsHtml(d, remarks) {
     remHtml;
 }
 
-function bankSigHtml() {
-  return '<div class="pv-bank-sig">'+
+function bankSigHtml(showBank) {
+  // Quotation's page 3 (right under the quote amount) and page 4 both used to
+  // show Bank Details — that's the repeat the owner flagged. Page 4 keeps its
+  // own full Bank Details block (with TRN); page 3 now shows signature only.
+  if (showBank === undefined) showBank = true;
+  var bankHtml = showBank ?
     '<div class="pv-bank"><h4>Bank Details</h4><p>'+
     '<strong>Tahfeel Business Setup Services</strong><br>'+
     'Bank: ADCB — Karama Branch<br>'+
     'Account No: 12204966920001<br>'+
     'IBAN: AE520030012204966920001<br>'+
-    'Swift Code: ADCBAEAA</p></div>'+
+    'Swift Code: ADCBAEAA</p></div>' : '<div></div>';
+  return '<div class="pv-bank-sig">'+
+    bankHtml+
     '<div class="pv-sig"><div class="pv-sig-line"></div><p>Authorised Signature</p>'+
     '<p style="font-weight:700;color:#1A3B8B;margin-top:2px;">Tahfeel Business Setup Services</p></div>'+
     '</div>';
@@ -789,7 +795,7 @@ function previewQt() {
     docHeader('QUOTATION',document.getElementById('qtNo').value,document.getElementById('qtDate').value,document.getElementById('qtNote').value,billTo,document.getElementById('qtValid').value)+
     itemsTable(d.items, false)+
     totalsHtml(d,[])+
-    bankSigHtml()+
+    bankSigHtml(false)+
     '<div class="pv-ft" style="position:absolute;bottom:0;left:0;right:0;"><span>www.tahfeel.ae</span><span>Thank you for choosing Tahfeel!</span><span>Info@tahfeel.ae | +971 50 394 5656</span></div></div>';
 
   // Page 4 - T&C + Docs + Notes + Why Tahfeel + Contact + Bank

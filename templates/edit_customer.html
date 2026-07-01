@@ -164,7 +164,7 @@
         <div class="card-header"><h2>📄 Existing Documents ({{ existing_docs|length }})</h2></div>
         <div class="card-body" style="padding:0;">
           <table>
-            <thead><tr><th>Type</th><th>Owner</th><th>Expiry</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Type</th><th>Owner</th><th>Expiry</th><th>Notes</th><th>Actions</th></tr></thead>
             <tbody>
               {% for doc in existing_docs %}
               {% set days = ((doc.expiry_date - now).days) if doc.expiry_date else 999 %}
@@ -176,6 +176,12 @@
                   {% elif days <= 30 %}<span style="color:var(--warning);font-size:11px;font-weight:700;"> ⚠ {{ days }}d</span>{% endif %}
                 {% else %}—{% endif %}</td>
                 <td style="color:var(--text-muted);font-size:12px;">{{ doc.notes or '—' }}</td>
+                <td>
+                  {% if doc.file_url %}<a href="{{ doc.file_url }}" target="_blank" style="color:var(--primary);font-size:12px;font-weight:600;text-decoration:none;margin-right:10px;">📎 View</a>{% endif %}
+                  <a href="/documents/{{ doc.id }}/delete?next=/customers/{{ customer.id }}/edit"
+                     onclick="return confirm('Remove this document?')"
+                     style="color:var(--danger);font-size:12px;font-weight:600;text-decoration:none;">🗑 Delete</a>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
