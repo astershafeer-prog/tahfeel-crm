@@ -4338,12 +4338,103 @@ def _customer_report_data(customer_id):
             label, color, width = d.expiry_date.strftime('%b %Y'), '#16A34A', min(84, 30 + days // 6)
         timeline.append({'label': label, 'doc': d.doc_type, 'color': color, 'width': width})
 
+    # ── Dashboard (page 1) data ──
+    import calendar as _cal
+    n_exp30 = len([d for d in docs if 0 <= dl(d) <= 30])
+    n_exp90 = len([d for d in docs if 0 <= dl(d) <= 90])
+    # Estimated non-compliance risk — simple derived index from document status mix
+    risk_pct = min(95, n_expired * 15 + n_exp30 * 8 + max(0, n_exp90 - n_exp30) * 3)
+    risk_label = 'VERY LOW' if risk_pct < 10 else 'LOW' if risk_pct < 25 else 'MEDIUM' if risk_pct < 50 else 'HIGH'
+    risk_color = '#16A34A' if risk_pct < 25 else '#F59E0B' if risk_pct < 50 else '#EF4444'
+
+    # One health card per document type (nearest expiry within the type)
+    doc_cards = []
+    seen_types = []
+    for d in docs:
+        t = d.doc_type or 'Other'
+        if t in seen_types:
+            continue
+        seen_types.append(t)
+        days = dl(d)
+        pct = 0 if days < 0 else min(100, round(100 * days / 365))
+        color = '#EF4444' if days < 0 else ('#F59E0B' if days <= 90 else '#16A34A')
+        status = 'Expired' if days < 0 else ('Expiring soon' if days <= 90 else 'Healthy')
+        doc_cards.append({'type': t, 'days': days, 'pct': pct, 'color': color, 'status': status,
+                          'expiry': d.expiry_date.strftime('%d %b %Y')})
+    doc_cards = doc_cards[:9]
+
+    # Rule-based insights
+    insights = []
+    if score is not None:
+        insights.append(('#16A34A' if score >= 70 else '#F59E0B',
+                         f'Compliance score {score}% — {mood.lower()}'))
+    insights.append(('#16A34A', 'No expired documents') if not n_expired else
+                    ('#EF4444', f'{n_expired} expired document{"s" if n_expired != 1 else ""} need immediate renewal'))
+    if n_exp90:
+        insights.append(('#F59E0B', f'{n_exp90} document{"s" if n_exp90 != 1 else ""} require attention within 90 days'))
+    if n_exp30 or n_expired:
+        insights.append(('#3B82F6', 'Recommended renewal planning in the next 30 days'))
+    insights.append((risk_color, f'Estimated compliance risk: {risk_label.title()}'))
+
+    # Timeline buckets
+    buckets = [
+        ('Next 30 days', n_exp30, '#EF4444'),
+        ('31–60 days', len([d for d in docs if 30 < dl(d) <= 60]), '#F59E0B'),
+        ('61–90 days', len([d for d in docs if 60 < dl(d) <= 90]), '#EAB308'),
+        ('90+ days', len([d for d in docs if dl(d) > 90]), '#16A34A'),
+    ]
+
+    # Attention required (top 5, soonest first)
+    attention = [(d, dl(d)) for d in docs if dl(d) <= 90][:5]
+
+    # Employee compliance by doc type
+    employees = Employee.query.filter_by(customer_id=customer_id).all()
+    emp_docs = [d for d in docs if d.employee_id]
+    emp_rows = []
+    for t in sorted({(d.doc_type or 'Other') for d in emp_docs}):
+        ds = [d for d in emp_docs if (d.doc_type or 'Other') == t]
+        ok = len([d for d in ds if dl(d) > 90])
+        due = len(ds) - ok
+        emp_rows.append({'type': t, 'ok': ok, 'due': due})
+    owners_count = Owner.query.filter_by(customer_id=customer_id).count()
+
+    # 3-month compliance calendar
+    cal_months = []
+    for i in range(3):
+        mm = (today.month - 1 + i) % 12 + 1
+        yy = today.year + ((today.month - 1 + i) // 12)
+        items = [d for d in docs if d.expiry_date.year == yy and d.expiry_date.month == mm]
+        cal_months.append({'label': f'{_cal.month_name[mm]} {yy}',
+                           'items': [f'{d.expiry_date.strftime("%d %b")} — {d.doc_type}' for d in items[:3]],
+                           'more': max(0, len(items) - 3)})
+
+    # QR code (SVG) linking to the live health page
+    qr_svg = ''
+    try:
+        import qrcode
+        import qrcode.image.svg
+        import io as _io
+        buf = _io.BytesIO()
+        qrcode.make(f'https://tahfeel-crm-production.up.railway.app/customers/{customer_id}/health',
+                    image_factory=qrcode.image.svg.SvgPathImage, box_size=6).save(buf)
+        qr_svg = buf.getvalue().decode()
+    except Exception as e:
+        print(f'[report] QR generation skipped: {e}')
+
+    report_no = f'TBS/CR/{today.year}/{customer_id:04d}'
+
     return {
         'customer': customer, 'today': today, 'docs': [(d, dl(d)) for d in docs],
         'total': total, 'n_valid': n_valid, 'n_expiring': n_expiring, 'n_expired': n_expired,
         'score': score, 'mood': mood, 'mood_color': mood_color, 'uplift': uplift,
         'categories': _doc_categories(docs, dl), 'action_items': action_items,
         'timeline': timeline, 'month_label': now_dubai().strftime('%B %Y'),
+        'n_exp30': n_exp30, 'n_exp90': n_exp90, 'risk_pct': risk_pct,
+        'risk_label': risk_label, 'risk_color': risk_color, 'doc_cards': doc_cards,
+        'insights': insights, 'buckets': buckets, 'attention': attention,
+        'employees_count': len(employees), 'emp_rows': emp_rows, 'owners_count': owners_count,
+        'cal_months': cal_months, 'qr_svg': qr_svg, 'report_no': report_no,
+        'generated': now_dubai(),
     }
 
 def build_report_email_html(data):
