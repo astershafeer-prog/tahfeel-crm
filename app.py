@@ -418,6 +418,8 @@ class WhatsAppMessage(db.Model):
     is_read      = db.Column(db.Boolean, default=False)   # inbound: has a staff seen it?
     lead_id      = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=True)
     customer_id  = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)
+    media_url    = db.Column(db.String(500), nullable=True)  # Cloudinary permanent URL
+    mime_type    = db.Column(db.String(50), nullable=True)
     created_at   = db.Column(db.DateTime, default=now_dubai)
     lead         = db.relationship('Lead', foreign_keys=[lead_id])
     customer     = db.relationship('Customer', foreign_keys=[customer_id])
