@@ -3,17 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <title>Compliance Intelligence Report — {{ customer.name }}</title>
+{% macro dicon(t, color) -%}
+{% set tl = (t or '')|lower %}
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;">
+{%- if 'visa' in tl or 'immigration' in tl or 'travel' in tl -%}
+<path d="M16 10h4a2 2 0 0 1 0 4h-4l-4 7H9l2-7H6l-2 2H2l2-4-2-4h2l2 2h5L9 3h3z"/>
+{%- elif 'passport' in tl -%}
+<path d="M3 19a9 9 0 0 1 9 0 9 9 0 0 1 9 0"/><path d="M3 6a9 9 0 0 1 9 0 9 9 0 0 1 9 0"/><path d="M3 6v13"/><path d="M12 6v13"/><path d="M21 6v13"/>
+{%- elif 'emirates id' in tl or 'labor' in tl or 'labour' in tl or 'establishment' in tl or 'id ' in tl or tl == 'id' -%}
+<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M14 10h4"/><path d="M14 14h4"/><path d="M6 16h6"/>
+{%- elif 'medical' in tl or 'dha' in tl or 'moh' in tl or 'health' in tl or 'insurance' in tl -%}
+<path d="M12 5v14"/><path d="M5 12h14"/><rect x="3" y="3" width="18" height="18" rx="3"/>
+{%- elif 'vat' in tl or 'tax' in tl or 'corporate' in tl -%}
+<path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6"/><path d="M9 12h6"/>
+{%- elif 'ejari' in tl or 'tenancy' in tl or 'rent' in tl or 'lease' in tl -%}
+<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>
+{%- elif 'trade' in tl or 'license' in tl or 'licence' in tl or 'noc' in tl or 'certificate' in tl -%}
+<circle cx="12" cy="9" r="5"/><path d="M9 13l-2 8 5-3 5 3-2-8"/>
+{%- else -%}
+<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}
 <style>
   @page{
-    size:A4 landscape;margin:7mm 7mm 12mm 7mm;
-    @bottom-left{content:"www.tahfeel.ae  |  info@tahfeel.ae";font-size:7pt;color:#64748B;font-family:'DejaVu Sans',sans-serif;}
+    size:A4 landscape;margin:7mm 7mm 13mm 7mm;
+    @bottom-left{content:"Tahfeel Business Setup Service  |  Info@tahfeel.ae  |  +971 4 585 5033";font-size:7pt;color:#64748B;font-family:'DejaVu Sans',sans-serif;}
     @bottom-center{content:"Generated automatically  |  Confidential";font-size:7pt;color:#64748B;font-family:'DejaVu Sans',sans-serif;}
     @bottom-right{content:"Page " counter(page) " of " counter(pages);font-size:7pt;color:#64748B;font-family:'DejaVu Sans',sans-serif;}
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:'DejaVu Sans',sans-serif;color:#0B1B35;font-size:8pt;}
   .card{background:#fff;border:0.7pt solid #DDE5EF;border-radius:6pt;}
-  .hd-blue{font-size:7.5pt;font-weight:bold;color:#1D4ED8;letter-spacing:0.3pt;}
+  .hd-blue{font-size:7.5pt;font-weight:bold;color:#0B3B8C;letter-spacing:0.3pt;}
   .pill{display:inline-block;font-size:6.5pt;font-weight:bold;padding:1pt 6pt;border-radius:8pt;}
   .p-red{background:#FEF2F2;color:#B91C1C;}
   .p-amber{background:#FFF7ED;color:#B45309;}
@@ -26,24 +48,29 @@
   .page2{page-break-before:always;}
   .statnum{font-size:14pt;font-weight:bold;line-height:1.1;}
   .statlbl{font-size:6.5pt;color:#64748B;font-weight:bold;letter-spacing:0.2pt;}
+  .accent{height:2.5pt;background:#0B3B8C;border-radius:2pt;}
 </style>
 </head>
 <body>
 
 <!-- ═══ HEADER ═══ -->
 <table><tr>
-  <td style="width:19%;">
-    <div style="font-size:15pt;font-weight:bold;color:#0B3B8C;">TAHFEEL</div>
-    <div style="font-size:6.5pt;color:#1D4ED8;letter-spacing:1pt;font-weight:bold;">BUSINESS SOLUTIONS</div>
+  <td style="width:26%;">
+    <div style="font-size:16pt;font-weight:bold;color:#0B3B8C;">TAHFEEL</div>
+    <div style="font-size:6.5pt;color:#1D4ED8;letter-spacing:0.8pt;font-weight:bold;">BUSINESS SETUP SERVICE</div>
+    <div style="font-size:6.5pt;color:#64748B;margin-top:3pt;line-height:1.5;">
+      Al Wasl Ivory Building, Karama, Dubai, UAE<br>
+      Info@tahfeel.ae &nbsp;|&nbsp; +971 4 585 5033
+    </div>
   </td>
-  <td style="width:36%;">
-    <div class="hd-blue">COMPLIANCE INTELLIGENCE REPORT</div>
+  <td style="width:38%;">
+    <div class="hd-blue" style="color:#1D4ED8;">COMPLIANCE INTELLIGENCE REPORT</div>
     <div style="font-size:13pt;font-weight:bold;color:#0B1B35;margin:1pt 0;">{{ customer.name }}</div>
     <div style="font-size:7.5pt;color:#475569;">Report date: <b>{{ generated.strftime('%d %b %Y') }}</b> &nbsp;|&nbsp; Report no: <b>{{ report_no }}</b></div>
   </td>
-  <td style="width:12%;text-align:center;">
+  <td style="width:14%;text-align:center;">
     {% if score is not none %}
-    <svg width="72" height="72" viewBox="0 0 96 96">
+    <svg width="76" height="76" viewBox="0 0 96 96">
       <circle cx="48" cy="48" r="39" fill="none" stroke="#E8ECF2" stroke-width="9"/>
       <circle cx="48" cy="48" r="39" fill="none" stroke="{{ mood_color }}" stroke-width="9" stroke-linecap="round" stroke-dasharray="{{ (245 * score / 100)|round(1) }} 245" transform="rotate(-90 48 48)"/>
       <text x="48" y="46" text-anchor="middle" font-size="19" font-weight="bold" fill="#0B1B35">{{ score }}%</text>
@@ -51,7 +78,7 @@
     </svg>
     {% endif %}
   </td>
-  <td style="width:20%;">
+  <td style="width:22%;">
     <div style="font-size:8.5pt;font-weight:bold;">Company health score</div>
     <div style="font-size:7pt;color:#475569;margin-top:2pt;line-height:1.5;">
       {% if score is not none and score >= 70 %}Your overall compliance health is strong. Keep up the good work!
@@ -59,11 +86,8 @@
       {% else %}A few renewals coming up — we're on it with you.{% endif %}
     </div>
   </td>
-  <td style="width:13%;text-align:right;">
-    {% if qr_svg %}<div style="width:52pt;height:52pt;display:inline-block;">{{ qr_svg|safe }}</div>
-    <div style="font-size:6pt;color:#64748B;text-align:center;">Scan to verify</div>{% endif %}
-  </td>
 </tr></table>
+<div class="accent" style="margin-top:4pt;"></div>
 
 <!-- ═══ STAT CARDS ═══ -->
 <table style="margin-top:5pt;border-spacing:2.5pt;border-collapse:separate;"><tr>
@@ -141,7 +165,7 @@
   <div>
     {% for c in doc_cards %}
     <div style="display:inline-block;width:10.6%;vertical-align:top;border:0.7pt solid #EEF2F7;border-radius:5pt;padding:4pt 5pt;margin-right:2pt;margin-bottom:2pt;">
-      <div style="font-size:6.5pt;font-weight:bold;color:#0B1B35;height:16pt;overflow:hidden;">{{ c.type }}</div>
+      <div style="height:16pt;overflow:hidden;">{{ dicon(c.type, c.color) }} <span style="font-size:6.5pt;font-weight:bold;color:#0B1B35;">{{ c.type }}</span></div>
       <div style="font-size:5.8pt;color:#94A3B8;">Valid till {{ c.expiry }}</div>
       <div style="font-size:11pt;font-weight:bold;color:{{ c.color }};">{{ c.days if c.days >= 0 else 0 }}</div>
       <div style="font-size:5.8pt;color:#64748B;">days remaining</div>
@@ -172,7 +196,7 @@
     {% for d, days in attention %}
     <table style="border-bottom:0.5pt solid #F1F5F9;"><tr>
       <td style="width:9pt;font-size:6.5pt;font-weight:bold;color:#fff;"><span style="display:inline-block;width:8pt;height:8pt;border-radius:4pt;background:{{ '#EF4444' if days < 0 or loop.index <= 2 else '#F59E0B' }};text-align:center;line-height:8pt;font-size:5.5pt;">{{ loop.index }}</span></td>
-      <td style="font-size:7pt;color:#334155;padding:2pt 3pt;">{{ 'Renew' if days >= 0 else 'URGENT: renew' }} {{ d.doc_type }}{% if d.owner_name and d.owner_name != customer.name %} — {{ d.owner_name }}{% endif %}</td>
+      <td style="font-size:7pt;color:#334155;padding:2pt 3pt;">{{ dicon(d.doc_type, '#64748B') }} {{ 'Renew' if days >= 0 else 'URGENT: renew' }} {{ d.doc_type }}{% if d.owner_name and d.owner_name != customer.name %} — {{ d.owner_name }}{% endif %}</td>
       <td style="font-size:6.5pt;font-weight:bold;color:{{ '#B91C1C' if days < 0 else '#B45309' }};text-align:right;white-space:nowrap;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
     </tr></table>
     {% else %}
@@ -189,7 +213,7 @@
     </tr>
     {% for r in emp_rows %}
     <tr>
-      <td style="font-size:7pt;color:#334155;padding:2pt 0;border-top:0.5pt solid #F1F5F9;">{{ r.type }}</td>
+      <td style="font-size:7pt;color:#334155;padding:2pt 0;border-top:0.5pt solid #F1F5F9;">{{ dicon(r.type, '#7C3AED') }} {{ r.type }}</td>
       <td style="font-size:7.5pt;font-weight:bold;color:#16A34A;text-align:right;border-top:0.5pt solid #F1F5F9;">{{ r.ok }}</td>
       <td style="font-size:7.5pt;font-weight:bold;color:{{ '#EF4444' if r.due else '#94A3B8' }};text-align:right;border-top:0.5pt solid #F1F5F9;">{{ r.due }}</td>
     </tr>
@@ -215,26 +239,32 @@
   </td>
 </tr></table>
 
-<!-- ═══ PAGE 2 — DOCUMENT DETAIL ═══ -->
+<!-- ═══ PAGE 2 — DOCUMENTS BY HOLDER ═══ -->
 <div class="page2">
   <table><tr>
     <td><span style="font-size:12pt;font-weight:bold;color:#0B3B8C;">TAHFEEL</span>
-      <span style="font-size:8pt;color:#64748B;"> | Your documents in detail — {{ customer.name }} · {{ month_label }}</span></td>
+      <span style="font-size:8pt;color:#64748B;"> | Documents by holder — {{ customer.name }} · {{ month_label }}</span></td>
   </tr></table>
+  <div class="accent" style="margin-top:3pt;"></div>
 
-  <div class="card" style="margin-top:6pt;overflow:hidden;">
+  {% for g in doc_groups %}
+  <div class="card" style="margin-top:6pt;overflow:hidden;page-break-inside:avoid;">
+    <div style="background:#F4F8FD;padding:4pt 10pt;border-bottom:0.7pt solid #E2E8F0;">
+      <span style="font-size:9pt;font-weight:bold;color:#0B3B8C;">
+        {% if g.kind == 'company' %}&#9632; {{ g.holder }}{% else %}&#128100; {{ g.holder }}{% endif %}
+      </span>
+      <span style="font-size:6.5pt;color:#94A3B8;"> · {{ 'Company documents' if g.kind == 'company' else 'Staff / individual' }} · {{ g.docs|length }} document{{ 's' if g.docs|length != 1 }}</span>
+    </div>
     <table>
-      <tr style="background:#F8FAFC;">
-        <th style="font-size:6.5pt;color:#94A3B8;text-align:left;padding:4pt 10pt;width:26%;">DOCUMENT</th>
-        <th style="font-size:6.5pt;color:#94A3B8;text-align:left;padding:4pt 10pt;">HOLDER</th>
-        <th style="font-size:6.5pt;color:#94A3B8;text-align:left;padding:4pt 10pt;">EXPIRY DATE</th>
-        <th style="font-size:6.5pt;color:#94A3B8;text-align:left;padding:4pt 10pt;">DAYS LEFT</th>
-        <th style="font-size:6.5pt;color:#94A3B8;text-align:right;padding:4pt 10pt;">STATUS</th>
+      <tr style="background:#FBFCFE;">
+        <th style="font-size:6.5pt;color:#94A3B8;text-align:left;padding:3pt 10pt;width:34%;">DOCUMENT</th>
+        <th style="font-size:6.5pt;color:#94A3B8;text-align:left;padding:3pt 10pt;">EXPIRY DATE</th>
+        <th style="font-size:6.5pt;color:#94A3B8;text-align:left;padding:3pt 10pt;">DAYS LEFT</th>
+        <th style="font-size:6.5pt;color:#94A3B8;text-align:right;padding:3pt 10pt;">STATUS</th>
       </tr>
-      {% for d, days in docs %}
+      {% for d, days in g.docs %}
       <tr>
-        <td style="font-size:8pt;font-weight:bold;padding:3pt 10pt;border-top:0.5pt solid #F1F5F9;">{{ d.doc_type }}</td>
-        <td style="font-size:8pt;color:#475569;padding:3pt 10pt;border-top:0.5pt solid #F1F5F9;">{{ d.owner_name or 'Company' }}</td>
+        <td style="font-size:8pt;font-weight:bold;padding:3pt 10pt;border-top:0.5pt solid #F1F5F9;">{{ dicon(d.doc_type, '#0B3B8C') }} {{ d.doc_type }}</td>
         <td style="font-size:8pt;color:#475569;padding:3pt 10pt;border-top:0.5pt solid #F1F5F9;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
         <td style="font-size:8pt;font-weight:bold;padding:3pt 10pt;border-top:0.5pt solid #F1F5F9;color:{{ '#EF4444' if days < 0 else ('#F59E0B' if days <= 90 else '#16A34A') }};">{% if days < 0 %}overdue {{ -days }}d{% else %}{{ days }}{% endif %}</td>
         <td style="text-align:right;padding:3pt 10pt;border-top:0.5pt solid #F1F5F9;">
@@ -246,6 +276,7 @@
       {% endfor %}
     </table>
   </div>
+  {% endfor %}
 
   <table style="margin-top:6pt;border-spacing:3pt;border-collapse:separate;"><tr>
     <td class="card" style="width:55%;padding:7pt 10pt;">

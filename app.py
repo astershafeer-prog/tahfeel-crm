@@ -4408,18 +4408,21 @@ def _customer_report_data(customer_id):
                            'items': [f'{d.expiry_date.strftime("%d %b")} — {d.doc_type}' for d in items[:3]],
                            'more': max(0, len(items) - 3)})
 
-    # QR code (SVG) linking to the live health page
-    qr_svg = ''
-    try:
-        import qrcode
-        import qrcode.image.svg
-        import io as _io
-        buf = _io.BytesIO()
-        qrcode.make(f'https://tahfeel-crm-production.up.railway.app/customers/{customer_id}/health',
-                    image_factory=qrcode.image.svg.SvgPathImage, box_size=6).save(buf)
-        qr_svg = buf.getvalue().decode()
-    except Exception as e:
-        print(f'[report] QR generation skipped: {e}')
+    # Page 2 — group documents by holder: company docs first, then each person
+    cust_name_l = (customer.name or '').strip().lower()
+    company_docs = [(d, dl(d)) for d in docs
+                    if not d.owner_name or d.owner_name.strip().lower() == cust_name_l]
+    holder_map = {}
+    for d in docs:
+        if d.owner_name and d.owner_name.strip().lower() != cust_name_l:
+            holder_map.setdefault(d.owner_name, []).append((d, dl(d)))
+    doc_groups = []
+    if company_docs:
+        doc_groups.append({'holder': customer.name, 'kind': 'company',
+                           'docs': sorted(company_docs, key=lambda x: x[1])})
+    for name in sorted(holder_map):
+        doc_groups.append({'holder': name, 'kind': 'person',
+                           'docs': sorted(holder_map[name], key=lambda x: x[1])})
 
     report_no = f'TBS/CR/{today.year}/{customer_id:04d}'
 
@@ -4433,7 +4436,7 @@ def _customer_report_data(customer_id):
         'risk_label': risk_label, 'risk_color': risk_color, 'doc_cards': doc_cards,
         'insights': insights, 'buckets': buckets, 'attention': attention,
         'employees_count': len(employees), 'emp_rows': emp_rows, 'owners_count': owners_count,
-        'cal_months': cal_months, 'qr_svg': qr_svg, 'report_no': report_no,
+        'cal_months': cal_months, 'doc_groups': doc_groups, 'report_no': report_no,
         'generated': now_dubai(),
     }
 
