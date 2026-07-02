@@ -4259,8 +4259,9 @@ def health_check():
 # ─────────────── Compliance report (printable, A4 landscape) ───────────────
 DOC_CATEGORIES = [
     ('Trade License', '📜'), ('Emirates ID', '🆔'), ('Passport', '📘'),
-    ('Visa', '✈️'), ('Medical Certificate', '🏥'), ('Insurance', '🛡️'),
-    ('Contract', '📝'), ('NOC', '📄'), ('Ejari', '🏠'), ('Other', '📦'),
+    ('Visa', '✈️'), ('Labor Card', '💳'), ('Establishment Card', '🏛️'),
+    ('Medical Certificate', '🏥'), ('Insurance', '🛡️'), ('Contract', '📝'),
+    ('NOC', '📄'), ('Ejari', '🏠'), ('Tenancy Contract', '🏘️'), ('Other', '📦'),
 ]
 
 def _doc_categories(docs, dl):
