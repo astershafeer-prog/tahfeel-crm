@@ -425,10 +425,23 @@ class WhatsAppMessage(db.Model):
 class WhatsAppThread(db.Model):
     """Thread-level state for a WhatsApp conversation (one row per contact)."""
     __tablename__ = 'whats_app_thread'
-    wa_id       = db.Column(db.String(30), primary_key=True)
-    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    assigned_at = db.Column(db.DateTime, nullable=True)
-    assignee    = db.relationship('User', foreign_keys=[assigned_to])
+    wa_id         = db.Column(db.String(30), primary_key=True)
+    assigned_to   = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    assigned_at   = db.Column(db.DateTime, nullable=True)
+    bot_paused    = db.Column(db.Boolean, default=False)
+    bot_paused_by = db.Column(db.String(100), nullable=True)
+    assignee      = db.relationship('User', foreign_keys=[assigned_to])
+
+class QuickReply(db.Model):
+    """Canned reply staff can insert with one click in a WhatsApp thread."""
+    __tablename__ = 'quick_reply'
+    id         = db.Column(db.Integer, primary_key=True)
+    label      = db.Column(db.String(100), nullable=False)
+    body       = db.Column(db.Text, nullable=False)
+    is_global  = db.Column(db.Boolean, default=False)
+    staff_id   = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=now_dubai)
+    staff      = db.relationship('User', foreign_keys=[staff_id])
 
 class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -4645,6 +4658,12 @@ def init_db():
             'ALTER TABLE company_document ADD COLUMN IF NOT EXISTS staff_id INTEGER',
             # WhatsApp inbox: unread tracking
             'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT FALSE',
+            # WhatsApp: per-conversation bot pause (human takeover)
+            'ALTER TABLE whats_app_thread ADD COLUMN IF NOT EXISTS bot_paused BOOLEAN DEFAULT FALSE',
+            'ALTER TABLE whats_app_thread ADD COLUMN IF NOT EXISTS bot_paused_by VARCHAR(100)',
+            # WhatsApp: media message support
+            'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS media_url VARCHAR(500)',
+            'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS mime_type VARCHAR(50)',
 
         ]
         for sql in migrations:
@@ -5345,12 +5364,17 @@ def whatsapp_thread(wa_id):
     customer_id = next((m.customer_id for m in msgs if m.customer_id), None)
     thread = WhatsAppThread.query.get(wa_id)
     staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).order_by(User.name).all()
+    quick_replies = QuickReply.query.filter(
+        (QuickReply.staff_id == session.get('user_id')) | (QuickReply.is_global == True)
+    ).order_by(QuickReply.label).all()
     return render_template('whatsapp_thread.html',
         wa_id=wa_id, messages=msgs, name=name, window_open=window_open,
         window_left=window_left,
         lead=Lead.query.get(lead_id) if lead_id else None,
         customer=Customer.query.get(customer_id) if customer_id else None,
         assignee=thread.assignee if thread else None, staff=staff,
+        bot_paused=thread.bot_paused if thread else False,
+        quick_replies=quick_replies,
         now=now_dubai())
 
 @app.route('/whatsapp/<wa_id>/assign', methods=['POST'])
@@ -5375,19 +5399,109 @@ def whatsapp_assign(wa_id):
 @app.route('/whatsapp/<wa_id>/reply', methods=['POST'])
 @login_required
 def whatsapp_reply(wa_id):
-    from whatsapp_webhook import send_text, log_message
+    from whatsapp_webhook import send_text, send_media, log_message
     body = (request.form.get('body') or '').strip()
-    if not body:
+    media_file = request.files.get('media')
+    has_media = media_file and media_file.filename
+    if not body and not has_media:
         return redirect(url_for('whatsapp_thread', wa_id=wa_id))
     last_in = WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in')\
             .order_by(WhatsAppMessage.created_at.desc()).first()
     if not last_in or (now_dubai() - last_in.created_at) >= WA_WINDOW:
         flash('24-hour reply window has closed — only an approved template can be sent now.', 'warning')
         return redirect(url_for('whatsapp_thread', wa_id=wa_id))
-    wam = send_text(wa_id, body)
-    log_message(wa_id, 'out', body, wam_id=wam,
-                handled_by=session.get('user_name', 'staff'), status='sent')
+
+    if has_media:
+        url, public_id = upload_to_cloudinary(media_file, folder='tahfeel-whatsapp')
+        if not url:
+            flash('Media upload failed.', 'error')
+            return redirect(url_for('whatsapp_thread', wa_id=wa_id))
+        mime = media_file.mimetype or ''
+        media_type = 'image' if mime.startswith('image') else \
+                     'audio' if mime.startswith('audio') else \
+                     'video' if mime.startswith('video') else 'document'
+        wam = send_media(wa_id, media_type, url, caption=body or None)
+        log_message(wa_id, 'out', body or f'[{media_type}]', msg_type=media_type, wam_id=wam,
+                    handled_by=session.get('user_name', 'staff'), status='sent',
+                    media_url=url, mime_type=mime)
+    else:
+        wam = send_text(wa_id, body)
+        log_message(wa_id, 'out', body, wam_id=wam,
+                    handled_by=session.get('user_name', 'staff'), status='sent')
     return redirect(url_for('whatsapp_thread', wa_id=wa_id))
+
+@app.route('/api/whatsapp-unread-count')
+@login_required
+def api_whatsapp_unread_count():
+    return jsonify({'unread': wa_unread_count()})
+
+@app.route('/whatsapp/quick-replies', methods=['GET', 'POST'])
+@login_required
+def quick_replies_list():
+    """List + add canned replies (own + global)."""
+    if request.method == 'POST':
+        label = (request.form.get('label') or '').strip()
+        body = (request.form.get('body') or '').strip()
+        is_global = request.form.get('is_global') == '1' and session.get('role') == 'admin'
+        if label and body:
+            db.session.add(QuickReply(
+                label=label, body=body, is_global=is_global,
+                staff_id=session.get('user_id'), created_at=now_dubai(),
+            ))
+            db.session.commit()
+            flash('Quick reply added.')
+        return redirect(url_for('quick_replies_list'))
+    replies = QuickReply.query.filter(
+        (QuickReply.staff_id == session.get('user_id')) | (QuickReply.is_global == True)
+    ).order_by(QuickReply.label).all()
+    return render_template('quick_replies.html', replies=replies)
+
+@app.route('/whatsapp/quick-replies/<int:reply_id>/delete', methods=['POST'])
+@login_required
+def delete_quick_reply(reply_id):
+    reply = QuickReply.query.get_or_404(reply_id)
+    if reply.staff_id != session.get('user_id') and not (reply.is_global and session.get('role') == 'admin'):
+        flash('Not authorized to delete this quick reply.', 'warning')
+        return redirect(url_for('quick_replies_list'))
+    db.session.delete(reply)
+    db.session.commit()
+    flash('Quick reply deleted.')
+    return redirect(url_for('quick_replies_list'))
+
+@app.route('/whatsapp/<wa_id>/bot-toggle', methods=['POST'])
+@login_required
+def whatsapp_bot_toggle(wa_id):
+    """Pause/resume the auto-reply bot for one conversation (human takeover)."""
+    thread = WhatsAppThread.query.get(wa_id)
+    if not thread:
+        thread = WhatsAppThread(wa_id=wa_id)
+        db.session.add(thread)
+    thread.bot_paused = not thread.bot_paused
+    thread.bot_paused_by = session.get('user_name') if thread.bot_paused else None
+    db.session.commit()
+    flash(f"Bot {'paused' if thread.bot_paused else 'resumed'} for this conversation.")
+    return redirect(url_for('whatsapp_thread', wa_id=wa_id))
+
+@app.route('/whatsapp/<wa_id>/delete', methods=['POST'])
+@login_required
+def whatsapp_delete_thread(wa_id):
+    """Delete an entire WhatsApp conversation (all messages + thread state)."""
+    WhatsAppMessage.query.filter_by(wa_id=wa_id).delete()
+    WhatsAppThread.query.filter_by(wa_id=wa_id).delete()
+    db.session.commit()
+    flash('Conversation deleted.')
+    return redirect(url_for('whatsapp_inbox'))
+
+@app.route('/whatsapp/<wa_id>/message/<int:msg_id>/delete', methods=['POST'])
+@login_required
+def whatsapp_delete_message(wa_id, msg_id):
+    """Delete a single message from a conversation."""
+    msg = WhatsAppMessage.query.get_or_404(msg_id)
+    if msg.wa_id != wa_id:
+        return 'Not found', 404
+    db.session.delete(msg)
+    db.session.commit()
+    return ('', 204)
 
 @app.route('/whatsapp/<wa_id>/convert', methods=['POST'])
 @login_required

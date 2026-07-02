@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Quick Replies</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('whatsapp') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'warning' %}warning{% elif cat == 'error' %}error{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="margin-bottom:12px;">
+      <a href="/whatsapp" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to WhatsApp</a>
+    </div>
+
+    <div class="page-header">
+      <h2>📋 Quick Replies</h2>
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:18px;margin-bottom:18px;">
+      <form method="POST" action="/whatsapp/quick-replies" style="display:flex;flex-direction:column;gap:10px;">
+        <input type="text" name="label" placeholder="Label (e.g. Greeting, Business hours)" required
+               style="padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+        <textarea name="body" placeholder="Reply text…" required rows="3"
+                  style="padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+        {% if session.role == 'admin' %}
+        <label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" name="is_global" value="1"> Make visible to all staff
+        </label>
+        {% endif %}
+        <button type="submit" style="align-self:flex-start;background:#25D366;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;cursor:pointer;">+ Add Quick Reply</button>
+      </form>
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
+      {% if not replies %}
+        <div style="padding:32px 20px;text-align:center;color:var(--text-muted);">No quick replies yet.</div>
+      {% else %}
+        {% for r in replies %}
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;gap:8px;align-items:baseline;">
+              <strong style="color:#0F2660;font-size:14px;">{{ r.label }}</strong>
+              {% if r.is_global %}<span style="font-size:10px;background:#E6EEFF;color:#1A3B8B;padding:1px 8px;border-radius:20px;">Global</span>{% endif %}
+            </div>
+            <div style="font-size:13px;color:var(--text-muted);white-space:pre-wrap;margin-top:2px;">{{ r.body }}</div>
+          </div>
+          <form method="POST" action="/whatsapp/quick-replies/{{ r.id }}/delete"
+                onsubmit="return confirm('Delete this quick reply?');" style="flex-shrink:0;">
+            <button type="submit" style="background:none;border:none;color:#DC2626;font-size:14px;cursor:pointer;">🗑</button>
+          </form>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

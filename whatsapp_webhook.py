@@ -80,6 +80,18 @@ def send_text(to, body):
         'text': {'body': body},
     })
 
+def send_media(to, media_type, url, caption=None):
+    """Send an image/document/audio/video by public link — ONLY inside the 24h window."""
+    payload = {
+        'messaging_product': 'whatsapp',
+        'to': normalize_phone(to),
+        'type': media_type,
+        media_type: {'link': url},
+    }
+    if caption and media_type in ('image', 'document', 'video'):
+        payload[media_type]['caption'] = caption
+    return _send(payload)
+
 def send_template(to, template_name, params=None, lang='en'):
     """Business-initiated message — required for first contact (Flow A)."""
     components = []
@@ -128,7 +140,7 @@ def find_contact(wa_number):
 
 def log_message(wa_id, direction, body, msg_type='text', wam_id=None,
                 contact_name=None, handled_by='bot', status=None,
-                lead_id=None, customer_id=None):
+                lead_id=None, customer_id=None, media_url=None, mime_type=None):
     """Persist one message row. Auto-links to lead/customer if not supplied."""
     from app import db, WhatsAppMessage
     if lead_id is None and customer_id is None:
@@ -144,11 +156,45 @@ def log_message(wa_id, direction, body, msg_type='text', wam_id=None,
         handled_by   = handled_by,
         lead_id      = lead_id,
         customer_id  = customer_id,
+        media_url    = media_url,
+        mime_type    = mime_type,
         created_at   = now_dubai(),
     )
     db.session.add(row)
     db.session.commit()
     return row
+
+def fetch_and_store_media(media_id):
+    """Download a media's temp URL from Meta and re-upload it to Cloudinary for permanent
+    storage (Meta's own URL expires in ~5 minutes). Returns (secure_url, mime_type) or (None, None)."""
+    token = _cfg('WA_ACCESS_TOKEN')
+    if not token or not media_id:
+        return None, None
+    try:
+        r = requests.get(f'{GRAPH}/{media_id}', headers={'Authorization': f'Bearer {token}'}, timeout=10)
+        if r.status_code >= 300:
+            print(f'[WA] media metadata fetch failed {r.status_code}: {r.text[:200]}')
+            return None, None
+        meta = r.json()
+        temp_url = meta.get('url')
+        mime_type = meta.get('mime_type')
+        if not temp_url:
+            return None, None
+        # Meta's media download also requires the bearer token
+        dl = requests.get(temp_url, headers={'Authorization': f'Bearer {token}'}, timeout=20)
+        if dl.status_code >= 300:
+            print(f'[WA] media download failed {dl.status_code}')
+            return None, None
+        import cloudinary.uploader
+        import io
+        result = cloudinary.uploader.upload(
+            io.BytesIO(dl.content), folder='tahfeel-whatsapp',
+            resource_type='auto', use_filename=True, unique_filename=True,
+        )
+        return result.get('secure_url'), mime_type
+    except Exception as e:
+        print(f'[WA] fetch_and_store_media failed: {e}')
+        return None, None
 
 
 # ── Auto-reply brain (Phase 1: menu). Phase 2 swaps this for Claude. ──────────
@@ -205,11 +251,19 @@ def handle_incoming(msg, contacts):
         return  # Meta retries — never double-process
     wa_id = msg.get('from')
     mtype = msg.get('type', 'text')
+    media_url = None
+    mime_type = None
     if mtype == 'text':
         body = (msg.get('text') or {}).get('body', '')
     elif mtype in ('button', 'interactive'):
         body = (msg.get('button') or {}).get('text') or \
                (((msg.get('interactive') or {}).get('button_reply') or {}).get('title')) or ''
+    elif mtype in ('image', 'document', 'audio', 'video', 'sticker'):
+        media_obj = msg.get(mtype) or {}
+        media_id = media_obj.get('id')
+        body = media_obj.get('caption') or media_obj.get('filename') or f'[{mtype} received]'
+        if media_id:
+            media_url, mime_type = fetch_and_store_media(media_id)
     else:
         body = f'[{mtype} message]'
 
@@ -225,11 +279,17 @@ def handle_incoming(msg, contacts):
         wa_id=normalize_phone(wa_id), direction='in').first() is None
 
     # 1) log the inbound (always — so it shows in the CRM inbox even when the bot is muted)
-    log_message(wa_id, 'in', body, msg_type=mtype, wam_id=wam_id, contact_name=cname)
+    log_message(wa_id, 'in', body, msg_type=mtype, wam_id=wam_id, contact_name=cname,
+                media_url=media_url, mime_type=mime_type)
 
     # 2) auto-reply — ONLY if the bot is explicitly switched on (safe-off by default)
     if not _flag('WA_BOT_ENABLED'):
         print('[WA] Bot muted (WA_BOT_ENABLED off) — logged inbound, no reply sent')
+        return
+    from app import WhatsAppThread
+    thread = WhatsAppThread.query.get(normalize_phone(wa_id))
+    if thread and thread.bot_paused:
+        print(f'[WA] Bot paused for {wa_id} (human takeover) — logged inbound, no reply sent')
         return
     reply = decide_reply(wa_id, body, is_first)
     if reply:

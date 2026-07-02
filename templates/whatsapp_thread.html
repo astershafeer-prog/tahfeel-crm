@@ -8,6 +8,7 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
   {%- from 'macros.html' import theme_loader -%}
   {{ theme_loader() }}
+  <style>.wa-msg:hover .wa-msg-del { display: block !important; }</style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
@@ -53,6 +54,14 @@
           <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border:none;">+ Convert to Lead</button>
         </form>
         {% endif %}
+        <form method="POST" action="/whatsapp/{{ wa_id }}/bot-toggle" style="display:inline;">
+          <button type="submit" style="font-size:11px;border:none;border-radius:20px;padding:4px 12px;cursor:pointer;color:white;background:{{ '#DC2626' if bot_paused else '#25D366' }};">
+            {% if bot_paused %}⏸ Bot Paused{% else %}🤖 Bot Active{% endif %}
+          </button>
+        </form>
+        <form method="POST" action="/whatsapp/{{ wa_id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this entire conversation? This cannot be undone.');">
+          <button type="submit" title="Delete conversation" style="background:none;border:none;color:#DC2626;font-size:16px;cursor:pointer;padding:4px;">🗑</button>
+        </form>
       </div>
     </div>
 
@@ -60,14 +69,32 @@
     <div style="background:#ECE5DD;border-left:0.5px solid #E2E8F0;border-right:0.5px solid #E2E8F0;padding:18px;min-height:280px;max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;" id="chatbox">
       {% for m in messages %}
         {% if m.direction == 'in' %}
-          <div style="align-self:flex-start;max-width:72%;background:white;padding:8px 12px;border-radius:8px;border-top-left-radius:0;box-shadow:0 1px 1px rgba(0,0,0,.08);">
+          <div class="wa-msg" style="align-self:flex-start;max-width:72%;background:white;padding:8px 12px;border-radius:8px;border-top-left-radius:0;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative;">
+            <a href="#" class="wa-msg-del" onclick="deleteMessage({{ m.id }}); return false;" title="Delete message" style="position:absolute;top:2px;right:6px;font-size:11px;color:#999;text-decoration:none;display:none;">✕</a>
+            {% if m.media_url %}
+              {% if m.msg_type == 'image' %}<img src="{{ m.media_url }}" style="max-width:100%;border-radius:8px;margin-bottom:4px;display:block;">
+              {% elif m.msg_type == 'audio' %}<audio controls style="max-width:220px;margin-bottom:4px;display:block;"><source src="{{ m.media_url }}"></audio>
+              {% elif m.msg_type == 'video' %}<video controls style="max-width:100%;border-radius:8px;margin-bottom:4px;display:block;"><source src="{{ m.media_url }}"></video>
+              {% else %}<a href="{{ m.media_url }}" target="_blank" style="display:flex;align-items:center;gap:8px;background:#F3F4F6;padding:10px;border-radius:8px;text-decoration:none;color:#111;margin-bottom:4px;">📎 {{ m.body }}</a>{% endif %}
+            {% endif %}
+            {% if not m.media_url or m.msg_type == 'image' or m.msg_type == 'video' %}
             <div style="white-space:pre-wrap;font-size:14px;color:#111;">{{ m.body }}</div>
+            {% endif %}
             <div style="text-align:right;font-size:10px;color:#999;margin-top:2px;">{{ m.created_at.strftime('%H:%M') }}</div>
           </div>
         {% else %}
-          <div style="align-self:flex-end;max-width:72%;background:#DCF8C6;padding:8px 12px;border-radius:8px;border-top-right-radius:0;box-shadow:0 1px 1px rgba(0,0,0,.08);">
+          <div class="wa-msg" style="align-self:flex-end;max-width:72%;background:#DCF8C6;padding:8px 12px;border-radius:8px;border-top-right-radius:0;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative;">
+            <a href="#" class="wa-msg-del" onclick="deleteMessage({{ m.id }}); return false;" title="Delete message" style="position:absolute;top:2px;right:6px;font-size:11px;color:#5a8a4a;text-decoration:none;display:none;">✕</a>
             {% if m.msg_type == 'template' %}<div style="font-size:10px;color:#1B7A3D;font-weight:700;margin-bottom:2px;">TEMPLATE</div>{% endif %}
+            {% if m.media_url %}
+              {% if m.msg_type == 'image' %}<img src="{{ m.media_url }}" style="max-width:100%;border-radius:8px;margin-bottom:4px;display:block;">
+              {% elif m.msg_type == 'audio' %}<audio controls style="max-width:220px;margin-bottom:4px;display:block;"><source src="{{ m.media_url }}"></audio>
+              {% elif m.msg_type == 'video' %}<video controls style="max-width:100%;border-radius:8px;margin-bottom:4px;display:block;"><source src="{{ m.media_url }}"></video>
+              {% else %}<a href="{{ m.media_url }}" target="_blank" style="display:flex;align-items:center;gap:8px;background:#F3F4F6;padding:10px;border-radius:8px;text-decoration:none;color:#111;margin-bottom:4px;">📎 {{ m.body }}</a>{% endif %}
+            {% endif %}
+            {% if not m.media_url or m.msg_type == 'image' or m.msg_type == 'video' %}
             <div style="white-space:pre-wrap;font-size:14px;color:#111;">{{ m.body }}</div>
+            {% endif %}
             <div style="text-align:right;font-size:10px;color:#5a8a4a;margin-top:2px;">
               {{ m.handled_by }} · {{ m.created_at.strftime('%H:%M') }}
               {% if m.status == 'read' %}<span style="color:#34B7F1;font-weight:700;" title="Read">✓✓</span>
@@ -87,8 +114,24 @@
         <span style="width:7px;height:7px;border-radius:50%;background:#25D366;display:inline-block;"></span>
         Reply window open · <strong>{{ window_left }}</strong> left to reply freely
       </div>
-      <form method="POST" action="/whatsapp/{{ wa_id }}/reply" style="display:flex;gap:8px;">
-        <input type="text" name="body" placeholder="Type a reply…" autocomplete="off" required
+      {% if quick_replies %}
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+        <select id="quickReplySelect" onchange="if(this.value){document.querySelector('input[name=body]').value=this.value;this.value='';document.querySelector('input[name=body]').focus();}"
+                style="flex:0;padding:6px 10px;border-radius:20px;border:1px solid #CBD5E1;font-size:12px;color:#334155;">
+          <option value="">📋 Quick replies…</option>
+          {% for r in quick_replies %}
+          <option value="{{ r.body }}">{{ r.label }}</option>
+          {% endfor %}
+        </select>
+        <a href="/whatsapp/quick-replies" style="font-size:11px;color:#1A3B8B;">Manage →</a>
+      </div>
+      {% endif %}
+      <form method="POST" action="/whatsapp/{{ wa_id }}/reply" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;">
+        <label title="Attach image, document or audio" style="cursor:pointer;font-size:20px;padding:6px;">
+          📎<input type="file" name="media" accept="image/*,audio/*,video/*,.pdf,.doc,.docx" style="display:none;" onchange="this.nextElementSibling.textContent = this.files[0] ? this.files[0].name : '';">
+          <span style="font-size:10px;color:#64748B;display:block;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        </label>
+        <input type="text" name="body" placeholder="Type a reply…" autocomplete="off"
                style="flex:1;padding:10px 14px;border:1px solid #CBD5E1;border-radius:24px;font-size:14px;">
         <button type="submit" style="background:#25D366;color:white;border:none;border-radius:24px;padding:10px 22px;font-weight:700;cursor:pointer;">Send</button>
       </form>
@@ -100,6 +143,12 @@
     </div>
   </div>
   <script>
+    var WA_ID = {{ wa_id|tojson }};
+    function deleteMessage(msgId) {
+      if (!confirm('Delete this message?')) return;
+      fetch('/whatsapp/' + WA_ID + '/message/' + msgId + '/delete', { method: 'POST' })
+        .then(function () { location.reload(); });
+    }
     var cb = document.getElementById('chatbox');
     if (cb) cb.scrollTop = cb.scrollHeight;
     // Auto-refresh every 8s so new messages appear live — but NEVER while the

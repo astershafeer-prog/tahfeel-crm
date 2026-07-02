@@ -244,6 +244,42 @@ loadTheme();
   {% endif %}
   <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;">{{ session.user_name[:2].upper() if session.user_name else 'U' }}</div>
 </div>
+<script>
+  // Global WhatsApp new-message alert (sound + browser notification), works on every page —
+  // not just the /whatsapp inbox. Reuses the same localStorage flags the inbox bell sets.
+  (function () {
+    function beep() {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start(); osc.stop(ctx.currentTime + 0.35);
+      } catch (e) {}
+    }
+    function notifsEnabled() { return localStorage.getItem('wa_notifs_enabled') === '1'; }
+    function poll() {
+      if (!notifsEnabled() || document.hidden) return;
+      fetch('/api/whatsapp-unread-count').then(function (r) { return r.json(); }).then(function (d) {
+        var prev = parseInt(localStorage.getItem('wa_last_unread') || '0', 10);
+        if (d.unread > prev) {
+          beep();
+          if (window.Notification && Notification.permission === 'granted') {
+            new Notification('New WhatsApp message', {
+              body: (d.unread - prev) + ' new message(s) waiting in the CRM inbox',
+              icon: '/static/img/logo_white.png'
+            });
+          }
+        }
+        localStorage.setItem('wa_last_unread', d.unread);
+      }).catch(function () {});
+    }
+    setInterval(poll, 15000);
+  })();
+</script>
 {% endmacro %}
 
 {% macro welcome(now) %}
