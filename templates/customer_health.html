@@ -111,7 +111,8 @@
       <a href="/health-check" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to Compliance</a>
       <div class="hc-actions" style="flex-wrap:wrap;">
         <button class="hc-btn" onclick="window.print()">🖨 Print</button>
-        <button class="hc-btn" onclick="window.print()">⬇ Download PDF</button>
+        <a class="hc-btn" href="/customers/{{ customer.id }}/report.pdf" target="_blank" style="text-decoration:none;">⬇ Download PDF report</a>
+        <form method="POST" action="/customers/{{ customer.id }}/send-report" style="margin:0;" onsubmit="return confirm('Email the compliance report (with PDF attached) to {{ customer.alert_email or customer.email or 'this client' }}?');"><button type="submit" class="hc-btn">📨 Send report now</button></form>
         <form method="POST" action="/customers/{{ customer.id }}/email-health" style="margin:0;"><button type="submit" class="hc-btn">📧 Email now</button></form>
         {% if wa_number %}<a class="hc-btn wa" target="_blank" href="https://wa.me/{{ wa_number }}?text=Dear%20{{ customer.contact_person.split()[0] if customer.contact_person else customer.name.split()[0] }}%2C%20here%20is%20your%20compliance%20update%20from%20Tahfeel.">💬 WhatsApp</a>{% endif %}
       </div>
@@ -122,7 +123,7 @@
       <div style="font-size:13px;color:#475569;">
         <strong style="color:#0F2660;">📨 Periodic compliance emails</strong> ·
         {% if customer.alerts_enabled %}<span style="color:#059669;font-weight:700;">ON</span>{% else %}<span style="color:#94A3B8;font-weight:700;">OFF</span>{% endif %}
-        <span style="color:#94A3B8;">— auto-reminders when a document is within 30 days. Sent from <strong>{{ from_email }}</strong> to {{ customer.alert_email or customer.email or 'client' }} + admin.</span>
+        <span style="color:#94A3B8;">— monthly PDF report + auto-reminders when a document is within 30 days. Sent from <strong>{{ from_email }}</strong> to {{ customer.alert_email or customer.email or 'client' }}.</span>
       </div>
       <form method="POST" action="/customers/{{ customer.id }}/toggle-alerts?next=health" style="margin:0;">
         <button type="submit" class="hc-btn" style="border-color:{{ '#DC2626' if customer.alerts_enabled else '#059669' }};color:{{ '#DC2626' if customer.alerts_enabled else '#059669' }};">

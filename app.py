@@ -4298,6 +4298,196 @@ def _donut_segments(band_counts, order, colors, circumference):
         acc += frac
     return segs
 
+def _customer_report_data(customer_id):
+    """Everything the customer-facing report needs — THEIR documents only."""
+    customer = Customer.query.get_or_404(customer_id)
+    today = now_dubai().date()
+    docs = [d for d in Document.query.filter_by(customer_id=customer_id).all() if d.expiry_date]
+    docs.sort(key=lambda d: d.expiry_date)
+
+    def dl(d):
+        return (d.expiry_date.date() - today).days
+
+    n_valid = len([d for d in docs if dl(d) > 90])
+    n_expiring = len([d for d in docs if 0 <= dl(d) <= 90])
+    n_expired = len([d for d in docs if dl(d) < 0])
+    total = len(docs)
+    score = round(100 * (n_valid + 0.5 * n_expiring) / total) if total else None
+    # Customer-facing wording only — never 'Poor'/'Average' (owner decision)
+    if score is None:
+        mood, mood_color = 'No documents on file', '#94A3B8'
+    elif score >= 90:
+        mood, mood_color = 'Excellent standing', '#16A34A'
+    elif score >= 70:
+        mood, mood_color = 'Good standing', '#16A34A'
+    elif n_expired:
+        mood, mood_color = 'Action needed', '#B91C1C'
+    else:
+        mood, mood_color = 'Attention recommended', '#B45309'
+    uplift = round(100 * (n_valid + n_expired + 0.5 * n_expiring) / total) if total and n_expired else None
+
+    action_items = [(d, dl(d)) for d in docs if dl(d) <= 60]
+    timeline = []
+    for d, days in [(d, dl(d)) for d in docs][:5]:
+        if days < 0:
+            label, color, width = 'Overdue', '#EF4444', 16
+        elif days <= 60:
+            label, color, width = d.expiry_date.strftime('%b %Y'), '#F59E0B', 16 + min(days, 60)
+        else:
+            label, color, width = d.expiry_date.strftime('%b %Y'), '#16A34A', min(84, 30 + days // 6)
+        timeline.append({'label': label, 'doc': d.doc_type, 'color': color, 'width': width})
+
+    return {
+        'customer': customer, 'today': today, 'docs': [(d, dl(d)) for d in docs],
+        'total': total, 'n_valid': n_valid, 'n_expiring': n_expiring, 'n_expired': n_expired,
+        'score': score, 'mood': mood, 'mood_color': mood_color, 'uplift': uplift,
+        'categories': _doc_categories(docs, dl), 'action_items': action_items,
+        'timeline': timeline, 'month_label': now_dubai().strftime('%B %Y'),
+    }
+
+def build_report_email_html(data):
+    """Branded HTML email body for the monthly customer compliance report.
+    Table-based + inline styles for mail-client compatibility."""
+    c = data['customer']
+    score = data['score']
+    mood_color = data['mood_color']
+    action_rows = ''
+    for d, days in data['action_items']:
+        holder = f' — {d.owner_name}' if d.owner_name and d.owner_name != c.name else ''
+        if days < 0:
+            badge = f'<span style="background:#B91C1C;color:#ffffff;font-size:11px;font-weight:bold;padding:2px 10px;border-radius:10px;">Expired {d.expiry_date.strftime("%d %b %Y")}</span>'
+        else:
+            badge = f'<span style="background:#FFF7ED;color:#B45309;font-size:11px;font-weight:bold;padding:2px 10px;border-radius:10px;">Expires {d.expiry_date.strftime("%d %b %Y")} · {days}d</span>'
+        action_rows += (f'<tr><td style="padding:6px 14px;font-size:13px;color:#334155;'
+                        f'border-top:1px solid #F1F5F9;">{d.doc_type}{holder}</td>'
+                        f'<td style="padding:6px 14px;text-align:right;border-top:1px solid #F1F5F9;">{badge}</td></tr>')
+    action_block = ''
+    if action_rows:
+        action_block = (
+            '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #FECACA;border-radius:10px;margin-top:14px;">'
+            '<tr><td colspan="2" style="background:#FEF2F2;color:#B91C1C;font-size:13px;font-weight:bold;'
+            'padding:8px 14px;border-radius:10px 10px 0 0;">Action required</td></tr>'
+            f'{action_rows}</table>')
+    else:
+        action_block = ('<div style="background:#ECFDF5;border-radius:10px;padding:12px 16px;margin-top:14px;'
+                        'font-size:13px;color:#15803D;font-weight:bold;">All of your documents are in good standing.</div>')
+    score_html = ''
+    if score is not None:
+        score_html = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;border:1px solid #E8ECF2;border-radius:10px;"><tr>'
+            f'<td style="padding:16px 20px;width:110px;text-align:center;">'
+            f'<div style="font-size:34px;font-weight:bold;color:{mood_color};">{score}%</div>'
+            f'<div style="font-size:11px;color:#64748B;">documents valid</div></td>'
+            f'<td style="padding:16px 10px;">'
+            f'<div style="font-size:14px;font-weight:bold;color:#0B1B35;">Your compliance score</div>'
+            f'<div style="font-size:12px;color:{mood_color};font-weight:bold;margin:2px 0 8px;">{data["mood"]}</div>'
+            f'<div style="font-size:12px;color:#64748B;">Valid <b style="color:#16A34A;">{data["n_valid"]}</b>'
+            f' &nbsp; Expiring <b style="color:#F59E0B;">{data["n_expiring"]}</b>'
+            f' &nbsp; Expired <b style="color:#EF4444;">{data["n_expired"]}</b></div></td></tr></table>')
+    n_action = len(data['action_items'])
+    intro = (f'Here is your compliance health summary for {data["month_label"]}. '
+             + (f'{n_action} of your documents require attention to keep your business fully compliant.'
+                if n_action else 'All of your documents are in good standing — no action is needed right now.'))
+    return f'''<!DOCTYPE html><html><body style="margin:0;padding:0;background:#F1F5F9;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:20px 10px;">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
+  <tr><td style="background:#0B1B35;padding:18px;text-align:center;">
+    <div style="color:#ffffff;font-size:20px;font-weight:bold;">Tahfeel</div>
+    <div style="color:#85B7EB;font-size:12px;margin-top:2px;">Monthly compliance health report</div>
+  </td></tr>
+  <tr><td style="padding:20px 24px 8px;">
+    <p style="font-size:14px;color:#334155;margin:0 0 14px;line-height:1.6;">Dear <b>{c.name}</b>,<br>{intro}</p>
+    {score_html}
+    {action_block}
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:18px 0 8px;">
+      <div style="font-size:13px;color:#0B1B35;font-weight:bold;">Need help renewing? Tahfeel handles it end to end.</div>
+      <div style="font-size:12px;color:#64748B;margin-top:4px;">Reply to this email or WhatsApp us at +971 4 585 5033 · info@tahfeel.ae</div>
+    </td></tr></table>
+    <div style="background:#F8FAFC;border:1px solid #E8ECF2;border-radius:8px;padding:10px 14px;margin:8px 0 16px;font-size:12px;color:#475569;">
+      &#128206; Your full report is attached as a PDF — summary plus document detail.
+    </div>
+  </td></tr>
+  <tr><td style="background:#F8FAFC;border-top:1px solid #E8ECF2;padding:12px 24px;font-size:10.5px;color:#94A3B8;text-align:center;line-height:1.6;">
+    Tahfeel Business Solutions · Dubai, UAE<br>
+    You receive this monthly report as a Tahfeel client. This report covers only your own documents.
+  </td></tr>
+</table></td></tr></table></body></html>'''
+
+def _send_customer_report(customer_id):
+    """Generate the customer's PDF + branded email and send it. Returns (ok, msg)."""
+    data = _customer_report_data(customer_id)
+    c = data['customer']
+    to_addr = c.alert_email or c.email
+    if not to_addr:
+        return False, 'no email on file'
+    if not data['total']:
+        return False, 'no documents with expiry dates'
+    html = render_template('customer_report_pdf.html', **data)
+    from weasyprint import HTML as _WHTML
+    pdf = _WHTML(string=html, base_url=request.url_root if request else None).write_pdf()
+    import re as _re
+    safe = _re.sub(r'[^A-Za-z0-9]+', '_', c.name or 'client').strip('_')[:40]
+    fname = f"Compliance_Report_{safe}_{now_dubai().strftime('%b%Y')}.pdf"
+    n_action = len(data['action_items'])
+    subject = f'Your compliance health report — {data["month_label"]}'
+    if n_action:
+        subject += f' · {n_action} document{"s" if n_action != 1 else ""} need attention'
+    body = build_report_email_html(data)
+    return send_email([to_addr], subject, body, attachments=[(fname, pdf, 'application/pdf')])
+
+@app.route('/customers/<int:customer_id>/send-report', methods=['POST'])
+@login_required
+def send_customer_report(customer_id):
+    try:
+        ok, msg = _send_customer_report(customer_id)
+    except Exception as e:
+        ok, msg = False, str(e)
+    if ok:
+        flash('📨 Compliance report emailed successfully.')
+    else:
+        flash(f'Could not send report: {msg}', 'error')
+    return redirect(url_for('customer_health', customer_id=customer_id))
+
+@app.route('/cron/monthly-reports')
+def cron_monthly_reports():
+    """Monthly customer compliance reports — hit by external cron on the 1st.
+    GET /cron/monthly-reports?key=CRON_KEY"""
+    from flask import jsonify
+    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+        return 'Forbidden', 403
+    sent, skipped, details = 0, 0, []
+    for c in Customer.query.filter_by(alerts_enabled=True).all():
+        try:
+            ok, msg = _send_customer_report(c.id)
+        except Exception as e:
+            ok, msg = False, str(e)
+        if ok:
+            sent += 1
+        else:
+            skipped += 1
+        details.append(f'{c.name}: {msg}')
+    return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
+
+@app.route('/customers/<int:customer_id>/report.pdf')
+@login_required
+def customer_report_pdf(customer_id):
+    """Download/preview the customer's personal compliance report as a real PDF."""
+    data = _customer_report_data(customer_id)
+    html = render_template('customer_report_pdf.html', **data)
+    try:
+        from weasyprint import HTML as _WHTML
+        pdf = _WHTML(string=html, base_url=request.url_root).write_pdf()
+    except Exception as e:
+        print(f'[report] WeasyPrint failed: {e}')
+        flash(f'PDF engine error: {e}', 'error')
+        return redirect(url_for('customer_health', customer_id=customer_id))
+    import re as _re
+    safe = _re.sub(r'[^A-Za-z0-9]+', '_', data['customer'].name or 'client').strip('_')[:40]
+    fname = f"Compliance_Report_{safe}_{now_dubai().strftime('%b%Y')}.pdf"
+    from flask import Response
+    return Response(pdf, mimetype='application/pdf',
+                    headers={'Content-Disposition': f'inline; filename="{fname}"'})
+
 @app.route('/health-check/report')
 @login_required
 def compliance_report():

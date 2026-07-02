@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Compliance Report — {{ customer.name }}</title>
+<style>
+  @page{
+    size:A4 landscape;margin:9mm 9mm 14mm 9mm;
+    @bottom-left{content:"Confidential — prepared exclusively for {{ customer.name|e }}";font-size:8pt;color:#94A3B8;font-family:'DejaVu Sans',sans-serif;}
+    @bottom-center{content:"Tahfeel Business Solutions";font-size:8pt;color:#94A3B8;font-family:'DejaVu Sans',sans-serif;}
+    @bottom-right{content:"Page " counter(page) " of " counter(pages);font-size:8pt;color:#94A3B8;font-family:'DejaVu Sans',sans-serif;}
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'DejaVu Sans',sans-serif;color:#0B1B35;font-size:10pt;background:#F6F8FB;}
+  .hd{background:#fff;border-bottom:1pt solid #E8ECF2;padding:8pt 14pt;}
+  .card{background:#fff;border:1pt solid #E8ECF2;border-radius:8pt;}
+  .pill{display:inline-block;font-size:7.5pt;font-weight:bold;padding:1.5pt 8pt;border-radius:9pt;}
+  .p-red{background:#FEF2F2;color:#B91C1C;}
+  .p-amber{background:#FFF7ED;color:#B45309;}
+  .p-green{background:#ECFDF5;color:#15803D;}
+  table{border-collapse:collapse;width:100%;}
+  th{font-size:7.5pt;color:#94A3B8;text-align:left;padding:3pt 10pt;}
+  td{font-size:9pt;padding:3pt 10pt;border-top:0.5pt solid #F1F5F9;}
+  .tile{display:inline-block;width:18%;text-align:center;vertical-align:top;margin:0 0.5%;}
+  .tile .ic{display:inline-block;width:24pt;height:24pt;border-radius:7pt;color:#fff;font-weight:bold;font-size:12pt;line-height:24pt;text-align:center;}
+  .page2{page-break-before:always;}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <table style="width:100%;"><tr>
+    <td style="border:none;padding:0;">
+      <span style="font-size:13pt;font-weight:bold;color:#0B1B35;">Tahfeel</span>
+      <span style="font-size:8.5pt;color:#64748B;"> | Compliance health report — {{ month_label }}</span>
+    </td>
+    <td style="border:none;padding:0;text-align:right;font-size:8.5pt;color:#64748B;">
+      Prepared for <b style="color:#0B1B35;">{{ customer.name }}</b>{% if customer.ac_code %} · {{ customer.ac_code }}{% endif %}
+    </td>
+  </tr></table>
+</div>
+
+<table style="width:100%;margin-top:8pt;"><tr>
+  <td style="border:none;width:34%;vertical-align:top;padding:0 4pt 0 0;">
+    <div class="card" style="padding:10pt;text-align:center;">
+      <svg width="110" height="110" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="38" fill="none" stroke="#E8ECF2" stroke-width="9"/>
+        {% if score is not none %}
+        <circle cx="48" cy="48" r="38" fill="none" stroke="{{ mood_color }}" stroke-width="9" stroke-linecap="round" stroke-dasharray="{{ (238.8 * score / 100)|round(1) }} 238.8" transform="rotate(-90 48 48)"/>
+        <text x="48" y="46" text-anchor="middle" font-size="17" font-weight="bold" fill="#0B1B35">{{ score }}%</text>
+        <text x="48" y="61" text-anchor="middle" font-size="8" fill="#64748B">documents valid</text>
+        {% endif %}
+      </svg>
+      <div style="font-size:9.5pt;font-weight:bold;color:{{ mood_color }};margin-top:3pt;">{{ mood }}</div>
+      {% if total %}
+      <div style="font-size:8.5pt;color:#475569;margin-top:4pt;line-height:1.6;">
+        <b style="color:#16A34A;">{{ n_valid }} of {{ total }}</b> documents fully valid<br>
+        <b style="color:#F59E0B;">{{ n_expiring }}</b> expiring soon · <b style="color:#EF4444;">{{ n_expired }}</b> expired
+      </div>
+      {% endif %}
+    </div>
+  </td>
+  <td style="border:none;width:66%;vertical-align:top;padding:0;">
+    <div class="card" style="padding:8pt 12pt;">
+      <div style="font-size:9.5pt;font-weight:bold;margin-bottom:6pt;">Your documents at a glance</div>
+      <div>
+        {% set tilecolors = ['#3B82F6','#8B5CF6','#16A34A','#F59E0B','#0EA5E9'] %}
+        {% for c in categories[:5] %}
+        <div class="tile">
+          <span class="ic" style="background:{{ tilecolors[loop.index0 % 5] }};">{{ c.name[0] }}</span>
+          <div style="font-size:7.5pt;font-weight:bold;color:#334155;margin-top:2pt;">{{ c.name }} ({{ c.count }})</div>
+          <div style="font-size:7pt;color:{{ c.color }};">&#9679; {{ c.status }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:6pt;overflow:hidden;{% if action_items %}border-color:#FECACA;{% endif %}">
+      {% if action_items %}
+      <div style="background:#FEF2F2;padding:5pt 12pt;font-size:9pt;font-weight:bold;color:#B91C1C;">! Action required — we can renew these for you</div>
+      {% for d, days in action_items %}
+      <table><tr>
+        <td style="border:none;font-size:8.5pt;color:#334155;">{{ d.doc_type }}{% if d.owner_name and d.owner_name != customer.name %} — {{ d.owner_name }}{% endif %}</td>
+        <td style="border:none;text-align:right;font-size:8.5pt;font-weight:bold;color:{{ '#B91C1C' if days < 0 else '#B45309' }};">
+          {% if days < 0 %}expired {{ d.expiry_date.strftime('%d %b %Y') }} — renew now to avoid fines{% else %}expires {{ d.expiry_date.strftime('%d %b %Y') }} · {{ days }} days left{% endif %}
+        </td>
+      </tr></table>
+      {% endfor %}
+      {% else %}
+      <div style="background:#ECFDF5;padding:8pt 12pt;font-size:9pt;font-weight:bold;color:#15803D;">All of your documents are in good standing — nothing needs renewal right now.</div>
+      {% endif %}
+    </div>
+  </td>
+</tr></table>
+
+<div class="card" style="margin-top:8pt;padding:8pt 12pt;">
+  <div style="font-size:9.5pt;font-weight:bold;margin-bottom:5pt;">Your renewal timeline</div>
+  {% for t in timeline %}
+  <table style="margin-bottom:3pt;"><tr>
+    <td style="border:none;width:14%;font-size:8pt;color:#5F5E5A;padding:0;">{{ t.label }}</td>
+    <td style="border:none;width:60%;padding:0;">
+      <div style="background:#F1F5F9;border-radius:4pt;height:7pt;"><div style="background:{{ t.color }};border-radius:4pt;height:7pt;width:{{ t.width }}%;"></div></div>
+    </td>
+    <td style="border:none;font-size:8pt;font-weight:bold;color:{{ t.color }};padding:0 0 0 8pt;">{{ t.doc }}</td>
+  </tr></table>
+  {% endfor %}
+  <div style="background:#ECFDF5;border-radius:6pt;padding:5pt 10pt;font-size:8.5pt;color:#15803D;margin-top:5pt;">
+    <b>Need help renewing?</b> Reply to this email or WhatsApp us at +971 4 585 5033 — Tahfeel handles the paperwork end to end.
+  </div>
+</div>
+
+<!-- ═══════ PAGE 2 — DETAIL ═══════ -->
+<div class="page2">
+  <div class="hd">
+    <span style="font-size:11pt;font-weight:bold;">Tahfeel</span>
+    <span style="font-size:8.5pt;color:#64748B;"> | Your documents in detail — {{ customer.name }} · {{ month_label }}</span>
+  </div>
+
+  <div class="card" style="margin-top:8pt;overflow:hidden;">
+    <table>
+      <tr style="background:#FBFCFE;"><th style="width:26%;">DOCUMENT</th><th>HOLDER</th><th>EXPIRY DATE</th><th>DAYS LEFT</th><th style="text-align:right;">STATUS</th></tr>
+      {% for d, days in docs %}
+      <tr>
+        <td style="font-weight:bold;">{{ d.doc_type }}</td>
+        <td style="color:#475569;">{{ d.owner_name or 'Company' }}</td>
+        <td style="color:#475569;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
+        <td style="font-weight:bold;color:{{ '#EF4444' if days < 0 else ('#F59E0B' if days <= 60 else '#16A34A') }};">
+          {% if days < 0 %}overdue {{ -days }}d{% else %}{{ days }}{% endif %}
+        </td>
+        <td style="text-align:right;">
+          {% if days < 0 %}<span class="pill p-red">Renewal due</span>
+          {% elif days <= 60 %}<span class="pill p-amber">Expiring soon</span>
+          {% else %}<span class="pill p-green">Valid</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <table style="width:100%;margin-top:8pt;"><tr>
+    <td style="border:none;width:55%;vertical-align:top;padding:0 4pt 0 0;">
+      <div class="card" style="padding:8pt 12pt;">
+        <div style="font-size:9.5pt;font-weight:bold;margin-bottom:4pt;">How your score is calculated</div>
+        <div style="font-size:8.5pt;color:#475569;line-height:1.8;">
+          Each document earns points by validity:<br>
+          <span style="color:#16A34A;">&#9679;</span> Valid more than 90 days — full point<br>
+          <span style="color:#F59E0B;">&#9679;</span> Expiring within 90 days — half point<br>
+          <span style="color:#EF4444;">&#9679;</span> Expired — no points<br>
+          {% if score is not none %}Your score is the average: ({{ n_valid }} + {{ n_expiring }} × 0.5 + 0) ÷ {{ total }} = <b style="color:#0B1B35;">{{ score }}%</b>.
+          {% if uplift and uplift > score %} Renewing your expired document{{ 's' if n_expired != 1 }} lifts it to <b style="color:#16A34A;">{{ uplift }}%</b>.{% endif %}{% endif %}
+        </div>
+      </div>
+    </td>
+    <td style="border:none;width:45%;vertical-align:top;padding:0;">
+      <div style="background:#0B1B35;border-radius:8pt;padding:10pt 12pt;color:#fff;">
+        <div style="font-size:9.5pt;font-weight:bold;margin-bottom:4pt;">Let Tahfeel handle it</div>
+        <div style="font-size:8.5pt;color:#B5D4F4;line-height:1.7;">
+          Trade license renewal, visa processing and document management — done for you.
+          Reply to this email or WhatsApp <b style="color:#fff;">+971 4 585 5033</b> and we'll take it from here.
+        </div>
+      </div>
+    </td>
+  </tr></table>
+</div>
+
+</body>
+</html>
