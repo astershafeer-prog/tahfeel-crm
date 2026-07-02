@@ -25,37 +25,31 @@
         <div class="card-body">
 
           <div class="section-label">Client Information</div>
-          <style>
-            .ctype-opt{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;text-transform:none;font-size:15px;padding:11px 22px;border:2px solid var(--border);border-radius:12px;}
-            .ctype-opt:has(input:checked){border-color:var(--primary);background:var(--info-bg);color:var(--primary);}
-            .ctype-opt input{width:auto;}
-          </style>
           {% set ct = customer.customer_type or 'Individual' %}
           <div class="form-group" style="margin-bottom:14px;">
             <label>Client Type</label>
-            <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;">
-              <label class="ctype-opt"><input type="radio" name="customer_type" value="Individual" {% if ct=='Individual' %}checked{% endif %} onchange="onTypeChange()"> 👤 Individual</label>
-              <label class="ctype-opt"><input type="radio" name="customer_type" value="Company" {% if ct=='Company' %}checked{% endif %} onchange="onTypeChange()"> 🏢 Company</label>
+            <div style="margin-top:8px;">
+              <span style="display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;padding:11px 22px;border:2px solid var(--primary);border-radius:12px;background:var(--info-bg);color:var(--primary);">
+                {% if ct == 'Company' %}🏢 Company{% else %}👤 Individual{% endif %}
+              </span>
+              <span style="font-size:12px;color:var(--text-muted);margin-left:10px;">Client type is fixed once created and can't be changed here.</span>
             </div>
+            <input type="hidden" name="customer_type" value="{{ ct }}">
           </div>
           <script>
-            window.__hasCompanyData = {{ 'true' if (customer.legal_form or customer.jurisdiction or customer.licensing_authority or customer.emirate or customer.business_activity or customer.ac_status or customer.ac_opening_date or customer.website or customer.uae_pass_number) else 'false' }};
+            window.__isCompany = {{ 'true' if ct == 'Company' else 'false' }};
             function onTypeChange(){
-              var t=document.querySelector('input[name="customer_type"]:checked');
-              var isCompany=t&&t.value==='Company';
+              var isCompany=window.__isCompany;
               var nl=document.getElementById('nameLabel'); if(nl) nl.textContent=isCompany?'Company Name *':'Full Name *';
               var pl=document.getElementById('phoneLabel'); if(pl) pl.textContent=isCompany?'Mobile *':'Phone *';
               var ws=document.getElementById('waSameLabel'); if(ws) ws.textContent=isCompany?'mobile':'phone';
               var cp=document.querySelector('input[name="contact_person"]'); if(cp) cp.required=isCompany;
               var cpg=document.getElementById('contactPersonGroup'); if(cpg) cpg.style.display=isCompany?'':'none';
-              var showCompany=isCompany||window.__hasCompanyData;
-              document.querySelectorAll('.company-only').forEach(function(e){e.style.display=showCompany?'':'none';});
+              document.querySelectorAll('.company-only').forEach(function(e){e.style.display=isCompany?'':'none';});
               document.querySelectorAll('.indiv-only').forEach(function(e){e.style.display=isCompany?'none':'';});
-              var hint=document.getElementById('reclassifyHint'); if(hint) hint.style.display=(!isCompany&&window.__hasCompanyData)?'':'none';
             }
             document.addEventListener('DOMContentLoaded', onTypeChange);
           </script>
-          <div id="reclassifyHint" style="display:none;background:#FAEEDA;color:#633806;padding:9px 13px;border-radius:8px;font-size:12px;margin-bottom:12px;">This client has company details but is saved as Individual. Switch the type to 🏢 Company above to classify it correctly — its details are shown below and are safe.</div>
           <div class="form-row-2">
             <div class="form-group">
               <label id="nameLabel">Full Name *</label>

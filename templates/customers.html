@@ -121,6 +121,7 @@
               <a href="/customers/{{ c.id }}" style="font-size:13px;font-weight:700;color:#1A3B8B;text-decoration:none;">{{ c.name }}</a>
               {% if c.lead_id %}<span style="font-size:10px;background:#EBF2FF;color:#1A3B8B;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:4px;">↩ Lead</span>{% endif %}
               {% if c.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ c.company }}</div>{% endif %}
+              {% if c.contact_person %}<div style="font-size:11px;color:#64748B;margin-top:1px;">👤 {{ c.contact_person }}</div>{% endif %}
             </td>
             <td>
               {% if c.phone %}
