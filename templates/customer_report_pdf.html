@@ -204,7 +204,7 @@
     {% for m in cal_months %}
     <div style="margin-bottom:3pt;">
       <div style="font-size:6.5pt;font-weight:bold;color:#1D4ED8;">{{ m.label|upper }}</div>
-      {% for it in m.items %}
+      {% for it in m['items'] %}
       <div style="font-size:6.5pt;color:#334155;padding:1pt 0;">{{ it }}</div>
       {% else %}
       <div style="font-size:6.5pt;color:#94A3B8;">No renewals</div>
