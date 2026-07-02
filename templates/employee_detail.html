@@ -66,7 +66,7 @@
         </form>
         <hr class="divider">
         <table>
-          <thead><tr><th>Type</th><th>Expiry</th><th>Status</th><th>File</th></tr></thead>
+          <thead><tr><th>Type</th><th>Expiry</th><th>Status</th><th>File</th><th>Actions</th></tr></thead>
           <tbody>
             {% for d in docs %}
             <tr>
@@ -82,9 +82,13 @@
                 {% endif %}
               </td>
               <td>{% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>
+              <td style="white-space:nowrap;">
+                <a href="/documents/{{ d.id }}/edit?next=/employees/{{ emp.id }}" style="color:#1A3B8B;font-size:12px;text-decoration:none;font-weight:600;margin-right:10px;">✏ Edit</a>
+                <a href="/documents/{{ d.id }}/delete?next=/employees/{{ emp.id }}" onclick="return confirm('Remove this document?')" style="color:#DC2626;font-size:12px;text-decoration:none;font-weight:600;">🗑 Delete</a>
+              </td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="empty">No documents yet.</td></tr>
+            <tr><td colspan="5" class="empty">No documents yet.</td></tr>
             {% endfor %}
           </tbody>
         </table>

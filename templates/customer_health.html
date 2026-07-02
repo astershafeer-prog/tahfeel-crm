@@ -110,10 +110,8 @@
     <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
       <a href="/health-check" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to Compliance</a>
       <div class="hc-actions" style="flex-wrap:wrap;">
-        <button class="hc-btn" onclick="window.print()">🖨 Print</button>
-        <a class="hc-btn" href="/customers/{{ customer.id }}/report.pdf" target="_blank" style="text-decoration:none;">⬇ Download PDF report</a>
+        <a class="hc-btn" href="/customers/{{ customer.id }}/report.pdf" target="_blank" style="text-decoration:none;">⬇ Download / Print PDF report</a>
         <form method="POST" action="/customers/{{ customer.id }}/send-report" style="margin:0;" onsubmit="return confirm('Email the compliance report (with PDF attached) to {{ customer.alert_email or customer.email or 'this client' }}?');"><button type="submit" class="hc-btn">📨 Send report now</button></form>
-        <form method="POST" action="/customers/{{ customer.id }}/email-health" style="margin:0;"><button type="submit" class="hc-btn">📧 Email now</button></form>
         {% if wa_number %}<a class="hc-btn wa" target="_blank" href="https://wa.me/{{ wa_number }}?text=Dear%20{{ customer.contact_person.split()[0] if customer.contact_person else customer.name.split()[0] }}%2C%20here%20is%20your%20compliance%20update%20from%20Tahfeel.">💬 WhatsApp</a>{% endif %}
       </div>
     </div>

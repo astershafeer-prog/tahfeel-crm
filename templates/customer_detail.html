@@ -299,7 +299,9 @@
                 <span style="color:var(--text-light);font-size:12px;">No file</span>
               {% endif %}
             </td>
-            <td>
+            <td style="white-space:nowrap;">
+              <a href="/documents/{{ doc.id }}/edit?next=/customers/{{ customer.id }}"
+                 style="color:var(--primary);font-size:12px;text-decoration:none;font-weight:600;margin-right:10px;">✏ Edit</a>
               <a href="/documents/{{ doc.id }}/delete?next=/customers/{{ customer.id }}"
                  onclick="return confirm('Remove this document?')"
                  style="color:var(--danger);font-size:12px;text-decoration:none;font-weight:600;">🗑 Delete</a>

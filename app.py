@@ -4933,8 +4933,10 @@ def edit_document(doc_id):
         if request.form.get('add_another'):
             cid = doc.customer_id
             return redirect(url_for('add_document') + (f'?customer_id={cid}' if cid else ''))
-        return redirect(url_for('documents'))
-    return render_template('edit_document.html', doc=doc, doc_types=doc_types, customers=customers)
+        nxt = request.form.get('next') or request.args.get('next')
+        return redirect(nxt) if nxt else redirect(url_for('documents'))
+    return render_template('edit_document.html', doc=doc, doc_types=doc_types, customers=customers,
+                           next_url=request.args.get('next', ''))
 
 @app.route('/documents/<int:doc_id>/delete')
 @login_required
