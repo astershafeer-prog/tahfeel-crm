@@ -1610,6 +1610,10 @@ def delete_lead(lead_id):
             return redirect(url_for('lead_detail', lead_id=lead_id))
     
     LeadUpdate.query.filter_by(lead_id=lead_id).delete()
+    # Unlink (don't delete) records that reference this lead but can outlive it —
+    # otherwise the DB foreign key blocks deletion with an error.
+    WhatsAppMessage.query.filter_by(lead_id=lead_id).update({'lead_id': None})
+    Task.query.filter_by(lead_id=lead_id).update({'lead_id': None})
     db.session.delete(lead)
     db.session.commit()
     flash('Lead deleted successfully')
@@ -1638,6 +1642,8 @@ def bulk_delete_leads():
                     skipped += 1
                     continue
             LeadUpdate.query.filter_by(lead_id=lead.id).delete()
+            WhatsAppMessage.query.filter_by(lead_id=lead.id).update({'lead_id': None})
+            Task.query.filter_by(lead_id=lead.id).update({'lead_id': None})
             db.session.delete(lead)
             count += 1
     db.session.commit()
