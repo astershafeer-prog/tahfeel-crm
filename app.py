@@ -4256,6 +4256,157 @@ def health_check():
                            total=len(docs), status_filter=status_filter, type_filter=type_filter,
                            search=search)
 
+# ─────────────── Compliance report (printable, A4 landscape) ───────────────
+DOC_CATEGORIES = [
+    ('Trade License', '📜'), ('Emirates ID', '🆔'), ('Passport', '📘'),
+    ('Visa', '✈️'), ('Medical Certificate', '🏥'), ('Insurance', '🛡️'),
+    ('Contract', '📝'), ('NOC', '📄'), ('Ejari', '🏠'), ('Other', '📦'),
+]
+
+def _doc_categories(docs, dl):
+    """Group documents into the seeded categories with a status summary each."""
+    known = [c[0] for c in DOC_CATEGORIES[:-1]]
+    cats = []
+    for name, icon in DOC_CATEGORIES:
+        if name == 'Other':
+            ds = [d for d in docs if (d.doc_type or 'Other') not in known]
+        else:
+            ds = [d for d in docs if (d.doc_type or '') == name]
+        if not ds:
+            continue
+        n_exp = len([d for d in ds if dl(d) < 0])
+        n_soon = len([d for d in ds if 0 <= dl(d) <= 60])
+        if n_exp:
+            status, color = f'{n_exp} expired', '#EF4444'
+        elif n_soon:
+            status, color = f'{n_soon} expiring', '#F59E0B'
+        else:
+            status, color = 'Active', '#16A34A'
+        cats.append({'name': name, 'icon': icon, 'count': len(ds), 'status': status, 'color': color})
+    return cats
+
+def _donut_segments(band_counts, order, colors, circumference):
+    """Precompute SVG stroke-dasharray/rotation for a segmented donut."""
+    total = sum(band_counts.get(b, 0) for b in order) or 1
+    segs, acc = [], 0.0
+    for b in order:
+        frac = band_counts.get(b, 0) / total
+        if frac <= 0:
+            continue
+        segs.append({'color': colors[b], 'dash': round(frac * circumference, 1),
+                     'rot': round(acc * 360 - 90, 1)})
+        acc += frac
+    return segs
+
+@app.route('/health-check/report')
+@login_required
+def compliance_report():
+    """Internal A4-landscape print report: executive summary + full detail."""
+    import calendar
+    now = now_dubai()
+    today = now.date()
+    docs = Document.query.filter(Document.expiry_date != None).all()
+
+    def dl(d):
+        return (d.expiry_date.date() - today).days
+
+    total = len(docs)
+    n_expired = len([d for d in docs if dl(d) < 0])
+    n_red = len([d for d in docs if 0 <= dl(d) <= 30])
+    n_amber = len([d for d in docs if 30 < dl(d) <= 60])
+    n_green = len([d for d in docs if dl(d) > 60])
+    n_valid90 = len([d for d in docs if dl(d) > 90])
+    n_soon90 = len([d for d in docs if 0 <= dl(d) <= 90])
+    overall = round(100 * (n_valid90 + 0.5 * n_soon90) / total) if total else None
+    overall_band = ('Excellent' if overall >= 90 else 'Good' if overall >= 70
+                    else 'Average' if overall >= 50 else 'Needs attention') if overall is not None else 'No data'
+    ring_color = ('#16A34A' if overall >= 70 else '#F59E0B' if overall >= 50 else '#EF4444') if overall is not None else '#94A3B8'
+
+    def bucket_split(ds):
+        return {'total': len(ds), 'valid': len([d for d in ds if dl(d) > 60]),
+                'expiring': len([d for d in ds if 0 <= dl(d) <= 60]),
+                'expired': len([d for d in ds if dl(d) < 0])}
+    comp_stats = bucket_split([d for d in docs if (d.belongs_to or '') == 'Company'])
+    ppl_stats = bucket_split([d for d in docs if (d.belongs_to or '') != 'Company'])
+
+    renew30 = len([d for d in docs if 0 <= dl(d) <= 30])
+    renew60 = len([d for d in docs if 0 <= dl(d) <= 60])
+    need_action = n_expired + n_red
+
+    customers_by_id = {c.id: c for c in Customer.query.all()}
+    def holder_label(d):
+        c = customers_by_id.get(d.customer_id) if d.customer_id else None
+        if c:
+            if d.owner_name and d.owner_name.strip().lower() != (c.name or '').strip().lower():
+                return f'{d.owner_name} — {c.name}'
+            return c.name
+        return (d.owner_name or 'Unknown') + (' (staff)' if d.belongs_to == 'Staff' else '')
+
+    urgent = sorted([d for d in docs if dl(d) <= 60], key=dl)
+    alerts = [(d, dl(d), holder_label(d)) for d in urgent[:4]]
+    renewals = [(d, dl(d), holder_label(d)) for d in urgent[:8]]
+    staff_alerts = [(d, dl(d)) for d in sorted(
+        [d for d in docs if d.belongs_to == 'Staff' and dl(d) <= 60], key=dl)][:6]
+
+    categories = _doc_categories(docs, dl)
+
+    timeline = []
+    month_counts = []
+    for i in range(3):
+        mm = (today.month - 1 + i) % 12 + 1
+        yy = today.year + ((today.month - 1 + i) // 12)
+        cnt = len([d for d in docs if d.expiry_date.year == yy and d.expiry_date.month == mm and dl(d) >= 0])
+        month_counts.append((f'{calendar.month_abbr[mm]} {yy}', cnt))
+    mx = max([c[1] for c in month_counts] + [1])
+    for (lbl, cnt), color in zip(month_counts, ['#EF4444', '#F59E0B', '#16A34A']):
+        timeline.append({'label': lbl, 'count': cnt, 'width': round(100 * cnt / mx), 'color': color})
+
+    groups = {}
+    for d in docs:
+        key = d.customer_id if d.customer_id else ('staff:' + (d.owner_name or 'Unknown'))
+        groups.setdefault(key, []).append(d)
+    rows = []
+    for key, dlist in groups.items():
+        dsorted = sorted(dlist, key=lambda d: d.expiry_date)
+        worst = min(dl(d) for d in dlist)
+        n_v = len([d for d in dlist if dl(d) > 90])
+        n_s = len([d for d in dlist if 0 <= dl(d) <= 90])
+        score = round(100 * (n_v + 0.5 * n_s) / len(dlist))
+        band = ('Excellent' if score >= 90 else 'Good' if score >= 70
+                else 'Average' if score >= 50 else 'Poor')
+        if isinstance(key, int):
+            c = customers_by_id.get(key)
+            oname = c.name if c else 'Unknown'
+            otype = (c.customer_type if c and c.customer_type else 'Individual')
+            ac = c.ac_code if c else None
+        else:
+            oname = key.split('staff:', 1)[1]
+            otype = 'Staff'
+            ac = None
+        rows.append({'name': oname, 'type': otype, 'ac': ac, 'count': len(dlist),
+                     'worst': worst, 'score': score, 'band': band,
+                     'n_expired': len([d for d in dlist if dl(d) < 0]),
+                     'docs': [(d, dl(d)) for d in dsorted]})
+    rows.sort(key=lambda r: r['worst'])
+
+    band_counts = {'Excellent': 0, 'Good': 0, 'Average': 0, 'Poor': 0}
+    for r in rows:
+        band_counts[r['band']] += 1
+    donut_segs = _donut_segments(
+        band_counts, ('Excellent', 'Good', 'Average', 'Poor'),
+        {'Excellent': '#16A34A', 'Good': '#4ADE80', 'Average': '#F59E0B', 'Poor': '#EF4444'},
+        238.8)
+
+    return render_template('compliance_report.html', now=now, today=today,
+                           total=total, n_expired=n_expired, n_red=n_red, n_amber=n_amber,
+                           n_green=n_green, overall=overall, overall_band=overall_band,
+                           ring_color=ring_color, comp_stats=comp_stats, ppl_stats=ppl_stats,
+                           renew30=renew30, renew60=renew60, need_action=need_action,
+                           alerts=alerts, renewals=renewals, staff_alerts=staff_alerts,
+                           categories=categories, timeline=timeline, rows=rows,
+                           band_counts=band_counts, donut_segs=donut_segs,
+                           n_clients=len(rows))
+
 @app.route('/documents')
 @login_required
 def documents():

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tahfeel — Compliance Report</title>
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    body{margin:0;background:#E5E9F0;font-family:'Segoe UI',Arial,sans-serif;color:#0B1B35;}
+    @page{size:A4 landscape;margin:8mm;}
+    .pg{background:#F6F8FB;width:281mm;min-height:193mm;margin:14px auto;padding:0;box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;flex-direction:column;}
+    @media print{
+      body{background:#F6F8FB;}
+      .pg{box-shadow:none;margin:0;width:auto;min-height:auto;page-break-after:always;}
+      .pg:last-child{page-break-after:auto;}
+      .no-print{display:none!important;}
+      .client-block{page-break-inside:avoid;}
+    }
+    .hd{background:#fff;border-bottom:1px solid #E8ECF2;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;}
+    .hd .brand{display:flex;align-items:center;gap:10px;}
+    .hd .brand b{font-size:17px;color:#0B1B35;}
+    .hd .brand span{font-size:12px;color:#64748B;}
+    .chip{display:inline-block;font-size:11px;font-weight:600;padding:3px 12px;border-radius:12px;}
+    .card{background:#fff;border:1px solid #E8ECF2;border-radius:12px;}
+    .ft{background:#fff;border-top:1px solid #E8ECF2;padding:6px 20px;display:flex;justify-content:space-between;font-size:10px;color:#94A3B8;margin-top:auto;}
+    table{border-collapse:collapse;width:100%;}
+    th{font-size:10px;color:#94A3B8;font-weight:600;text-align:left;padding:4px 14px;}
+    td{font-size:11.5px;padding:4px 14px;border-top:1px solid #F1F5F9;}
+    .pill{display:inline-block;font-size:10px;font-weight:600;padding:2px 10px;border-radius:11px;}
+    .p-red{background:#FEF2F2;color:#B91C1C;}
+    .p-amber{background:#FFF7ED;color:#B45309;}
+    .p-green{background:#ECFDF5;color:#15803D;}
+    .p-navy{background:#EFF6FF;color:#1D4ED8;}
+  </style>
+</head>
+<body>
+  <div class="no-print" style="max-width:281mm;margin:14px auto 0;display:flex;justify-content:space-between;align-items:center;">
+    <a href="/health-check" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to Compliance</a>
+    <button onclick="window.print()" style="background:#0F2660;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;">🖨 Print / Save as PDF</button>
+  </div>
+
+  <!-- ═══════════════ PAGE 1 — EXECUTIVE SUMMARY ═══════════════ -->
+  <div class="pg">
+    <div class="hd">
+      <div class="brand">
+        <img src="/static/img/logo_white.png" alt="" style="height:30px;background:#0F2660;border-radius:8px;padding:4px;">
+        <div><b>Tahfeel</b> <span>BUSINESS HEALTH CHECK — Compliance report</span></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        {% if need_action %}<span class="chip" style="background:#FEF2F2;color:#B91C1C;">{{ need_action }} need action</span>{% endif %}
+        <span style="font-size:11.5px;color:#64748B;">Generated {{ now.strftime('%d %b %Y, %H:%M') }} · {{ n_clients }} client{{ 's' if n_clients != 1 }} · {{ total }} documents</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr 1.3fr;gap:9px;padding:10px 20px 0;">
+      <div class="card" style="padding:10px;text-align:center;">
+        <div style="font-size:11.5px;font-weight:600;">Overall health score</div>
+        <svg width="86" height="86" viewBox="0 0 72 72" style="margin:2px 0;">
+          <circle cx="36" cy="36" r="29" fill="none" stroke="#E8ECF2" stroke-width="7"/>
+          {% if overall is not none %}
+          <circle cx="36" cy="36" r="29" fill="none" stroke="{{ ring_color }}" stroke-width="7" stroke-linecap="round" stroke-dasharray="{{ (182.2 * overall / 100)|round(1) }} 182.2" transform="rotate(-90 36 36)"/>
+          <text x="36" y="41" text-anchor="middle" font-size="16" font-weight="600" fill="#0B1B35">{{ overall }}%</text>
+          {% endif %}
+        </svg>
+        <div style="font-size:11px;font-weight:600;color:{{ ring_color }};">{{ overall_band }}</div>
+      </div>
+
+      <div class="card" style="padding:10px 12px;">
+        <div style="font-size:11.5px;font-weight:600;">🏢 Company docs</div>
+        <div style="font-size:26px;font-weight:700;margin:2px 0;">{{ comp_stats.total }}</div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748B;border-top:1px solid #F1F5F9;padding-top:5px;">
+          <span>Valid<br><b style="color:#16A34A;font-size:14px;">{{ comp_stats.valid }}</b></span>
+          <span>Expiring<br><b style="color:#F59E0B;font-size:14px;">{{ comp_stats.expiring }}</b></span>
+          <span>Expired<br><b style="color:#EF4444;font-size:14px;">{{ comp_stats.expired }}</b></span>
+        </div>
+      </div>
+
+      <div class="card" style="padding:10px 12px;">
+        <div style="font-size:11.5px;font-weight:600;">👥 People compliance</div>
+        <div style="font-size:26px;font-weight:700;margin:2px 0;">{{ ppl_stats.total }}</div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748B;border-top:1px solid #F1F5F9;padding-top:5px;">
+          <span>Valid<br><b style="color:#16A34A;font-size:14px;">{{ ppl_stats.valid }}</b></span>
+          <span>Expiring<br><b style="color:#F59E0B;font-size:14px;">{{ ppl_stats.expiring }}</b></span>
+          <span>Expired<br><b style="color:#EF4444;font-size:14px;">{{ ppl_stats.expired }}</b></span>
+        </div>
+      </div>
+
+      <div class="card" style="padding:10px 12px;">
+        <div style="font-size:11.5px;font-weight:600;">📅 Renewals</div>
+        <div style="font-size:10.5px;color:#64748B;margin-top:5px;">Next 30 days</div>
+        <div style="font-size:26px;font-weight:700;">{{ renew30 }}</div>
+        <div style="font-size:10.5px;color:#64748B;">Next 60 days <b style="color:#F59E0B;">{{ renew60 }}</b></div>
+      </div>
+
+      <div class="card" style="padding:10px 12px;">
+        <div style="font-size:11.5px;font-weight:600;margin-bottom:5px;">🔔 Compliance alerts</div>
+        {% for d, days, holder in alerts %}
+        <div style="font-size:10px;color:#334155;line-height:1.75;">
+          <span style="color:{{ '#EF4444' if days < 0 else '#F59E0B' }};">●</span>
+          {{ holder|truncate(26) }} — {{ d.doc_type }}
+          <b style="color:{{ '#B91C1C' if days < 0 else '#B45309' }};">{% if days < 0 %}expired {{ -days }}d{% else %}{{ days }}d left{% endif %}</b>
+        </div>
+        {% else %}
+        <div style="font-size:10.5px;color:#16A34A;">✓ No documents need attention</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:9px;padding:9px 20px 0;flex:1;">
+      <div class="card" style="flex:1.55;padding:10px 14px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:9px;">Compliance overview <span style="font-weight:400;color:#94A3B8;font-size:10px;">by document category</span></div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;">
+          {% for c in categories %}
+          <div style="text-align:center;">
+            <div style="width:38px;height:38px;border-radius:10px;background:#F1F5F9;display:inline-flex;align-items:center;justify-content:center;font-size:19px;">{{ c.icon }}</div>
+            <div style="font-size:10px;font-weight:600;color:#334155;margin-top:4px;">{{ c.name }} ({{ c.count }})</div>
+            <div style="font-size:9.5px;color:{{ c.color }};">● {{ c.status }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="card" style="flex:1;padding:10px 14px;display:flex;gap:12px;align-items:center;">
+        <svg width="96" height="96" viewBox="0 0 96 96">
+          <circle cx="48" cy="48" r="38" fill="none" stroke="#E8ECF2" stroke-width="10"/>
+          {% for s in donut_segs %}
+          <circle cx="48" cy="48" r="38" fill="none" stroke="{{ s.color }}" stroke-width="10" stroke-dasharray="{{ s.dash }} 238.8" transform="rotate({{ s.rot }} 48 48)"/>
+          {% endfor %}
+          {% if overall is not none %}<text x="48" y="46" text-anchor="middle" font-size="17" font-weight="600" fill="#0B1B35">{{ overall }}%</text>
+          <text x="48" y="61" text-anchor="middle" font-size="10" fill="#64748B">{{ overall_band }}</text>{% endif %}
+        </svg>
+        <div style="font-size:10.5px;color:#334155;line-height:2;flex:1;">
+          <div style="font-size:12px;font-weight:600;margin-bottom:2px;">Client health chart</div>
+          <span style="color:#16A34A;">■</span> Excellent (90–100) <b style="float:right;">{{ band_counts.Excellent }}</b><br>
+          <span style="color:#4ADE80;">■</span> Good (70–89) <b style="float:right;">{{ band_counts.Good }}</b><br>
+          <span style="color:#F59E0B;">■</span> Average (50–69) <b style="float:right;">{{ band_counts.Average }}</b><br>
+          <span style="color:#EF4444;">■</span> Poor (0–49) <b style="float:right;">{{ band_counts.Poor }}</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin:9px 20px;overflow:hidden;">
+      <div style="font-size:12px;font-weight:600;padding:8px 14px 3px;">Upcoming renewals <span style="font-weight:400;color:#94A3B8;font-size:10px;">most urgent first — full list in the detailed pages</span></div>
+      <table>
+        <tr><th>DOCUMENT</th><th>HOLDER / REFERENCE</th><th>EXPIRY DATE</th><th>DAYS LEFT</th><th style="text-align:right;">STATUS</th></tr>
+        {% for d, days, holder in renewals %}
+        <tr>
+          <td style="font-weight:600;">{{ d.doc_type }}</td>
+          <td style="color:#475569;">{{ holder }}</td>
+          <td style="color:#475569;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
+          <td style="font-weight:600;color:{{ '#EF4444' if days < 0 else ('#F59E0B' if days <= 30 else '#16A34A') }};">{{ days }}</td>
+          <td style="text-align:right;">
+            {% if days < 0 %}<span class="pill p-red">Expired</span>
+            {% elif days <= 30 %}<span class="pill p-amber">Expiring soon</span>
+            {% else %}<span class="pill p-green">Valid</span>{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:#16A34A;">✓ Nothing expiring in the next 60 days</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <div class="ft">
+      <span>🔒 Confidential — Tahfeel Business Solutions</span><span>Generated by Tahfeel CRM</span><span>Executive summary</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PAGES 2+ — DETAILED REPORT ═══════════════ -->
+  <div class="pg" style="min-height:auto;">
+    <div class="hd" style="padding:8px 20px;">
+      <div class="brand"><b style="font-size:13px;">Tahfeel</b> <span style="font-size:11px;">| Compliance report — detailed view (all clients, all documents)</span></div>
+      <span style="font-size:10.5px;color:#64748B;">{{ now.strftime('%d %b %Y') }} · sorted most urgent first · <span style="color:#EF4444;">■</span> expired <span style="color:#F59E0B;">■</span> ≤60d <span style="color:#16A34A;">■</span> valid</span>
+    </div>
+
+    <div style="padding:10px 20px;display:flex;flex-direction:column;gap:9px;">
+      {% for r in rows %}
+      {% set edge = '#EF4444' if r.worst <= 30 else ('#F59E0B' if r.worst <= 60 else '#16A34A') %}
+      {% set spill = 'p-red' if r.score < 50 else ('p-amber' if r.score < 70 else 'p-green') %}
+      <div class="client-block card" style="border-left:4px solid {{ edge }};border-radius:0 12px 12px 0;overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 14px;background:#FBFCFE;border-bottom:1px solid #F1F5F9;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="font-size:15px;">{% if r.type == 'Company' %}🏢{% elif r.type == 'Staff' %}👔{% elif r.type == 'Investor' %}💼{% else %}👤{% endif %}</span>
+            <span style="font-size:12.5px;font-weight:600;">{{ r.name }}</span>
+            <span style="font-size:10px;color:#94A3B8;">{{ r.type }}{% if r.ac %} · {{ r.ac }}{% endif %} · {{ r.count }} document{{ 's' if r.count != 1 }}</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            {% if r.n_expired %}<span class="pill p-red">{{ r.n_expired }} expired</span>{% endif %}
+            <span class="pill {{ spill }}">Score {{ r.score }}% — {{ r.band }}</span>
+          </div>
+        </div>
+        <table>
+          <tr><th style="width:26%;">DOCUMENT</th><th>HOLDER</th><th>EXPIRY DATE</th><th>DAYS LEFT</th><th style="text-align:right;">STATUS</th></tr>
+          {% for d, days in r.docs %}
+          <tr>
+            <td style="font-weight:600;">{{ d.doc_type }}</td>
+            <td style="color:#475569;">{{ d.owner_name or '—' }}</td>
+            <td style="color:#475569;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
+            <td style="font-weight:600;color:{{ '#EF4444' if days < 0 else ('#F59E0B' if days <= 60 else '#16A34A') }};">{{ days }}</td>
+            <td style="text-align:right;">
+              {% if days < 0 %}<span class="pill p-red">Expired</span>
+              {% elif days <= 30 %}<span class="pill p-amber">Expiring soon</span>
+              {% elif days <= 60 %}<span class="pill p-amber">Renew soon</span>
+              {% else %}<span class="pill p-green">Valid</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="ft">
+      <span>🔒 Confidential — Tahfeel Business Solutions</span><span>Generated by Tahfeel CRM</span><span>Detailed report</span>
+    </div>
+  </div>
+</body>
+</html>
