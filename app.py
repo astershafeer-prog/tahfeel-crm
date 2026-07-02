@@ -4022,7 +4022,8 @@ def delete_owner(owner_id):
     return redirect(url_for('customer_detail', customer_id=cid))
 
 # ─────────────────────────── Email alert engine ───────────────────────────
-def send_email(to_list, subject, html_body):
+def send_email(to_list, subject, html_body, attachments=None):
+    """attachments: optional list of (filename, bytes, mime_type) tuples."""
     host = os.environ.get('SMTP_HOST'); user = os.environ.get('SMTP_USER'); pwd = os.environ.get('SMTP_PASS')
     port = int(os.environ.get('SMTP_PORT', '465')); sender = os.environ.get('SMTP_FROM', user or '')
     recipients = [r for r in to_list if r]
@@ -4037,13 +4038,20 @@ def send_email(to_list, subject, html_body):
         from_addr = os.environ.get('RESEND_FROM') or sender or 'info@tahfeel.ae'
         if '<' not in from_addr:
             from_addr = f'Tahfeel Business Solutions <{from_addr}>'
+        payload = {'from': from_addr, 'to': recipients,
+                   'subject': subject, 'html': html_body}
+        if attachments:
+            import base64
+            payload['attachments'] = [
+                {'filename': fname, 'content': base64.b64encode(data).decode()}
+                for fname, data, _mime in attachments
+            ]
         try:
             resp = _rq.post('https://api.resend.com/emails',
                             headers={'Authorization': f'Bearer {resend_key}',
                                      'Content-Type': 'application/json'},
-                            json={'from': from_addr, 'to': recipients,
-                                  'subject': subject, 'html': html_body},
-                            timeout=15)
+                            json=payload,
+                            timeout=30)
             if resp.status_code in (200, 201):
                 return True, 'sent'
             return False, f'Resend {resp.status_code}: {resp.text[:200]}'
@@ -4052,9 +4060,16 @@ def send_email(to_list, subject, html_body):
 
     if not (host and user and pwd):
         return False, 'Email not configured (set RESEND_API_KEY, or SMTP_HOST/USER/PASS)'
-    msg = MIMEMultipart('alternative')
+    msg = MIMEMultipart('mixed' if attachments else 'alternative')
     msg['Subject'] = subject; msg['From'] = sender; msg['To'] = ', '.join(recipients)
     msg.attach(MIMEText(html_body, 'html'))
+    if attachments:
+        from email.mime.application import MIMEApplication
+        for fname, data, mime in attachments:
+            subtype = (mime or 'application/octet-stream').split('/')[-1]
+            part = MIMEApplication(data, _subtype=subtype)
+            part.add_header('Content-Disposition', 'attachment', filename=fname)
+            msg.attach(part)
 
     import socket as _socket
     _orig_gai = _socket.getaddrinfo

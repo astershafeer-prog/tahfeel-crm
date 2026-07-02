@@ -2,7 +2,7 @@
 cmd = "gunicorn app:app -b 0.0.0.0:$PORT"
 
 [phases.setup]
-nixPkgs = ["python39"]
+nixPkgs = ["python39", "pango", "harfbuzz", "fontconfig", "freetype", "glib"]
 
 [variables]
-BUILD_ID = "force15"
+BUILD_ID = "force16"
