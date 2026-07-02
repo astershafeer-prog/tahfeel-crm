@@ -29,7 +29,7 @@
   @page{
     size:A4 landscape;margin:7mm 7mm 13mm 7mm;
     @bottom-left{content:"Tahfeel Business Setup Service  |  Info@tahfeel.ae  |  +971 4 585 5033";font-size:7pt;color:#64748B;font-family:'DejaVu Sans',sans-serif;}
-    @bottom-center{content:"Generated automatically  |  Confidential";font-size:7pt;color:#64748B;font-family:'DejaVu Sans',sans-serif;}
+    @bottom-center{content:"Generated automatically  |  Confidential  |  For information only, E&OE";font-size:7pt;color:#64748B;font-family:'DejaVu Sans',sans-serif;}
     @bottom-right{content:"Page " counter(page) " of " counter(pages);font-size:7pt;color:#64748B;font-family:'DejaVu Sans',sans-serif;}
   }
   *{box-sizing:border-box;}
@@ -113,19 +113,20 @@
       <tr><td style="color:#64748B;">Employees</td><td style="text-align:right;font-weight:bold;">{{ employees_count }}</td></tr>
       <tr><td style="color:#64748B;">Partners / UBO</td><td style="text-align:right;font-weight:bold;">{{ owners_count }}</td></tr>
       <tr><td style="color:#64748B;">Contact person</td><td style="text-align:right;font-weight:bold;">{{ customer.contact_person or '—' }}</td></tr>
+      <tr><td style="color:#64748B;">Account manager</td><td style="text-align:right;font-weight:bold;color:#0B3B8C;">{{ account_manager or '—' }}</td></tr>
       <tr><td style="color:#64748B;">Phone</td><td style="text-align:right;font-weight:bold;">{{ customer.phone or customer.mobile or '—' }}</td></tr>
       <tr><td style="color:#64748B;">Email</td><td style="text-align:right;font-weight:bold;">{{ customer.email or '—' }}</td></tr>
       <tr><td style="color:#64748B;">AC code</td><td style="text-align:right;font-weight:bold;">{{ customer.ac_code or '—' }}</td></tr>
     </table>
   </td>
   <td class="card" style="width:40%;padding:6pt 9pt;">
-    <div class="hd-blue" style="margin-bottom:4pt;">COMPLIANCE INSIGHTS</div>
-    {% for color, text in insights %}
-    <div style="font-size:7.5pt;color:#334155;padding:2.5pt 0;border-bottom:0.5pt solid #F1F5F9;">
-      <span style="color:{{ color }};font-weight:bold;">&#9679;</span> {{ text }}
+    <div class="hd-blue" style="margin-bottom:4pt;">AI COMPLIANCE ADVISOR
+      <span style="float:right;font-weight:normal;font-size:6pt;color:#7C3AED;background:#F5F3FF;padding:1pt 6pt;border-radius:8pt;">AI-POWERED</span>
     </div>
-    {% endfor %}
-    <div style="background:#F0F7FF;border-radius:5pt;padding:5pt 8pt;margin-top:5pt;font-size:7pt;color:#1D4ED8;">
+    <div style="font-size:7.6pt;color:#334155;line-height:1.65;">
+      {% for s in advisor %}{{ s }} {% endfor %}
+    </div>
+    <div style="background:#F0F7FF;border-radius:5pt;padding:5pt 8pt;margin-top:6pt;font-size:7pt;color:#1D4ED8;">
       {% if n_expired or n_exp30 %}<b>Tahfeel can handle these renewals for you</b> — reply to this email or WhatsApp +971 4 585 5033.{% else %}<b>Your compliance position is strong.</b> Maintain regular renewal discipline.{% endif %}
     </div>
   </td>
@@ -174,6 +175,29 @@
     </div>
     {% endfor %}
   </div>
+</div>
+
+<!-- ═══ UPCOMING RENEWALS FORECAST (NEXT 3 MONTHS) ═══ -->
+<div class="card" style="margin-top:3pt;padding:5pt 10pt;background:#F0F7FF;border-color:#CFE0F7;">
+  <table><tr>
+    <td style="width:26%;">
+      <span class="hd-blue" style="color:#1D4ED8;">UPCOMING RENEWALS FORECAST</span>
+      <span style="font-size:6pt;color:#7C3AED;background:#F5F3FF;padding:1pt 6pt;border-radius:8pt;">PREDICTIVE</span>
+      <div style="font-size:6.5pt;color:#64748B;">Next 3 months</div>
+    </td>
+    <td style="font-size:8pt;color:#0B1B35;">
+      {% if forecast %}
+      In the next 3 months you will require:&nbsp;
+      {% for f in forecast %}<b style="color:#1D4ED8;">{{ f.count }} × {{ f.type }}</b>{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+      {% else %}
+      <span style="color:#15803D;font-weight:bold;">No renewals due in the next 3 months — you're ahead of schedule.</span>
+      {% endif %}
+    </td>
+    <td style="width:14%;text-align:right;">
+      {% if forecast_total %}<span style="font-size:15pt;font-weight:bold;color:#1D4ED8;">{{ forecast_total }}</span>
+      <span style="font-size:6.5pt;color:#64748B;"> renewal{{ 's' if forecast_total != 1 }}<br>to plan for</span>{% endif %}
+    </td>
+  </tr></table>
 </div>
 
 <!-- ═══ TAX | ATTENTION | EMPLOYEES | CALENDAR ═══ -->

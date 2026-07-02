@@ -4426,6 +4426,40 @@ def _customer_report_data(customer_id):
 
     report_no = f'TBS/CR/{today.year}/{customer_id:04d}'
 
+    # ── AI-style compliance advisor (rule-based, deterministic) ──
+    advisor = []
+    if score is not None:
+        advisor.append(f'Your company is in {mood.lower()} with a compliance score of {score}%.')
+    if n_expired:
+        advisor.append(f'{n_expired} expired document{"s" if n_expired != 1 else ""} '
+                       f'{"significantly increase" if n_expired > 1 else "increases"} your regulatory exposure and should be renewed without delay.')
+    elif n_exp30:
+        advisor.append(f'{n_exp30} document{"s" if n_exp30 != 1 else ""} will require renewal within the next 30 days.')
+    if uplift and uplift > (score or 0):
+        advisor.append(f'Completing the identified renewals could improve your score to {uplift}% '
+                       f'and reduce your estimated compliance risk from {risk_pct}%.')
+    if not (customer.vat_status or customer.corp_tax_status):
+        pass
+    elif (customer.vat_due_date and 0 <= (customer.vat_due_date - today).days <= 60) or \
+         (customer.corp_tax_due_date and 0 <= (customer.corp_tax_due_date - today).days <= 60):
+        advisor.append('A tax filing is due soon — please ensure returns are submitted on time.')
+    else:
+        advisor.append('No immediate tax issues were detected.')
+    # Priority = the category holding the most urgent document
+    urgent_docs = sorted([d for d in docs if dl(d) <= 90], key=dl)
+    if urgent_docs:
+        advisor.append(f'Priority should be given to {(urgent_docs[0].doc_type or "document").lower()} compliance.')
+    else:
+        advisor.append('Maintain your current renewal discipline to keep this strong standing.')
+
+    # ── Upcoming renewals forecast — next 3 months, grouped by type ──
+    fc = {}
+    for d in docs:
+        if dl(d) <= 90:
+            fc[d.doc_type or 'Other'] = fc.get(d.doc_type or 'Other', 0) + 1
+    forecast = [{'type': t, 'count': n} for t, n in sorted(fc.items(), key=lambda x: -x[1])]
+    forecast_total = sum(fc.values())
+
     return {
         'customer': customer, 'today': today, 'docs': [(d, dl(d)) for d in docs],
         'total': total, 'n_valid': n_valid, 'n_expiring': n_expiring, 'n_expired': n_expired,
@@ -4437,6 +4471,8 @@ def _customer_report_data(customer_id):
         'insights': insights, 'buckets': buckets, 'attention': attention,
         'employees_count': len(employees), 'emp_rows': emp_rows, 'owners_count': owners_count,
         'cal_months': cal_months, 'doc_groups': doc_groups, 'report_no': report_no,
+        'advisor': advisor, 'forecast': forecast, 'forecast_total': forecast_total,
+        'account_manager': customer.rep.name if customer.rep else None,
         'generated': now_dubai(),
     }
 
