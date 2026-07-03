@@ -2566,6 +2566,18 @@ def toggle_customer_alerts(customer_id):
         return redirect(url_for('customer_health', customer_id=customer_id))
     return redirect(url_for('customer_detail', customer_id=customer_id))
 
+@app.route('/admin/alerts/disable-all')
+@login_required
+@admin_required
+def disable_all_alerts():
+    """One-click safety switch: turn OFF report alerts for every customer.
+    Used when customer details aren't finalised yet, so no automated
+    weekly/monthly emails go out until each customer is re-enabled."""
+    n = Customer.query.filter_by(alerts_enabled=True).update({'alerts_enabled': False})
+    db.session.commit()
+    flash(f'🔕 Report alerts turned OFF for {n} customer(s). No automated emails will send until you re-enable them individually.')
+    return redirect(url_for('admin_panel'))
+
 @app.route('/customers/<int:customer_id>/delete')
 @login_required
 @admin_required
