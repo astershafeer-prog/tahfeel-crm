@@ -4555,7 +4555,8 @@ def build_report_email_html(data):
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:20px 10px;">
 <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
   <tr><td style="background:#0B1B35;padding:18px;text-align:center;">
-    <div style="color:#ffffff;font-size:20px;font-weight:bold;">Tahfeel</div>
+    <img src="https://tahfeelcrm.online/static/img/logo_white.png" alt="Tahfeel" width="150" style="max-width:150px;height:auto;display:block;margin:0 auto 8px;">
+    <div style="color:#ffffff;font-size:16px;font-weight:bold;">Tahfeel Business Setup Services LLC</div>
     <div style="color:#85B7EB;font-size:12px;margin-top:2px;">Monthly compliance health report</div>
   </td></tr>
   <tr><td style="padding:20px 24px 8px;">
