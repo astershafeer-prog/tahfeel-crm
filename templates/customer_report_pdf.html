@@ -81,8 +81,8 @@
   <td style="width:22%;">
     <div style="font-size:10pt;font-weight:bold;">Company health score</div>
     <div style="font-size:8.5pt;color:#475569;margin-top:3pt;line-height:1.55;">
-      {% if score is not none and score >= 70 %}Your overall compliance health is strong. Keep up the good work!
-      {% elif n_expired %}Renewing your expired document{{ 's' if n_expired != 1 }} will restore your standing quickly.
+      {% if n_expired %}You have {{ n_expired }} expired document{{ 's' if n_expired != 1 }} to renew — clearing {{ 'these' if n_expired != 1 else 'this' }} will restore your standing quickly.
+      {% elif score is not none and score >= 70 %}Your overall compliance health is strong. Keep up the good work!
       {% else %}A few renewals coming up — we're on it with you.{% endif %}
     </div>
   </td>
@@ -165,7 +165,7 @@
   <div>
     {% for c in doc_cards %}
     <div style="display:inline-block;width:15.3%;vertical-align:top;border:0.8pt solid #EEF2F7;border-radius:6pt;padding:6pt 8pt;margin-right:3pt;margin-bottom:3pt;">
-      <div style="height:19pt;overflow:hidden;">{{ dicon(c.type, c.color, 17) }} <span style="font-size:8pt;font-weight:bold;color:#0B1B35;">{{ c.type }}</span></div>
+      <div style="height:28pt;line-height:1.25;">{{ dicon(c.type, c.color, 16) }} <span style="font-size:8.5pt;font-weight:bold;color:#0B1B35;">{{ c.type }}</span></div>
       <div style="font-size:7pt;color:#94A3B8;">Valid till {{ c.expiry }}</div>
       <div style="font-size:15pt;font-weight:bold;color:{{ c.color }};">{{ c.days if c.days >= 0 else 0 }}</div>
       <div style="font-size:7pt;color:#64748B;">days remaining</div>
@@ -257,25 +257,33 @@
   <div class="accent" style="margin-top:4pt;"></div>
 
   {% for g in doc_groups %}
+  {% set parts = g.holder.split() %}
+  {% set initials = (parts[0][0] ~ (parts[1][0] if parts|length > 1 else ''))|upper %}
   <div class="card" style="margin-top:8pt;overflow:hidden;page-break-inside:avoid;">
     <div style="background:#F4F8FD;padding:6pt 12pt;border-bottom:0.8pt solid #E2E8F0;">
-      <span style="font-size:11pt;font-weight:bold;color:#0B3B8C;">
-        {% if g.kind == 'company' %}&#9632; {{ g.holder }}{% else %}&#128100; {{ g.holder }}{% endif %}
-      </span>
-      <span style="font-size:8pt;color:#94A3B8;"> · {{ 'Company documents' if g.kind == 'company' else 'Staff / individual' }} · {{ g.docs|length }} document{{ 's' if g.docs|length != 1 }}</span>
+      <table><tr>
+        <td style="width:26pt;vertical-align:middle;">
+          <span style="display:inline-block;width:21pt;height:21pt;border-radius:{{ '5pt' if g.kind == 'company' else '11pt' }};background:{{ '#0B3B8C' if g.kind == 'company' else '#7C3AED' }};color:#fff;font-size:9pt;font-weight:bold;text-align:center;line-height:21pt;">{{ initials }}</span>
+        </td>
+        <td style="vertical-align:middle;">
+          <span style="font-size:11pt;font-weight:bold;color:#0B3B8C;">{{ g.holder }}</span>
+          <span style="font-size:8pt;color:#94A3B8;"> &nbsp;{{ 'Company documents' if g.kind == 'company' else 'Staff / individual' }} · {{ g.docs|length }} document{{ 's' if g.docs|length != 1 }}</span>
+        </td>
+      </tr></table>
     </div>
-    <table>
+    <table style="table-layout:fixed;">
+      <colgroup><col style="width:40%;"><col style="width:22%;"><col style="width:16%;"><col style="width:22%;"></colgroup>
       <tr style="background:#FBFCFE;">
-        <th style="font-size:7.5pt;color:#94A3B8;text-align:left;padding:5pt 12pt;width:34%;">DOCUMENT</th>
+        <th style="font-size:7.5pt;color:#94A3B8;text-align:left;padding:5pt 12pt;">DOCUMENT</th>
         <th style="font-size:7.5pt;color:#94A3B8;text-align:left;padding:5pt 12pt;">EXPIRY DATE</th>
-        <th style="font-size:7.5pt;color:#94A3B8;text-align:left;padding:5pt 12pt;">DAYS LEFT</th>
+        <th style="font-size:7.5pt;color:#94A3B8;text-align:right;padding:5pt 12pt;">DAYS LEFT</th>
         <th style="font-size:7.5pt;color:#94A3B8;text-align:right;padding:5pt 12pt;">STATUS</th>
       </tr>
       {% for d, days in g.docs %}
       <tr>
         <td style="font-size:9.5pt;font-weight:bold;padding:4.5pt 12pt;border-top:0.5pt solid #F1F5F9;">{{ dicon(d.doc_type, '#0B3B8C', 15) }} {{ d.doc_type }}</td>
         <td style="font-size:9.5pt;color:#475569;padding:4.5pt 12pt;border-top:0.5pt solid #F1F5F9;">{{ d.expiry_date.strftime('%d %b %Y') }}</td>
-        <td style="font-size:9.5pt;font-weight:bold;padding:4.5pt 12pt;border-top:0.5pt solid #F1F5F9;color:{{ '#EF4444' if days < 0 else ('#F59E0B' if days <= 90 else '#16A34A') }};">{% if days < 0 %}overdue {{ -days }}d{% else %}{{ days }}{% endif %}</td>
+        <td style="font-size:9.5pt;font-weight:bold;text-align:right;padding:4.5pt 12pt;border-top:0.5pt solid #F1F5F9;color:{{ '#EF4444' if days < 0 else ('#F59E0B' if days <= 90 else '#16A34A') }};">{% if days < 0 %}overdue {{ -days }}d{% else %}{{ days }}d{% endif %}</td>
         <td style="text-align:right;padding:4.5pt 12pt;border-top:0.5pt solid #F1F5F9;">
           {% if days < 0 %}<span class="pill p-red">Renewal due</span>
           {% elif days <= 90 %}<span class="pill p-amber">Expiring soon</span>

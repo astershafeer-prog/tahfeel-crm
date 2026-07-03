@@ -4408,14 +4408,15 @@ def _customer_report_data(customer_id):
                            'items': [f'{d.expiry_date.strftime("%d %b")} — {d.doc_type}' for d in items[:3]],
                            'more': max(0, len(items) - 3)})
 
-    # Page 2 — group documents by holder: company docs first, then each person
-    cust_name_l = (customer.name or '').strip().lower()
-    company_docs = [(d, dl(d)) for d in docs
-                    if not d.owner_name or d.owner_name.strip().lower() == cust_name_l]
+    # Page 2 — group documents by holder. A document belongs to a PERSON only when
+    # it is linked to an employee record; everything else (incl. company docs that
+    # happen to carry a contact person's name in owner_name) stays under the company.
+    company_docs = [(d, dl(d)) for d in docs if not d.employee_id]
     holder_map = {}
     for d in docs:
-        if d.owner_name and d.owner_name.strip().lower() != cust_name_l:
-            holder_map.setdefault(d.owner_name, []).append((d, dl(d)))
+        if d.employee_id:
+            nm = (d.employee.name if d.employee else None) or d.owner_name or 'Employee'
+            holder_map.setdefault(nm, []).append((d, dl(d)))
     doc_groups = []
     if company_docs:
         doc_groups.append({'holder': customer.name, 'kind': 'company',
