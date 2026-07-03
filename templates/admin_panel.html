@@ -52,17 +52,19 @@
             <tr>
               <td><strong>{{ user.name }}</strong></td>
               <td style="color:var(--text-muted);font-size:12px;">{{ user.email }}</td>
-              <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span></td>
+              <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span>{% if user.is_super %} <span class="badge" style="background:#7C3AED;color:#fff;" title="Super Admin — can manage all accounts">★ Super</span>{% endif %}</td>
               <td><span class="badge {{ 'badge-active' if user.active else 'badge-inactive' }}">{{ 'Active' if user.active else 'Inactive' }}</span></td>
               <td>
-                {% if user.role == 'admin' %}
+                {% if (user.role == 'admin' or user.is_super) and not session.is_super %}
                   <span style="font-size:12px;color:var(--text-muted);">Protected</span>
                 {% else %}
                 <div style="display:flex;gap:6px;">
                   <button class="btn-sm" onclick="toggleEdit({{ user.id }})">Edit</button>
+                  {% if user.id != session.user_id %}
                   <a href="/admin/staff/{{ user.id }}/toggle" class="btn-sm" style="border-color:{{ 'var(--danger)' if user.active else 'var(--success)' }};color:{{ 'var(--danger)' if user.active else 'var(--success)' }};">
                     {{ 'Deactivate' if user.active else 'Activate' }}
                   </a>
+                  {% endif %}
                 </div>
                 {% endif %}
               </td>

@@ -99,6 +99,7 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(20), default='staff')
+    is_super = db.Column(db.Boolean, default=False)  # Super Admin: can edit other admins + self
     active = db.Column(db.Boolean, default=True)
     phone = db.Column(db.String(20), nullable=True)
     on_leave = db.Column(db.Boolean, default=False)  # Excludes from Meta lead rotation
@@ -584,6 +585,14 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def can_manage_user(target):
+    """A regular admin may manage only non-admin staff. A super admin may manage
+    anyone (including other admins and themselves). Returns True if allowed."""
+    if session.get('is_super'):
+        return True
+    # Not a super admin: block managing admins or super admins
+    return not (target.role == 'admin' or target.is_super)
+
 def finance_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -699,6 +708,7 @@ def login():
             session['user_name'] = user.name
             session['user_email'] = user.email
             session['role'] = user.role
+            session['is_super'] = bool(user.is_super)
             try:
                 session['unread_mentions'] = DeskNote.query.filter_by(mention_user_id=user.id, is_done=False).count()
             except:
@@ -2072,6 +2082,9 @@ def admin_add_staff():
 @admin_required
 def admin_edit_staff(user_id):
     user = User.query.get_or_404(user_id)
+    if not can_manage_user(user):
+        flash('Only a Super Admin can edit an admin account')
+        return redirect(url_for('admin_panel'))
     name = request.form.get('name', '').strip()
     email = request.form.get('email', '').strip()
     new_password = request.form.get('password', '').strip()
@@ -2160,6 +2173,12 @@ def toggle_user(user_id):
 @admin_required
 def admin_toggle_staff(user_id):
     user = User.query.get_or_404(user_id)
+    if not can_manage_user(user):
+        flash('Only a Super Admin can deactivate an admin account')
+        return redirect(url_for('admin_panel'))
+    if user.id == session.get('user_id') and user.active:
+        flash('You cannot deactivate your own account')
+        return redirect(url_for('admin_panel'))
     user.active = not user.active
     db.session.commit()
     flash(f'{"Activated" if user.active else "Deactivated"} {user.name}')
@@ -5162,6 +5181,9 @@ def init_db():
             # WhatsApp: media message support
             'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS media_url VARCHAR(500)',
             'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS mime_type VARCHAR(50)',
+            # Super Admin flag: can edit other admins + self (fixed to admin@tahfeel.ae)
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_super BOOLEAN DEFAULT FALSE',
+            "UPDATE \"user\" SET is_super = TRUE WHERE email = 'admin@tahfeel.ae'",
 
         ]
         for sql in migrations:
@@ -5177,7 +5199,8 @@ def init_db():
             if not admin:
                 new_admin = User(
                     name='Admin-Tahfeel', email='admin@tahfeel.ae',
-                    password=generate_password_hash('tahfeel2026'), role='admin'
+                    password=generate_password_hash('tahfeel2026'), role='admin',
+                    is_super=True
                 )
                 db.session.add(new_admin)
                 db.session.commit()
