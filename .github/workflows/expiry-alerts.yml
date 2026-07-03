@@ -1,8 +1,8 @@
-name: Daily Document Expiry Alerts
+name: Weekly Document Expiry Alerts
 
 on:
   schedule:
-    - cron: '0 4 * * *'   # 08:00 Dubai (UTC+4) = 04:00 UTC, daily
+    - cron: '0 4 * * 1'   # 08:00 Dubai (UTC+4) = 04:00 UTC, every Monday
   workflow_dispatch: {}    # allows manual run from the Actions tab
 
 jobs:
@@ -12,6 +12,6 @@ jobs:
       - name: Trigger expiry-alert emails
         run: |
           echo "Calling expiry-alerts endpoint..."
-          curl -fsS "https://tahfeel-crm-production.up.railway.app/cron/expiry-alerts?key=${{ secrets.CRON_KEY }}" -o response.json \
+          curl -fsS "https://tahfeelcrm.online/cron/expiry-alerts?key=${{ secrets.CRON_KEY }}" -o response.json \
             || { echo "Request failed"; exit 1; }
           echo "Response:"; cat response.json
