@@ -81,7 +81,7 @@
                   {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>{% endif %}
                 {% endif %}
               </td>
-              <td>{% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>
+              <td>{% if d.file_url %}<a href="/documents/{{ d.id }}/file" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>
               <td style="white-space:nowrap;">
                 <a href="/documents/{{ d.id }}/edit?next=/employees/{{ emp.id }}" style="color:#1A3B8B;font-size:12px;text-decoration:none;font-weight:600;margin-right:10px;">✏ Edit</a>
                 <a href="/documents/{{ d.id }}/delete?next=/employees/{{ emp.id }}" onclick="return confirm('Remove this document?')" style="color:#DC2626;font-size:12px;text-decoration:none;font-weight:600;">🗑 Delete</a>

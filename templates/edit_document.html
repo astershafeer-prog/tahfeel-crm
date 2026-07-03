@@ -23,7 +23,7 @@
         <div class="card-header">
           <h2>Edit Document</h2>
           {% if doc.file_url %}
-          <a href="{{ doc.file_url }}" target="_blank" style="font-size:12px;color:var(--primary);text-decoration:none;border:1.5px solid var(--border);padding:6px 12px;border-radius:var(--radius-sm);">📎 View Current File</a>
+          <a href="/documents/{{ doc.id }}/file" target="_blank" style="font-size:12px;color:var(--primary);text-decoration:none;border:1.5px solid var(--border);padding:6px 12px;border-radius:var(--radius-sm);">📎 View Current File</a>
           {% endif %}
         </div>
         <div class="card-body">
@@ -78,7 +78,7 @@
             <label>Replace File (leave empty to keep current)</label>
             {% if doc.file_url %}
             <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);">
-              Current file: <a href="{{ doc.file_url }}" target="_blank" style="color:var(--primary);">📎 View</a>
+              Current file: <a href="/documents/{{ doc.id }}/file" target="_blank" style="color:var(--primary);">📎 View</a>
             </div>
             {% elif doc.file_name %}
             <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);">Current: {{ doc.file_name }}</div>

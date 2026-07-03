@@ -157,9 +157,9 @@
         </td>
         <td>
           <div class="actions">
-            <button class="btn-sm" onclick='openViewModal({{ doc.id }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }}, {{ (doc.document_url or "")|tojson }})'>View</button>
-            {% if doc.document_url %}<a class="btn-sm" href="{{ doc.document_url.replace('/upload/', '/upload/fl_attachment/') }}" target="_blank">⬇ Download</a>{% endif %}
-            <button class="btn-sm btn-wa" onclick='shareWhatsApp({{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%d %b %Y") if doc.expiry_date else "")|tojson }}, {{ (doc.document_url or "")|tojson }})'>WhatsApp</button>
+            <button class="btn-sm" onclick='openViewModal({{ doc.id }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }}, {{ ("/tahfeel-docs/" ~ doc.id ~ "/file" if doc.document_url else "")|tojson }})'>View</button>
+            {% if doc.document_url %}<a class="btn-sm" href="/tahfeel-docs/{{ doc.id }}/file" target="_blank">⬇ Download</a>{% endif %}
+            <button class="btn-sm btn-wa" onclick='shareWhatsApp({{ (doc.doc_type or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%d %b %Y") if doc.expiry_date else "")|tojson }}, {{ ("https://tahfeelcrm.online/tahfeel-docs/" ~ doc.id ~ "/file" if doc.document_url else "")|tojson }})'>WhatsApp</button>
             <button class="btn-sm" onclick='openEditModal({{ doc.id }}, {{ (doc.category or "Tahfeel")|tojson }}, {{ (doc.doc_type or "")|tojson }}, {{ (doc.staff_id or "")|tojson }}, {{ (doc.owner or "")|tojson }}, {{ (doc.expiry_date.strftime("%Y-%m-%d") if doc.expiry_date else "")|tojson }}, {{ (doc.issue_date.strftime("%Y-%m-%d") if doc.issue_date else "")|tojson }}, {{ (doc.authority or "")|tojson }})'>Edit</button>
             <button class="btn-delete" onclick='if(confirm("Delete this document?")) fetch("/tahfeel-doc/{{ doc.id }}/delete", {method:"POST"}).then(()=>location.reload())'>Delete</button>
           </div>

@@ -171,7 +171,7 @@
                 {% else %}—{% endif %}</td>
                 <td style="color:var(--text-muted);font-size:12px;">{{ doc.notes or '—' }}</td>
                 <td>
-                  {% if doc.file_url %}<a href="{{ doc.file_url }}" target="_blank" style="color:var(--primary);font-size:12px;font-weight:600;text-decoration:none;margin-right:10px;">📎 View</a>{% endif %}
+                  {% if doc.file_url %}<a href="/documents/{{ doc.id }}/file" target="_blank" style="color:var(--primary);font-size:12px;font-weight:600;text-decoration:none;margin-right:10px;">📎 View</a>{% endif %}
                   <a href="/documents/{{ doc.id }}/delete?next=/customers/{{ customer.id }}/edit"
                      onclick="return confirm('Remove this document?')"
                      style="color:var(--danger);font-size:12px;font-weight:600;text-decoration:none;">🗑 Delete</a>

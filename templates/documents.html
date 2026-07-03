@@ -118,7 +118,7 @@
             <td style="padding:10px 14px;">
               <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                 {% if doc.file_url %}
-                <a href="{{ doc.file_url }}" target="_blank" style="background:#EBF2FF;color:#1A3B8B;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;">📎 View</a>
+                <a href="/documents/{{ doc.id }}/file" target="_blank" style="background:#EBF2FF;color:#1A3B8B;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;">📎 View</a>
                 {% endif %}
                 {% if doc.customer and doc.customer.phone and days <= 30 %}
 {% set doc_rep = (doc.customer.rep.name + '%0A📞 ' + doc.customer.rep.phone|replace(' ','')|replace('+','%2B') + '%0ATahfeel Business Setup Services%0A📞 +971 50 394 5656') if doc.customer.rep and doc.customer.rep.phone else 'Tahfeel Business Setup Services%0A📞 +971 50 394 5656' %}

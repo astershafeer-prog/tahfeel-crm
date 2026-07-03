@@ -4,6 +4,8 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_sqlalchemy import SQLAlchemy
 import cloudinary
 import cloudinary.uploader
+import cloudinary.api
+import cloudinary.utils
 
 # Cloudinary config — credentials set via Railway environment variables
 cloudinary.config(
@@ -13,8 +15,11 @@ cloudinary.config(
     secure=True
 )
 
-def upload_to_cloudinary(file, folder='tahfeel-documents'):
-    """Upload file to Cloudinary. Returns (url, public_id) or (None, None) on failure."""
+def upload_to_cloudinary(file, folder='tahfeel-documents', public=False):
+    """Upload file to Cloudinary. Returns (url, public_id) or (None, None) on failure.
+    KYC/company documents are uploaded as `authenticated` (only reachable via signed
+    URLs behind the login-protected /documents/... routes). Pass public=True ONLY for
+    assets that external services must fetch directly (e.g. WhatsApp media for Meta)."""
     try:
         if not file or not file.filename: return None, None
         result = cloudinary.uploader.upload(
@@ -23,12 +28,32 @@ def upload_to_cloudinary(file, folder='tahfeel-documents'):
     resource_type='auto',
     use_filename=True,
     unique_filename=True,
-    access_mode='public'
+    access_mode='public' if public else 'authenticated'
 )
         return result.get('secure_url'), result.get('public_id')
     except Exception as e:
         print(f'Cloudinary upload error: {e}')
         return None, None
+
+def signed_document_url(file_url, public_id):
+    """Signed Cloudinary delivery URL for an authenticated document asset.
+    Falls back to the stored URL for legacy files without a public_id."""
+    if not public_id:
+        return file_url
+    resource_type = 'raw' if (file_url and '/raw/upload/' in file_url) else \
+                    'video' if (file_url and '/video/upload/' in file_url) else 'image'
+    fmt = None
+    if file_url:
+        tail = file_url.rsplit('/', 1)[-1].split('?')[0]
+        if '.' in tail:
+            ext = tail.rsplit('.', 1)[-1].lower()
+            # raw public_ids already include the extension — don't double it
+            if not public_id.lower().endswith('.' + ext):
+                fmt = ext
+    url, _ = cloudinary.utils.cloudinary_url(
+        public_id, resource_type=resource_type, type='upload',
+        format=fmt, sign_url=True, secure=True)
+    return url
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, timezone
 DUBAI_TZ = timezone(timedelta(hours=4))
@@ -2015,38 +2040,54 @@ def marketing_export():
 
 
 
-@app.route('/admin/fix-cloudinary-access')
+@app.route('/documents/<int:doc_id>/file')
+@login_required
+def document_file(doc_id):
+    """Login-protected access to a customer/employee document: redirects to a
+    signed Cloudinary URL. Raw Cloudinary links no longer work (authenticated)."""
+    d = Document.query.get_or_404(doc_id)
+    if not d.file_url:
+        return 'No file attached', 404
+    return redirect(signed_document_url(d.file_url, d.cloudinary_public_id))
+
+@app.route('/tahfeel-docs/<int:doc_id>/file')
+@login_required
+def company_document_file(doc_id):
+    """Login-protected access to an internal Tahfeel document (CompanyDocument)."""
+    d = CompanyDocument.query.get_or_404(doc_id)
+    if not d.document_url:
+        return 'No file attached', 404
+    return redirect(signed_document_url(d.document_url, d.cloudinary_public_id))
+
+@app.route('/admin/secure-documents')
 @login_required
 @admin_required
-def fix_cloudinary_access():
-    """Fix Cloudinary document URLs - revert /raw/upload/ to /image/upload/"""
-    try:
-        # Get all documents with /raw/upload/ in their URL (these are broken)
-        documents = Document.query.filter(Document.file_url.like('%/raw/upload/%')).all()
-        fixed = 0
-        
-        for doc in documents:
-            if doc.file_url:
-                # Change /raw/upload/ back to /image/upload/
-                old_url = doc.file_url
-                doc.file_url = doc.file_url.replace('/raw/upload/', '/image/upload/')
-                db.session.add(doc)
-                fixed += 1
-                print(f"✓ Fixed URL for Doc {doc.id}: {old_url} → {doc.file_url}")
-        
-        db.session.commit()
-        
-        if fixed > 0:
-            flash(f'✓ Fixed {fixed} document URLs. Files should now be accessible!', 'success')
-        else:
-            flash('No documents needed URL fixing. All URLs are correct.', 'info')
-            
-    except Exception as e:
-        flash(f'Error: {str(e)}', 'error')
-        print(f"Fix Error: {e}")
-        import traceback
-        traceback.print_exc()
-    
+def secure_documents():
+    """One-time migration: switch every existing Cloudinary document from public
+    to authenticated access, so raw links stop working and files are only
+    reachable via the login-protected /documents routes."""
+    secured, failed = 0, 0
+    for model, url_attr in ((Document, 'file_url'), (CompanyDocument, 'document_url')):
+        for d in model.query.filter(model.cloudinary_public_id != None).all():
+            url = getattr(d, url_attr) or ''
+            rt = 'raw' if '/raw/upload/' in url else 'video' if '/video/upload/' in url else 'image'
+            done = False
+            # resource_type may be mislabeled in legacy URLs — try the likely one, then the others
+            for try_rt in [rt] + [x for x in ('image', 'raw', 'video') if x != rt]:
+                try:
+                    cloudinary.api.update(d.cloudinary_public_id, resource_type=try_rt,
+                                          access_mode='authenticated')
+                    done = True
+                    break
+                except Exception:
+                    continue
+            if done:
+                secured += 1
+            else:
+                failed += 1
+                print(f'[secure-docs] could not secure {model.__name__} id={d.id} pid={d.cloudinary_public_id}')
+    flash(f'🔐 Secured {secured} document file(s) on Cloudinary.' +
+          (f' {failed} could not be updated — check logs.' if failed else ' Raw links are now disabled.'))
     return redirect(url_for('admin_panel'))
 
 
@@ -5946,7 +5987,8 @@ def whatsapp_reply(wa_id):
         return redirect(url_for('whatsapp_thread', wa_id=wa_id))
 
     if has_media:
-        url, public_id = upload_to_cloudinary(media_file, folder='tahfeel-whatsapp')
+        # public=True: Meta's servers must fetch this URL to deliver the media
+        url, public_id = upload_to_cloudinary(media_file, folder='tahfeel-whatsapp', public=True)
         if not url:
             flash('Media upload failed.', 'error')
             return redirect(url_for('whatsapp_thread', wa_id=wa_id))
@@ -6469,7 +6511,8 @@ def add_tahfeel_doc():
         if file and file.filename:
             try:
                 upload_result = cloudinary.uploader.upload(
-                    file, folder='tahfeel-documents', resource_type='auto'
+                    file, folder='tahfeel-documents', resource_type='auto',
+                    access_mode='authenticated'
                 )
                 doc_url = upload_result['secure_url']
                 cloudinary_id = upload_result['public_id']
@@ -6597,7 +6640,8 @@ def edit_tahfeel_doc(doc_id):
                     upload_result = cloudinary.uploader.upload(
                         file,
                         folder='tahfeel-documents',
-                        resource_type='auto'
+                        resource_type='auto',
+                        access_mode='authenticated'
                     )
                     doc.document_url = upload_result['secure_url']
                     doc.cloudinary_public_id = upload_result['public_id']
@@ -6650,6 +6694,7 @@ def upload_tahfeel_doc_file(doc_id):
             file,
             folder='tahfeel-documents',
             resource_type='auto',
+            access_mode='authenticated',
             public_id=f"doc_{doc.name.replace(' ', '_')}_{datetime.now().timestamp()}"
         )
         
@@ -6720,6 +6765,7 @@ def add_tahfeel_doc_bulk():
                         file,
                         folder='tahfeel-documents',
                         resource_type='auto',
+                        access_mode='authenticated',
                         public_id=f"doc_{name.replace(' ', '_')}_{datetime.now().timestamp()}"
                     )
                     doc_url = result.get('secure_url')

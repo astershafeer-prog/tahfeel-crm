@@ -228,7 +228,7 @@
         <div class="dgrid">
           {% for d in company_docs %}
           <div class="dtile" style="border-top-color:{{ edgecol(d, today) }};">
-            {% if d.file_url %}<a href="{{ d.file_url }}" target="_blank" class="file" title="Open file">📎</a>{% endif %}
+            {% if d.file_url %}<a href="/documents/{{ d.id }}/file" target="_blank" class="file" title="Open file">📎</a>{% endif %}
             <div class="dico" style="background:{{ edgebg(d, today) }};color:{{ edgecol(d, today) }};">{{ dicon(d.doc_type) }}</div>
             <div class="dt">{{ d.doc_type }}</div>
             {% if d.owner_name and d.owner_name != customer.name %}<div class="ow">{{ d.owner_name }}</div>{% endif %}
