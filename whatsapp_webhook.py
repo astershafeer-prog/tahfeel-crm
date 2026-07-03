@@ -223,18 +223,85 @@ def _is_greeting(text):
     return t in ('hi', 'hello', 'hey', 'start', 'salam', 'assalam',
                  'assalamualaikum', 'hai', 'menu', 'help') or t == ''
 
-def decide_reply(wa_id, text, is_first):
-    """Return the bot's reply string (or None to stay silent)."""
+def _menu_reply(wa_id, text, is_first):
+    """Phase-1 scripted fallback used when the AI is off or unavailable."""
     t = (text or '').strip()
     if t in MENU_REPLIES:
         return MENU_REPLIES[t]
     if is_first or _is_greeting(t):
         return WELCOME
-    # Unknown free text → acknowledge + re-show menu once
     return (
         "Thanks for your message — a Tahfeel team member will get back to you shortly. 🙏\n\n"
         "Meanwhile, reply *1* (new license), *2* (visa) or *3* (agent)."
     )
+
+# ── Phase 2: Claude-powered replies ───────────────────────────────────────────
+AI_SYSTEM_PROMPT = (
+    "You are the WhatsApp assistant for Tahfeel Business Setup Services LLC, a business-setup "
+    "and PRO-services consultancy in Dubai, UAE. You help prospective and existing clients over "
+    "WhatsApp with: new business licenses (mainland, free zone, offshore), visa services "
+    "(investor, partner, employment, family), company amendments, bank-account opening, and "
+    "general PRO/government paperwork.\n\n"
+    "Style: warm, professional, concise. This is WhatsApp — keep replies short (2–5 sentences), "
+    "use simple language, and at most one relevant emoji. If the customer writes in Arabic, reply "
+    "in Arabic; otherwise reply in English.\n\n"
+    "Goals, in order: (1) understand what the customer needs, (2) ask one focused qualifying "
+    "question at a time (e.g. planned business activity, mainland vs free zone, how many visas, "
+    "nationality) to move things forward, (3) give helpful high-level guidance, (4) reassure them "
+    "a Tahfeel specialist will follow up to confirm exact cost and timeline.\n\n"
+    "Rules: Never invent specific prices, fees, or processing times — say a specialist will share "
+    "exact figures. Do not promise guaranteed approvals. If the customer asks for a human, is "
+    "upset, or the matter is complex/sensitive, tell them you're connecting them with a Tahfeel "
+    "team member who will reply here shortly. Contact: info@tahfeel.ae, +971 4 585 5033.\n\n"
+    "Output only the message to send to the customer — no preamble, no quotation marks, no notes "
+    "about your reasoning."
+)
+
+def ai_reply(wa_id, text, is_first):
+    """Generate a reply with Claude from the recent conversation. Raises on failure
+    so the caller can fall back to the scripted menu."""
+    import anthropic
+    from app import WhatsAppMessage
+    model = _cfg('WA_AI_MODEL', 'claude-opus-4-8')
+
+    # Build conversation history from the thread (inbound already logged by caller).
+    rows = (WhatsAppMessage.query
+            .filter_by(wa_id=normalize_phone(wa_id))
+            .order_by(WhatsAppMessage.created_at).all())
+    history = []
+    for r in rows[-16:]:
+        content = (r.body or '').strip()
+        if not content or content.startswith('['):  # skip media placeholders
+            continue
+        role = 'user' if r.direction == 'in' else 'assistant'
+        history.append({'role': role, 'content': content})
+    # The Messages API requires the first turn to be from the user.
+    while history and history[0]['role'] != 'user':
+        history.pop(0)
+    if not history:
+        history = [{'role': 'user', 'content': (text or '').strip() or 'Hello'}]
+
+    client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+    resp = client.messages.create(
+        model=model,
+        max_tokens=1024,
+        system=AI_SYSTEM_PROMPT,
+        messages=history,
+    )
+    out = ''.join(b.text for b in resp.content if b.type == 'text').strip()
+    return out or None
+
+def decide_reply(wa_id, text, is_first):
+    """Return the bot's reply. Uses Claude when an API key is present and
+    WA_AI_ENABLED is on; otherwise (or on any AI error) falls back to the menu."""
+    if os.environ.get('ANTHROPIC_API_KEY') and _flag('WA_AI_ENABLED', 'true'):
+        try:
+            r = ai_reply(wa_id, text, is_first)
+            if r:
+                return r
+        except Exception as e:
+            print(f'[WA] AI reply failed ({e}); falling back to scripted menu')
+    return _menu_reply(wa_id, text, is_first)
 
 
 # ── Incoming message handling ─────────────────────────────────────────────────
