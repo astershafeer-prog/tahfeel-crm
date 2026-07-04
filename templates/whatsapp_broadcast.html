@@ -87,31 +87,42 @@
       {% if without_wa %}<span style="font-size:12px;color:#94A3B8;">{{ without_wa|length }} excluded — no number on record</span>{% endif %}
     </div>
 
-    {% if with_wa and templates %}
-    <!-- SEND FORM (POST) -->
+    {% if with_wa %}
+    <!-- SEND FORM (POST) — recipient list shows even before a template is chosen -->
     <form method="POST" action="/whatsapp/broadcast/send" id="bcSend">
       <input type="hidden" name="filter_summary" value="{% if args.get('business_activity') %}activity~{{ args.get('business_activity') }} {% endif %}{% for f in ['customer_type','jurisdiction','emirate','licensing_authority','nationality'] %}{% if args.get(f) and args.get(f)!='All' %}{{ f }}={{ args.get(f) }} {% endif %}{% endfor %}{% if args.get('expiry_days') %}expiry<={{ args.get('expiry_days') }}d{% endif %}">
 
       <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:14px;">
         <div style="padding:10px 16px;border-bottom:1px solid #F1F5F9;font-size:12px;color:#64748B;display:flex;align-items:center;gap:8px;">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="bcAll" checked onchange="bcToggleAll(this)"> Select all</label>
+          <span style="color:#94A3B8;">Remove anyone you don't want to message with the ✕</span>
           <span id="bcCount" style="margin-left:auto;font-weight:600;color:#1A3B8B;"></span>
         </div>
-        <div style="max-height:340px;overflow-y:auto;">
+        <div style="max-height:360px;overflow-y:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <tr style="position:sticky;top:0;background:#F8FAFC;color:#94A3B8;font-size:11px;text-align:left;">
+              <th style="padding:6px 16px;width:28px;"></th>
+              <th style="padding:6px 8px;">Customer / Company</th>
+              <th style="padding:6px 8px;">Rep</th>
+              <th style="padding:6px 8px;">Activity</th>
+              <th style="padding:6px 8px;text-align:right;">WhatsApp</th>
+              <th style="padding:6px 16px;width:34px;"></th>
+            </tr>
             {% for c in with_wa %}
-            <tr style="border-bottom:1px solid #F1F5F9;">
+            <tr class="bcTr" id="bcTr-{{ c.id }}" style="border-bottom:1px solid #F1F5F9;">
               <td style="padding:8px 16px;width:28px;"><input type="checkbox" class="bcRow" name="customer_ids" value="{{ c.id }}" checked onchange="bcRecount()"></td>
               <td style="padding:8px 8px;"><a href="/customers/{{ c.id }}" style="color:#0F2660;text-decoration:none;font-weight:600;">{{ c.name }}</a>{% if c.company %} <span style="color:#94A3B8;">· {{ c.company }}</span>{% endif %}</td>
+              <td style="padding:8px 8px;color:#64748B;">{{ c.rep.name if c.rep else '—' }}</td>
               <td style="padding:8px 8px;color:#64748B;">{{ c.business_activity or '—' }}</td>
-              <td style="padding:8px 8px;color:#64748B;">{{ c.jurisdiction or '' }}</td>
-              <td style="padding:8px 16px;color:#64748B;text-align:right;white-space:nowrap;">{{ c.whatsapp or c.mobile or c.phone or c.phone2 }}</td>
+              <td style="padding:8px 8px;color:#64748B;text-align:right;white-space:nowrap;">{{ c.whatsapp or c.mobile or c.phone or c.phone2 }}</td>
+              <td style="padding:8px 16px;text-align:right;"><span onclick="bcRemove({{ c.id }})" title="Remove from this send" style="cursor:pointer;color:#DC2626;font-weight:700;">✕</span></td>
             </tr>
             {% endfor %}
           </table>
         </div>
       </div>
 
+      {% if templates %}
       <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:16px 18px;">
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:220px;">
@@ -131,9 +142,12 @@
           <button type="submit" onclick="return bcConfirm()" style="background:#25D366;color:white;border:none;border-radius:20px;padding:10px 24px;font-weight:700;font-size:14px;cursor:pointer;">📢 Send broadcast</button>
         </div>
       </div>
+      {% else %}
+      <div style="background:#FEF3C7;color:#854F0B;border-radius:10px;padding:14px;font-size:13px;">You can review and refine the list above. To send, <a href="/whatsapp/templates" style="color:#1A3B8B;">add and activate a template first →</a></div>
+      {% endif %}
     </form>
-    {% elif with_wa %}
-      <div style="background:#FEF3C7;color:#854F0B;border-radius:10px;padding:14px;font-size:13px;">Add and activate a template first — <a href="/whatsapp/templates" style="color:#1A3B8B;">WhatsApp Templates →</a></div>
+    {% elif without_wa %}
+      <div style="background:#FEF3C7;color:#854F0B;border-radius:10px;padding:14px;font-size:13px;">{{ without_wa|length }} customer{{ 's' if without_wa|length != 1 }} match these filters, but none have a WhatsApp number on record — so there's no one to message.</div>
     {% else %}
       <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;text-align:center;color:#64748B;font-size:13px;">No customers match these filters.</div>
     {% endif %}
@@ -170,13 +184,23 @@
     var FIRST_NAME = {{ (with_wa[0].contact_person or with_wa[0].name).split(' ')[0]|tojson if with_wa else '""' }};
     var FIRST_COMPANY = {{ (with_wa[0].trade_name or with_wa[0].company or with_wa[0].name)|tojson if with_wa else '""' }};
 
-    function bcToggleAll(cb){ document.querySelectorAll('.bcRow').forEach(function(r){ r.checked = cb.checked; }); bcRecount(); }
+    function bcToggleAll(cb){ document.querySelectorAll('.bcTr:not(.bcGone) .bcRow').forEach(function(r){ r.checked = cb.checked; }); bcRecount(); }
     function bcRecount(){
       var n = document.querySelectorAll('.bcRow:checked').length;
       var el = document.getElementById('bcCount'); if(el) el.textContent = n + ' selected';
     }
+    function bcRemove(id){
+      var tr = document.getElementById('bcTr-' + id);
+      if(!tr) return;
+      var cb = tr.querySelector('.bcRow'); if(cb) cb.checked = false;
+      tr.classList.add('bcGone');
+      tr.style.display = 'none';
+      bcRecount();
+    }
     function bcCurTpl(){
-      var id = parseInt(document.getElementById('bcTpl').value,10);
+      var sel = document.getElementById('bcTpl');
+      if(!sel) return null;
+      var id = parseInt(sel.value,10);
       for(var i=0;i<BC_TPLS.length;i++) if(BC_TPLS[i].id===id) return BC_TPLS[i];
       return null;
     }

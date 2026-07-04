@@ -6369,13 +6369,14 @@ def whatsapp_broadcast():
 @admin_required
 def whatsapp_broadcast_export():
     """Download the filtered customer list as Excel (same filters as the preview)."""
+    import io
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     from flask import send_file
     custs = broadcast_filter_customers(request.args)
     wb = Workbook(); ws = wb.active; ws.title = 'Customers'
-    headers = ['Name', 'Company', 'Business Activity', 'Type', 'Jurisdiction', 'Emirate',
-               'Authority', 'Nationality', 'WhatsApp', 'Email', 'Next Doc Expiry']
+    headers = ['Name', 'Company', 'Assigned Rep', 'Business Activity', 'Type', 'Jurisdiction',
+               'Emirate', 'Authority', 'Nationality', 'WhatsApp', 'Email', 'Next Doc Expiry']
     for i, h in enumerate(headers, 1):
         ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
         ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
@@ -6383,7 +6384,8 @@ def whatsapp_broadcast_export():
     for c in custs:
         docs = Document.query.filter_by(customer_id=c.id).filter(Document.expiry_date.isnot(None)).all()
         next_exp = min([d.expiry_date.date() for d in docs], default=None)
-        ws.append([c.name or '', c.company or '', c.business_activity or '', c.customer_type or '',
+        ws.append([c.name or '', c.company or '', (c.rep.name if c.rep else ''),
+                   c.business_activity or '', c.customer_type or '',
                    c.jurisdiction or '', c.emirate or '', c.licensing_authority or '',
                    c.nationality or '', _cust_wa_number(c) or '', c.email or '',
                    next_exp.strftime('%d/%m/%Y') if next_exp else ''])
