@@ -5407,6 +5407,41 @@ def init_db():
                         var_fields=vfields, body_preview=body, active=False))
                 db.session.commit()
                 print('Starter WhatsApp templates seeded (inactive)')
+            # Client-journey template batch — seeded INACTIVE, once only. Guarded by a
+            # sentinel (document_request_v1): if none of the batch exists yet, add them
+            # all; individual deletions afterwards are respected (won't be re-added).
+            journey = [
+                ('Document Request', 'document_request_v1', 'Utility', 'first_name,job_type,custom',
+                 'Dear {{1}},\n\nTo continue processing your {{2}}, we require the following document(s):\n\n{{3}}\n\nPlease reply to this message with the requested document(s). If you need any assistance, kindly contact your account manager or reply to this message.\n\nThank you,\nTahfeel Business Setup Services'),
+                ('Documents Received', 'documents_received_v1', 'Utility', 'first_name,job_type',
+                 'Dear {{1}},\n\nThank you. We have successfully received the documents required for your {{2}}.\n\nOur team is reviewing them and will keep you informed of the next update.\n\nThank you,\nTahfeel Business Setup Services'),
+                ('Additional Documents Required', 'additional_documents_required_v1', 'Utility', 'first_name,custom,job_type',
+                 'Dear {{1}},\n\nTo continue processing your {{3}}, we require the following additional document(s):\n\n{{2}}\n\nPlease reply to this message with the requested document(s) at your earliest convenience to avoid any delay.\n\nThank you,\nTahfeel Business Setup Services'),
+                ('Application Submitted', 'application_submitted_v1', 'Utility', 'first_name,job_type',
+                 'Dear {{1}},\n\nYour {{2}} has been successfully submitted to the relevant authority.\n\nNo action is required from your side at this time. We will notify you as soon as there is an update.\n\nThank you,\nTahfeel Business Setup Services'),
+                ('Application Update', 'application_progress_v1', 'Utility', 'first_name,job_type,custom',
+                 'Dear {{1}},\n\nWe would like to update you on your {{2}}.\n\nCurrent Status:\n{{3}}\n\nIf any action is required from your side, we will contact you separately.\n\nThank you,\nTahfeel Business Setup Services'),
+                ('Still Processing — No Update', 'processing_update_v1', 'Utility', 'first_name,job_type',
+                 'Dear {{1}},\n\nYour {{2}} is currently under processing with the relevant authority.\n\nThere is no action required from your side at this time. We will notify you as soon as there is any progress.\n\nThank you for your patience.\n\nTahfeel Business Setup Services'),
+                ('Action Required', 'action_required_v1', 'Utility', 'first_name,job_type,custom',
+                 'Dear {{1}},\n\nAction is required to continue processing your {{2}}.\n\nPlease complete the following:\n\n{{3}}\n\nKindly reply to this message once completed or contact your account manager if you need any assistance.\n\nThank you,\nTahfeel Business Setup Services'),
+                ('Compliance Alert', 'compliance_alert_v1', 'Utility', 'first_name,custom,custom',
+                 'Dear {{1}},\n\nThis is a reminder that your {{2}} is due on {{3}}.\n\nPlease contact us if you require assistance to complete the necessary process before the due date.\n\nThank you,\nTahfeel Business Setup Services'),
+                ('Compliance Report Ready', 'compliance_report_ready_v1', 'Utility', 'first_name',
+                 'Dear {{1}},\n\nYour monthly compliance report is now ready.\n\nPlease review the report for upcoming renewals, pending actions, and important compliance updates.\n\nIf you have any questions, simply reply to this message.\n\nThank you,\nTahfeel Business Setup Services'),
+                ('Feedback Request', 'service_feedback_v1', 'Utility', 'first_name,job_type',
+                 'Dear {{1}},\n\nThank you for choosing Tahfeel Business Setup Services for your {{2}}.\n\nWe would appreciate your feedback about your experience. Your comments help us improve our services.\n\nSimply reply to this message with your feedback.\n\nThank you.'),
+                ('Monthly Check-In', 'service_followup_v1', 'Utility', 'first_name',
+                 'Dear {{1}},\n\nWe hope everything is going well.\n\nIf you have any questions regarding your existing services with Tahfeel, simply reply to this message and our team will be happy to assist you.\n\nThank you,\nTahfeel Business Setup Services'),
+            ]
+            journey_names = [m for _, m, _, _, _ in journey]
+            if not MessageTemplate.query.filter(MessageTemplate.meta_name.in_(journey_names)).first():
+                for label, mname, cat, vfields, body in journey:
+                    db.session.add(MessageTemplate(
+                        label=label, meta_name=mname, category=cat,
+                        var_fields=vfields, body_preview=body, active=False))
+                db.session.commit()
+                print(f'Seeded {len(journey)} client-journey WhatsApp templates (inactive)')
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(ServiceType(name=jt))
