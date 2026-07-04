@@ -398,8 +398,19 @@ def notify_new_lead(lead):
     """Send the approved welcome template to a freshly-created lead.
     Safe to call always — silently no-ops if WhatsApp isn't configured or no phone."""
     try:
-        if not _flag('WA_AUTO_WELCOME'):
-            return  # Flow A off by default — no auto-greeting until explicitly enabled
+        # In-CRM admin toggle wins; if never set, fall back to the WA_AUTO_WELCOME env flag.
+        enabled = None
+        try:
+            from app import get_setting
+            v = get_setting('wa_auto_welcome')
+            if v is not None:
+                enabled = (v == 'on')
+        except Exception:
+            pass
+        if enabled is None:
+            enabled = _flag('WA_AUTO_WELCOME')
+        if not enabled:
+            return  # off by default — no auto-greeting until explicitly enabled
         if not _cfg('WA_ACCESS_TOKEN') or not _cfg('WA_PHONE_NUMBER_ID'):
             return
         if not lead or not lead.phone:

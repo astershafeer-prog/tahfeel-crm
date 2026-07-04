@@ -487,6 +487,28 @@ class MessageTemplate(db.Model):
     active       = db.Column(db.Boolean, default=True)
     created_at   = db.Column(db.DateTime, default=now_dubai)
 
+class AppSetting(db.Model):
+    """Simple key/value store for CRM settings that used to live in Railway env vars,
+    so admins can change them in the CRM instead of touching Railway."""
+    __tablename__ = 'app_setting'
+    key   = db.Column(db.String(60), primary_key=True)
+    value = db.Column(db.String(300))
+
+def get_setting(key, default=None):
+    try:
+        row = AppSetting.query.get(key)
+        return row.value if (row and row.value is not None) else default
+    except Exception:
+        return default
+
+def set_setting(key, value):
+    row = AppSetting.query.get(key)
+    if not row:
+        row = AppSetting(key=key)
+        db.session.add(row)
+    row.value = value
+    db.session.commit()
+
 # Auto-fill keys available for template variables (order in var_fields = {{1}}, {{2}}…)
 WA_VAR_LABELS = {
     'first_name': 'First name',
@@ -1805,8 +1827,19 @@ def admin_panel():
     job_types = ServiceType.query.order_by(ServiceType.name).all()
     doc_types = DocType.query.order_by(DocType.name).all()
     partners = Partner.query.order_by(Partner.name).all()
+    wa_auto_welcome = (get_setting('wa_auto_welcome', 'off') == 'on')
     return render_template('admin_panel.html', users=users, services=services,
-                           sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners)
+                           sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
+                           wa_auto_welcome=wa_auto_welcome)
+
+@app.route('/admin/whatsapp-settings', methods=['POST'])
+@login_required
+@admin_required
+def admin_whatsapp_settings():
+    """Save WhatsApp settings (one-time config) — currently the auto-welcome toggle."""
+    set_setting('wa_auto_welcome', 'on' if request.form.get('wa_auto_welcome') == 'on' else 'off')
+    flash('WhatsApp settings saved.')
+    return redirect(url_for('admin_panel') + '#whatsapp-settings')
 
 
 # ── Marketing-Ext: read-only lead report for the external marketing agency ──
