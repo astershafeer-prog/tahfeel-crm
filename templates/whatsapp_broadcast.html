@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — WhatsApp Broadcast</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+  <style>
+    .bc-field label{font-size:11px;color:#64748B;display:block;margin-bottom:3px;}
+    .bc-field input,.bc-field select{width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;}
+    .bc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px;}
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('whatsapp') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'warning' %}warning{% elif cat == 'error' %}error{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="margin-bottom:12px;">
+      <a href="/whatsapp" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to WhatsApp</a>
+    </div>
+
+    <div class="page-header">
+      <h2>📢 WhatsApp Broadcast</h2>
+    </div>
+
+    <div style="font-size:12.5px;color:#475569;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:10px 14px;margin-bottom:14px;line-height:1.6;">
+      Filter your customers, then send one <strong>approved template</strong> to the whole group.
+      Today: <strong>{{ today_sent }}</strong> of <strong>{{ daily_cap }}</strong> daily messages used.
+      {% if not templates %}<br><span style="color:#991B1B;">No active templates yet — <a href="/whatsapp/templates" style="color:#1A3B8B;">add one first</a>.</span>{% endif %}
+    </div>
+
+    <!-- FILTER FORM (GET) -->
+    <form method="GET" action="/whatsapp/broadcast" style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:16px 18px;margin-bottom:16px;">
+      <input type="hidden" name="apply" value="1">
+      <div class="bc-grid">
+        <div class="bc-field"><label>Business activity contains</label>
+          <input type="text" name="business_activity" value="{{ args.get('business_activity','') }}" placeholder="e.g. restaurant"></div>
+        <div class="bc-field"><label>Customer type</label>
+          <select name="customer_type">
+            <option value="All">All</option>
+            <option value="Company" {{ 'selected' if args.get('customer_type')=='Company' }}>Company</option>
+            <option value="Individual" {{ 'selected' if args.get('customer_type')=='Individual' }}>Individual</option>
+          </select></div>
+        <div class="bc-field"><label>Jurisdiction</label>
+          <select name="jurisdiction"><option value="All">All</option>
+            {% for j in jurisdictions %}<option value="{{ j }}" {{ 'selected' if args.get('jurisdiction')==j }}>{{ j }}</option>{% endfor %}
+          </select></div>
+        <div class="bc-field"><label>Emirate</label>
+          <select name="emirate"><option value="All">All</option>
+            {% for e in emirates %}<option value="{{ e }}" {{ 'selected' if args.get('emirate')==e }}>{{ e }}</option>{% endfor %}
+          </select></div>
+        <div class="bc-field"><label>Licensing authority</label>
+          <select name="licensing_authority"><option value="All">All</option>
+            {% for a in authorities %}<option value="{{ a }}" {{ 'selected' if args.get('licensing_authority')==a }}>{{ a }}</option>{% endfor %}
+          </select></div>
+        <div class="bc-field"><label>Nationality</label>
+          <select name="nationality"><option value="All">All</option>
+            {% for n in nationalities %}<option value="{{ n }}" {{ 'selected' if args.get('nationality')==n }}>{{ n }}</option>{% endfor %}
+          </select></div>
+        <div class="bc-field"><label>Document expiring within</label>
+          <select name="expiry_days"><option value="">Any time</option>
+            {% for d in [30,60,90] %}<option value="{{ d }}" {{ 'selected' if args.get('expiry_days')==d|string }}>{{ d }} days</option>{% endfor %}
+          </select></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button type="submit" style="background:#1A3B8B;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;font-size:13px;cursor:pointer;">🔍 Apply filters</button>
+        {% if applied %}
+        <a href="/whatsapp/broadcast/export?{{ request.query_string.decode() }}" style="background:white;border:1px solid #CBD5E1;border-radius:20px;padding:8px 18px;font-size:13px;text-decoration:none;color:#334155;">⬇ Download Excel</a>
+        <a href="/whatsapp/broadcast" style="font-size:12px;color:#64748B;">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if applied %}
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+      <span style="background:#E6EEFF;color:#1A3B8B;font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;">{{ with_wa|length }} customer{{ 's' if with_wa|length != 1 }} match with a WhatsApp number</span>
+      {% if without_wa %}<span style="font-size:12px;color:#94A3B8;">{{ without_wa|length }} excluded — no number on record</span>{% endif %}
+    </div>
+
+    {% if with_wa and templates %}
+    <!-- SEND FORM (POST) -->
+    <form method="POST" action="/whatsapp/broadcast/send" id="bcSend">
+      <input type="hidden" name="filter_summary" value="{% if args.get('business_activity') %}activity~{{ args.get('business_activity') }} {% endif %}{% for f in ['customer_type','jurisdiction','emirate','licensing_authority','nationality'] %}{% if args.get(f) and args.get(f)!='All' %}{{ f }}={{ args.get(f) }} {% endif %}{% endfor %}{% if args.get('expiry_days') %}expiry<={{ args.get('expiry_days') }}d{% endif %}">
+
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:14px;">
+        <div style="padding:10px 16px;border-bottom:1px solid #F1F5F9;font-size:12px;color:#64748B;display:flex;align-items:center;gap:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="bcAll" checked onchange="bcToggleAll(this)"> Select all</label>
+          <span id="bcCount" style="margin-left:auto;font-weight:600;color:#1A3B8B;"></span>
+        </div>
+        <div style="max-height:340px;overflow-y:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            {% for c in with_wa %}
+            <tr style="border-bottom:1px solid #F1F5F9;">
+              <td style="padding:8px 16px;width:28px;"><input type="checkbox" class="bcRow" name="customer_ids" value="{{ c.id }}" checked onchange="bcRecount()"></td>
+              <td style="padding:8px 8px;"><a href="/customers/{{ c.id }}" style="color:#0F2660;text-decoration:none;font-weight:600;">{{ c.name }}</a>{% if c.company %} <span style="color:#94A3B8;">· {{ c.company }}</span>{% endif %}</td>
+              <td style="padding:8px 8px;color:#64748B;">{{ c.business_activity or '—' }}</td>
+              <td style="padding:8px 8px;color:#64748B;">{{ c.jurisdiction or '' }}</td>
+              <td style="padding:8px 16px;color:#64748B;text-align:right;white-space:nowrap;">{{ c.whatsapp or c.mobile or c.phone or c.phone2 }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:16px 18px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:220px;">
+            <label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Template</label>
+            <select name="template_id" id="bcTpl" onchange="bcTplChanged()" style="width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+              {% for t in templates %}<option value="{{ t.id }}">{{ t.label }} ({{ t.category }})</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div id="bcCustomVars" style="margin-top:12px;"></div>
+        <div style="margin-top:12px;">
+          <label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Preview (first recipient)</label>
+          <div id="bcPreview" style="background:#DCF8C6;border-radius:12px;border-bottom-right-radius:2px;padding:10px 14px;font-size:13px;color:#1B3A1B;line-height:1.6;white-space:pre-wrap;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px;flex-wrap:wrap;">
+          <div style="font-size:11px;color:#94A3B8;">Auto-filled fields (like first name) are personalised per customer. "Custom text" applies to everyone.</div>
+          <button type="submit" onclick="return bcConfirm()" style="background:#25D366;color:white;border:none;border-radius:20px;padding:10px 24px;font-weight:700;font-size:14px;cursor:pointer;">📢 Send broadcast</button>
+        </div>
+      </div>
+    </form>
+    {% elif with_wa %}
+      <div style="background:#FEF3C7;color:#854F0B;border-radius:10px;padding:14px;font-size:13px;">Add and activate a template first — <a href="/whatsapp/templates" style="color:#1A3B8B;">WhatsApp Templates →</a></div>
+    {% else %}
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;text-align:center;color:#64748B;font-size:13px;">No customers match these filters.</div>
+    {% endif %}
+    {% endif %}
+
+    <!-- RECENT CAMPAIGNS -->
+    {% if recent %}
+    <div style="margin-top:22px;">
+      <div style="font-weight:700;color:#0F2660;font-size:14px;margin-bottom:8px;">Recent broadcasts</div>
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;overflow:hidden;">
+        {% for b in recent %}
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #F1F5F9;font-size:13px;">
+          <div style="flex:1;min-width:0;">
+            <strong style="color:#0F2660;">{{ b.template_label }}</strong>
+            <span style="color:#94A3B8;font-size:11px;">· {{ b.created_at.strftime('%d %b %H:%M') }}{% if b.creator %} · {{ b.creator.name }}{% endif %}</span>
+            {% if b.filter_summary %}<div style="color:#94A3B8;font-size:11px;">{{ b.filter_summary }}</div>{% endif %}
+          </div>
+          <div style="text-align:right;white-space:nowrap;">
+            {% if b.status == 'sending' %}<span style="color:#B45309;font-size:12px;">⏳ Sending {{ b.sent }}/{{ b.total }}</span>
+            {% else %}<span style="color:#166534;font-size:12px;">✓ {{ b.sent }} sent</span>{% if b.failed %} <span style="color:#991B1B;font-size:12px;">· {{ b.failed }} failed</span>{% endif %}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="font-size:11px;color:#94A3B8;margin-top:6px;">Refresh this page to update sending progress.</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    var BC_TPLS = {{ templates|tojson }};
+    var BC_LABELS = {{ var_labels|tojson }};
+    var OPEN = '{' + '{', CLOSE = '}' + '}';
+    var FIRST_NAME = {{ (with_wa[0].contact_person or with_wa[0].name).split(' ')[0]|tojson if with_wa else '""' }};
+    var FIRST_COMPANY = {{ (with_wa[0].trade_name or with_wa[0].company or with_wa[0].name)|tojson if with_wa else '""' }};
+
+    function bcToggleAll(cb){ document.querySelectorAll('.bcRow').forEach(function(r){ r.checked = cb.checked; }); bcRecount(); }
+    function bcRecount(){
+      var n = document.querySelectorAll('.bcRow:checked').length;
+      var el = document.getElementById('bcCount'); if(el) el.textContent = n + ' selected';
+    }
+    function bcCurTpl(){
+      var id = parseInt(document.getElementById('bcTpl').value,10);
+      for(var i=0;i<BC_TPLS.length;i++) if(BC_TPLS[i].id===id) return BC_TPLS[i];
+      return null;
+    }
+    function bcTplChanged(){
+      var t = bcCurTpl(); if(!t) return;
+      var wrap = document.getElementById('bcCustomVars'); wrap.innerHTML='';
+      var ci = 0;
+      t.vars.forEach(function(k, idx){
+        if(k !== 'custom') return;
+        ci++;
+        var d = document.createElement('div'); d.style.marginBottom='8px';
+        var lab = document.createElement('label');
+        lab.textContent = OPEN + (idx+1) + CLOSE + ' Custom text';
+        lab.style.cssText='font-size:11px;color:#64748B;display:block;margin-bottom:3px;';
+        var inp = document.createElement('input'); inp.type='text'; inp.name='custom_'+ci; inp.required=true;
+        inp.placeholder='Type the text sent to everyone';
+        inp.style.cssText='width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;';
+        inp.addEventListener('input', bcPreview);
+        d.appendChild(lab); d.appendChild(inp); wrap.appendChild(d);
+      });
+      bcPreview();
+    }
+    function bcPreview(){
+      var t = bcCurTpl(); if(!t) return;
+      var body = t.body, ci = 0;
+      t.vars.forEach(function(k, idx){
+        var val;
+        if(k === 'custom'){ ci++; var inp=document.querySelector('[name="custom_'+ci+'"]'); val = inp && inp.value.trim() ? inp.value : '________'; }
+        else if(k === 'first_name'){ val = FIRST_NAME; }
+        else if(k === 'full_name'){ val = FIRST_NAME; }
+        else if(k === 'company'){ val = FIRST_COMPANY; }
+        else { val = '(auto)'; }
+        body = body.split(OPEN + (idx+1) + CLOSE).join(val);
+      });
+      document.getElementById('bcPreview').textContent = body;
+    }
+    function bcConfirm(){
+      var n = document.querySelectorAll('.bcRow:checked').length;
+      if(n === 0){ alert('Select at least one customer.'); return false; }
+      return confirm('Send this WhatsApp template to ' + n + ' customer' + (n!==1?'s':'') + '?');
+    }
+    bcRecount(); bcTplChanged();
+  </script>
+</body>
+</html>

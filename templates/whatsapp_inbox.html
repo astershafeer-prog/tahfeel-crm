@@ -24,6 +24,7 @@
       <h2>💬 WhatsApp <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ threads|length }} conversation{{ 's' if threads|length != 1 }})</span></h2>
       <span style="font-size:12px;color:#1B7A3D;display:flex;align-items:center;gap:10px;">
         {% if session.role == 'admin' %}
+        <a href="/whatsapp/broadcast" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📢 Broadcast</a>
         <a href="/whatsapp/templates" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📨 Templates</a>
         {% endif %}
         <a href="/whatsapp/quick-replies" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📋 Quick replies</a>

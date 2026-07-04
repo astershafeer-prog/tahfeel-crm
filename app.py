@@ -525,6 +525,51 @@ def wa_send_context(customer=None, job=None):
                     'lang': t.lang, 'body': t.body_preview, 'params': params})
     return out
 
+class Broadcast(db.Model):
+    """One bulk WhatsApp send to a filtered group. Individual messages are logged
+    to WhatsAppMessage as usual; this row tracks the campaign + live progress."""
+    __tablename__ = 'broadcast'
+    id             = db.Column(db.Integer, primary_key=True)
+    template_id    = db.Column(db.Integer, db.ForeignKey('message_template.id'))
+    template_label = db.Column(db.String(100))
+    filter_summary = db.Column(db.String(400))
+    total          = db.Column(db.Integer, default=0)
+    sent           = db.Column(db.Integer, default=0)
+    failed         = db.Column(db.Integer, default=0)
+    status         = db.Column(db.String(20), default='sending')  # sending / done
+    created_by     = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at     = db.Column(db.DateTime, default=now_dubai)
+    creator        = db.relationship('User', foreign_keys=[created_by])
+
+def broadcast_filter_customers(args):
+    """Build the customer list for a broadcast from filter args (works for the
+    preview page, Excel export, and the send loop — one source of truth)."""
+    q = Customer.query
+    activity = (args.get('business_activity') or '').strip()
+    if activity:
+        q = q.filter(Customer.business_activity.ilike(f'%{activity}%'))
+    for field in ('jurisdiction', 'emirate', 'licensing_authority', 'customer_type', 'nationality'):
+        val = (args.get(field) or '').strip()
+        if val and val != 'All':
+            q = q.filter(getattr(Customer, field) == val)
+    custs = q.order_by(Customer.name).all()
+    # Document-expiry window is across the customer's documents — filter in Python
+    expiry_days = args.get('expiry_days', type=int)
+    if expiry_days:
+        today = now_dubai().date()
+        keep = []
+        for c in custs:
+            docs = Document.query.filter_by(customer_id=c.id)\
+                    .filter(Document.expiry_date.isnot(None)).all()
+            if any(0 <= (d.expiry_date.date() - today).days <= expiry_days for d in docs):
+                keep.append(c)
+        custs = keep
+    return custs
+
+def _cust_wa_number(c):
+    from whatsapp_webhook import normalize_phone
+    return normalize_phone(c.whatsapp or c.mobile or c.phone or c.phone2 or '')
+
 class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
@@ -6223,6 +6268,151 @@ def whatsapp_send_template():
     else:
         flash('WhatsApp send failed — check the number and that this template name is approved in Meta.', 'error')
     return redirect(back)
+
+@app.route('/whatsapp/broadcast')
+@login_required
+@admin_required
+def whatsapp_broadcast():
+    """Filter customers and preview a bulk WhatsApp send (admin only)."""
+    applied = bool(request.args.get('apply'))
+    matched, with_wa, without_wa = [], [], []
+    if applied:
+        for c in broadcast_filter_customers(request.args):
+            (with_wa if _cust_wa_number(c) else without_wa).append(c)
+        matched = with_wa + without_wa
+    # Distinct dropdown values from existing data
+    def _distinct(col):
+        rows = db.session.query(col).filter(col.isnot(None), col != '').distinct().all()
+        return sorted({r[0] for r in rows})
+    templates = MessageTemplate.query.filter_by(active=True).order_by(MessageTemplate.label).all()
+    tpl_ctx = [{'id': t.id, 'label': t.label, 'category': t.category, 'body': t.body_preview,
+                'vars': [k.strip() for k in (t.var_fields or '').split(',') if k.strip()]}
+               for t in templates]
+    today_sent = WhatsAppMessage.query.filter(
+        WhatsAppMessage.direction == 'out', WhatsAppMessage.msg_type == 'template',
+        WhatsAppMessage.created_at >= now_dubai().replace(hour=0, minute=0, second=0, microsecond=0)
+    ).count()
+    daily_cap = int(os.environ.get('WA_DAILY_CAP', '250'))
+    recent = Broadcast.query.order_by(Broadcast.created_at.desc()).limit(8).all()
+    return render_template('whatsapp_broadcast.html',
+        applied=applied, args=request.args, with_wa=with_wa, without_wa=without_wa,
+        matched=matched, templates=tpl_ctx, var_labels=WA_VAR_LABELS,
+        jurisdictions=_distinct(Customer.jurisdiction), emirates=_distinct(Customer.emirate),
+        authorities=_distinct(Customer.licensing_authority),
+        nationalities=_distinct(Customer.nationality),
+        today_sent=today_sent, daily_cap=daily_cap, recent=recent, now=now_dubai())
+
+@app.route('/whatsapp/broadcast/export')
+@login_required
+@admin_required
+def whatsapp_broadcast_export():
+    """Download the filtered customer list as Excel (same filters as the preview)."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    custs = broadcast_filter_customers(request.args)
+    wb = Workbook(); ws = wb.active; ws.title = 'Customers'
+    headers = ['Name', 'Company', 'Business Activity', 'Type', 'Jurisdiction', 'Emirate',
+               'Authority', 'Nationality', 'WhatsApp', 'Email', 'Next Doc Expiry']
+    for i, h in enumerate(headers, 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    today = now_dubai().date()
+    for c in custs:
+        docs = Document.query.filter_by(customer_id=c.id).filter(Document.expiry_date.isnot(None)).all()
+        next_exp = min([d.expiry_date.date() for d in docs], default=None)
+        ws.append([c.name or '', c.company or '', c.business_activity or '', c.customer_type or '',
+                   c.jurisdiction or '', c.emirate or '', c.licensing_authority or '',
+                   c.nationality or '', _cust_wa_number(c) or '', c.email or '',
+                   next_exp.strftime('%d/%m/%Y') if next_exp else ''])
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = max(len(str(col[0].value or '')), 14)
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return send_file(buf, download_name='tahfeel_broadcast_list.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+def _run_broadcast(app_obj, broadcast_id, recipients, template_id, custom_vars, sender_name):
+    """Background worker: send one approved template to many recipients, throttled.
+    recipients = list of (customer_id, wa_number). custom_vars = list of typed values
+    for the template's 'custom' variables, in order."""
+    import time
+    from whatsapp_webhook import send_template, log_message
+    with app_obj.app_context():
+        tpl = MessageTemplate.query.get(template_id)
+        bc = Broadcast.query.get(broadcast_id)
+        if not tpl or not bc:
+            return
+        keys = [k.strip() for k in (tpl.var_fields or '').split(',') if k.strip()]
+        for cust_id, to in recipients:
+            customer = Customer.query.get(cust_id)
+            params, ci = [], 0
+            for k in keys:
+                if k == 'custom':
+                    params.append(custom_vars[ci] if ci < len(custom_vars) else '')
+                    ci += 1
+                else:
+                    params.append(_wa_resolve_var(k, customer))
+            wam = send_template(to, tpl.meta_name, params=params or None, lang=tpl.lang or 'en')
+            body = tpl.body_preview
+            for n, v in enumerate(params, start=1):
+                body = body.replace('{{%d}}' % n, v)
+            log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                        handled_by=sender_name, status='sent' if wam else 'failed',
+                        customer_id=cust_id)
+            if wam:
+                bc.sent = (bc.sent or 0) + 1
+            else:
+                bc.failed = (bc.failed or 0) + 1
+            db.session.commit()
+            time.sleep(1)  # ~1 msg/sec — stays well under Meta's rate limits
+        bc.status = 'done'
+        db.session.commit()
+
+@app.route('/whatsapp/broadcast/send', methods=['POST'])
+@login_required
+@admin_required
+def whatsapp_broadcast_send():
+    import threading
+    tpl = MessageTemplate.query.get_or_404(request.form.get('template_id', type=int))
+    ids = request.form.getlist('customer_ids')
+    custom_vars = []
+    i = 1
+    while f'custom_{i}' in request.form:
+        custom_vars.append((request.form.get(f'custom_{i}') or '').strip())
+        i += 1
+    recipients = []
+    for cid in ids:
+        c = Customer.query.get(int(cid))
+        if not c:
+            continue
+        to = _cust_wa_number(c)
+        if to:
+            recipients.append((c.id, to))
+    if not recipients:
+        flash('No recipients with a WhatsApp number were selected.', 'error')
+        return redirect(url_for('whatsapp_broadcast'))
+    # Daily-cap guard (Meta limits business-initiated conversations per 24h)
+    daily_cap = int(os.environ.get('WA_DAILY_CAP', '250'))
+    today_sent = WhatsAppMessage.query.filter(
+        WhatsAppMessage.direction == 'out', WhatsAppMessage.msg_type == 'template',
+        WhatsAppMessage.created_at >= now_dubai().replace(hour=0, minute=0, second=0, microsecond=0)
+    ).count()
+    if today_sent + len(recipients) > daily_cap:
+        flash(f'This send ({len(recipients)}) would exceed today\'s cap of {daily_cap} '
+              f'({today_sent} already sent). Reduce the list or raise WA_DAILY_CAP.', 'error')
+        return redirect(url_for('whatsapp_broadcast'))
+    bc = Broadcast(template_id=tpl.id, template_label=tpl.label,
+                   filter_summary=(request.form.get('filter_summary') or '')[:400],
+                   total=len(recipients), sent=0, failed=0, status='sending',
+                   created_by=session.get('user_id'), created_at=now_dubai())
+    db.session.add(bc); db.session.commit()
+    threading.Thread(target=_run_broadcast,
+                     args=(app, bc.id, recipients, tpl.id, custom_vars,
+                           session.get('user_name', 'staff')),
+                     daemon=True).start()
+    flash(f'Broadcast started — sending "{tpl.label}" to {len(recipients)} customers. '
+          f'Progress updates below.')
+    return redirect(url_for('whatsapp_broadcast'))
 
 @app.route('/whatsapp/<wa_id>/bot-toggle', methods=['POST'])
 @login_required
