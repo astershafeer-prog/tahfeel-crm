@@ -6,6 +6,17 @@
   <title>Tahfeel CRM — Admin Panel</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .acc{background:white;border:0.5px solid #E2E8F0;border-radius:12px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);overflow:hidden;}
+    .acc>summary{list-style:none;cursor:pointer;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:700;color:#0F2660;font-size:15px;user-select:none;}
+    .acc>summary::-webkit-details-marker{display:none;}
+    .acc>summary::after{content:'▾';margin-left:auto;color:#94A3B8;font-size:13px;transition:transform .15s;}
+    .acc[open]>summary::after{transform:rotate(180deg);}
+    .acc>summary:hover{background:#F8FAFC;}
+    .acc-inner{padding:0 16px 16px;}
+    .admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
+    .acc .card{box-shadow:none;}
+  </style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
@@ -30,10 +41,9 @@
     </div>
 
     <!-- WhatsApp Settings — one-time config (functions live on the WhatsApp page) -->
-    <div class="card" id="whatsapp-settings" style="margin-bottom:16px;">
-      <div class="card-header">
-        <h2>📨 WhatsApp Settings</h2>
-      </div>
+    <details class="acc" open id="whatsapp-settings">
+      <summary>📨 WhatsApp Settings</summary>
+      <div class="acc-inner">
       <div style="padding:14px 18px;">
         <div style="font-size:12.5px;color:#64748B;margin-bottom:12px;line-height:1.6;">
           Day-to-day WhatsApp work (Inbox, Templates, Broadcast, Quick replies) lives on the
@@ -54,9 +64,14 @@
           Currently: <strong>{{ 'ON — new leads are being greeted automatically' if wa_auto_welcome else 'OFF — no automatic welcome is sent' }}</strong>
         </div>
       </div>
-    </div>
+      </div>
+    </details>
 
-    <!-- Staff Management — full width -->
+    <!-- Staff & Roles -->
+    <details class="acc" open>
+      <summary>👥 Staff &amp; Roles</summary>
+      <div class="acc-inner">
+    <!-- Staff Management -->
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
         <h2>👥 Staff Management</h2>
@@ -130,8 +145,10 @@
         </div>
       </div>
     </div>
+      </div>
+    </details>
 
-    <!-- Add Staff Modal -->
+    <!-- Add Staff Modal (overlay, outside the sections) -->
     <div class="modal-overlay" id="staffModal" style="display:none;">
       <div class="modal-box" style="max-width:560px;width:92%;text-align:left;">
         <h3 style="margin-top:0;">➕ Add New Staff</h3>
@@ -164,8 +181,10 @@
       </div>
     </div>
 
-    <!-- 3-Column Grid for dropdown lists -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+    <!-- Leads setup -->
+    <details class="acc">
+      <summary>🧲 Leads setup</summary>
+      <div class="acc-inner"><div class="admin-grid">
 
       <!-- Services (Leads) -->
       <div class="card" id="services">
@@ -288,6 +307,13 @@
           {% endif %}
         </div>
       </div>
+      </div></div>
+    </details>
+
+    <!-- Tasks & Documents -->
+    <details class="acc">
+      <summary>💼 Tasks &amp; Documents</summary>
+      <div class="acc-inner"><div class="admin-grid">
 
       <!-- Service Types (Tasks) -->
       <div class="card" id="service-types">
@@ -379,6 +405,13 @@
           </div>
         </div>
       </div>
+      </div></div>
+    </details>
+
+    <!-- Finance -->
+    <details class="acc">
+      <summary>🤝 Finance</summary>
+      <div class="acc-inner"><div class="admin-grid">
 
       <!-- Partners -->
       <div class="card" id="partners">
@@ -419,8 +452,8 @@
           {% endif %}
         </div>
       </div>
-
-    </div>
+      </div></div>
+    </details>
   </div>
 
   <script>
