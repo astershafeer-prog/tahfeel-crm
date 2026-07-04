@@ -30,6 +30,9 @@
             <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add">+ Add Task</a>
             <a href="/documents/add?customer_id={{ customer.id }}" class="btn-sm" style="background:#fff !important;border-color:var(--primary);color:var(--primary) !important;">📄 Add Document</a>
             <a href="/customers/{{ customer.id }}/health" class="btn-sm" style="background:#fff !important;border-color:#059669;color:#059669 !important;">🛡 Compliance Report</a>
+            {% if wa_templates and (customer.whatsapp or customer.mobile or customer.phone or customer.phone2) %}
+            <button type="button" onclick="openWaSend()" class="btn-sm" style="background:#25D366 !important;border-color:#25D366;color:#fff !important;">📨 Send WhatsApp</button>
+            {% endif %}
             <form method="POST" action="/customers/{{ customer.id }}/toggle-alerts" style="margin:0;display:inline;">
               <button type="submit" class="btn-sm" style="border-color:{{ '#16A34A' if customer.alerts_enabled else '#94A3B8' }};color:{{ '#16A34A' if customer.alerts_enabled else '#64748B' }};">{{ '🔔 Alerts ON' if customer.alerts_enabled else '🔕 Alerts OFF' }}</button>
             </form>
@@ -408,5 +411,6 @@
       if(m) m.addEventListener('click', function(e){ if(e.target===this) m.classList.remove('active'); });
     });
   </script>
+  {% include '_wa_send_modal.html' %}
 </body>
 </html>

@@ -471,6 +471,60 @@ class QuickReply(db.Model):
     created_at = db.Column(db.DateTime, default=now_dubai)
     staff      = db.relationship('User', foreign_keys=[staff_id])
 
+class MessageTemplate(db.Model):
+    """A WhatsApp template approved in Meta Business Manager, registered in the CRM
+    so staff can send it outside the 24h window. meta_name + lang must match Meta
+    exactly; body_preview should be kept identical to the approved body (it is what
+    the CRM shows in previews and logs — Meta sends its own approved text)."""
+    __tablename__ = 'message_template'
+    id           = db.Column(db.Integer, primary_key=True)
+    label        = db.Column(db.String(100), nullable=False)   # friendly name staff see
+    meta_name    = db.Column(db.String(120), nullable=False)   # exact template name in Meta
+    category     = db.Column(db.String(20), default='Utility') # Utility / Marketing
+    lang         = db.Column(db.String(10), default='en')
+    body_preview = db.Column(db.Text, nullable=False)          # body with {{1}}, {{2}}…
+    var_fields   = db.Column(db.String(300))                   # comma-separated keys, one per variable
+    active       = db.Column(db.Boolean, default=True)
+    created_at   = db.Column(db.DateTime, default=now_dubai)
+
+# Auto-fill keys available for template variables (order in var_fields = {{1}}, {{2}}…)
+WA_VAR_LABELS = {
+    'first_name': 'First name',
+    'full_name':  'Full name',
+    'company':    'Company name',
+    'job_type':   'Service / task type',
+    'custom':     'Custom text (typed at send time)',
+}
+
+def _wa_resolve_var(key, customer=None, job=None):
+    """Best-effort auto-fill of one template variable from CRM data."""
+    if key == 'first_name' and customer:
+        base = (customer.contact_person or customer.name or '').strip()
+        return base.split()[0] if base else ''
+    if key == 'full_name' and customer:
+        return (customer.contact_person or customer.name or '').strip()
+    if key == 'company' and customer:
+        return (customer.trade_name or customer.company
+                or (customer.name if customer.customer_type == 'Company' else '') or '').strip()
+    if key == 'job_type' and job:
+        return job.job_type or ''
+    return ''
+
+def wa_send_context(customer=None, job=None):
+    """Active templates + pre-filled variable values for the send modal."""
+    if job and customer is None:
+        customer = job.customer
+    out = []
+    for t in MessageTemplate.query.filter_by(active=True).order_by(MessageTemplate.label).all():
+        keys = [k.strip() for k in (t.var_fields or '').split(',') if k.strip()]
+        params = [{'n': i, 'key': k,
+                   'label': WA_VAR_LABELS.get(k, k),
+                   'value': _wa_resolve_var(k, customer, job)}
+                  for i, k in enumerate(keys, start=1)]
+        out.append({'id': t.id, 'label': t.label, 'category': t.category,
+                    'lang': t.lang, 'body': t.body_preview, 'params': params})
+    return out
+
 class JobUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
@@ -2462,7 +2516,8 @@ def customer_detail(customer_id):
     total_received = sum(j.amount_received or 0 for j in jobs)
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
                            documents=docs, employees=employees, owners=owners, now=now, today=now.date(),
-                           total_invoiced=total_invoiced, total_received=total_received)
+                           total_invoiced=total_invoiced, total_received=total_received,
+                           wa_templates=wa_send_context(customer=customer))
 
 
 @app.route('/customers/<int:customer_id>/health')
@@ -3110,7 +3165,8 @@ def job_detail(job_id):
     return render_template('job_detail.html', job=job, now=now,
                            statuses=JOB_STATUSES, users=users,
                            service_types=service_types, timedelta=timedelta,
-                           sibling_jobs=sibling_jobs, partners=partners)
+                           sibling_jobs=sibling_jobs, partners=partners,
+                           wa_templates=wa_send_context(job=job))
 
 @app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -5280,6 +5336,32 @@ def init_db():
                 db.session.add(Source(name='Meta'))
                 db.session.commit()
                 print("Ensured 'Meta' source exists")
+            # Starter WhatsApp templates — seeded INACTIVE; admin activates each one
+            # after creating + approving the same name/wording in Meta Business Manager
+            if MessageTemplate.query.count() == 0:
+                starters = [
+                    ('Task completed — congratulations', 'tahfeel_job_completed', 'Utility',
+                     'first_name,job_type',
+                     'Dear {{1}}, great news! Your {{2}} has been completed successfully. Thank you for choosing Tahfeel Business Services. We remain at your service for any future requirements.'),
+                    ('Payment received — thank you', 'tahfeel_payment_thankyou', 'Utility',
+                     'first_name',
+                     'Dear {{1}}, we confirm receipt of your payment. Thank you for your trust in Tahfeel Business Services.'),
+                    ('Renewal reminder', 'tahfeel_renewal_reminder', 'Utility',
+                     'first_name,custom,custom',
+                     'Dear {{1}}, a friendly reminder from Tahfeel: your {{2}} is due for renewal on {{3}}. Reply to this message and our team will gladly assist you with the renewal.'),
+                    ('Birthday greeting', 'tahfeel_birthday', 'Marketing',
+                     'first_name',
+                     'Dear {{1}}, the entire team at Tahfeel Business Services wishes you a very happy birthday! May the year ahead bring you success and prosperity.'),
+                    ('General update / announcement', 'tahfeel_general_update', 'Marketing',
+                     'first_name,custom',
+                     'Dear {{1}}, an important update from Tahfeel Business Services: {{2}}. Reply to this message if you would like our assistance.'),
+                ]
+                for label, mname, cat, vfields, body in starters:
+                    db.session.add(MessageTemplate(
+                        label=label, meta_name=mname, category=cat,
+                        var_fields=vfields, body_preview=body, active=False))
+                db.session.commit()
+                print('Starter WhatsApp templates seeded (inactive)')
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(ServiceType(name=jt))
@@ -5942,14 +6024,16 @@ def whatsapp_thread(wa_id):
     quick_replies = QuickReply.query.filter(
         (QuickReply.staff_id == session.get('user_id')) | (QuickReply.is_global == True)
     ).order_by(QuickReply.label).all()
+    cust = Customer.query.get(customer_id) if customer_id else None
     return render_template('whatsapp_thread.html',
         wa_id=wa_id, messages=msgs, name=name, window_open=window_open,
         window_left=window_left,
         lead=Lead.query.get(lead_id) if lead_id else None,
-        customer=Customer.query.get(customer_id) if customer_id else None,
+        customer=cust,
         assignee=thread.assignee if thread else None, staff=staff,
         bot_paused=thread.bot_paused if thread else False,
         quick_replies=quick_replies,
+        wa_templates=wa_send_context(customer=cust),
         now=now_dubai())
 
 @app.route('/whatsapp/<wa_id>/assign', methods=['POST'])
@@ -6043,6 +6127,102 @@ def delete_quick_reply(reply_id):
     db.session.commit()
     flash('Quick reply deleted.')
     return redirect(url_for('quick_replies_list'))
+
+@app.route('/whatsapp/templates', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def whatsapp_templates():
+    """Manage the approved Meta templates the CRM can send (admin only)."""
+    if request.method == 'POST':
+        label = (request.form.get('label') or '').strip()
+        meta_name = (request.form.get('meta_name') or '').strip()
+        body = (request.form.get('body_preview') or '').strip()
+        if not (label and meta_name and body):
+            flash('Label, Meta template name and body are required.', 'error')
+        else:
+            db.session.add(MessageTemplate(
+                label=label, meta_name=meta_name,
+                category=request.form.get('category', 'Utility'),
+                lang=(request.form.get('lang') or 'en').strip() or 'en',
+                body_preview=body,
+                var_fields=(request.form.get('var_fields') or '').strip(),
+                active=request.form.get('active') == '1',
+                created_at=now_dubai(),
+            ))
+            db.session.commit()
+            flash(f'Template "{label}" added.')
+        return redirect(url_for('whatsapp_templates'))
+    tpls = MessageTemplate.query.order_by(MessageTemplate.label).all()
+    return render_template('whatsapp_templates.html', templates=tpls, var_keys=WA_VAR_LABELS)
+
+@app.route('/whatsapp/templates/<int:tpl_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def whatsapp_template_edit(tpl_id):
+    t = MessageTemplate.query.get_or_404(tpl_id)
+    t.label = (request.form.get('label') or t.label).strip()
+    t.meta_name = (request.form.get('meta_name') or t.meta_name).strip()
+    t.category = request.form.get('category', t.category)
+    t.lang = (request.form.get('lang') or t.lang).strip() or 'en'
+    t.body_preview = (request.form.get('body_preview') or t.body_preview).strip()
+    t.var_fields = (request.form.get('var_fields') or '').strip()
+    db.session.commit()
+    flash(f'Template "{t.label}" updated.')
+    return redirect(url_for('whatsapp_templates'))
+
+@app.route('/whatsapp/templates/<int:tpl_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def whatsapp_template_toggle(tpl_id):
+    t = MessageTemplate.query.get_or_404(tpl_id)
+    t.active = not t.active
+    db.session.commit()
+    flash(f'Template "{t.label}" {"activated" if t.active else "deactivated"}.')
+    return redirect(url_for('whatsapp_templates'))
+
+@app.route('/whatsapp/templates/<int:tpl_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def whatsapp_template_delete(tpl_id):
+    t = MessageTemplate.query.get_or_404(tpl_id)
+    db.session.delete(t)
+    db.session.commit()
+    flash('Template deleted.')
+    return redirect(url_for('whatsapp_templates'))
+
+@app.route('/whatsapp/send-template', methods=['POST'])
+@login_required
+def whatsapp_send_template():
+    """Send an approved template to one contact (works outside the 24h window).
+    Destination = explicit wa_id (from a thread) or the customer's best number."""
+    from whatsapp_webhook import send_template, log_message, normalize_phone
+    tpl = MessageTemplate.query.get_or_404(request.form.get('template_id', type=int))
+    back = request.form.get('return_url') or request.referrer or url_for('whatsapp_inbox')
+    customer = Customer.query.get(request.form.get('customer_id', type=int) or 0)
+    to = (request.form.get('wa_id') or '').strip()
+    if not to and customer:
+        to = customer.whatsapp or customer.mobile or customer.phone or customer.phone2 or ''
+    to = normalize_phone(to)
+    if not to:
+        flash('No WhatsApp number on record for this contact.', 'error')
+        return redirect(back)
+    params, i = [], 1
+    while f'param_{i}' in request.form:
+        params.append((request.form.get(f'param_{i}') or '').strip())
+        i += 1
+    wam = send_template(to, tpl.meta_name, params=params or None, lang=tpl.lang or 'en')
+    body = tpl.body_preview
+    for n, v in enumerate(params, start=1):
+        body = body.replace('{{%d}}' % n, v)
+    log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                handled_by=session.get('user_name', 'staff'),
+                status='sent' if wam else 'failed',
+                customer_id=customer.id if customer else None)
+    if wam:
+        flash(f'"{tpl.label}" sent on WhatsApp.')
+    else:
+        flash('WhatsApp send failed — check the number and that this template name is approved in Meta.', 'error')
+    return redirect(back)
 
 @app.route('/whatsapp/<wa_id>/bot-toggle', methods=['POST'])
 @login_required

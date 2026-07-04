@@ -137,7 +137,14 @@
       </form>
       {% else %}
       <div style="text-align:center;color:#854F0B;background:#FEF3C7;border-radius:8px;padding:12px;font-size:13px;">
-        ⏱️ The 24-hour reply window has closed. To message this contact again you must send an approved template (free-text replies are blocked by WhatsApp).
+        ⏱️ The 24-hour reply window has closed — free-text replies are blocked by WhatsApp.
+        {% if wa_templates %}
+        <div style="margin-top:10px;">
+          <button type="button" onclick="openWaSend()" style="background:#25D366;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;font-size:13px;cursor:pointer;">📨 Send approved template</button>
+        </div>
+        {% else %}
+        {% if session.role == 'admin' %}<div style="margin-top:6px;font-size:12px;"><a href="/whatsapp/templates" style="color:#1A3B8B;">Set up approved templates →</a></div>{% endif %}
+        {% endif %}
       </div>
       {% endif %}
     </div>
@@ -156,8 +163,11 @@
     setInterval(function () {
       var inp = document.querySelector('input[name="body"]');
       var typing = inp && (document.activeElement === inp || inp.value.trim() !== '');
-      if (!typing && !document.hidden) location.reload();
+      var waModal = document.getElementById('waSendOverlay');
+      var modalOpen = waModal && waModal.style.display === 'flex';
+      if (!typing && !modalOpen && !document.hidden) location.reload();
     }, 30000);
   </script>
+  {% include '_wa_send_modal.html' %}
 </body>
 </html>

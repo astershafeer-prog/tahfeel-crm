@@ -1,0 +1,104 @@
+{# Shared "send approved WhatsApp template" modal.
+   Works on: customer_detail (customer), job_detail (job), whatsapp_thread (wa_id, customer?).
+   Open with openWaSend(). Requires wa_templates in the render context. #}
+{% if wa_templates %}
+<div id="waSendOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:white;border-radius:14px;max-width:520px;width:100%;padding:20px 22px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.25);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#0F2660;">📨 Send WhatsApp template</div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">
+          {% if customer is defined and customer %}{{ customer.name }}{% elif job is defined and job %}{{ job.customer.name }}{% elif name is defined and name %}{{ name }}{% endif %}
+          {% if wa_id is defined and wa_id %} · +{{ wa_id }}{% endif %}
+        </div>
+      </div>
+      <button type="button" onclick="closeWaSend()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#94A3B8;">✕</button>
+    </div>
+    <div style="border-top:1px solid #F1F5F9;margin:10px 0;"></div>
+    <form method="POST" action="/whatsapp/send-template">
+      <input type="hidden" name="template_id" id="waTplId">
+      <input type="hidden" name="customer_id" value="{% if customer is defined and customer %}{{ customer.id }}{% elif job is defined and job %}{{ job.customer_id }}{% endif %}">
+      <input type="hidden" name="wa_id" value="{% if wa_id is defined and wa_id %}{{ wa_id }}{% endif %}">
+      <input type="hidden" name="return_url" value="{{ request.path }}">
+      <label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Template</label>
+      <select id="waTplSelect" onchange="waTplChanged()"
+              style="width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+        {% for t in wa_templates %}
+        <option value="{{ t.id }}">{{ t.label }} ({{ t.category }} · {{ t.lang|upper }})</option>
+        {% endfor %}
+      </select>
+      <div id="waTplParams"></div>
+      <label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Preview</label>
+      <div id="waTplPreview" style="background:#DCF8C6;border-radius:12px;border-bottom-right-radius:2px;padding:10px 14px;font-size:13px;color:#1B3A1B;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <div style="font-size:11px;color:#94A3B8;">Sent as an approved Meta template — allowed outside the 24-hour window. Logged to the WhatsApp thread.</div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <button type="button" onclick="closeWaSend()" style="background:white;border:1px solid #CBD5E1;border-radius:20px;padding:8px 16px;font-size:13px;cursor:pointer;">Cancel</button>
+          <button type="submit" style="background:#25D366;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;font-size:13px;cursor:pointer;">Send</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+  var WA_TPLS = {{ wa_templates|tojson }};
+  var WA_OPEN = '{' + '{';
+  var WA_CLOSE = '}' + '}';
+  function openWaSend(preId) {
+    var ov = document.getElementById('waSendOverlay');
+    ov.style.display = 'flex';
+    if (preId) {
+      var sel = document.getElementById('waTplSelect');
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === String(preId)) { sel.value = String(preId); break; }
+      }
+    }
+    waTplChanged();
+  }
+  function closeWaSend() { document.getElementById('waSendOverlay').style.display = 'none'; }
+  document.getElementById('waSendOverlay').addEventListener('click', function (e) {
+    if (e.target === this) closeWaSend();
+  });
+  function waCurTpl() {
+    var id = parseInt(document.getElementById('waTplSelect').value, 10);
+    for (var i = 0; i < WA_TPLS.length; i++) if (WA_TPLS[i].id === id) return WA_TPLS[i];
+    return null;
+  }
+  function waTplChanged() {
+    var t = waCurTpl();
+    if (!t) return;
+    document.getElementById('waTplId').value = t.id;
+    var wrap = document.getElementById('waTplParams');
+    wrap.innerHTML = '';
+    t.params.forEach(function (p) {
+      var d = document.createElement('div');
+      d.style.marginBottom = '10px';
+      var lab = document.createElement('label');
+      lab.textContent = WA_OPEN + p.n + WA_CLOSE + ' ' + p.label;
+      lab.style.cssText = 'font-size:11px;color:#64748B;display:block;margin-bottom:3px;';
+      var inp = document.createElement('input');
+      inp.type = 'text';
+      inp.name = 'param_' + p.n;
+      inp.value = p.value || '';
+      inp.required = true;
+      inp.style.cssText = 'width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;';
+      inp.addEventListener('input', waPreview);
+      d.appendChild(lab);
+      d.appendChild(inp);
+      wrap.appendChild(d);
+    });
+    waPreview();
+  }
+  function waPreview() {
+    var t = waCurTpl();
+    if (!t) return;
+    var body = t.body;
+    t.params.forEach(function (p) {
+      var inp = document.querySelector('#waTplParams input[name="param_' + p.n + '"]');
+      var v = inp && inp.value.trim() ? inp.value : '________';
+      body = body.split(WA_OPEN + p.n + WA_CLOSE).join(v);
+    });
+    document.getElementById('waTplPreview').textContent = body;
+  }
+</script>
+{% endif %}

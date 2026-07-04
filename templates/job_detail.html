@@ -40,6 +40,9 @@
           {% if job.customer.phone %}
           <a href="javascript:void(0)" onclick="sendWA()" class="ib" style="background:#25D366;border-color:#25D366;color:white;font-size:14px;" title="Send WhatsApp Update">💬</a>
           {% endif %}
+          {% if wa_templates and (job.customer.whatsapp or job.customer.mobile or job.customer.phone or job.customer.phone2) %}
+          <a href="javascript:void(0)" onclick="openWaSend()" class="ib" style="background:#128C7E;border-color:#128C7E;color:white;font-size:14px;" title="Send approved template (works outside 24h window)">📨</a>
+          {% endif %}
           {% if job.status != 'Closed' and session.role in ['admin','operations'] %}
           <a href="/jobs/{{ job.id }}/edit" class="ib" title="Edit">✏</a>
           <button class="ib ib-del" onclick="if(confirm('Delete this task?')) window.location='/jobs/{{ job.id }}/delete'" title="Delete">🗑</button>
@@ -717,5 +720,6 @@ Dubai, UAE`;
     if (e.target === this) closePopup();
   });
   </script>
+  {% include '_wa_send_modal.html' %}
 </body>
 </html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — WhatsApp Templates</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('whatsapp') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'warning' %}warning{% elif cat == 'error' %}error{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="margin-bottom:12px;">
+      <a href="/whatsapp" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to WhatsApp</a>
+    </div>
+
+    <div class="page-header">
+      <h2>📨 WhatsApp Templates</h2>
+    </div>
+
+    <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px 16px;font-size:12.5px;color:#854F0B;margin-bottom:16px;line-height:1.6;">
+      <strong>How this works:</strong> each template here must first be created and <strong>approved in Meta Business Manager</strong>
+      (WhatsApp Manager → Message Templates) with the <strong>exact same name, language and body text</strong>.
+      Keep templates <em>inactive</em> until Meta approves them — inactive templates don't appear in the send menu.
+      Variables are written as <code>{{ '{{1}}' }}</code>, <code>{{ '{{2}}' }}</code>… and auto-filled from the CRM in the order listed under "Variable auto-fill".
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:18px;margin-bottom:18px;">
+      <div style="font-weight:700;color:#0F2660;font-size:14px;margin-bottom:10px;">+ Add template</div>
+      <form method="POST" action="/whatsapp/templates" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <input type="text" name="label" placeholder="Label staff see (e.g. Renewal reminder)" required
+                 style="flex:2;min-width:200px;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+          <input type="text" name="meta_name" placeholder="Exact Meta template name (e.g. tahfeel_renewal_reminder)" required
+                 style="flex:2;min-width:200px;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+          <select name="category" style="flex:0;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+            <option value="Utility">Utility</option>
+            <option value="Marketing">Marketing</option>
+          </select>
+          <input type="text" name="lang" value="en" placeholder="Lang" style="width:60px;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+        </div>
+        <textarea name="body_preview" required rows="3"
+                  placeholder="Body text exactly as approved in Meta, with {{ '{{1}}' }}, {{ '{{2}}' }}… for variables"
+                  style="padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+        <input type="text" name="var_fields"
+               placeholder="Variable auto-fill, comma-separated in order — keys: {{ var_keys.keys()|join(', ') }}"
+               style="padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+        <label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" name="active" value="1"> Active (only tick after Meta has approved this template)
+        </label>
+        <button type="submit" style="align-self:flex-start;background:#25D366;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;cursor:pointer;">+ Add Template</button>
+      </form>
+      <div style="font-size:11px;color:#94A3B8;margin-top:8px;">
+        Auto-fill keys: {% for k, v in var_keys.items() %}<code>{{ k }}</code> = {{ v }}{{ ' · ' if not loop.last }}{% endfor %}
+      </div>
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
+      {% if not templates %}
+        <div style="padding:32px 20px;text-align:center;color:var(--text-muted);">No templates yet.</div>
+      {% else %}
+        {% for t in templates %}
+        <div style="padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <strong style="color:#0F2660;font-size:14px;">{{ t.label }}</strong>
+                <span style="font-size:10px;background:{{ '#E6F5EC' if t.category == 'Utility' else '#FDF2E3' }};color:{{ '#0F6E56' if t.category == 'Utility' else '#854F0B' }};padding:1px 8px;border-radius:20px;">{{ t.category }}</span>
+                <span style="font-size:10px;background:#F1F5F9;color:#475569;padding:1px 8px;border-radius:20px;">{{ t.lang|upper }}</span>
+                {% if t.active %}
+                <span style="font-size:10px;background:#DCFCE7;color:#166534;padding:1px 8px;border-radius:20px;">● Active</span>
+                {% else %}
+                <span style="font-size:10px;background:#FEE2E2;color:#991B1B;padding:1px 8px;border-radius:20px;">○ Inactive — awaiting Meta approval?</span>
+                {% endif %}
+              </div>
+              <div style="font-size:11px;color:#94A3B8;margin-top:3px;">Meta name: <code>{{ t.meta_name }}</code>{% if t.var_fields %} · vars: <code>{{ t.var_fields }}</code>{% endif %}</div>
+              <div style="font-size:13px;color:var(--text-muted);white-space:pre-wrap;margin-top:4px;">{{ t.body_preview }}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <form method="POST" action="/whatsapp/templates/{{ t.id }}/toggle" style="margin:0;">
+                <button type="submit" class="btn-sm" style="border-color:{{ '#DC2626' if t.active else '#16A34A' }};color:{{ '#DC2626' if t.active else '#16A34A' }};">{{ 'Deactivate' if t.active else 'Activate' }}</button>
+              </form>
+              <button type="button" class="btn-sm" onclick="var f=document.getElementById('edit-{{ t.id }}');f.style.display=f.style.display==='none'?'block':'none';">✏ Edit</button>
+              <form method="POST" action="/whatsapp/templates/{{ t.id }}/delete" onsubmit="return confirm('Delete template {{ t.label }}?');" style="margin:0;">
+                <button type="submit" style="background:none;border:none;color:#DC2626;font-size:14px;cursor:pointer;">🗑</button>
+              </form>
+            </div>
+          </div>
+          <form id="edit-{{ t.id }}" method="POST" action="/whatsapp/templates/{{ t.id }}/edit"
+                style="display:none;margin-top:12px;padding-top:12px;border-top:1px dashed #E2E8F0;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <input type="text" name="label" value="{{ t.label }}" required style="flex:2;min-width:180px;padding:7px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+              <input type="text" name="meta_name" value="{{ t.meta_name }}" required style="flex:2;min-width:180px;padding:7px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+              <select name="category" style="padding:7px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+                <option value="Utility" {{ 'selected' if t.category == 'Utility' }}>Utility</option>
+                <option value="Marketing" {{ 'selected' if t.category == 'Marketing' }}>Marketing</option>
+              </select>
+              <input type="text" name="lang" value="{{ t.lang }}" style="width:50px;padding:7px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+            </div>
+            <textarea name="body_preview" rows="3" required style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;resize:vertical;margin-bottom:8px;">{{ t.body_preview }}</textarea>
+            <input type="text" name="var_fields" value="{{ t.var_fields or '' }}" placeholder="Variable auto-fill keys, comma-separated"
+                   style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;margin-bottom:8px;">
+            <button type="submit" style="align-self:flex-start;background:#1A3B8B;color:white;border:none;border-radius:20px;padding:7px 18px;font-weight:700;font-size:13px;cursor:pointer;">Save changes</button>
+          </form>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
