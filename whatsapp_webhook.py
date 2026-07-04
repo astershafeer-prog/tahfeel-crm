@@ -92,14 +92,20 @@ def send_media(to, media_type, url, caption=None):
         payload[media_type]['caption'] = caption
     return _send(payload)
 
-def send_template(to, template_name, params=None, lang='en'):
-    """Business-initiated message — required for first contact (Flow A)."""
+def send_template(to, template_name, params=None, lang='en', param_names=None):
+    """Business-initiated message — required for first contact (Flow A).
+    param_names: optional list parallel to params. If given, each body variable
+    is sent as a NAMED parameter (e.g. {{customer_name}}); otherwise positional
+    ({{1}}, {{2}}…). Meta requires the payload to match how the template was built."""
     components = []
     if params:
-        components = [{
-            'type': 'body',
-            'parameters': [{'type': 'text', 'text': str(p)} for p in params],
-        }]
+        parameters = []
+        for i, p in enumerate(params):
+            item = {'type': 'text', 'text': str(p)}
+            if param_names and i < len(param_names) and param_names[i]:
+                item['parameter_name'] = param_names[i]
+            parameters.append(item)
+        components = [{'type': 'body', 'parameters': parameters}]
     payload = {
         'messaging_product': 'whatsapp',
         'to': normalize_phone(to),
@@ -399,11 +405,17 @@ def notify_new_lead(lead):
         if not lead or not lead.phone:
             return
         first = (lead.name or 'there').split()[0]
-        tmpl = _cfg('WA_WELCOME_TEMPLATE', 'tahfeel_lead_welcome')
-        wam = send_template(lead.phone, tmpl, params=[first], lang=_cfg('WA_TEMPLATE_LANG', 'en'))
+        tmpl = _cfg('WA_WELCOME_TEMPLATE', 'general')
+        lang = _cfg('WA_WELCOME_LANG', 'en_GB')  # 'general' is English (UK) in Meta
+        # 'general' uses a NAMED variable {{customer_name}}. Set WA_WELCOME_PARAM_NAME=''
+        # to fall back to a positional {{1}} template.
+        pname = _cfg('WA_WELCOME_PARAM_NAME', 'customer_name')
+        param_names = [pname] if pname else None
+        wam = send_template(lead.phone, tmpl, params=[first], lang=lang, param_names=param_names)
         body = f'[template: {tmpl}] Hi {first}, thanks for your interest in Tahfeel…'
         log_message(lead.phone, 'out', body, msg_type='template',
-                    wam_id=wam, handled_by='bot', status='sent', lead_id=lead.id)
+                    wam_id=wam, handled_by='bot', status='sent' if wam else 'failed',
+                    lead_id=lead.id)
         print(f'[WA] ✓ Welcome template sent to lead {lead.id} ({lead.phone})')
     except Exception as e:
         # Never let WhatsApp break lead creation

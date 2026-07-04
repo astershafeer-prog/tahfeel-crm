@@ -1472,6 +1472,13 @@ def add_lead():
         )
         db.session.add(lead)
         db.session.commit()
+        # Auto-greet on WhatsApp (approved template). Only for this single manual add —
+        # never bulk import. No-ops unless WA_AUTO_WELCOME is on. Never breaks lead add.
+        try:
+            from whatsapp_webhook import notify_new_lead
+            notify_new_lead(lead)
+        except Exception as e:
+            print(f'[WA] manual-lead greet skipped: {e}')
         flash('Lead added successfully')
         return redirect(url_for('all_leads'))
     campaigns = Campaign.query.order_by(Campaign.name).all()
