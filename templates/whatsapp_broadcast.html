@@ -81,26 +81,33 @@
       </div>
     </form>
 
-    {% if applied %}
+    <!-- Badge + manual add (always available, with or without a filter) -->
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
-      <span style="background:#E6EEFF;color:#1A3B8B;font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;">{{ with_wa|length }} customer{{ 's' if with_wa|length != 1 }} match with a WhatsApp number</span>
+      {% if applied %}
+      <span style="background:#E6EEFF;color:#1A3B8B;font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;">{{ with_wa|length }} filtered match{{ 'es' if with_wa|length != 1 }} with a WhatsApp number</span>
       {% if without_wa %}<span style="font-size:12px;color:#94A3B8;">{{ without_wa|length }} excluded — no number on record</span>{% endif %}
+      {% endif %}
+      <button type="button" onclick="bcToggleSearch()" style="background:#1A3B8B;color:white;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">+ Add recipient from clients</button>
     </div>
 
-    {% if with_wa %}
-    <!-- SEND FORM (POST) — recipient list shows even before a template is chosen -->
+    <div id="bcSearchPanel" style="display:none;background:white;border:0.5px solid #E2E8F0;border-radius:12px;padding:12px 14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+      <input type="text" id="bcSearchInput" placeholder="Search a client by name, company or number…" oninput="bcSearch()" autocomplete="off" style="width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+      <div id="bcSearchResults" style="margin-top:8px;max-height:240px;overflow-y:auto;font-size:13px;color:#94A3B8;">Type at least 2 characters to search your clients…</div>
+    </div>
+
     <form method="POST" action="/whatsapp/broadcast/send" id="bcSend">
       <input type="hidden" name="filter_summary" value="{% if args.get('business_activity') %}activity~{{ args.get('business_activity') }} {% endif %}{% for f in ['customer_type','jurisdiction','emirate','licensing_authority','nationality'] %}{% if args.get(f) and args.get(f)!='All' %}{{ f }}={{ args.get(f) }} {% endif %}{% endfor %}{% if args.get('expiry_days') %}expiry<={{ args.get('expiry_days') }}d{% endif %}">
 
       <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:14px;">
         <div style="padding:10px 16px;border-bottom:1px solid #F1F5F9;font-size:12px;color:#64748B;display:flex;align-items:center;gap:8px;">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="bcAll" checked onchange="bcToggleAll(this)"> Select all</label>
-          <span style="color:#94A3B8;">Remove anyone you don't want to message with the ✕</span>
+          <span style="color:#94A3B8;">Remove anyone with the ✕</span>
           <span id="bcCount" style="margin-left:auto;font-weight:600;color:#1A3B8B;"></span>
         </div>
         <div style="max-height:360px;overflow-y:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <tr style="position:sticky;top:0;background:#F8FAFC;color:#94A3B8;font-size:11px;text-align:left;">
+            <thead>
+            <tr style="background:#F8FAFC;color:#94A3B8;font-size:11px;text-align:left;">
               <th style="padding:6px 16px;width:28px;"></th>
               <th style="padding:6px 8px;">Customer / Company</th>
               <th style="padding:6px 8px;">Rep</th>
@@ -108,8 +115,11 @@
               <th style="padding:6px 8px;text-align:right;">WhatsApp</th>
               <th style="padding:6px 16px;width:34px;"></th>
             </tr>
+            </thead>
+            <tbody id="bcTbody">
             {% for c in with_wa %}
-            <tr class="bcTr" id="bcTr-{{ c.id }}" style="border-bottom:1px solid #F1F5F9;">
+            {% set _fn = (c.contact_person or c.name or '') %}
+            <tr class="bcTr" id="bcTr-{{ c.id }}" data-first="{{ _fn.split()[0] if _fn else '' }}" data-company="{{ c.trade_name or c.company or c.name or '' }}" style="border-bottom:1px solid #F1F5F9;">
               <td style="padding:8px 16px;width:28px;"><input type="checkbox" class="bcRow" name="customer_ids" value="{{ c.id }}" checked onchange="bcRecount()"></td>
               <td style="padding:8px 8px;"><a href="/customers/{{ c.id }}" style="color:#0F2660;text-decoration:none;font-weight:600;">{{ c.name }}</a>{% if c.company %} <span style="color:#94A3B8;">· {{ c.company }}</span>{% endif %}</td>
               <td style="padding:8px 8px;color:#64748B;">{{ c.rep.name if c.rep else '—' }}</td>
@@ -118,7 +128,9 @@
               <td style="padding:8px 16px;text-align:right;"><span onclick="bcRemove({{ c.id }})" title="Remove from this send" style="cursor:pointer;color:#DC2626;font-weight:700;">✕</span></td>
             </tr>
             {% endfor %}
+            </tbody>
           </table>
+          <div id="bcEmpty" style="padding:22px;text-align:center;color:#94A3B8;font-size:13px;{% if with_wa %}display:none;{% endif %}">No recipients yet — apply a filter above, or use “+ Add recipient from clients”.</div>
         </div>
       </div>
 
@@ -143,15 +155,9 @@
         </div>
       </div>
       {% else %}
-      <div style="background:#FEF3C7;color:#854F0B;border-radius:10px;padding:14px;font-size:13px;">You can review and refine the list above. To send, <a href="/whatsapp/templates" style="color:#1A3B8B;">add and activate a template first →</a></div>
+      <div style="background:#FEF3C7;color:#854F0B;border-radius:10px;padding:14px;font-size:13px;">You can build and review the list above. To send, <a href="/whatsapp/templates" style="color:#1A3B8B;">add and activate a template first →</a></div>
       {% endif %}
     </form>
-    {% elif without_wa %}
-      <div style="background:#FEF3C7;color:#854F0B;border-radius:10px;padding:14px;font-size:13px;">{{ without_wa|length }} customer{{ 's' if without_wa|length != 1 }} match these filters, but none have a WhatsApp number on record — so there's no one to message.</div>
-    {% else %}
-      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;text-align:center;color:#64748B;font-size:13px;">No customers match these filters.</div>
-    {% endif %}
-    {% endif %}
 
     <!-- RECENT CAMPAIGNS -->
     {% if recent %}
@@ -181,8 +187,68 @@
     var BC_TPLS = {{ templates|tojson }};
     var BC_LABELS = {{ var_labels|tojson }};
     var OPEN = '{' + '{', CLOSE = '}' + '}';
-    var FIRST_NAME = {{ (with_wa[0].contact_person or with_wa[0].name).split(' ')[0]|tojson if with_wa else '""' }};
-    var FIRST_COMPANY = {{ (with_wa[0].trade_name or with_wa[0].company or with_wa[0].name)|tojson if with_wa else '""' }};
+
+    function bcEsc(s){ var d=document.createElement('div'); d.textContent = (s==null?'':s); return d.innerHTML; }
+    function bcToggleSearch(){
+      var p=document.getElementById('bcSearchPanel');
+      p.style.display = (p.style.display==='none' ? 'block' : 'none');
+      if(p.style.display==='block') document.getElementById('bcSearchInput').focus();
+    }
+    var bcSearchTimer=null;
+    function bcSearch(){
+      clearTimeout(bcSearchTimer);
+      var q=document.getElementById('bcSearchInput').value.trim();
+      var box=document.getElementById('bcSearchResults');
+      if(q.length<2){ box.textContent='Type at least 2 characters to search your clients…'; return; }
+      box.textContent='Searching…';
+      bcSearchTimer=setTimeout(function(){
+        fetch('/whatsapp/broadcast/search?q='+encodeURIComponent(q))
+          .then(function(r){return r.json();})
+          .then(function(list){
+            if(!list.length){ box.textContent='No clients found with a WhatsApp number.'; return; }
+            box.innerHTML='';
+            list.forEach(function(o){
+              var row=document.createElement('div');
+              row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #F1F5F9;';
+              var inList=!!document.getElementById('bcTr-'+o.id);
+              row.innerHTML='<div style="flex:1;min-width:0;color:#0F2660;">'+bcEsc(o.name)+(o.company?' <span style=\'color:#94A3B8;\'>· '+bcEsc(o.company)+'</span>':'')+'<div style=\'font-size:11px;color:#94A3B8;\'>'+bcEsc(o.phone)+(o.rep?' · '+bcEsc(o.rep):'')+'</div></div>';
+              var btn=document.createElement('button'); btn.type='button';
+              btn.textContent=inList?'Added':'+ Add';
+              btn.disabled=inList;
+              btn.style.cssText='background:#25D366;color:white;border:none;border-radius:16px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;'+(inList?'opacity:0.5;':'');
+              btn.onclick=function(){ bcAddRow(o); btn.textContent='Added'; btn.disabled=true; btn.style.opacity='0.5'; };
+              row.appendChild(btn); box.appendChild(row);
+            });
+          }).catch(function(){ box.textContent='Search error — try again.'; });
+      },250);
+    }
+    function bcAddRow(o){
+      var existing=document.getElementById('bcTr-'+o.id);
+      if(existing){ existing.classList.remove('bcGone'); existing.style.display=''; var c=existing.querySelector('.bcRow'); if(c)c.checked=true; bcRecount(); return; }
+      var first=(o.name||'').split(' ')[0];
+      var tr=document.createElement('tr');
+      tr.className='bcTr'; tr.id='bcTr-'+o.id;
+      tr.setAttribute('data-first', first);
+      tr.setAttribute('data-company', o.company||o.name||'');
+      tr.style.borderBottom='1px solid #F1F5F9';
+      tr.innerHTML='<td style="padding:8px 16px;width:28px;"><input type="checkbox" class="bcRow" name="customer_ids" value="'+o.id+'" checked onchange="bcRecount()"></td>'
+        +'<td style="padding:8px 8px;"><a href="/customers/'+o.id+'" style="color:#0F2660;text-decoration:none;font-weight:600;">'+bcEsc(o.name)+'</a>'+(o.company?' <span style="color:#94A3B8;">· '+bcEsc(o.company)+'</span>':'')+'</td>'
+        +'<td style="padding:8px 8px;color:#64748B;">'+bcEsc(o.rep||'—')+'</td>'
+        +'<td style="padding:8px 8px;color:#64748B;">'+bcEsc(o.activity||'—')+'</td>'
+        +'<td style="padding:8px 8px;color:#64748B;text-align:right;white-space:nowrap;">'+bcEsc(o.phone)+'</td>'
+        +'<td style="padding:8px 16px;text-align:right;"><span onclick="bcRemove('+o.id+')" title="Remove" style="cursor:pointer;color:#DC2626;font-weight:700;">✕</span></td>';
+      document.getElementById('bcTbody').appendChild(tr);
+      document.getElementById('bcEmpty').style.display='none';
+      bcRecount();
+    }
+    function bcFirstRecipient(){
+      var cbs=document.querySelectorAll('.bcRow:checked');
+      for(var i=0;i<cbs.length;i++){
+        var tr=cbs[i].closest('.bcTr');
+        if(tr && tr.style.display!=='none') return {first:tr.getAttribute('data-first')||'', company:tr.getAttribute('data-company')||''};
+      }
+      return {first:'', company:''};
+    }
 
     function bcToggleAll(cb){ document.querySelectorAll('.bcTr:not(.bcGone) .bcRow').forEach(function(r){ r.checked = cb.checked; }); bcRecount(); }
     function bcRecount(){
@@ -196,6 +262,7 @@
       tr.classList.add('bcGone');
       tr.style.display = 'none';
       bcRecount();
+      if(!document.querySelector('.bcTr:not(.bcGone)')){ var e=document.getElementById('bcEmpty'); if(e) e.style.display=''; }
     }
     function bcCurTpl(){
       var sel = document.getElementById('bcTpl');
@@ -225,13 +292,13 @@
     }
     function bcPreview(){
       var t = bcCurTpl(); if(!t) return;
+      var fr = bcFirstRecipient();
       var body = t.body, ci = 0;
       t.vars.forEach(function(k, idx){
         var val;
         if(k === 'custom'){ ci++; var inp=document.querySelector('[name="custom_'+ci+'"]'); val = inp && inp.value.trim() ? inp.value : '________'; }
-        else if(k === 'first_name'){ val = FIRST_NAME; }
-        else if(k === 'full_name'){ val = FIRST_NAME; }
-        else if(k === 'company'){ val = FIRST_COMPANY; }
+        else if(k === 'first_name' || k === 'full_name'){ val = fr.first || '________'; }
+        else if(k === 'company'){ val = fr.company || '________'; }
         else { val = '(auto)'; }
         body = body.split(OPEN + (idx+1) + CLOSE).join(val);
       });

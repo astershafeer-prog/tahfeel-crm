@@ -6395,6 +6395,29 @@ def whatsapp_broadcast_export():
     return send_file(buf, download_name='tahfeel_broadcast_list.xlsx', as_attachment=True,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+@app.route('/whatsapp/broadcast/search')
+@login_required
+@admin_required
+def whatsapp_broadcast_search():
+    """Typeahead for manually adding recipients — clients with a WhatsApp number."""
+    q = (request.args.get('q') or '').strip()
+    out = []
+    if len(q) >= 2:
+        like = f'%{q}%'
+        rows = Customer.query.filter(db.or_(
+            Customer.name.ilike(like), Customer.company.ilike(like),
+            Customer.phone.ilike(like), Customer.mobile.ilike(like),
+            Customer.whatsapp.ilike(like), Customer.phone2.ilike(like),
+        )).order_by(Customer.name).limit(20).all()
+        for c in rows:
+            wa = _cust_wa_number(c)
+            if not wa:
+                continue
+            out.append({'id': c.id, 'name': c.name or '', 'company': c.company or '',
+                        'rep': (c.rep.name if c.rep else ''),
+                        'activity': c.business_activity or '', 'phone': wa})
+    return jsonify(out)
+
 def _run_broadcast(app_obj, broadcast_id, recipients, template_id, custom_vars, sender_name):
     """Background worker: send one approved template to many recipients, throttled.
     recipients = list of (customer_id, wa_number). custom_vars = list of typed values
