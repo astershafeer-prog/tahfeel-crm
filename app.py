@@ -5430,9 +5430,9 @@ def init_db():
                  'Dear {{1}},\n\nAction is required to continue processing your {{2}}.\n\nPlease complete the following:\n\n{{3}}\n\nKindly reply to this message once completed or contact your account manager if you need any assistance.\n\nThank you,\nTahfeel Business Setup Services'),
                 ('Compliance Alert', 'compliance_alert_v1', 'Utility', 'first_name,custom,custom',
                  'Dear {{1}},\n\nThis is a reminder that your {{2}} is due on {{3}}.\n\nPlease contact us if you require assistance to complete the necessary process before the due date.\n\nThank you,\nTahfeel Business Setup Services'),
-                ('Compliance Report Ready', 'compliance_report_ready_v1', 'Utility', 'first_name',
-                 'Dear {{1}},\n\nYour monthly compliance report is now ready.\n\nPlease review the report for upcoming renewals, pending actions, and important compliance updates.\n\nIf you have any questions, simply reply to this message.\n\nThank you,\nTahfeel Business Setup Services'),
-                ('Monthly Check-In', 'service_followup_v1', 'Utility', 'first_name',
+                ('Compliance Report Ready', '_compliance_report_ready_v1', 'Utility', 'first_name',
+                 'Dear {{1}},\n\nYour monthly compliance report is now ready.\n\nPlease review the report sent to your inbox for upcoming renewals, pending actions, and important compliance updates.\n\nIf you have any questions, simply reply to this message.\n\nThank you,\nTahfeel Business Setup Services'),
+                ('Monthly Check-In', 'service_followup_v1', 'Marketing', 'first_name',
                  'Dear {{1}},\n\nWe hope everything is going well.\n\nIf you have any questions regarding your existing services with Tahfeel, simply reply to this message and our team will be happy to assist you.\n\nThank you,\nTahfeel Business Setup Services'),
             ]
             journey_names = [m for _, m, _, _, _ in journey]
@@ -5450,6 +5450,24 @@ def init_db():
                 if t:
                     db.session.delete(t)
                     print(f'Retired unused template: {dead}')
+            db.session.commit()
+            # One-time corrections to match how templates ended up in Meta:
+            #  - compliance report name gained a leading underscore in Meta
+            #  - owner reworded the compliance report body ("sent to your inbox")
+            #  - Meta reclassified the monthly check-in as Marketing
+            _rpt = MessageTemplate.query.filter_by(meta_name='compliance_report_ready_v1').first()
+            if _rpt:
+                _rpt.meta_name = '_compliance_report_ready_v1'
+            _rpt = MessageTemplate.query.filter_by(meta_name='_compliance_report_ready_v1').first()
+            if _rpt and 'sent to your inbox' not in (_rpt.body_preview or ''):
+                _rpt.body_preview = ('Dear {{1}},\n\nYour monthly compliance report is now ready.\n\n'
+                                     'Please review the report sent to your inbox for upcoming renewals, '
+                                     'pending actions, and important compliance updates.\n\n'
+                                     'If you have any questions, simply reply to this message.\n\n'
+                                     'Thank you,\nTahfeel Business Setup Services')
+            _fu = MessageTemplate.query.filter_by(meta_name='service_followup_v1').first()
+            if _fu and _fu.category != 'Marketing':
+                _fu.category = 'Marketing'
             db.session.commit()
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
