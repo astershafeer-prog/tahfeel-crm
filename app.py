@@ -509,6 +509,13 @@ def set_setting(key, value):
     row.value = value
     db.session.commit()
 
+def wa_template_active(meta_name):
+    """Return an active MessageTemplate by its Meta name, or None."""
+    try:
+        return MessageTemplate.query.filter_by(meta_name=meta_name, active=True).first()
+    except Exception:
+        return None
+
 # Auto-fill keys available for template variables (order in var_fields = {{1}}, {{2}}…)
 WA_VAR_LABELS = {
     'first_name': 'First name',
@@ -5016,7 +5023,41 @@ def documents():
                            belongs_filter=belongs_filter, doc_type_filter=doc_type_filter,
                            doc_types=doc_types,
                            total=total, page=page, total_pages=total_pages,
+                           expiry_tpl=wa_template_active('compliance_alert_v1'),
                            now=now)
+
+@app.route('/documents/<int:doc_id>/whatsapp-remind', methods=['POST'])
+@login_required
+def document_whatsapp_remind(doc_id):
+    """Send the approved expiry-reminder template (compliance_alert_v1) from the
+    business number for one document — API path, logged to the CRM thread."""
+    from whatsapp_webhook import send_template, log_message, normalize_phone
+    doc = Document.query.get_or_404(doc_id)
+    back = request.referrer or url_for('documents')
+    tpl = wa_template_active('compliance_alert_v1')
+    if not tpl:
+        flash('Expiry-reminder template isn\'t active yet — activate compliance_alert_v1 in WhatsApp Templates.', 'error')
+        return redirect(back)
+    cust = doc.customer
+    to = normalize_phone((cust.whatsapp or cust.mobile or cust.phone or cust.phone2) if cust else '')
+    if not to:
+        flash('No WhatsApp number on record for this customer.', 'error')
+        return redirect(back)
+    first = ((cust.contact_person or cust.name or 'there').split() or ['there'])[0]
+    item = doc.doc_type or 'document'
+    due = doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else ''
+    params = [first, item, due]
+    wam = send_template(to, tpl.meta_name, params=params, lang=tpl.lang or 'en')
+    body = tpl.body_preview
+    for n, v in enumerate(params, start=1):
+        body = body.replace('{{%d}}' % n, v)
+    log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                handled_by=session.get('user_name', 'staff'),
+                status='sent' if wam else 'failed',
+                customer_id=cust.id if cust else None)
+    flash('Renewal reminder sent on WhatsApp.' if wam else 'WhatsApp send failed — check the number and template.',
+          'success' if wam else 'error')
+    return redirect(back)
 
 
 @app.route('/documents/export')
@@ -6131,7 +6172,8 @@ def whatsapp_inbox():
 
     staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).order_by(User.name).all()
     return render_template('whatsapp_inbox.html', threads=thread_list, now=now_dubai(),
-                           q=q, flt=flt, counts=counts, staff=staff)
+                           q=q, flt=flt, counts=counts, staff=staff,
+                           wa_templates=wa_send_context())
 
 @app.route('/whatsapp/<wa_id>')
 @login_required

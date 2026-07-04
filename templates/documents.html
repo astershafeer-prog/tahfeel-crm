@@ -123,7 +123,12 @@
                 {% if doc.customer and doc.customer.phone and days <= 30 %}
 {% set doc_rep = (doc.customer.rep.name + '%0A📞 ' + doc.customer.rep.phone|replace(' ','')|replace('+','%2B') + '%0ATahfeel Business Setup Services%0A📞 +971 50 394 5656') if doc.customer.rep and doc.customer.rep.phone else 'Tahfeel Business Setup Services%0A📞 +971 50 394 5656' %}
                 <a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ doc.customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0AWe%20would%20like%20to%20remind%20you%20that%20your%20*{{ doc.doc_type|replace(' ','%20') }}*%20is%20due%20to%20expire%20on%20*{{ doc.expiry_date.strftime('%d %b %Y')|replace(' ','%20') }}*.%0A%0ATo%20avoid%20any%20penalties%20or%20service%20disruptions%2C%20kindly%20get%20in%20touch%20with%20us%20at%20your%20earliest%20convenience%20so%20we%20can%20assist%20with%20the%20renewal%20process.%0A%0AWarm%20regards%2C%0A{{ doc_rep }}"
-                   target="_blank" style="background:#25D366;color:white;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;">💬 WhatsApp</a>
+                   target="_blank" style="background:#25D366;color:white;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;" title="Personal WhatsApp from your own number (not logged)">💬 Personal</a>
+                {% endif %}
+                {% if expiry_tpl and doc.customer and (doc.customer.whatsapp or doc.customer.mobile or doc.customer.phone or doc.customer.phone2) %}
+                <form method="POST" action="/documents/{{ doc.id }}/whatsapp-remind" style="display:inline;margin:0;" onsubmit="return confirm('Send an official renewal reminder to {{ doc.customer.name }} from the business WhatsApp? It will be logged in the CRM.');">
+                  <button type="submit" title="Approved reminder from the business number — logged in the CRM, replies come to the inbox" style="background:#128C7E;color:white;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;border:none;cursor:pointer;">📨 Send reminder</button>
+                </form>
                 {% endif %}
                 <a href="/documents/{{ doc.id }}/edit" style="background:#F1F5F9;color:#334155;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;">✏ Edit</a>
                 <a href="/documents/{{ doc.id }}/delete" onclick="return confirm('Remove this document?')" style="background:#FEE2E2;color:#B91C1C;font-size:12px;font-weight:600;padding:5px 11px;border-radius:6px;text-decoration:none;">🗑 Delete</a>

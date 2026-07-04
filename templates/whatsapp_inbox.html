@@ -23,6 +23,9 @@
     <div class="page-header">
       <h2>💬 WhatsApp <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ threads|length }} conversation{{ 's' if threads|length != 1 }})</span></h2>
       <span style="font-size:12px;color:#1B7A3D;display:flex;align-items:center;gap:10px;">
+        {% if wa_templates %}
+        <button type="button" onclick="openNewMsg()" style="background:#25D366;color:white;border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">✉ New message</button>
+        {% endif %}
         {% if session.role == 'admin' %}
         <a href="/whatsapp/broadcast" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📢 Broadcast</a>
         <a href="/whatsapp/templates" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📨 Templates</a>
@@ -159,5 +162,67 @@
     }
     localStorage.setItem('wa_last_unread', CURRENT_UNREAD);
   </script>
+
+  {% if wa_templates %}
+  <!-- New message modal — start a chat with any number via an approved template -->
+  <div id="nmOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:white;border-radius:14px;max-width:520px;width:100%;padding:20px 22px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.25);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+        <div style="font-size:16px;font-weight:700;color:#0F2660;">✉ New WhatsApp message</div>
+        <button type="button" onclick="closeNewMsg()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#94A3B8;">✕</button>
+      </div>
+      <div style="font-size:12px;color:#94A3B8;margin-bottom:12px;">Starts a conversation from the business number using an approved template. Include the country code (e.g. 9715…).</div>
+      <form method="POST" action="/whatsapp/send-template">
+        <input type="hidden" name="template_id" id="nmTplId">
+        <input type="hidden" name="return_url" value="{{ request.path }}">
+        <label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Phone number (with country code)</label>
+        <input type="text" name="wa_id" required placeholder="971501234567" style="width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:12px;">
+        <label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Template</label>
+        <select id="nmTplSelect" onchange="nmTplChanged()" style="width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+          {% for t in wa_templates %}<option value="{{ t.id }}">{{ t.label }} ({{ t.category }})</option>{% endfor %}
+        </select>
+        <div id="nmParams"></div>
+        <label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Preview</label>
+        <div id="nmPreview" style="background:#DCF8C6;border-radius:12px;border-bottom-right-radius:2px;padding:10px 14px;font-size:13px;color:#1B3A1B;line-height:1.6;white-space:pre-wrap;margin-bottom:12px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button type="button" onclick="closeNewMsg()" style="background:white;border:1px solid #CBD5E1;border-radius:20px;padding:8px 16px;font-size:13px;cursor:pointer;">Cancel</button>
+          <button type="submit" style="background:#25D366;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;font-size:13px;cursor:pointer;">Send</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    var NM_TPLS = {{ wa_templates|tojson }};
+    var NM_O='{'+'{', NM_C='}'+'}';
+    function openNewMsg(){ document.getElementById('nmOverlay').style.display='flex'; nmTplChanged(); }
+    function closeNewMsg(){ document.getElementById('nmOverlay').style.display='none'; }
+    document.getElementById('nmOverlay').addEventListener('click', function(e){ if(e.target===this) closeNewMsg(); });
+    function nmCur(){ var id=parseInt(document.getElementById('nmTplSelect').value,10); for(var i=0;i<NM_TPLS.length;i++) if(NM_TPLS[i].id===id) return NM_TPLS[i]; return null; }
+    function nmTplChanged(){
+      var t=nmCur(); if(!t) return;
+      document.getElementById('nmTplId').value=t.id;
+      var w=document.getElementById('nmParams'); w.innerHTML='';
+      t.params.forEach(function(p){
+        var d=document.createElement('div'); d.style.marginBottom='10px';
+        var l=document.createElement('label'); l.textContent=NM_O+p.n+NM_C+' '+p.label;
+        l.style.cssText='font-size:11px;color:#64748B;display:block;margin-bottom:3px;';
+        var i=document.createElement('input'); i.type='text'; i.name='param_'+p.n; i.required=true;
+        i.style.cssText='width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;';
+        i.addEventListener('input', nmPreview);
+        d.appendChild(l); d.appendChild(i); w.appendChild(d);
+      });
+      nmPreview();
+    }
+    function nmPreview(){
+      var t=nmCur(); if(!t) return; var body=t.body;
+      t.params.forEach(function(p){
+        var inp=document.querySelector('#nmParams [name="param_'+p.n+'"]');
+        var v=inp&&inp.value.trim()?inp.value:'________';
+        body=body.split(NM_O+p.n+NM_C).join(v);
+      });
+      document.getElementById('nmPreview').textContent=body;
+    }
+  </script>
+  {% endif %}
 </body>
 </html>
