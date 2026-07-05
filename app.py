@@ -3374,6 +3374,7 @@ def delete_job(job_id):
     job = Job.query.get_or_404(job_id)
     SubTask.query.filter_by(job_id=job_id).delete()
     JobUpdate.query.filter_by(job_id=job_id).delete()
+    PartialRevenue.query.filter_by(job_id=job_id).delete()
     db.session.delete(job)
     db.session.commit()
     flash('Task deleted')
@@ -3395,6 +3396,7 @@ def bulk_delete_jobs():
         if job:
             SubTask.query.filter_by(job_id=job.id).delete()
             JobUpdate.query.filter_by(job_id=job.id).delete()
+            PartialRevenue.query.filter_by(job_id=job.id).delete()
             db.session.delete(job)
             count += 1
     db.session.commit()
@@ -6466,6 +6468,8 @@ def whatsapp_template_toggle(tpl_id):
 @admin_required
 def whatsapp_template_delete(tpl_id):
     t = MessageTemplate.query.get_or_404(tpl_id)
+    # keep past broadcasts (they store their own label) but drop the FK
+    Broadcast.query.filter_by(template_id=t.id).update({'template_id': None})
     db.session.delete(t)
     db.session.commit()
     flash('Template deleted.')
