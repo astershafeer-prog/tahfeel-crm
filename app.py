@@ -706,11 +706,22 @@ def inject_globals():
     return result
 
 def wa_unread_count():
-    """Number of unread incoming WhatsApp messages — shown as a badge on the nav."""
+    """Unread WhatsApp badge on the nav. Reps see only chats assigned to THEM
+    (their targeted alert); admins see all unread (oversight). Done/resolved
+    chats never count."""
     try:
         if 'user_id' not in session:
             return 0
-        return WhatsAppMessage.query.filter_by(direction='in', is_read=False).count()
+        resolved_ids = {t.wa_id for t in WhatsAppThread.query.filter_by(resolved=True).all()}
+        q = WhatsAppMessage.query.filter_by(direction='in', is_read=False)
+        if session.get('role') == 'admin':
+            msgs = q.all()
+        else:
+            my_ids = {t.wa_id for t in WhatsAppThread.query.filter_by(assigned_to=session['user_id']).all()}
+            if not my_ids:
+                return 0
+            msgs = q.filter(WhatsAppMessage.wa_id.in_(list(my_ids))).all()
+        return sum(1 for m in msgs if m.wa_id not in resolved_ids)
     except Exception:
         return 0
 app.jinja_env.globals['wa_unread_count'] = wa_unread_count
