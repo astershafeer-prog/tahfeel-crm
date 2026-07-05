@@ -458,6 +458,9 @@ class WhatsAppThread(db.Model):
     assigned_at   = db.Column(db.DateTime, nullable=True)
     bot_paused    = db.Column(db.Boolean, default=False)
     bot_paused_by = db.Column(db.String(100), nullable=True)
+    resolved      = db.Column(db.Boolean, default=False)   # 'Done' — drops out of the active list
+    resolved_at   = db.Column(db.DateTime, nullable=True)
+    resolved_by   = db.Column(db.String(100), nullable=True)
     assignee      = db.relationship('User', foreign_keys=[assigned_to])
 
 class QuickReply(db.Model):
@@ -5418,6 +5421,9 @@ def init_db():
             # WhatsApp: per-conversation bot pause (human takeover)
             'ALTER TABLE whats_app_thread ADD COLUMN IF NOT EXISTS bot_paused BOOLEAN DEFAULT FALSE',
             'ALTER TABLE whats_app_thread ADD COLUMN IF NOT EXISTS bot_paused_by VARCHAR(100)',
+            'ALTER TABLE whats_app_thread ADD COLUMN IF NOT EXISTS resolved BOOLEAN DEFAULT FALSE',
+            'ALTER TABLE whats_app_thread ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP',
+            'ALTER TABLE whats_app_thread ADD COLUMN IF NOT EXISTS resolved_by VARCHAR(100)',
             # WhatsApp: media message support
             'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS media_url VARCHAR(500)',
             'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS mime_type VARCHAR(50)',
@@ -6151,7 +6157,7 @@ WA_WINDOW = timedelta(hours=24)  # Meta free-reply window after last inbound
 def whatsapp_inbox():
     """List of WhatsApp conversations, newest activity first. Supports search + filter."""
     q = (request.args.get('q') or '').strip()
-    flt = request.args.get('filter', 'all')   # all | unread | unmatched | mine
+    flt = request.args.get('filter', 'unread')   # unread(default) | all | unmatched | mine | done
     msgs = WhatsAppMessage.query.order_by(WhatsAppMessage.created_at.desc()).all()
     thread_assignments = {t.wa_id: t for t in WhatsAppThread.query.all()}
     threads = {}
@@ -6179,14 +6185,17 @@ def whatsapp_inbox():
         t['customer'] = Customer.query.get(t['customer_id']) if t['customer_id'] else None
         wt = thread_assignments.get(t['wa_id'])
         t['assignee'] = wt.assignee if wt else None
+        t['resolved'] = bool(wt.resolved) if wt else False
     thread_list = sorted(threads.values(), key=lambda x: x['last_at'], reverse=True)
 
-    # counts for the filter tabs (before filtering)
+    uid = session.get('user_id')
+    # counts for the filter tabs (before filtering). Active views exclude 'done'.
     counts = {
         'all': len(thread_list),
-        'unread': sum(1 for t in thread_list if t['unread']),
-        'unmatched': sum(1 for t in thread_list if not t['lead'] and not t['customer']),
-        'mine': sum(1 for t in thread_list if t['assignee'] and t['assignee'].id == session.get('user_id')),
+        'unread': sum(1 for t in thread_list if t['unread'] and not t['resolved']),
+        'unmatched': sum(1 for t in thread_list if not t['lead'] and not t['customer'] and not t['resolved']),
+        'mine': sum(1 for t in thread_list if t['assignee'] and t['assignee'].id == uid and not t['resolved']),
+        'done': sum(1 for t in thread_list if t['resolved']),
     }
     # apply search
     if q:
@@ -6195,11 +6204,13 @@ def whatsapp_inbox():
                        if ql in (t['name'] or '').lower() or ql in (t['wa_id'] or '')]
     # apply filter
     if flt == 'unread':
-        thread_list = [t for t in thread_list if t['unread']]
+        thread_list = [t for t in thread_list if t['unread'] and not t['resolved']]
     elif flt == 'unmatched':
-        thread_list = [t for t in thread_list if not t['lead'] and not t['customer']]
+        thread_list = [t for t in thread_list if not t['lead'] and not t['customer'] and not t['resolved']]
     elif flt == 'mine':
-        thread_list = [t for t in thread_list if t['assignee'] and t['assignee'].id == session.get('user_id')]
+        thread_list = [t for t in thread_list if t['assignee'] and t['assignee'].id == uid and not t['resolved']]
+    elif flt == 'done':
+        thread_list = [t for t in thread_list if t['resolved']]
 
     staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).order_by(User.name).all()
     return render_template('whatsapp_inbox.html', threads=thread_list, now=now_dubai(),
@@ -6245,6 +6256,7 @@ def whatsapp_thread(wa_id):
         customer=cust,
         assignee=thread.assignee if thread else None, staff=staff,
         bot_paused=thread.bot_paused if thread else False,
+        resolved=thread.resolved if thread else False,
         quick_replies=quick_replies,
         wa_templates=wa_send_context(customer=cust),
         now=now_dubai())
@@ -6764,6 +6776,22 @@ def whatsapp_reengage():
     return render_template('reengage.html', applied=applied, args=request.args, leads=leads,
                            templates=wa_send_context(), sources=sources, lead_statuses=lead_statuses,
                            today_sent=today_sent, daily_cap=daily_cap, recent=recent, now=now_dubai())
+
+@app.route('/whatsapp/<wa_id>/done', methods=['POST'])
+@login_required
+def whatsapp_mark_done(wa_id):
+    """Mark a conversation resolved (Done) — it leaves the active list. Toggles back."""
+    thread = WhatsAppThread.query.get(wa_id)
+    if not thread:
+        thread = WhatsAppThread(wa_id=wa_id)
+        db.session.add(thread)
+    resolving = not thread.resolved
+    thread.resolved = resolving
+    thread.resolved_at = now_dubai() if resolving else None
+    thread.resolved_by = session.get('user_name') if resolving else None
+    db.session.commit()
+    flash('Marked done — moved to the Done filter.' if resolving else 'Conversation reopened.')
+    return redirect(request.referrer or url_for('whatsapp_inbox'))
 
 @app.route('/whatsapp/<wa_id>/bot-toggle', methods=['POST'])
 @login_required

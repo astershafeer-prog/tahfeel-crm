@@ -270,6 +270,11 @@ AI_SYSTEM_PROMPT = (
     "exact figures. Do not promise guaranteed approvals. If the customer asks for a human, is "
     "upset, or the matter is complex/sensitive, tell them you're connecting them with a Tahfeel "
     "team member who will reply here shortly. Contact: info@tahfeel.ae, +971 4 585 5033.\n\n"
+    "HAND-OVER SIGNAL: Whenever you tell the customer that a Tahfeel specialist or team member will "
+    "take over or follow up — i.e. they ask for a human, they are upset, the matter is complex or "
+    "sensitive, or they are ready to proceed / want to get started — append the exact text "
+    "[[HANDOVER]] as the very last line of your reply. The system removes this marker before the "
+    "customer ever sees it. Never mention it, and never add it in any other situation.\n\n"
     "Output only the message to send to the customer — no preamble, no quotation marks, no notes "
     "about your reasoning."
 )
@@ -306,19 +311,68 @@ def ai_reply(wa_id, text, is_first):
         messages=history,
     )
     out = ''.join(b.text for b in resp.content if b.type == 'text').strip()
-    return out or None
+    handover = '[[HANDOVER]]' in out
+    out = out.replace('[[HANDOVER]]', '').strip()
+    return (out or None), handover
 
 def decide_reply(wa_id, text, is_first):
-    """Return the bot's reply. Uses Claude when an API key is present and
-    WA_AI_ENABLED is on; otherwise (or on any AI error) falls back to the menu."""
+    """Return (reply, handover). Uses Claude when an API key is present and
+    WA_AI_ENABLED is on; otherwise (or on any AI error) falls back to the menu.
+    handover=True means the AI decided a human should take over."""
     if os.environ.get('ANTHROPIC_API_KEY') and _flag('WA_AI_ENABLED', 'true'):
         try:
-            r = ai_reply(wa_id, text, is_first)
+            r, handover = ai_reply(wa_id, text, is_first)
             if r:
-                return r
+                return r, handover
         except Exception as e:
             print(f'[WA] AI reply failed ({e}); falling back to scripted menu')
-    return _menu_reply(wa_id, text, is_first)
+    return _menu_reply(wa_id, text, is_first), False
+
+def do_handover(wa_id):
+    """The AI decided a human should take over: assign the chat to a rep and pause
+    the bot. For a brand-new prospect, create a round-robin Lead (same as Meta) so
+    the rep gets the new-lead bell alert; known contacts route to their own rep."""
+    from app import db, WhatsAppMessage, WhatsAppThread, Lead, Customer, LeadUpdate, User
+    key = normalize_phone(wa_id)
+    lead_id, customer_id = find_contact(wa_id)
+    rep_id = None
+    if customer_id:
+        c = Customer.query.get(customer_id)
+        rep_id = c.assigned_to if c else None
+    elif lead_id:
+        l = Lead.query.get(lead_id)
+        rep_id = l.assigned_to if l else None
+    else:
+        # unknown number → create a round-robin lead so the assigned rep is alerted
+        try:
+            from meta_webhook import get_next_sales_staff
+            assigned = get_next_sales_staff(db, User, Lead)
+        except Exception:
+            assigned = None
+        cname = next((m.contact_name for m in WhatsAppMessage.query.filter_by(wa_id=key).all()
+                      if m.contact_name), None) or f'WhatsApp {key}'
+        lead = Lead(name=cname.title(), phone=key, source='WhatsApp - AI Bot', sub_source='WhatsApp Bot',
+                    lead_type='New', status='New', assigned_to=(assigned.id if assigned else None),
+                    created_at=now_dubai(), due_date=now_dubai() + timedelta(days=1),
+                    remarks='Bot handed the conversation over to a human.')
+        db.session.add(lead)
+        db.session.flush()
+        WhatsAppMessage.query.filter_by(wa_id=key).update({'lead_id': lead.id})
+        db.session.add(LeadUpdate(lead_id=lead.id, stage='New — WhatsApp',
+            remark='Bot handed the conversation to a human.',
+            staff_name='System (WhatsApp Bot)', created_at=now_dubai()))
+        rep_id = lead.assigned_to
+    thread = WhatsAppThread.query.get(key)
+    if not thread:
+        thread = WhatsAppThread(wa_id=key)
+        db.session.add(thread)
+    if rep_id:
+        thread.assigned_to = rep_id
+        thread.assigned_at = now_dubai()
+    thread.bot_paused = True
+    thread.bot_paused_by = 'AI hand-over'
+    db.session.commit()
+    print(f'[WA] Hand-over for {key} → rep {rep_id}; bot paused')
 
 
 # ── Incoming message handling ─────────────────────────────────────────────────
@@ -375,10 +429,15 @@ def handle_incoming(msg, contacts):
     if thread and thread.bot_paused:
         print(f'[WA] Bot paused for {wa_id} (human takeover) — logged inbound, no reply sent')
         return
-    reply = decide_reply(wa_id, body, is_first)
+    reply, handover = decide_reply(wa_id, body, is_first)
     if reply:
         out_wam = send_text(wa_id, reply)
         log_message(wa_id, 'out', reply, wam_id=out_wam, handled_by='bot', status='sent')
+    if handover:
+        try:
+            do_handover(wa_id)
+        except Exception as e:
+            print(f'[WA] hand-over failed: {e}')
 
 def handle_status(st):
     """Delivery receipts for our outbound messages (sent/delivered/read/failed)."""

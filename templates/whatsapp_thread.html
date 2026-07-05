@@ -59,6 +59,9 @@
             {% if bot_paused %}⏸ Bot Paused{% else %}🤖 Bot Active{% endif %}
           </button>
         </form>
+        <form method="POST" action="/whatsapp/{{ wa_id }}/done" style="display:inline;">
+          <button type="submit" title="{{ 'Reopen this conversation' if resolved else 'Mark done — moves it out of the active inbox' }}" style="font-size:11px;border:1px solid {{ '#CBD5E1' if resolved else '#16A34A' }};background:{{ '#F1F5F9' if resolved else '#fff' }};color:{{ '#64748B' if resolved else '#16A34A' }};border-radius:20px;padding:4px 12px;cursor:pointer;">{{ '↩ Reopen' if resolved else '✓ Done' }}</button>
+        </form>
         <form method="POST" action="/whatsapp/{{ wa_id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this entire conversation? This cannot be undone.');">
           <button type="submit" title="Delete conversation" style="background:none;border:none;color:#DC2626;font-size:16px;cursor:pointer;padding:4px;">🗑</button>
         </form>

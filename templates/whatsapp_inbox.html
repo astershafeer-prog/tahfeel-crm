@@ -41,7 +41,7 @@
     <!-- Search + filter tabs -->
     <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div style="display:flex;gap:6px;">
-        {% set tabs = [('all','All',counts.all), ('unread','Unread',counts.unread), ('mine','Mine',counts.mine), ('unmatched','Unmatched',counts.unmatched)] %}
+        {% set tabs = [('unread','Unread',counts.unread), ('mine','Mine',counts.mine), ('unmatched','Unmatched',counts.unmatched), ('done','Done',counts.done), ('all','All',counts.all)] %}
         {% for key, label, c in tabs %}
         <a href="/whatsapp?filter={{ key }}{% if q %}&q={{ q }}{% endif %}"
            style="font-size:13px;padding:6px 14px;border-radius:20px;text-decoration:none;
@@ -97,6 +97,9 @@
             </select>
           </form>
           {% if t.unread %}<span style="background:#25D366;color:white;font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;min-width:20px;text-align:center;flex-shrink:0;">{{ t.unread }}</span>{% endif %}
+          <form method="POST" action="/whatsapp/{{ t.wa_id }}/done" onclick="event.stopPropagation();" style="flex-shrink:0;margin:0;">
+            <button type="submit" title="{{ 'Reopen this conversation' if t.resolved else 'Mark done — move out of the active list' }}" style="font-size:11px;border:1px solid {{ '#CBD5E1' if t.resolved else '#16A34A' }};background:{{ '#F1F5F9' if t.resolved else '#fff' }};color:{{ '#64748B' if t.resolved else '#16A34A' }};border-radius:20px;padding:4px 10px;cursor:pointer;">{{ '↩ Reopen' if t.resolved else '✓ Done' }}</button>
+          </form>
         </div>
         {% endfor %}
       {% endif %}
