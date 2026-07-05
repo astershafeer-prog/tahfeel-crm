@@ -5463,6 +5463,11 @@ def init_db():
                 db.session.add(Source(name='Meta'))
                 db.session.commit()
                 print("Ensured 'Meta' source exists")
+            # Source for leads converted from a WhatsApp bot conversation
+            if not Source.query.filter_by(name='WhatsApp - AI Bot').first():
+                db.session.add(Source(name='WhatsApp - AI Bot'))
+                db.session.commit()
+                print("Ensured 'WhatsApp - AI Bot' source exists")
             # Starter WhatsApp templates — seeded INACTIVE; admin activates each one
             # after creating + approving the same name/wording in Meta Business Manager
             if MessageTemplate.query.count() == 0:
@@ -6804,7 +6809,7 @@ def whatsapp_convert(wa_id):
             f'WhatsApp {wa_id}')
     assigned = get_next_sales_staff(db, User, Lead)
     lead = Lead(
-        name=name.title(), phone=wa_id, source='WhatsApp', sub_source='WhatsApp Bot',
+        name=name.title(), phone=wa_id, source='WhatsApp - AI Bot', sub_source='WhatsApp Bot',
         lead_type='New', status='New', representative=session.get('user_name'),
         assigned_to=assigned.id if assigned else None,
         created_at=now_dubai(), due_date=now_dubai() + timedelta(days=1),

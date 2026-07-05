@@ -41,7 +41,7 @@
           <div class="form-row-2" style="gap:12px;">
             <div>
               <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Full Name</div>
-              <div style="font-size:14px;font-weight:600;color:var(--text-primary);">{{ lead.name }}</div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-primary);">{{ lead.name }}{% if lead.source and 'WhatsApp' in lead.source %} <span title="Started from a WhatsApp — AI Bot conversation" style="font-size:13px;">💬</span>{% endif %}</div>
             </div>
             <div>
               <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Company</div>

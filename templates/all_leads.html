@@ -173,6 +173,7 @@
                           <span title="Future lead — parked until {{ lead.due_date.strftime('%d %b %Y') if lead.due_date else '' }}" style="font-size:12px;margin-left:4px;">🔮</span>
                         {% endif %}
                       {% endif %}
+                      {% if lead.source and 'WhatsApp' in lead.source %}<span title="Started from a WhatsApp — AI Bot conversation" style="font-size:12px;margin-left:4px;">💬</span>{% endif %}
                     </div>
                     {% if lead.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ lead.company }}</div>{% endif %}
                   </td>
