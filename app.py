@@ -1402,10 +1402,17 @@ def all_leads():
         leads = [l for l in leads if l.assigned_to == user_id]
 
     if search:
-        leads = [l for l in leads if
-                 search in (l.name or '').lower() or
-                 search in (l.phone or '').lower() or
-                 search in (l.company or '').lower()]
+        sdigits = ''.join(ch for ch in search if ch.isdigit())
+        def _lmatch(l):
+            if search in (l.name or '').lower() or search in (l.company or '').lower():
+                return True
+            # digits-only phone match, so a partial number works despite spaces/+ formatting
+            if sdigits:
+                for p in (l.phone, getattr(l, 'phone2', None)):
+                    if p and sdigits in ''.join(ch for ch in p if ch.isdigit()):
+                        return True
+            return False
+        leads = [l for l in leads if _lmatch(l)]
 
     if is_default:
         # Default: show this week's leads
@@ -1798,6 +1805,7 @@ def delete_lead(lead_id):
     LeadUpdate.query.filter_by(lead_id=lead_id).delete()
     # Unlink (don't delete) records that reference this lead but can outlive it —
     # otherwise the DB foreign key blocks deletion with an error.
+    Customer.query.filter_by(lead_id=lead_id).update({'lead_id': None})
     WhatsAppMessage.query.filter_by(lead_id=lead_id).update({'lead_id': None})
     Task.query.filter_by(lead_id=lead_id).update({'lead_id': None})
     db.session.delete(lead)
@@ -1821,12 +1829,12 @@ def bulk_delete_leads():
     for lead_id in ids:
         lead = Lead.query.get(int(lead_id))
         if lead:
-            # Skip converted leads
-            if lead.status == 'Converted':
-                customer = Customer.query.filter_by(lead_id=lead.id).first()
-                if customer:
-                    skipped += 1
-                    continue
+            # Keep converted leads that still own a real customer record
+            if lead.status == 'Converted' and Customer.query.filter_by(lead_id=lead.id).first():
+                skipped += 1
+                continue
+            # Unlink everything that references this lead so the FK doesn't block delete
+            Customer.query.filter_by(lead_id=lead.id).update({'lead_id': None})
             LeadUpdate.query.filter_by(lead_id=lead.id).delete()
             WhatsAppMessage.query.filter_by(lead_id=lead.id).update({'lead_id': None})
             Task.query.filter_by(lead_id=lead.id).update({'lead_id': None})
@@ -2420,10 +2428,16 @@ def customers():
                 except: pass
         customer_list = Customer.query.order_by(Customer.created_at.desc()).all()
         if search:
-            customer_list = [c for c in customer_list if
-                search in (c.name or '').lower() or
-                search in (c.company or '').lower() or
-                search in (c.phone or '').lower()]
+            csdigits = ''.join(ch for ch in search if ch.isdigit())
+            def _cmatch(c):
+                if search in (c.name or '').lower() or search in (c.company or '').lower():
+                    return True
+                if csdigits:
+                    for p in (c.phone, c.phone2, c.mobile, c.whatsapp):
+                        if p and csdigits in ''.join(ch for ch in p if ch.isdigit()):
+                            return True
+                return False
+            customer_list = [c for c in customer_list if _cmatch(c)]
         if birthday_filter == 'today':
             customer_list = [c for c in customer_list if c.date_of_birth and
                              c.date_of_birth.month == now.month and
