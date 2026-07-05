@@ -343,25 +343,21 @@ def do_handover(wa_id):
         l = Lead.query.get(lead_id)
         rep_id = l.assigned_to if l else None
     else:
-        # unknown number → create a round-robin lead so the assigned rep is alerted
-        try:
-            from meta_webhook import get_next_sales_staff
-            assigned = get_next_sales_staff(db, User, Lead)
-        except Exception:
-            assigned = None
-        cname = next((m.contact_name for m in WhatsAppMessage.query.filter_by(wa_id=key).all()
-                      if m.contact_name), None) or f'WhatsApp {key}'
-        lead = Lead(name=cname.title(), phone=key, source='WhatsApp - AI Bot', sub_source='WhatsApp Bot',
-                    lead_type='New', status='New', assigned_to=(assigned.id if assigned else None),
-                    created_at=now_dubai(), due_date=now_dubai() + timedelta(days=1),
-                    remarks='Bot handed the conversation over to a human.')
-        db.session.add(lead)
-        db.session.flush()
-        WhatsAppMessage.query.filter_by(wa_id=key).update({'lead_id': lead.id})
-        db.session.add(LeadUpdate(lead_id=lead.id, stage='New — WhatsApp',
-            remark='Bot handed the conversation to a human.',
-            staff_name='System (WhatsApp Bot)', created_at=now_dubai()))
-        rep_id = lead.assigned_to
+        # unknown number → round-robin assign the CHAT to a sales rep (NO lead yet).
+        # The rep reviews the conversation and clicks "Convert to Lead" for genuine ones.
+        # Rotation = least-recently-assigned active sales rep (on-leave staff skipped).
+        sales = User.query.filter(User.active == True, User.on_leave == False,
+                                  User.role == 'sales').order_by(User.id).all()
+        if not sales:
+            sales = User.query.filter(User.active == True, User.role == 'sales').order_by(User.id).all()
+        rep_id = None
+        if sales:
+            def _last_chat(s):
+                t = (WhatsAppThread.query.filter_by(assigned_to=s.id)
+                     .filter(WhatsAppThread.assigned_at.isnot(None))
+                     .order_by(WhatsAppThread.assigned_at.desc()).first())
+                return t.assigned_at if t else datetime.min
+            rep_id = min(sales, key=_last_chat).id
     thread = WhatsAppThread.query.get(key)
     if not thread:
         thread = WhatsAppThread(wa_id=key)

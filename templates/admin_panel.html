@@ -91,7 +91,7 @@
               <td><strong>{{ user.name }}</strong></td>
               <td style="color:var(--text-muted);font-size:12px;">{{ user.email }}</td>
               <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span>{% if user.is_super %} <span class="badge" style="background:#7C3AED;color:#fff;" title="Super Admin — can manage all accounts">★ Super</span>{% endif %}</td>
-              <td><span class="badge {{ 'badge-active' if user.active else 'badge-inactive' }}">{{ 'Active' if user.active else 'Inactive' }}</span></td>
+              <td><span class="badge {{ 'badge-active' if user.active else 'badge-inactive' }}">{{ 'Active' if user.active else 'Inactive' }}</span>{% if user.on_leave %} <span class="badge" style="background:#FEF3C7;color:#B45309;" title="Skipped in lead round-robin">🏖 On Leave</span>{% endif %}</td>
               <td>
                 {% if (user.role == 'admin' or user.is_super) and not session.is_super %}
                   <span style="font-size:12px;color:var(--text-muted);">Protected</span>
@@ -101,6 +101,11 @@
                   {% if user.id != session.user_id %}
                   <a href="/admin/staff/{{ user.id }}/toggle" class="btn-sm" style="border-color:{{ 'var(--danger)' if user.active else 'var(--success)' }};color:{{ 'var(--danger)' if user.active else 'var(--success)' }};">
                     {{ 'Deactivate' if user.active else 'Activate' }}
+                  </a>
+                  {% endif %}
+                  {% if user.role == 'sales' %}
+                  <a href="/admin/staff/{{ user.id }}/toggle-leave" class="btn-sm" style="border-color:{{ '#16A34A' if user.on_leave else '#F59E0B' }};color:{{ '#16A34A' if user.on_leave else '#B45309' }};" title="{{ 'Bring back into lead round-robin' if user.on_leave else 'Skip in lead round-robin while away' }}">
+                    {{ '✓ Back' if user.on_leave else '🏖 On leave' }}
                   </a>
                   {% endif %}
                 </div>

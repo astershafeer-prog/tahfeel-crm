@@ -6898,11 +6898,16 @@ def whatsapp_convert(wa_id):
     name = (request.form.get('name') or
             next((m.contact_name for m in WhatsAppMessage.query.filter_by(wa_id=wa_id).all() if m.contact_name), None) or
             f'WhatsApp {wa_id}')
-    assigned = get_next_sales_staff(db, User, Lead)
+    # Keep the lead with the rep already handling this chat (the reviewer); else round-robin.
+    thread = WhatsAppThread.query.get(wa_id)
+    rep_id = thread.assigned_to if (thread and thread.assigned_to) else None
+    if not rep_id:
+        assigned = get_next_sales_staff(db, User, Lead)
+        rep_id = assigned.id if assigned else None
     lead = Lead(
         name=name.title(), phone=wa_id, source='WhatsApp - AI Bot', sub_source='WhatsApp Bot',
         lead_type='New', status='New', representative=session.get('user_name'),
-        assigned_to=assigned.id if assigned else None,
+        assigned_to=rep_id,
         created_at=now_dubai(), due_date=now_dubai() + timedelta(days=1),
         remarks='Created from WhatsApp conversation.',
     )
