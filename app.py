@@ -5543,6 +5543,17 @@ def init_db():
             if _fu and _fu.category != 'Marketing':
                 _fu.category = 'Marketing'
             db.session.commit()
+            # Re-engagement template for winning back Lost leads (seeded inactive)
+            if not MessageTemplate.query.filter_by(meta_name='tahfeel_reengage_v1').first():
+                db.session.add(MessageTemplate(
+                    label='Re-engage lost lead', meta_name='tahfeel_reengage_v1',
+                    category='Marketing', var_fields='first_name',
+                    body_preview='Dear {{1}}, we noticed you enquired with Tahfeel Business Setup '
+                                 'Services some time ago.\n\nAre you still interested? Simply reply '
+                                 'to this message and our team will be happy to help you get started.',
+                    active=False))
+                db.session.commit()
+                print('Seeded re-engage template (inactive)')
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(ServiceType(name=jt))
@@ -6603,6 +6614,7 @@ def _run_broadcast(app_obj, broadcast_id, recipients, template_id, custom_vars, 
 def whatsapp_broadcast_send():
     import threading
     from whatsapp_webhook import normalize_phone
+    back = request.form.get('return_url') or url_for('whatsapp_broadcast')
     tpl = MessageTemplate.query.get_or_404(request.form.get('template_id', type=int))
     custom_vars = []
     i = 1
@@ -6635,7 +6647,7 @@ def whatsapp_broadcast_send():
                            'company': (ext_comps[idx] if idx < len(ext_comps) else '')})
     if not recipients:
         flash('No recipients with a WhatsApp number were selected.', 'error')
-        return redirect(url_for('whatsapp_broadcast'))
+        return redirect(back)
     # Daily-cap guard (Meta limits business-initiated conversations per 24h)
     daily_cap = int(os.environ.get('WA_DAILY_CAP', '250'))
     today_sent = WhatsAppMessage.query.filter(
@@ -6645,7 +6657,7 @@ def whatsapp_broadcast_send():
     if today_sent + len(recipients) > daily_cap:
         flash(f'This send ({len(recipients)}) would exceed today\'s cap of {daily_cap} '
               f'({today_sent} already sent). Reduce the list or raise WA_DAILY_CAP.', 'error')
-        return redirect(url_for('whatsapp_broadcast'))
+        return redirect(back)
     bc = Broadcast(template_id=tpl.id, template_label=tpl.label,
                    filter_summary=(request.form.get('filter_summary') or '')[:400],
                    total=len(recipients), sent=0, failed=0, status='sending',
@@ -6657,7 +6669,48 @@ def whatsapp_broadcast_send():
                      daemon=True).start()
     flash(f'Broadcast started — sending "{tpl.label}" to {len(recipients)} recipients. '
           f'Progress updates below.')
-    return redirect(url_for('whatsapp_broadcast'))
+    return redirect(back)
+
+@app.route('/whatsapp/reengage')
+@login_required
+@admin_required
+def whatsapp_reengage():
+    """Win-back tool: filter LOST leads (excluding junk) by date range and send an
+    approved re-engagement template. Reuses the broadcast send path (leads are
+    submitted as external recipients; replies auto-link to the lead by phone)."""
+    applied = bool(request.args.get('apply'))
+    leads = []
+    if applied:
+        q = Lead.query.filter(Lead.status == 'Lost')
+        q = q.filter(db.or_(Lead.genuine.is_(None), Lead.genuine != 'Junk'))  # skip junk
+        q = q.filter(Lead.phone.isnot(None), Lead.phone != '')
+        df = (request.args.get('from') or '').strip()
+        dt = (request.args.get('to') or '').strip()
+        if df:
+            try:
+                q = q.filter(Lead.created_at >= datetime.strptime(df, '%Y-%m-%d'))
+            except Exception:
+                pass
+        if dt:
+            try:
+                q = q.filter(Lead.created_at < datetime.strptime(dt, '%Y-%m-%d') + timedelta(days=1))
+            except Exception:
+                pass
+        src = (request.args.get('source') or '').strip()
+        if src and src != 'All':
+            q = q.filter(Lead.source == src)
+        leads = q.order_by(Lead.created_at.desc()).all()
+    sources = sorted({r[0] for r in db.session.query(Lead.source)
+                      .filter(Lead.source.isnot(None), Lead.source != '').distinct().all()})
+    daily_cap = int(os.environ.get('WA_DAILY_CAP', '250'))
+    today_sent = WhatsAppMessage.query.filter(
+        WhatsAppMessage.direction == 'out', WhatsAppMessage.msg_type == 'template',
+        WhatsAppMessage.created_at >= now_dubai().replace(hour=0, minute=0, second=0, microsecond=0)
+    ).count()
+    recent = Broadcast.query.order_by(Broadcast.created_at.desc()).limit(6).all()
+    return render_template('reengage.html', applied=applied, args=request.args, leads=leads,
+                           templates=wa_send_context(), sources=sources,
+                           today_sent=today_sent, daily_cap=daily_cap, recent=recent, now=now_dubai())
 
 @app.route('/whatsapp/<wa_id>/bot-toggle', methods=['POST'])
 @login_required

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Re-engage Lost Leads</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('whatsapp') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'warning' %}warning{% elif cat == 'error' %}error{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="margin-bottom:12px;"><a href="/whatsapp" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to WhatsApp</a></div>
+    <div class="page-header"><h2>♻️ Re-engage Lost Leads</h2></div>
+
+    <div style="font-size:12.5px;color:#475569;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:10px 14px;margin-bottom:14px;line-height:1.6;">
+      Win back leads marked <strong>Lost</strong> (junk leads are automatically excluded) by sending an approved
+      re-engagement template. Today: <strong>{{ today_sent }}</strong> of <strong>{{ daily_cap }}</strong> daily messages used.
+      {% if not templates %}<br><span style="color:#991B1B;">No active templates yet — <a href="/whatsapp/templates" style="color:#1A3B8B;">activate one first</a> (e.g. Re-engage lost lead).</span>{% endif %}
+    </div>
+
+    <form method="GET" action="/whatsapp/reengage" style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:16px 18px;margin-bottom:16px;">
+      <input type="hidden" name="apply" value="1">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
+        <div><label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Lost between — from</label>
+          <input type="date" name="from" value="{{ args.get('from','') }}" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <div><label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">to</label>
+          <input type="date" name="to" value="{{ args.get('to','') }}" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <div><label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Source</label>
+          <select name="source" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;"><option value="All">All</option>
+            {% for s in sources %}<option value="{{ s }}" {{ 'selected' if args.get('source')==s }}>{{ s }}</option>{% endfor %}
+          </select></div>
+      </div>
+      <button type="submit" style="background:#1A3B8B;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;font-size:13px;cursor:pointer;">🔍 Find lost leads</button>
+    </form>
+
+    {% if applied %}
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+      <span style="background:#E6EEFF;color:#1A3B8B;font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;">{{ leads|length }} lost lead{{ 's' if leads|length != 1 }} with a phone number</span>
+    </div>
+
+    {% if leads %}
+    <form method="POST" action="/whatsapp/broadcast/send" id="rgSend">
+      <input type="hidden" name="return_url" value="/whatsapp/reengage">
+      <input type="hidden" name="filter_summary" value="Re-engage Lost{% if args.get('from') %} from {{ args.get('from') }}{% endif %}{% if args.get('to') %} to {{ args.get('to') }}{% endif %}{% if args.get('source') and args.get('source')!='All' %} · {{ args.get('source') }}{% endif %}">
+
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:14px;">
+        <div style="padding:10px 16px;border-bottom:1px solid #F1F5F9;font-size:12px;color:#64748B;display:flex;align-items:center;gap:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="rgAll" checked onchange="rgToggleAll(this)"> Select all</label>
+          <span style="color:#94A3B8;">Remove anyone with the ✕</span>
+          <span id="rgCount" style="margin-left:auto;font-weight:600;color:#1A3B8B;"></span>
+        </div>
+        <div style="max-height:380px;overflow-y:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:#F8FAFC;color:#94A3B8;font-size:11px;text-align:left;">
+              <th style="padding:6px 16px;width:28px;"></th><th style="padding:6px 8px;">Lead</th>
+              <th style="padding:6px 8px;">Service</th><th style="padding:6px 8px;">Source</th>
+              <th style="padding:6px 8px;">Rep</th><th style="padding:6px 8px;">Lost on</th>
+              <th style="padding:6px 8px;text-align:right;">Phone</th><th style="padding:6px 16px;width:34px;"></th>
+            </tr></thead>
+            <tbody>
+            {% for l in leads %}
+            {% set _fn = (l.name or '') %}
+            <tr class="rgTr" id="rgTr-{{ l.id }}" data-phone="{{ l.phone }}" data-first="{{ _fn.split()[0] if _fn else '' }}" data-company="{{ l.company or '' }}" style="border-bottom:1px solid #F1F5F9;">
+              <td style="padding:8px 16px;width:28px;"><input type="checkbox" class="rgRow" checked onchange="rgRecount()"></td>
+              <td style="padding:8px 8px;"><a href="/leads/{{ l.id }}" style="color:#0F2660;text-decoration:none;font-weight:600;">{{ l.name }}</a>{% if l.company %} <span style="color:#94A3B8;">· {{ l.company }}</span>{% endif %}</td>
+              <td style="padding:8px 8px;color:#64748B;">{{ l.service or '—' }}</td>
+              <td style="padding:8px 8px;color:#64748B;">{{ l.source or '—' }}</td>
+              <td style="padding:8px 8px;color:#64748B;">{{ l.rep.name if l.rep else '—' }}</td>
+              <td style="padding:8px 8px;color:#64748B;white-space:nowrap;">{{ l.created_at.strftime('%d %b %Y') if l.created_at else '—' }}</td>
+              <td style="padding:8px 8px;color:#64748B;text-align:right;white-space:nowrap;">{{ l.phone }}</td>
+              <td style="padding:8px 16px;text-align:right;"><span onclick="rgRemove({{ l.id }})" title="Remove" style="cursor:pointer;color:#DC2626;font-weight:700;">✕</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% if templates %}
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:16px 18px;">
+        <label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Template</label>
+        <select name="template_id" id="rgTpl" onchange="rgTplChanged()" style="width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+          {% for t in templates %}<option value="{{ t.id }}" {{ 'selected' if t.body and 'still interested' in t.body }}>{{ t.label }} ({{ t.category }})</option>{% endfor %}
+        </select>
+        <div id="rgCustomVars" style="margin-top:12px;"></div>
+        <div style="margin-top:12px;">
+          <label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Preview (first lead)</label>
+          <div id="rgPreview" style="background:#DCF8C6;border-radius:12px;border-bottom-right-radius:2px;padding:10px 14px;font-size:13px;color:#1B3A1B;line-height:1.6;white-space:pre-wrap;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px;flex-wrap:wrap;">
+          <div style="font-size:11px;color:#94A3B8;">Sent from the business number. Replies land in your inbox and link back to the lead.</div>
+          <button type="submit" onclick="return rgConfirm()" style="background:#25D366;color:white;border:none;border-radius:20px;padding:10px 24px;font-weight:700;font-size:14px;cursor:pointer;">♻️ Send re-engagement</button>
+        </div>
+      </div>
+      {% else %}
+      <div style="background:#FEF3C7;color:#854F0B;border-radius:10px;padding:14px;font-size:13px;">Review the list above. To send, <a href="/whatsapp/templates" style="color:#1A3B8B;">activate a template first →</a></div>
+      {% endif %}
+    </form>
+    {% else %}
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;text-align:center;color:#64748B;font-size:13px;">No lost leads match — try widening the date range.</div>
+    {% endif %}
+    {% endif %}
+
+    {% if recent %}
+    <div style="margin-top:22px;">
+      <div style="font-weight:700;color:#0F2660;font-size:14px;margin-bottom:8px;">Recent sends</div>
+      <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;overflow:hidden;">
+        {% for b in recent %}
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #F1F5F9;font-size:13px;">
+          <div style="flex:1;min-width:0;"><strong style="color:#0F2660;">{{ b.template_label }}</strong>
+            <span style="color:#94A3B8;font-size:11px;">· {{ b.created_at.strftime('%d %b %H:%M') }}{% if b.filter_summary %} · {{ b.filter_summary }}{% endif %}</span></div>
+          <div style="text-align:right;white-space:nowrap;">
+            {% if b.status == 'sending' %}<span style="color:#B45309;font-size:12px;">⏳ {{ b.sent }}/{{ b.total }}</span>
+            {% else %}<span style="color:#166534;font-size:12px;">✓ {{ b.sent }} sent</span>{% if b.failed %} <span style="color:#991B1B;font-size:12px;">· {{ b.failed }} failed</span>{% endif %}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="font-size:11px;color:#94A3B8;margin-top:6px;">Refresh to update sending progress.</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    var RG_TPLS = {{ templates|tojson }};
+    var RG_O='{'+'{', RG_C='}'+'}';
+    function rgToggleAll(cb){ document.querySelectorAll('.rgTr:not(.rgGone) .rgRow').forEach(function(r){ r.checked=cb.checked; }); rgRecount(); }
+    function rgRecount(){ var n=document.querySelectorAll('.rgRow:checked').length; var el=document.getElementById('rgCount'); if(el) el.textContent=n+' selected'; }
+    function rgRemove(id){ var tr=document.getElementById('rgTr-'+id); if(!tr) return; var cb=tr.querySelector('.rgRow'); if(cb) cb.checked=false; tr.classList.add('rgGone'); tr.style.display='none'; rgRecount(); }
+    function rgCur(){ var s=document.getElementById('rgTpl'); if(!s) return null; var id=parseInt(s.value,10); for(var i=0;i<RG_TPLS.length;i++) if(RG_TPLS[i].id===id) return RG_TPLS[i]; return null; }
+    function rgFirst(){ var cbs=document.querySelectorAll('.rgRow:checked'); for(var i=0;i<cbs.length;i++){ var tr=cbs[i].closest('.rgTr'); if(tr && tr.style.display!=='none') return {first:tr.getAttribute('data-first')||'', company:tr.getAttribute('data-company')||''}; } return {first:'',company:''}; }
+    function rgTplChanged(){ var t=rgCur(); if(!t) return; var w=document.getElementById('rgCustomVars'); w.innerHTML=''; var ci=0;
+      t.params.forEach(function(p, idx){ if(p.key!=='custom') return; ci++;
+        var d=document.createElement('div'); d.style.marginBottom='8px';
+        var l=document.createElement('label'); l.textContent=RG_O+p.n+RG_C+' Custom text'; l.style.cssText='font-size:11px;color:#64748B;display:block;margin-bottom:3px;';
+        var i=document.createElement('input'); i.type='text'; i.name='custom_'+ci; i.required=true; i.placeholder='Text sent to everyone';
+        i.style.cssText='width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;';
+        i.addEventListener('input', rgPreview); d.appendChild(l); d.appendChild(i); w.appendChild(d);
+      }); rgPreview();
+    }
+    function rgPreview(){ var t=rgCur(); if(!t) return; var fr=rgFirst(); var body=t.body, ci=0;
+      t.params.forEach(function(p){ var v; if(p.key==='custom'){ ci++; var inp=document.querySelector('[name="custom_'+ci+'"]'); v=inp&&inp.value.trim()?inp.value:'________'; } else if(p.key==='first_name'||p.key==='full_name'){ v=fr.first||'________'; } else if(p.key==='company'){ v=fr.company||'________'; } else { v='(auto)'; }
+        body=body.split(RG_O+p.n+RG_C).join(v); });
+      document.getElementById('rgPreview').textContent=body;
+    }
+    function rgConfirm(){
+      var form=document.getElementById('rgSend');
+      form.querySelectorAll('.rg-ext-hidden').forEach(function(e){ e.remove(); });
+      var n=document.querySelectorAll('.rgRow:checked').length;
+      if(n===0){ alert('Select at least one lead.'); return false; }
+      document.querySelectorAll('.rgTr').forEach(function(tr){
+        if(tr.style.display==='none') return; var cb=tr.querySelector('.rgRow'); if(!cb||!cb.checked) return;
+        ['phone','first','company'].forEach(function(k){ var inp=document.createElement('input'); inp.type='hidden'; inp.className='rg-ext-hidden'; inp.name='ext_'+k; inp.value=tr.getAttribute('data-'+k)||''; form.appendChild(inp); });
+      });
+      return confirm('Send the re-engagement message to ' + n + ' lost lead' + (n!==1?'s':'') + '?');
+    }
+    rgRecount(); rgTplChanged();
+  </script>
+</body>
+</html>

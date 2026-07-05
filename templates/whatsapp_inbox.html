@@ -27,6 +27,7 @@
         <button type="button" onclick="openNewMsg()" style="background:#25D366;color:white;border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">✉ New message</button>
         {% endif %}
         {% if session.role == 'admin' %}
+        <a href="/whatsapp/reengage" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">♻️ Re-engage</a>
         <a href="/whatsapp/broadcast" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📢 Broadcast</a>
         <a href="/whatsapp/templates" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📨 Templates</a>
         {% endif %}
