@@ -428,6 +428,23 @@
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header"><h2>Add Update</h2></div>
       <div class="card-body">
+        {% set _wanum = (job.customer.whatsapp or job.customer.mobile or job.customer.phone or job.customer.phone2 or '')|replace(' ','')|replace('+','') %}
+        {% if _wanum %}
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px dashed #E2E8F0;">
+          <span style="font-size:11px;color:#64748B;font-weight:600;">Message customer:</span>
+          {% if wa_templates %}<button type="button" onclick="openWaSend()" class="btn-sm" style="background:#128C7E;color:#fff;border-color:#128C7E;">📨 Template</button>{% endif %}
+          {% if quick_replies %}
+          <select onchange="if(this.value){window.open(this.value,'_blank');this.selectedIndex=0;}" class="btn-sm" style="max-width:220px;cursor:pointer;">
+            <option value="">💬 Quick message (Web)…</option>
+            {% for r in quick_replies %}
+            <option value="https://wa.me/{{ _wanum }}?text={{ ('Dear ' + (job.customer.name.split()[0] if job.customer.name else 'Sir/Madam') + ',\n\n' + r.body)|urlencode }}">{{ r.label }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
+          <a href="javascript:void(0)" onclick="sendWA()" class="btn-sm" style="background:#25D366;color:#fff;border-color:#25D366;">💬 Web</a>
+          <span style="font-size:10px;color:#94A3B8;">Template = business number (logged) · Web = your own number (for the group)</span>
+        </div>
+        {% endif %}
         <form method="post">
           <div class="form-row-2">
             <div class="form-group">

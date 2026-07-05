@@ -3255,11 +3255,14 @@ def job_detail(job_id):
     # All jobs for same customer (for multi-task timeline)
     sibling_jobs = Job.query.filter_by(customer_id=job.customer_id).order_by(Job.created_at.asc()).all()
     partners = Partner.query.filter_by(active=True).order_by(Partner.name).all()
+    quick_replies = QuickReply.query.filter(
+        (QuickReply.staff_id == session.get('user_id')) | (QuickReply.is_global == True)
+    ).order_by(QuickReply.label).all()
     return render_template('job_detail.html', job=job, now=now,
                            statuses=JOB_STATUSES, users=users,
                            service_types=service_types, timedelta=timedelta,
                            sibling_jobs=sibling_jobs, partners=partners,
-                           wa_templates=wa_send_context(job=job))
+                           wa_templates=wa_send_context(job=job), quick_replies=quick_replies)
 
 @app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
 @login_required
