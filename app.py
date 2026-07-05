@@ -2812,14 +2812,33 @@ def disable_all_alerts():
 @admin_required
 def delete_customer(customer_id):
     customer = Customer.query.get_or_404(customer_id)
-    # Only delete if no jobs linked
+    # Only delete if no jobs linked (tasks carry finance/revenue — remove them first)
     if customer.jobs:
         flash('Cannot delete customer with existing tasks. Remove tasks first.')
         return redirect(url_for('customer_detail', customer_id=customer_id))
-    Document.query.filter_by(customer_id=customer_id).delete()
-    db.session.delete(customer)
-    db.session.commit()
-    flash('Customer deleted')
+    try:
+        company_ids = [c.id for c in Company.query.filter_by(customer_id=customer_id).all()]
+        employee_ids = [e.id for e in Employee.query.filter_by(customer_id=customer_id).all()]
+        # 1) documents attached to the customer, its companies, and its employees
+        Document.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
+        if company_ids:
+            Document.query.filter(Document.company_id.in_(company_ids)).delete(synchronize_session=False)
+        if employee_ids:
+            Document.query.filter(Document.employee_id.in_(employee_ids)).delete(synchronize_session=False)
+        # 2) the company / employee / owner records that belong to this customer
+        Employee.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
+        Owner.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
+        Company.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
+        # 3) unlink WhatsApp history (keep the messages, just detach)
+        WhatsAppMessage.query.filter_by(customer_id=customer_id).update({'customer_id': None})
+        db.session.delete(customer)
+        db.session.commit()
+        flash('Customer deleted')
+    except Exception as e:
+        db.session.rollback()
+        print(f'[delete_customer] failed for {customer_id}: {e}')
+        flash('Could not delete this customer — it still has linked records. Tell the admin.', 'error')
+        return redirect(url_for('customer_detail', customer_id=customer_id))
     return redirect(url_for('customers'))
 
 
