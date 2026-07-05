@@ -6576,6 +6576,27 @@ def whatsapp_broadcast_import_excel():
                     'stats': {'loaded': len(out), 'skip_consent': skip_consent,
                               'skip_phone': skip_phone, 'dupes': dupes}})
 
+@app.route('/whatsapp/broadcast/sample-excel')
+@login_required
+@admin_required
+def whatsapp_broadcast_sample_excel():
+    """A blank Excel with the exact columns the import expects, so staff fill it right."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    wb = Workbook(); ws = wb.active; ws.title = 'Numbers'
+    for i, h in enumerate(['Name', 'Phone', 'Consent', 'Company'], 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    ws.append(['Ahmed Ali', '971501234567', 'Yes', 'Al Noor Trading'])
+    ws.append(['Sara Khan', '971559876543', 'Yes', ''])
+    ws.append(['(no consent — will be skipped)', '971500000000', 'No', ''])
+    for i, w in enumerate([28, 20, 12, 24], 1):
+        ws.column_dimensions[chr(64 + i)].width = w
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return send_file(buf, download_name='tahfeel_broadcast_numbers_sample.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 def _run_broadcast(app_obj, broadcast_id, recipients, template_id, custom_vars, sender_name):
     """Background worker: send one approved template to many recipients, throttled.
     recipients = list of dicts {'cust_id': int|None, 'to': digits, 'first': str, 'company': str}.
@@ -6696,10 +6717,18 @@ def whatsapp_reengage():
     submitted as external recipients; replies auto-link to the lead by phone)."""
     applied = bool(request.args.get('apply'))
     leads = []
+    lead_statuses = ['Lost', 'New', 'Contacted', 'Qualified', 'Proposal', 'Future']  # Converted excluded — wrong audience for win-back
     if applied:
-        q = Lead.query.filter(Lead.status == 'Lost')
-        q = q.filter(db.or_(Lead.genuine.is_(None), Lead.genuine != 'Junk'))  # skip junk
-        q = q.filter(Lead.phone.isnot(None), Lead.phone != '')
+        q = Lead.query.filter(Lead.phone.isnot(None), Lead.phone != '')
+        status = (request.args.get('status') or 'Lost').strip()
+        if status and status != 'All':
+            q = q.filter(Lead.status == status)
+        quality = (request.args.get('quality') or 'exclude_junk').strip()
+        if quality == 'exclude_junk':
+            q = q.filter(db.or_(Lead.genuine.is_(None), Lead.genuine != 'Junk'))
+        elif quality == 'junk_only':
+            q = q.filter(Lead.genuine == 'Junk')
+        # 'all' → no quality filter
         df = (request.args.get('from') or '').strip()
         dt = (request.args.get('to') or '').strip()
         if df:
@@ -6725,7 +6754,7 @@ def whatsapp_reengage():
     ).count()
     recent = Broadcast.query.order_by(Broadcast.created_at.desc()).limit(6).all()
     return render_template('reengage.html', applied=applied, args=request.args, leads=leads,
-                           templates=wa_send_context(), sources=sources,
+                           templates=wa_send_context(), sources=sources, lead_statuses=lead_statuses,
                            today_sent=today_sent, daily_cap=daily_cap, recent=recent, now=now_dubai())
 
 @app.route('/whatsapp/<wa_id>/bot-toggle', methods=['POST'])

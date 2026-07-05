@@ -158,15 +158,15 @@
     }
     var cb = document.getElementById('chatbox');
     if (cb) cb.scrollTop = cb.scrollHeight;
-    // Auto-refresh every 30s so new messages appear live — but NEVER while the
-    // user is typing a reply (don't clobber unsent text or steal focus).
+    // Auto-refresh every 60s so new messages appear — but NEVER while the user is
+    // typing a reply or has the template popup open (don't clobber unsent text).
     setInterval(function () {
       var inp = document.querySelector('input[name="body"]');
       var typing = inp && (document.activeElement === inp || inp.value.trim() !== '');
       var waModal = document.getElementById('waSendOverlay');
       var modalOpen = waModal && waModal.style.display === 'flex';
       if (!typing && !modalOpen && !document.hidden) location.reload();
-    }, 30000);
+    }, 60000);
   </script>
   {% include '_wa_send_modal.html' %}
 </body>

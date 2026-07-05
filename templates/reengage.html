@@ -31,8 +31,19 @@
 
     <form method="GET" action="/whatsapp/reengage" style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:16px 18px;margin-bottom:16px;">
       <input type="hidden" name="apply" value="1">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
-        <div><label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Lost between — from</label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px;">
+        <div><label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Lead group</label>
+          <select name="status" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+            {% for s in lead_statuses %}<option value="{{ s }}" {{ 'selected' if (args.get('status') or 'Lost')==s }}>{{ s }}{{ ' (Won)' if s=='Converted' }}</option>{% endfor %}
+            <option value="All" {{ 'selected' if args.get('status')=='All' }}>All statuses</option>
+          </select></div>
+        <div><label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Quality</label>
+          <select name="quality" id="rgQuality" onchange="rgJunkWarn()" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;">
+            <option value="exclude_junk" {{ 'selected' if (args.get('quality') or 'exclude_junk')=='exclude_junk' }}>Exclude junk (recommended)</option>
+            <option value="all" {{ 'selected' if args.get('quality')=='all' }}>Include all (incl. junk)</option>
+            <option value="junk_only" {{ 'selected' if args.get('quality')=='junk_only' }}>Junk only</option>
+          </select></div>
+        <div><label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">Created — from</label>
           <input type="date" name="from" value="{{ args.get('from','') }}" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
         <div><label style="font-size:11px;color:#64748B;display:block;margin-bottom:4px;">to</label>
           <input type="date" name="to" value="{{ args.get('to','') }}" style="width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
@@ -41,12 +52,16 @@
             {% for s in sources %}<option value="{{ s }}" {{ 'selected' if args.get('source')==s }}>{{ s }}</option>{% endfor %}
           </select></div>
       </div>
-      <button type="submit" style="background:#1A3B8B;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;font-size:13px;cursor:pointer;">🔍 Find lost leads</button>
+      <button type="submit" style="background:#1A3B8B;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;font-size:13px;cursor:pointer;">🔍 Find leads</button>
     </form>
+
+    <div id="rgJunkBanner" style="display:none;background:#FEE2E2;border:1px solid #FCA5A5;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:#991B1B;line-height:1.6;">
+      ⚠️ <strong>Junk numbers are included.</strong> Junk leads are usually fake, wrong, or spam numbers — messaging them invites blocks and reports, which can drop your WhatsApp number's quality rating and pause all your templates. Only proceed if you're confident these are real people.
+    </div>
 
     {% if applied %}
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
-      <span style="background:#E6EEFF;color:#1A3B8B;font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;">{{ leads|length }} lost lead{{ 's' if leads|length != 1 }} with a phone number</span>
+      <span style="background:#E6EEFF;color:#1A3B8B;font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;">{{ leads|length }} lead{{ 's' if leads|length != 1 }} with a phone number</span>
     </div>
 
     {% if leads %}
@@ -108,7 +123,7 @@
       {% endif %}
     </form>
     {% else %}
-      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;text-align:center;color:#64748B;font-size:13px;">No lost leads match — try widening the date range.</div>
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:20px;text-align:center;color:#64748B;font-size:13px;">No leads match — try another group or widen the date range.</div>
     {% endif %}
     {% endif %}
 
@@ -165,7 +180,8 @@
       });
       return confirm('Send the re-engagement message to ' + n + ' lost lead' + (n!==1?'s':'') + '?');
     }
-    rgRecount(); rgTplChanged();
+    function rgJunkWarn(){ var q=document.getElementById('rgQuality'); var b=document.getElementById('rgJunkBanner'); if(!q||!b) return; b.style.display=(q.value==='all'||q.value==='junk_only')?'block':'none'; }
+    rgRecount(); rgTplChanged(); rgJunkWarn();
   </script>
 </body>
 </html>

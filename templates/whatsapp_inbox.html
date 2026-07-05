@@ -103,8 +103,13 @@
     </div>
   </div>
   <script>
-    // Auto-refresh the conversation list every 30s (pauses when tab is hidden)
-    setInterval(function () { if (!document.hidden) location.reload(); }, 30000);
+    // Auto-refresh the conversation list every 60s — pauses when the tab is hidden
+    // OR while the New-message popup is open (so a draft isn't wiped mid-typing).
+    setInterval(function () {
+      var nm = document.getElementById('nmOverlay');
+      var modalOpen = nm && nm.style.display === 'flex';
+      if (!document.hidden && !modalOpen) location.reload();
+    }, 60000);
 
     // --- New-message alert: sound + browser notification, survives the 15s reload via localStorage ---
     var CURRENT_UNREAD = {{ counts.unread }};
