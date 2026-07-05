@@ -6493,10 +6493,70 @@ def whatsapp_broadcast_search():
                         'activity': c.business_activity or '', 'phone': wa})
     return jsonify(out)
 
+@app.route('/whatsapp/broadcast/import-excel', methods=['POST'])
+@login_required
+@admin_required
+def whatsapp_broadcast_import_excel():
+    """Parse an uploaded Excel of EXTERNAL (non-CRM) numbers for a broadcast.
+    Columns: Name, Phone, Consent (Yes/No), Company. Only Consent=Yes rows are
+    returned; blanks/no-consent/no-phone/duplicates are skipped and counted.
+    Nothing is stored — these are used for a one-off send + log only."""
+    from openpyxl import load_workbook
+    from whatsapp_webhook import normalize_phone
+    f = request.files.get('file')
+    if not f or not f.filename:
+        return jsonify({'error': 'No file uploaded.'}), 400
+    try:
+        wb = load_workbook(f, read_only=True, data_only=True)
+        ws = wb.active
+        rows = list(ws.iter_rows(values_only=True))
+    except Exception:
+        return jsonify({'error': 'Could not read that file — please upload a valid .xlsx.'}), 400
+    if not rows:
+        return jsonify({'recipients': [], 'stats': {'loaded': 0}})
+    header = [(str(c).strip().lower() if c is not None else '') for c in rows[0]]
+    def col(*names):
+        for nm in names:
+            if nm in header:
+                return header.index(nm)
+        return None
+    ci_name = col('name', 'customer', 'full name')
+    ci_phone = col('phone', 'number', 'mobile', 'whatsapp', 'phone number', 'contact')
+    ci_consent = col('consent', 'opt-in', 'optin', 'opted in')
+    ci_company = col('company', 'company name', 'business')
+    has_header = any(x is not None for x in (ci_name, ci_phone, ci_consent, ci_company))
+    data = rows[1:] if has_header else rows
+    if ci_name is None:
+        ci_name = 0
+    if ci_phone is None:
+        ci_phone = 1 if (rows and len(rows[0]) > 1) else 0
+    def cell(r, i):
+        return (str(r[i]).strip() if (i is not None and i < len(r) and r[i] is not None) else '')
+    seen = set()
+    out, skip_consent, skip_phone, dupes = [], 0, 0, 0
+    for r in data:
+        phone = normalize_phone(cell(r, ci_phone))
+        if not phone or len(phone) < 8:
+            skip_phone += 1
+            continue
+        if ci_consent is not None:
+            consent = cell(r, ci_consent).lower()
+            if consent not in ('yes', 'y', 'true', '1', 'opted in', 'consent', 'opt-in'):
+                skip_consent += 1
+                continue
+        if phone in seen:
+            dupes += 1
+            continue
+        seen.add(phone)
+        out.append({'phone': phone, 'name': cell(r, ci_name), 'company': cell(r, ci_company)})
+    return jsonify({'recipients': out, 'has_consent_col': ci_consent is not None,
+                    'stats': {'loaded': len(out), 'skip_consent': skip_consent,
+                              'skip_phone': skip_phone, 'dupes': dupes}})
+
 def _run_broadcast(app_obj, broadcast_id, recipients, template_id, custom_vars, sender_name):
     """Background worker: send one approved template to many recipients, throttled.
-    recipients = list of (customer_id, wa_number). custom_vars = list of typed values
-    for the template's 'custom' variables, in order."""
+    recipients = list of dicts {'cust_id': int|None, 'to': digits, 'first': str, 'company': str}.
+    External (Excel-imported) recipients have cust_id=None and carry their own first/company."""
     import time
     from whatsapp_webhook import send_template, log_message
     with app_obj.app_context():
@@ -6505,22 +6565,29 @@ def _run_broadcast(app_obj, broadcast_id, recipients, template_id, custom_vars, 
         if not tpl or not bc:
             return
         keys = [k.strip() for k in (tpl.var_fields or '').split(',') if k.strip()]
-        for cust_id, to in recipients:
-            customer = Customer.query.get(cust_id)
+        for r in recipients:
+            customer = Customer.query.get(r['cust_id']) if r.get('cust_id') else None
             params, ci = [], 0
             for k in keys:
                 if k == 'custom':
                     params.append(custom_vars[ci] if ci < len(custom_vars) else '')
                     ci += 1
-                else:
+                elif customer:
                     params.append(_wa_resolve_var(k, customer))
+                elif k in ('first_name', 'full_name'):
+                    params.append(r.get('first') or '')
+                elif k == 'company':
+                    params.append(r.get('company') or '')
+                else:
+                    params.append('')
+            to = r['to']
             wam = send_template(to, tpl.meta_name, params=params or None, lang=tpl.lang or 'en')
             body = tpl.body_preview
             for n, v in enumerate(params, start=1):
                 body = body.replace('{{%d}}' % n, v)
             log_message(to, 'out', body, msg_type='template', wam_id=wam,
                         handled_by=sender_name, status='sent' if wam else 'failed',
-                        customer_id=cust_id)
+                        customer_id=r.get('cust_id'))
             if wam:
                 bc.sent = (bc.sent or 0) + 1
             else:
@@ -6535,21 +6602,37 @@ def _run_broadcast(app_obj, broadcast_id, recipients, template_id, custom_vars, 
 @admin_required
 def whatsapp_broadcast_send():
     import threading
+    from whatsapp_webhook import normalize_phone
     tpl = MessageTemplate.query.get_or_404(request.form.get('template_id', type=int))
-    ids = request.form.getlist('customer_ids')
     custom_vars = []
     i = 1
     while f'custom_{i}' in request.form:
         custom_vars.append((request.form.get(f'custom_{i}') or '').strip())
         i += 1
-    recipients = []
-    for cid in ids:
-        c = Customer.query.get(int(cid))
+    recipients, seen = [], set()
+    # CRM customers
+    for cid in request.form.getlist('customer_ids'):
+        c = Customer.query.get(int(cid)) if str(cid).isdigit() else None
         if not c:
             continue
         to = _cust_wa_number(c)
-        if to:
-            recipients.append((c.id, to))
+        if to and to not in seen:
+            seen.add(to)
+            recipients.append({'cust_id': c.id, 'to': to,
+                               'first': ((c.contact_person or c.name or '').split() or [''])[0],
+                               'company': c.trade_name or c.company or ''})
+    # External recipients from an Excel import (parallel arrays)
+    ext_phones = request.form.getlist('ext_phone')
+    ext_firsts = request.form.getlist('ext_first')
+    ext_comps = request.form.getlist('ext_company')
+    for idx, ph in enumerate(ext_phones):
+        to = normalize_phone(ph)
+        if not to or to in seen:
+            continue
+        seen.add(to)
+        recipients.append({'cust_id': None, 'to': to,
+                           'first': (ext_firsts[idx] if idx < len(ext_firsts) else ''),
+                           'company': (ext_comps[idx] if idx < len(ext_comps) else '')})
     if not recipients:
         flash('No recipients with a WhatsApp number were selected.', 'error')
         return redirect(url_for('whatsapp_broadcast'))
@@ -6572,7 +6655,7 @@ def whatsapp_broadcast_send():
                      args=(app, bc.id, recipients, tpl.id, custom_vars,
                            session.get('user_name', 'staff')),
                      daemon=True).start()
-    flash(f'Broadcast started — sending "{tpl.label}" to {len(recipients)} customers. '
+    flash(f'Broadcast started — sending "{tpl.label}" to {len(recipients)} recipients. '
           f'Progress updates below.')
     return redirect(url_for('whatsapp_broadcast'))
 

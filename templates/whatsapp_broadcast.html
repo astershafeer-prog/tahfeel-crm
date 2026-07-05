@@ -88,12 +88,24 @@
       {% if without_wa %}<span style="font-size:12px;color:#94A3B8;">{{ without_wa|length }} excluded — no number on record</span>{% endif %}
       {% endif %}
       <button type="button" onclick="bcToggleSearch()" style="background:#1A3B8B;color:white;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">+ Add recipient from clients</button>
+      <button type="button" onclick="document.getElementById('bcExcel').click()" style="background:#0F6E56;color:white;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">📥 Import numbers from Excel</button>
+      <input type="file" id="bcExcel" accept=".xlsx" style="display:none;" onchange="bcImportExcel(this)">
+      <span id="bcImportStat" style="font-size:12px;color:#94A3B8;"></span>
     </div>
 
     <div id="bcSearchPanel" style="display:none;background:white;border:0.5px solid #E2E8F0;border-radius:12px;padding:12px 14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
       <input type="text" id="bcSearchInput" placeholder="Search a client by name, company or number…" oninput="bcSearch()" autocomplete="off" style="width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;">
       <div id="bcSearchResults" style="margin-top:8px;max-height:240px;overflow-y:auto;font-size:13px;color:#94A3B8;">Type at least 2 characters to search your clients…</div>
     </div>
+
+    <div id="bcExtWarn" style="display:none;background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#854F0B;line-height:1.6;">
+      ⚠️ You've added <strong id="bcExtCount">0</strong> external number(s) not in the CRM. WhatsApp can block or downgrade your number if these people didn't opt in — only send to contacts who agreed to hear from you.
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:600;color:#92400E;">
+        <input type="checkbox" id="bcConsent"> I confirm these external contacts have opted in to WhatsApp messages from Tahfeel.
+      </label>
+    </div>
+
+    <div style="font-size:11px;color:#94A3B8;margin-bottom:10px;">Excel columns: <code>Name</code> · <code>Phone</code> (with country code) · <code>Consent</code> (Yes/No) · <code>Company</code>. Only rows marked Consent = Yes are imported.</div>
 
     <form method="POST" action="/whatsapp/broadcast/send" id="bcSend">
       <input type="hidden" name="filter_summary" value="{% if args.get('business_activity') %}activity~{{ args.get('business_activity') }} {% endif %}{% for f in ['customer_type','jurisdiction','emirate','licensing_authority','nationality'] %}{% if args.get(f) and args.get(f)!='All' %}{{ f }}={{ args.get(f) }} {% endif %}{% endfor %}{% if args.get('expiry_days') %}expiry<={{ args.get('expiry_days') }}d{% endif %}">
@@ -249,6 +261,56 @@
       }
       return {first:'', company:''};
     }
+    function bcImportExcel(input){
+      if(!input.files || !input.files[0]) return;
+      var stat=document.getElementById('bcImportStat'); stat.textContent='Reading…';
+      var fd=new FormData(); fd.append('file', input.files[0]);
+      fetch('/whatsapp/broadcast/import-excel', {method:'POST', body:fd})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          input.value='';
+          if(d.error){ stat.textContent=d.error; return; }
+          (d.recipients||[]).forEach(bcAddExt);
+          var s=d.stats||{}, msg=s.loaded+' imported';
+          if(s.skip_consent) msg+=' · '+s.skip_consent+' skipped (no consent)';
+          if(s.skip_phone) msg+=' · '+s.skip_phone+' no phone';
+          if(s.dupes) msg+=' · '+s.dupes+' duplicate';
+          stat.textContent=msg; bcUpdateExtWarn();
+        }).catch(function(){ input.value=''; stat.textContent='Import failed — try again.'; });
+    }
+    function bcAddExt(o){
+      var key='ext-'+o.phone;
+      var ex=document.getElementById(key);
+      if(ex){ ex.classList.remove('bcGone'); ex.style.display=''; var c=ex.querySelector('.bcRow'); if(c)c.checked=true; bcRecount(); return; }
+      var tr=document.createElement('tr');
+      tr.className='bcTr bcExt'; tr.id=key;
+      tr.setAttribute('data-phone', o.phone);
+      tr.setAttribute('data-first', (o.name||'').split(' ')[0]);
+      tr.setAttribute('data-company', o.company||'');
+      tr.style.borderBottom='1px solid #F1F5F9';
+      tr.innerHTML='<td style="padding:8px 16px;width:28px;"><input type="checkbox" class="bcRow" checked onchange="bcRecount()"></td>'
+        +'<td style="padding:8px 8px;">'+bcEsc(o.name||'(no name)')+(o.company?' <span style="color:#94A3B8;">· '+bcEsc(o.company)+'</span>':'')+' <span style="font-size:10px;background:#FEF3C7;color:#854F0B;padding:1px 6px;border-radius:10px;">external</span></td>'
+        +'<td style="padding:8px 8px;color:#64748B;">—</td>'
+        +'<td style="padding:8px 8px;color:#64748B;">—</td>'
+        +'<td style="padding:8px 8px;color:#64748B;text-align:right;white-space:nowrap;">'+bcEsc(o.phone)+'</td>'
+        +'<td style="padding:8px 16px;text-align:right;"><span onclick="bcRemoveEl(\''+key+'\')" title="Remove" style="cursor:pointer;color:#DC2626;font-weight:700;">✕</span></td>';
+      document.getElementById('bcTbody').appendChild(tr);
+      document.getElementById('bcEmpty').style.display='none';
+      bcRecount();
+    }
+    function bcRemoveEl(elId){
+      var tr=document.getElementById(elId); if(!tr) return;
+      var cb=tr.querySelector('.bcRow'); if(cb) cb.checked=false;
+      tr.classList.add('bcGone'); tr.style.display='none';
+      bcRecount(); bcUpdateExtWarn();
+      if(!document.querySelector('.bcTr:not(.bcGone)')){ var e=document.getElementById('bcEmpty'); if(e) e.style.display=''; }
+    }
+    function bcUpdateExtWarn(){
+      var ext=document.querySelectorAll('.bcTr.bcExt:not(.bcGone)').length;
+      var warn=document.getElementById('bcExtWarn');
+      document.getElementById('bcExtCount').textContent=ext;
+      warn.style.display = ext>0 ? 'block' : 'none';
+    }
 
     function bcToggleAll(cb){ document.querySelectorAll('.bcTr:not(.bcGone) .bcRow').forEach(function(r){ r.checked = cb.checked; }); bcRecount(); }
     function bcRecount(){
@@ -305,9 +367,26 @@
       document.getElementById('bcPreview').textContent = body;
     }
     function bcConfirm(){
+      var form=document.getElementById('bcSend');
+      form.querySelectorAll('.bc-ext-hidden').forEach(function(e){ e.remove(); });
       var n = document.querySelectorAll('.bcRow:checked').length;
-      if(n === 0){ alert('Select at least one customer.'); return false; }
-      return confirm('Send this WhatsApp template to ' + n + ' customer' + (n!==1?'s':'') + '?');
+      if(n === 0){ alert('Select at least one recipient.'); return false; }
+      var extCount=0;
+      document.querySelectorAll('.bcTr.bcExt').forEach(function(tr){
+        if(tr.style.display==='none') return;
+        var cb=tr.querySelector('.bcRow'); if(!cb || !cb.checked) return;
+        extCount++;
+        ['phone','first','company'].forEach(function(k){
+          var inp=document.createElement('input'); inp.type='hidden'; inp.className='bc-ext-hidden';
+          inp.name='ext_'+k; inp.value=tr.getAttribute('data-'+k)||'';
+          form.appendChild(inp);
+        });
+      });
+      if(extCount>0 && !document.getElementById('bcConsent').checked){
+        alert('Please tick the opt-in confirmation before sending to external numbers.');
+        return false;
+      }
+      return confirm('Send this WhatsApp template to ' + n + ' recipient' + (n!==1?'s':'') + '?');
     }
     bcRecount(); bcTplChanged();
   </script>
