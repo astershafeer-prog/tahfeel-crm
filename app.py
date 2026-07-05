@@ -104,6 +104,18 @@ def restrict_marketing_role():
         return
     return redirect(url_for('marketing_report'))
 
+@app.before_request
+def restrict_finance_whatsapp():
+    # Finance has no need for WhatsApp — block all /whatsapp pages + the unread API.
+    if session.get('role') != 'finance':
+        return
+    path = request.path or ''
+    if path.startswith('/whatsapp') or path == '/api/whatsapp-unread-count':
+        if request.path == '/api/whatsapp-unread-count':
+            return jsonify({'unread': 0})
+        flash('WhatsApp is not available for the Finance role.', 'warning')
+        return redirect(url_for('dashboard'))
+
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
