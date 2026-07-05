@@ -522,6 +522,7 @@ WA_VAR_LABELS = {
     'full_name':  'Full name',
     'company':    'Company name',
     'job_type':   'Service / task type',
+    'service':    'Service enquired (from the lead)',
     'custom':     'Custom text (typed at send time)',
 }
 
@@ -5543,17 +5544,28 @@ def init_db():
             if _fu and _fu.category != 'Marketing':
                 _fu.category = 'Marketing'
             db.session.commit()
-            # Re-engagement template for winning back Lost leads (seeded inactive)
-            if not MessageTemplate.query.filter_by(meta_name='tahfeel_reengage_v1').first():
+            # Re-engagement template for winning back Lost leads (seeded inactive).
+            # 2 variables: {{1}} first name, {{2}} the service/thing they enquired about.
+            _reengage_body = ('Hello {{1}},\n\nWe noticed that you previously enquired with '
+                'Tahfeel Business Setup Services about {{2}}.\n\nWe wanted to check if you\'re '
+                'still interested. If you need any information or would like to move forward, '
+                'simply reply to this message and our team will be happy to assist you.\n\n'
+                'If you\'d prefer to speak directly with one of our Business Consultants, just '
+                'reply "Speak" and we\'ll arrange it for you.\n\nThank you,')
+            _re = MessageTemplate.query.filter_by(meta_name='tahfeel_reengage_v1').first()
+            if not _re:
                 db.session.add(MessageTemplate(
                     label='Re-engage lost lead', meta_name='tahfeel_reengage_v1',
-                    category='Marketing', var_fields='first_name',
-                    body_preview='Dear {{1}}, we noticed you enquired with Tahfeel Business Setup '
-                                 'Services some time ago.\n\nAre you still interested? Simply reply '
-                                 'to this message and our team will be happy to help you get started.',
-                    active=False))
+                    category='Marketing', var_fields='first_name,service',
+                    body_preview=_reengage_body, active=False))
                 db.session.commit()
                 print('Seeded re-engage template (inactive)')
+            elif _re.var_fields == 'first_name':
+                # upgrade the earlier 1-variable version to the 2-variable Meta template
+                _re.var_fields = 'first_name,service'
+                _re.body_preview = _reengage_body
+                db.session.commit()
+                print('Upgraded re-engage template to 2 variables')
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(ServiceType(name=jt))
@@ -6589,6 +6601,8 @@ def _run_broadcast(app_obj, broadcast_id, recipients, template_id, custom_vars, 
                     params.append(r.get('first') or '')
                 elif k == 'company':
                     params.append(r.get('company') or '')
+                elif k == 'service':
+                    params.append(r.get('service') or '')
                 else:
                     params.append('')
             to = r['to']
@@ -6633,10 +6647,11 @@ def whatsapp_broadcast_send():
             recipients.append({'cust_id': c.id, 'to': to,
                                'first': ((c.contact_person or c.name or '').split() or [''])[0],
                                'company': c.trade_name or c.company or ''})
-    # External recipients from an Excel import (parallel arrays)
+    # External recipients — Excel import or re-engage leads (parallel arrays)
     ext_phones = request.form.getlist('ext_phone')
     ext_firsts = request.form.getlist('ext_first')
     ext_comps = request.form.getlist('ext_company')
+    ext_services = request.form.getlist('ext_service')
     for idx, ph in enumerate(ext_phones):
         to = normalize_phone(ph)
         if not to or to in seen:
@@ -6644,7 +6659,8 @@ def whatsapp_broadcast_send():
         seen.add(to)
         recipients.append({'cust_id': None, 'to': to,
                            'first': (ext_firsts[idx] if idx < len(ext_firsts) else ''),
-                           'company': (ext_comps[idx] if idx < len(ext_comps) else '')})
+                           'company': (ext_comps[idx] if idx < len(ext_comps) else ''),
+                           'service': (ext_services[idx] if idx < len(ext_services) else '')})
     if not recipients:
         flash('No recipients with a WhatsApp number were selected.', 'error')
         return redirect(back)

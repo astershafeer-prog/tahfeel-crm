@@ -71,7 +71,7 @@
             <tbody>
             {% for l in leads %}
             {% set _fn = (l.name or '') %}
-            <tr class="rgTr" id="rgTr-{{ l.id }}" data-phone="{{ l.phone }}" data-first="{{ _fn.split()[0] if _fn else '' }}" data-company="{{ l.company or '' }}" style="border-bottom:1px solid #F1F5F9;">
+            <tr class="rgTr" id="rgTr-{{ l.id }}" data-phone="{{ l.phone }}" data-first="{{ _fn.split()[0] if _fn else '' }}" data-company="{{ l.company or '' }}" data-service="{{ l.service or 'business setup' }}" style="border-bottom:1px solid #F1F5F9;">
               <td style="padding:8px 16px;width:28px;"><input type="checkbox" class="rgRow" checked onchange="rgRecount()"></td>
               <td style="padding:8px 8px;"><a href="/leads/{{ l.id }}" style="color:#0F2660;text-decoration:none;font-weight:600;">{{ l.name }}</a>{% if l.company %} <span style="color:#94A3B8;">· {{ l.company }}</span>{% endif %}</td>
               <td style="padding:8px 8px;color:#64748B;">{{ l.service or '—' }}</td>
@@ -139,7 +139,7 @@
     function rgRecount(){ var n=document.querySelectorAll('.rgRow:checked').length; var el=document.getElementById('rgCount'); if(el) el.textContent=n+' selected'; }
     function rgRemove(id){ var tr=document.getElementById('rgTr-'+id); if(!tr) return; var cb=tr.querySelector('.rgRow'); if(cb) cb.checked=false; tr.classList.add('rgGone'); tr.style.display='none'; rgRecount(); }
     function rgCur(){ var s=document.getElementById('rgTpl'); if(!s) return null; var id=parseInt(s.value,10); for(var i=0;i<RG_TPLS.length;i++) if(RG_TPLS[i].id===id) return RG_TPLS[i]; return null; }
-    function rgFirst(){ var cbs=document.querySelectorAll('.rgRow:checked'); for(var i=0;i<cbs.length;i++){ var tr=cbs[i].closest('.rgTr'); if(tr && tr.style.display!=='none') return {first:tr.getAttribute('data-first')||'', company:tr.getAttribute('data-company')||''}; } return {first:'',company:''}; }
+    function rgFirst(){ var cbs=document.querySelectorAll('.rgRow:checked'); for(var i=0;i<cbs.length;i++){ var tr=cbs[i].closest('.rgTr'); if(tr && tr.style.display!=='none') return {first:tr.getAttribute('data-first')||'', company:tr.getAttribute('data-company')||'', service:tr.getAttribute('data-service')||''}; } return {first:'',company:'',service:''}; }
     function rgTplChanged(){ var t=rgCur(); if(!t) return; var w=document.getElementById('rgCustomVars'); w.innerHTML=''; var ci=0;
       t.params.forEach(function(p, idx){ if(p.key!=='custom') return; ci++;
         var d=document.createElement('div'); d.style.marginBottom='8px';
@@ -150,7 +150,7 @@
       }); rgPreview();
     }
     function rgPreview(){ var t=rgCur(); if(!t) return; var fr=rgFirst(); var body=t.body, ci=0;
-      t.params.forEach(function(p){ var v; if(p.key==='custom'){ ci++; var inp=document.querySelector('[name="custom_'+ci+'"]'); v=inp&&inp.value.trim()?inp.value:'________'; } else if(p.key==='first_name'||p.key==='full_name'){ v=fr.first||'________'; } else if(p.key==='company'){ v=fr.company||'________'; } else { v='(auto)'; }
+      t.params.forEach(function(p){ var v; if(p.key==='custom'){ ci++; var inp=document.querySelector('[name="custom_'+ci+'"]'); v=inp&&inp.value.trim()?inp.value:'________'; } else if(p.key==='first_name'||p.key==='full_name'){ v=fr.first||'________'; } else if(p.key==='company'){ v=fr.company||'________'; } else if(p.key==='service'){ v=fr.service||'________'; } else { v='(auto)'; }
         body=body.split(RG_O+p.n+RG_C).join(v); });
       document.getElementById('rgPreview').textContent=body;
     }
@@ -161,7 +161,7 @@
       if(n===0){ alert('Select at least one lead.'); return false; }
       document.querySelectorAll('.rgTr').forEach(function(tr){
         if(tr.style.display==='none') return; var cb=tr.querySelector('.rgRow'); if(!cb||!cb.checked) return;
-        ['phone','first','company'].forEach(function(k){ var inp=document.createElement('input'); inp.type='hidden'; inp.className='rg-ext-hidden'; inp.name='ext_'+k; inp.value=tr.getAttribute('data-'+k)||''; form.appendChild(inp); });
+        ['phone','first','company','service'].forEach(function(k){ var inp=document.createElement('input'); inp.type='hidden'; inp.className='rg-ext-hidden'; inp.name='ext_'+k; inp.value=tr.getAttribute('data-'+k)||''; form.appendChild(inp); });
       });
       return confirm('Send the re-engagement message to ' + n + ' lost lead' + (n!==1?'s':'') + '?');
     }
