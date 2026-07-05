@@ -113,6 +113,9 @@
 
             <!-- Company-only -->
             <div class="form-group company-only" style="grid-column:1/-1;"><div class="section-label" style="margin-top:8px;">🏢 Company Details</div></div>
+            <div class="form-group company-only"><label>AC Code</label><input type="text" name="ac_code" value="{{ customer.ac_code or '' }}"></div>
+            <div class="form-group company-only"><label>Trade Name</label><input type="text" name="trade_name" value="{{ customer.trade_name or '' }}"></div>
+            <div class="form-group company-only"><label>Mobile</label><input type="text" name="mobile" value="{{ customer.mobile or '' }}" placeholder="+971 5X XXX XXXX"></div>
             <div class="form-group company-only"><label>AC Opening Date</label><input type="date" name="ac_opening_date" value="{{ customer.ac_opening_date.strftime('%Y-%m-%d') if customer.ac_opening_date else '' }}"></div>
             <div class="form-group company-only"><label>AC Status</label><select name="ac_status"><option value="">— Select —</option>{% for s in ['Active','Under Formation','Inactive','Closed'] %}<option value="{{ s }}" {% if customer.ac_status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group company-only"><label>Legal Form</label><select name="legal_form"><option value="">— Select —</option>{% for s in ['LLC','Sole Establishment','Civil Company','Branch','Free Zone Company','Free Zone Establishment','Offshore','Other'] %}<option value="{{ s }}" {% if customer.legal_form==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
@@ -121,7 +124,11 @@
             <div class="form-group company-only"><label>Emirate</label><select name="emirate"><option value="">— Select —</option>{% for s in ['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah','Fujairah','Umm Al Quwain'] %}<option value="{{ s }}" {% if customer.emirate==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group company-only"><label>Business Activity</label><input type="text" name="business_activity" value="{{ customer.business_activity or '' }}"></div>
             <div class="form-group company-only"><label>Website</label><input type="text" name="website" value="{{ customer.website or '' }}" placeholder="www.company.com"></div>
+            <div class="form-group company-only"><label>Free Zone Name</label><input type="text" name="freezone_name" value="{{ customer.freezone_name or '' }}" placeholder="e.g. DMCC, IFZA, JAFZA"></div>
+            <div class="form-group company-only"><label>Country of Incorporation</label><input type="text" name="country_incorp" value="{{ customer.country_incorp or '' }}"></div>
+            <div class="form-group company-only"><label>P.O. Box</label><input type="text" name="po_box" value="{{ customer.po_box or '' }}"></div>
             <div class="form-group company-only"><label>UAE Pass Access Number</label><input type="text" name="uae_pass_number" value="{{ customer.uae_pass_number or '' }}" placeholder="+971 5X XXX XXXX"></div>
+            <div class="form-group company-only"><label>UAE Pass Name</label><input type="text" name="uae_pass_name" value="{{ customer.uae_pass_name or '' }}"></div>
 
             <div class="form-group" style="grid-column:1/-1;"><div class="section-label" style="margin-top:8px;">🧾 Tax &amp; Compliance</div></div>
             <div class="form-group"><label>VAT / Tax Filing</label><select name="vat_status"><option value="">— N/A —</option><option value="Not filed" {% if customer.vat_status=='Not filed' %}selected{% endif %}>Not filed</option><option value="Filed">Filed → roll to next quarter</option></select></div>
