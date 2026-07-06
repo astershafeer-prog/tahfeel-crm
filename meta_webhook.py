@@ -173,16 +173,19 @@ def meta_verify():
 @meta_bp.route('/webhook/meta', methods=['POST'])
 def meta_receive():
     """Receives lead notification from Meta instantly."""
-    # Verify the request is genuinely from Meta
+    # Verify the request is genuinely from Meta. Fail CLOSED: if no secret is
+    # configured we reject everything rather than accept unsigned/spoofable posts.
     app_secret = os.environ.get('META_APP_SECRET', '')
-    if app_secret:
-        sig_header   = request.headers.get('X-Hub-Signature-256', '')
-        expected_sig = 'sha256=' + hmac.new(
-            app_secret.encode(), request.data, hashlib.sha256
-        ).hexdigest()
-        if not hmac.compare_digest(sig_header, expected_sig):
-            print('[Meta] Invalid signature — rejected')
-            return 'Unauthorized', 401
+    if not app_secret:
+        print('[Meta] META_APP_SECRET not configured — rejecting webhook (fail closed)')
+        return 'Server not configured', 503
+    sig_header   = request.headers.get('X-Hub-Signature-256', '')
+    expected_sig = 'sha256=' + hmac.new(
+        app_secret.encode(), request.data, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(sig_header, expected_sig):
+        print('[Meta] Invalid signature — rejected')
+        return 'Unauthorized', 401
 
     payload = request.get_json(silent=True)
     if not payload:

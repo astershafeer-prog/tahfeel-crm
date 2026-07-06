@@ -37,7 +37,27 @@ jobs:
         run: |
           python backup_database.py
           echo "✅ Backup script completed"
-      
+
+      - name: Verify backup is not empty/partial
+        # Safety guard: fail the job (red) if no backup file was produced or if the
+        # newest one is suspiciously small (< 10 KB). A healthy dump is ~100 KB+ and
+        # grows over time; a tiny file usually means a partial/failed dump that would
+        # otherwise slip through as a "green" run. Raise MIN_BYTES as your data grows.
+        run: |
+          MIN_BYTES=10240
+          newest=$(ls -1t backups/*.sql.gz 2>/dev/null | head -n1 || true)
+          if [ -z "$newest" ]; then
+            echo "❌ No backup file was produced — the database dump failed."
+            exit 1
+          fi
+          size=$(stat -c%s "$newest")
+          echo "Newest backup: $newest ($size bytes)"
+          if [ "$size" -lt "$MIN_BYTES" ]; then
+            echo "❌ Backup is only $size bytes (under $MIN_BYTES) — likely a partial/empty dump. Check the DATABASE_URL secret (must be the PUBLIC Railway URL) and the run logs."
+            exit 1
+          fi
+          echo "✅ Backup size looks healthy ($size bytes)."
+
       - name: List backup files
         run: |
           echo "📦 Checking backup directory:"
@@ -51,5 +71,5 @@ jobs:
         with:
           name: tahfeel-backup-${{ github.run_number }}
           path: backups/*.sql.gz
-          retention-days: 30
+          retention-days: 90   # GitHub free-tier maximum — longer safety window
           if-no-files-found: warn

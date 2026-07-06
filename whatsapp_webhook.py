@@ -123,22 +123,30 @@ def send_template(to, template_name, params=None, lang='en', param_names=None):
 # ── DB logging ────────────────────────────────────────────────────────────────
 def find_contact(wa_number):
     """Match an incoming WhatsApp number to an existing Lead or Customer.
-    Returns (lead_id, customer_id) — either may be None."""
-    from app import Lead, Customer
+    Returns (lead_id, customer_id) — either may be None.
+
+    Runs on every inbound message, so it selects ONLY id + phone columns (row
+    tuples) instead of hydrating full ORM objects for every lead/customer.
+    Phone matching is last-9-digits, which can't use a plain index (numbers are
+    stored with mixed formatting), so this still scans — but with a fraction of
+    the memory/CPU of loading whole rows."""
+    from app import db, Lead, Customer
     key = _match_key(wa_number)
     if not key:
         return None, None
     lead_id = customer_id = None
     # Leads: phone or phone2
-    for lead in Lead.query.filter(Lead.phone.isnot(None)).all():
-        if _match_key(lead.phone) == key or (lead.phone2 and _match_key(lead.phone2) == key):
-            lead_id = lead.id
+    for lid, phone, phone2 in db.session.query(Lead.id, Lead.phone, Lead.phone2)\
+            .filter(Lead.phone.isnot(None)):
+        if _match_key(phone) == key or (phone2 and _match_key(phone2) == key):
+            lead_id = lid
             break
     # Customers: phone / phone2 / mobile / whatsapp
-    for c in Customer.query.all():
-        for f in (c.phone, c.phone2, c.mobile, c.whatsapp):
+    for cid, phone, phone2, mobile, whatsapp in db.session.query(
+            Customer.id, Customer.phone, Customer.phone2, Customer.mobile, Customer.whatsapp):
+        for f in (phone, phone2, mobile, whatsapp):
             if f and _match_key(f) == key:
-                customer_id = c.id
+                customer_id = cid
                 break
         if customer_id:
             break

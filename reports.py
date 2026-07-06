@@ -1084,3 +1084,87 @@ def export_revenue():
     ws.cell(row, 8).number_format = '#,##0.00'
 
     return _respond(wb, f"Revenue_Report_{df}_{dt}.xlsx")
+
+
+# ── Customer Detail Report (Company / Individual) — every field captured at
+#    creation, in one Excel. Filter by type (All / Company / Individual) and by
+#    creation date range. Admin+Finance see all; Sales+Operations see their own
+#    (customers where they are the assigned representative).
+@reports_bp.route('/reports/customers/export')
+def export_customer_report():
+    g = _guard_sales_operations()  # Admin + Finance + Sales + Operations
+    if g:
+        return g
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
+    df_d, dt_d, df, dt = _dates(request)
+    cust_type = (request.args.get('cust_type') or 'all').strip()
+
+    users = {u.id: u.name for u in db.session.query(User).all()}
+
+    query = db.session.query(Customer).filter(
+        Customer.created_at >= df_d, Customer.created_at <= dt_d)
+    if cust_type in ('Company', 'Individual'):
+        query = query.filter((Customer.customer_type == cust_type))
+    # Sales/Operations only see customers they are the representative of.
+    if session.get('role') not in ('admin', 'finance'):
+        query = query.filter(Customer.assigned_to == session.get('user_id'))
+    customers = query.order_by(Customer.name).all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Customer Detail"
+
+    cols = [
+        '#', 'Type', 'Name', 'Company', 'Contact Person',
+        'Phone', 'Phone 2', 'Mobile', 'WhatsApp', 'Email', 'Website', 'Address',
+        'Nationality', 'Date of Birth', 'Source', 'Primary Representative',
+        'AC Code', 'Trade Name', 'Legal Form', 'Jurisdiction', 'Licensing Authority',
+        'Free Zone Name', 'Emirate', 'Country of Incorporation', 'Business Activity',
+        'AC Status', 'PO Box', 'AC Opening Date', 'UAE Pass Number', 'UAE Pass Name',
+        'VAT Status', 'VAT Due Date', 'Corp Tax Status', 'Corp Tax Due Date',
+        'Alerts Enabled', 'Alert Email', 'Alert WhatsApp', 'Notes', 'Created Date',
+    ]
+    title = 'CUSTOMER DETAIL REPORT'
+    if cust_type in ('Company', 'Individual'):
+        title += f' — {cust_type.upper()} ONLY'
+    _title_block(ws, title, df, dt, len(cols))
+    _headers(ws, cols)
+
+    def d(val):  # date -> string, safe for date or datetime or None
+        if not val:
+            return ''
+        return val.strftime('%d/%m/%Y')
+
+    rows = []
+    for i, c in enumerate(customers, 1):
+        rows.append([
+            i, c.customer_type or 'Individual', c.name or '', c.company or '',
+            c.contact_person or '',
+            c.phone or '', c.phone2 or '', c.mobile or '', c.whatsapp or '',
+            c.email or '', c.website or '', c.address or '',
+            c.nationality or '', d(c.date_of_birth), c.source or '',
+            users.get(c.assigned_to, '—'),
+            c.ac_code or '', c.trade_name or '', c.legal_form or '', c.jurisdiction or '',
+            c.licensing_authority or '', c.freezone_name or '', c.emirate or '',
+            c.country_incorp or '', c.business_activity or '', c.ac_status or '',
+            c.po_box or '', d(c.ac_opening_date), c.uae_pass_number or '', c.uae_pass_name or '',
+            c.vat_status or '', d(c.vat_due_date), c.corp_tax_status or '', d(c.corp_tax_due_date),
+            ('Yes' if c.alerts_enabled else 'No'), c.alert_email or '', c.alert_whatsapp or '',
+            c.notes or '', d(c.created_at),
+        ])
+
+    _write_rows(ws, rows)
+    _col_widths(ws, [
+        4, 12, 24, 24, 20,
+        16, 16, 16, 16, 24, 22, 28,
+        14, 14, 14, 20,
+        14, 22, 16, 16, 22,
+        20, 14, 20, 24,
+        16, 12, 16, 18, 18,
+        12, 14, 14, 16,
+        14, 24, 16, 40, 14,
+    ])
+    _freeze(ws)
+    _filter(ws, len(cols))
+    suffix = cust_type if cust_type in ('Company', 'Individual') else 'All'
+    return _respond(wb, f"Customer_Detail_{suffix}_{df}_{dt}.xlsx")

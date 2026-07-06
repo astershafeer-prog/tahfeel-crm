@@ -91,6 +91,34 @@
       </div>
       {% endif %}
 
+      <!-- Customer Detail Report (Company / Individual) - Admin + Finance + Sales + Operations -->
+      {% if role in ['admin', 'finance', 'sales', 'operations'] %}
+      <div class="card" style="border-top:4px solid #0E7490;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">🏢</span>
+          <div>
+            <div style="font-weight:700;color:#0E7490;font-size:15px;">Customer Detail Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Full company / individual profile</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 10px 0;line-height:2;">
+          <li>Every field captured at creation</li>
+          <li>Contact, company profile & licensing</li>
+          <li>VAT / Corporate-tax status & due dates</li>
+          <li>Representative, source, alerts & notes</li>
+        </ul>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;">Customer Type:</label>
+          <select id="cust_type_filter" style="width:100%;padding:6px;font-size:12px;border:1.5px solid #CBD5E1;border-radius:6px;">
+            <option value="all">All Customers</option>
+            <option value="Company">Company only</option>
+            <option value="Individual">Individual only</option>
+          </select>
+        </div>
+        <button class="btn-add" style="width:100%;text-align:center;background:#0E7490;" onclick="exportCustomerReport()">⬇ Export to Excel</button>
+      </div>
+      {% endif %}
+
       <!-- 3. Finance Report - Admin + Finance only -->
       {% if role in ['admin', 'finance'] %}
       <div class="card" style="border-top:4px solid #6a3d9a;">
@@ -310,6 +338,23 @@
       setTimeout(() => { document.getElementById('loadingOverlay').style.display = 'none'; }, 3000);
     }
     
+    function exportCustomerReport() {
+      const from = document.getElementById('date_from').value;
+      const to = document.getElementById('date_to').value;
+      if (!from || !to) { alert('Please select both dates.'); return; }
+      if (new Date(from) > new Date(to)) { alert('"From" date cannot be after "To" date.'); return; }
+      const ctype = document.getElementById('cust_type_filter').value;
+      const url = `/reports/customers/export?date_from=${from}&date_to=${to}&cust_type=${ctype}`;
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      const a = document.createElement('a');
+      a.href = url;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => { document.getElementById('loadingOverlay').style.display = 'none'; }, 3000);
+    }
+
     function exportReportWithStatus(type) {
       const from = document.getElementById('date_from').value;
       const to = document.getElementById('date_to').value;

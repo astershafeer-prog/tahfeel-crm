@@ -115,7 +115,7 @@
   </div>
 
   <script>
-    const serviceDays = {{ service_days|safe }};
+    const serviceDays = {{ service_days_json|tojson }};
 
     function updateDueDate(selectEl, dateInputId) {
       const selected = selectEl.value;

@@ -2,6 +2,7 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.middleware.proxy_fix import ProxyFix
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
@@ -66,13 +67,30 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
+# Trust exactly ONE proxy hop (Railway's edge) for X-Forwarded-For / -Proto.
+# This makes request.remote_addr the real client IP that connected to Railway —
+# attacker-supplied X-Forwarded-For entries to the left are ignored, so the login
+# throttle can't be bypassed by spoofing the header. (Cloudflare is DNS-only /
+# grey-cloud here, so Railway is the only proxy in front of the app.)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 # Secret key signs all session cookies. MUST be set via the SECRET_KEY env var in Railway.
-# The fallback only exists so the app still boots if the var is missing — it is NOT secure
-# (it is public in git history) so set SECRET_KEY in Railway to override it.
-app.secret_key = os.environ.get('SECRET_KEY') or 'tahfeel2026secretkey'
-if app.secret_key == 'tahfeel2026secretkey':
-    print('[!] SECURITY WARNING: SECRET_KEY env var not set - using insecure public fallback. '
-          'Set SECRET_KEY in Railway and redeploy to secure sessions.')
+# Security policy:
+#   - Production (a real DATABASE_URL is set, i.e. Postgres on Railway): SECRET_KEY is
+#     MANDATORY. We refuse to boot without it rather than fall back to a public,
+#     git-history key that would let anyone forge admin sessions.
+#   - Local dev (no DATABASE_URL / SQLite): generate a random per-boot key so nothing
+#     insecure is ever hard-coded. (Restarting logs local dev sessions out — that's fine.)
+_secret = os.environ.get('SECRET_KEY')
+_is_production = bool(os.environ.get('DATABASE_URL'))
+if not _secret:
+    if _is_production:
+        raise RuntimeError(
+            'SECRET_KEY environment variable is not set. Set it in Railway and redeploy. '
+            'Refusing to start with an insecure fallback key.')
+    import secrets as _secrets
+    _secret = _secrets.token_hex(32)
+    print('[!] SECRET_KEY not set — using a random per-boot key for local dev only.')
+app.secret_key = _secret
 # Session configuration for custom domain support
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS only
@@ -82,6 +100,69 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tahfeel.db')).replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+# ── CSRF protection ───────────────────────────────────────────────────────────
+# Protects every POST/PUT/PATCH/DELETE. The token is auto-injected into every
+# HTML form and every fetch/XHR by the script added in _inject_csrf() below, so
+# individual templates don't each need editing. Webhooks (verified by HMAC
+# signature instead) are exempted after their blueprints are registered.
+from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+csrf = CSRFProtect(app)
+# Give the token a long life so a page left open overnight doesn't fail on submit.
+app.config['WTF_CSRF_TIME_LIMIT'] = None
+
+@app.errorhandler(CSRFError)
+def _handle_csrf_error(e):
+    # Friendlier than a raw 400 — usually a stale tab; ask them to retry.
+    flash('Your session expired or the form was stale. Please try that again.', 'warning')
+    return redirect(request.referrer or url_for('dashboard'))
+
+# Client-side shim: adds the CSRF token to every non-GET form submit and every
+# fetch/XMLHttpRequest, so all existing templates and AJAX calls are covered
+# without per-file edits. Injected right before </body> on HTML responses.
+_CSRF_JS_TEMPLATE = """<script>(function(){var t=%s;
+function inject(f){if(f&&f.tagName==='FORM'&&!f.querySelector('input[name=\"csrf_token\"]')){var i=document.createElement('input');i.type='hidden';i.name='csrf_token';i.value=t;f.appendChild(i);}}
+document.addEventListener('submit',function(e){var f=e.target;if(f&&f.tagName==='FORM'){var m=(f.getAttribute('method')||'get').toLowerCase();if(m!=='get')inject(f);}},true);
+document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('form').forEach(function(f){var m=(f.getAttribute('method')||'get').toLowerCase();if(m!=='get')inject(f);});});
+// State-changing links are now POST-only routes. Intercept clicks on them and
+// submit as a POST form carrying the CSRF token. Runs in the bubble phase so any
+// inline onclick="return confirm(...)" has already decided: if the user cancelled
+// (defaultPrevented) we do nothing.
+var MUT=/\\/(delete|toggle|toggle-leave)$/;
+var MUT_EXACT={'/admin/secure-documents':1,'/admin/alerts/disable-all':1};
+document.addEventListener('click',function(e){
+  if(e.defaultPrevented)return;
+  var a=e.target.closest?e.target.closest('a[href]'):null;if(!a)return;
+  var href=a.getAttribute('href')||'';if(!href||href.charAt(0)!=='/')return;
+  var path=href.split('?')[0];
+  if(MUT.test(path)||MUT_EXACT[path]){
+    e.preventDefault();
+    var f=document.createElement('form');f.method='POST';f.action=href;f.style.display='none';
+    var i=document.createElement('input');i.type='hidden';i.name='csrf_token';i.value=t;f.appendChild(i);
+    document.body.appendChild(f);f.submit();
+  }
+},false);
+var of=window.fetch;if(of){window.fetch=function(u,o){o=o||{};var m=(o.method||'get').toUpperCase();if(m!=='GET'&&m!=='HEAD'){if(o.headers instanceof Headers){if(!o.headers.has('X-CSRFToken'))o.headers.set('X-CSRFToken',t);}else{o.headers=o.headers||{};if(!o.headers['X-CSRFToken'])o.headers['X-CSRFToken']=t;}}return of(u,o);};}
+var oo=XMLHttpRequest.prototype.open,os=XMLHttpRequest.prototype.send;
+XMLHttpRequest.prototype.open=function(m){this._csrfM=m;return oo.apply(this,arguments);};
+XMLHttpRequest.prototype.send=function(){try{if(this._csrfM&&['POST','PUT','PATCH','DELETE'].indexOf(String(this._csrfM).toUpperCase())>=0)this.setRequestHeader('X-CSRFToken',t);}catch(e){}return os.apply(this,arguments);};
+})();</script>"""
+
+@app.after_request
+def _inject_csrf(resp):
+    try:
+        if resp.direct_passthrough:
+            return resp
+        if 'text/html' not in resp.headers.get('Content-Type', ''):
+            return resp
+        body = resp.get_data(as_text=True)
+        if '</body>' in body:
+            import json as _json
+            script = _CSRF_JS_TEMPLATE % _json.dumps(generate_csrf())
+            resp.set_data(body.replace('</body>', script + '</body>', 1))
+    except Exception as e:
+        print(f'[csrf inject] {e}')
+    return resp
 
 @app.after_request
 def set_security_headers(resp):
@@ -509,6 +590,15 @@ class AppSetting(db.Model):
     key   = db.Column(db.String(60), primary_key=True)
     value = db.Column(db.String(300))
 
+class LoginAttempt(db.Model):
+    """One failed-login timestamp per row, keyed by client IP. DB-backed so the
+    brute-force throttle works across ALL gunicorn workers and survives restarts
+    (the old in-memory dict was per-process and reset on every redeploy)."""
+    __tablename__ = 'login_attempt'
+    id         = db.Column(db.Integer, primary_key=True)
+    ip         = db.Column(db.String(64), index=True)
+    created_at = db.Column(db.DateTime, default=now_dubai, index=True)
+
 def get_setting(key, default=None):
     try:
         row = AppSetting.query.get(key)
@@ -755,6 +845,33 @@ def inject_birthdays():
         print(f'Birthday error: {e}')
     return {'birthdays_today': []}
 
+def _safe_redirect(target, fallback_endpoint='dashboard', **fallback_kwargs):
+    """Redirect only to a same-site relative path. Blocks open-redirect payloads
+    (e.g. //evil.com or https://evil.com) coming from user-supplied `next`/return
+    URLs by falling back to a known-safe internal endpoint."""
+    from urllib.parse import urlparse
+    if target:
+        p = urlparse(target)
+        # Accept only relative paths (no scheme, no netloc) that start with a single '/'
+        if not p.scheme and not p.netloc and target.startswith('/') and not target.startswith('//'):
+            return redirect(target)
+    return redirect(url_for(fallback_endpoint, **fallback_kwargs))
+
+def _can_view_document(doc):
+    """Authorization for viewing a customer/employee/company document file.
+    Admin & Finance & Operations see all. Sales/Staff only see documents for a
+    customer they are the assigned rep of, or documents they uploaded themselves."""
+    role = session.get('role')
+    if role in ('admin', 'finance', 'operations'):
+        return True
+    uid = session.get('user_id')
+    if getattr(doc, 'uploaded_by', None) and doc.uploaded_by == uid:
+        return True
+    cust = getattr(doc, 'customer', None)
+    if cust and cust.assigned_to == uid:
+        return True
+    return False
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -866,26 +983,53 @@ def apply_lead_filters(leads, args, now):
 def index():
     return redirect(url_for('login'))
 
-import time as _time
-from collections import defaultdict as _defaultdict
-_login_attempts = _defaultdict(list)   # ip -> [failed-attempt timestamps]
 _LOGIN_MAX_ATTEMPTS = 10               # per window, per IP
 _LOGIN_WINDOW = 300                    # seconds (5 minutes)
 
 def _client_ip():
-    fwd = request.headers.get('X-Forwarded-For', '')
-    return (fwd.split(',')[0].strip() if fwd else request.remote_addr) or 'unknown'
+    # ProxyFix has already set remote_addr to the real client IP (rightmost
+    # trusted hop), so this is not spoofable via a forged X-Forwarded-For.
+    return request.remote_addr or 'unknown'
+
+def _login_blocked(ip):
+    """True if this IP has hit the failed-login cap within the window. DB-backed,
+    so it holds across workers. Fails OPEN on any DB error (never lock everyone out)."""
+    try:
+        window_start = now_dubai() - timedelta(seconds=_LOGIN_WINDOW)
+        return LoginAttempt.query.filter(
+            LoginAttempt.ip == ip,
+            LoginAttempt.created_at >= window_start
+        ).count() >= _LOGIN_MAX_ATTEMPTS
+    except Exception as e:
+        print(f'[login-throttle] check skipped: {e}')
+        return False
+
+def _record_login_failure(ip):
+    try:
+        # Opportunistic prune of anything older than the window (keeps table tiny).
+        window_start = now_dubai() - timedelta(seconds=_LOGIN_WINDOW)
+        LoginAttempt.query.filter(LoginAttempt.created_at < window_start).delete()
+        db.session.add(LoginAttempt(ip=ip))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f'[login-throttle] record skipped: {e}')
+
+def _clear_login_failures(ip):
+    try:
+        LoginAttempt.query.filter(LoginAttempt.ip == ip).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        # Basic brute-force throttle (per IP, in-memory).
+        # Brute-force throttle (per IP, DB-backed so it holds across workers).
         ip = _client_ip()
-        now_ts = _time.time()
-        _login_attempts[ip] = [t for t in _login_attempts[ip] if now_ts - t < _LOGIN_WINDOW]
-        if len(_login_attempts[ip]) >= _LOGIN_MAX_ATTEMPTS:
+        if _login_blocked(ip):
             flash('Too many failed attempts. Please wait a few minutes and try again.')
             return render_template('login.html', email=email), 429
         user = User.query.filter_by(email=email, active=True).first()
@@ -900,11 +1044,11 @@ def login():
                 session['unread_mentions'] = DeskNote.query.filter_by(mention_user_id=user.id, is_done=False).count()
             except:
                 session['unread_mentions'] = 0
-            _login_attempts[ip] = []  # reset on success
+            _clear_login_failures(ip)  # reset on success
             if user.role == 'marketing':
                 return redirect(url_for('marketing_report'))
             return redirect(url_for('dashboard'))
-        _login_attempts[ip].append(now_ts)  # record failed attempt
+        _record_login_failure(ip)  # record failed attempt
         flash('Invalid email or password')
         return render_template('login.html', email=email)
     return render_template('login.html', email='')
@@ -913,6 +1057,18 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+@app.route('/healthz')
+def healthz():
+    """Lightweight health probe for an uptime monitor (e.g. free UptimeRobot).
+    Returns 200 when the app + database are reachable, 503 otherwise. No login and
+    no data is exposed — just a status word — so it's safe to leave public."""
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        print(f'[healthz] DB check failed: {e}')
+        return jsonify({'status': 'error'}), 503
 
 @app.route('/api/lead-alerts')
 @login_required
@@ -948,8 +1104,10 @@ def dashboard():
         date_filter = request.args.get('date', 'month')  # Default to current month
         
         try:
-            all_jobs = Job.query.order_by(Job.created_at.desc()).all()
-            
+            # Eager-load partial_revenues — the revenue loops below iterate them
+            # per job, which would otherwise fire one query per job (N+1).
+            all_jobs = Job.query.options(db.subqueryload(Job.partial_revenues)).order_by(Job.created_at.desc()).all()
+
             # Filter jobs by date
             if date_filter == 'today':
                 jobs = [j for j in all_jobs if j.created_at and j.created_at.date() == now.date()]
@@ -1082,7 +1240,8 @@ def dashboard():
 
         leads = all_leads
         try:
-            all_jobs = Job.query.order_by(Job.due_date).all()
+            # Eager-load partial_revenues (iterated per job in the revenue loops below).
+            all_jobs = Job.query.options(db.subqueryload(Job.partial_revenues)).order_by(Job.due_date).all()
             if date_filter == 'today':
                 leads = [l for l in all_leads if l.created_at and l.created_at.date() == now.date()]
                 jobs = [j for j in all_jobs if j.created_at and j.created_at.date() == now.date()]
@@ -1207,7 +1366,11 @@ def dashboard():
         wl_filter = 'month'
         wl_from = wl_to = ''
         all_leads_db = Lead.query.all()
-        all_jobs_db = Job.query.all()
+        # The per-staff loop below reads j.customer.assigned_to and j.partial_revenues
+        # for every job, once per user — eager-load both to avoid a large N+1.
+        all_jobs_db = Job.query.options(
+            db.joinedload(Job.customer), db.subqueryload(Job.partial_revenues)
+        ).all()
         def in_period(dt, f):
             if not dt: return False
             d = dt.date() if hasattr(dt,'date') else dt
@@ -1807,7 +1970,7 @@ def edit_lead(lead_id):
     campaigns = Campaign.query.order_by(Campaign.name).all()
     return render_template('edit_lead.html', lead=lead, users=users, services=services, sources=sources, campaigns=campaigns, now=now)
 
-@app.route('/leads/<int:lead_id>/delete')
+@app.route('/leads/<int:lead_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def delete_lead(lead_id):
@@ -2234,6 +2397,9 @@ def document_file(doc_id):
     """Login-protected access to a customer/employee document: redirects to a
     signed Cloudinary URL. Raw Cloudinary links no longer work (authenticated)."""
     d = Document.query.get_or_404(doc_id)
+    if not _can_view_document(d):
+        flash('You are not authorised to view this document.', 'error')
+        return redirect(url_for('dashboard'))
     if not d.file_url:
         return 'No file attached', 404
     return redirect(signed_document_url(d.file_url, d.cloudinary_public_id))
@@ -2241,13 +2407,17 @@ def document_file(doc_id):
 @app.route('/tahfeel-docs/<int:doc_id>/file')
 @login_required
 def company_document_file(doc_id):
-    """Login-protected access to an internal Tahfeel document (CompanyDocument)."""
+    """Internal Tahfeel document (CompanyDocument) — restricted to the same people
+    who manage them: Admin or Saada (matches the /tahfeel-doc page access)."""
+    if session.get('role') != 'admin' and session.get('user_email') != 'saadatahfeel@gmail.com':
+        flash('Access denied.', 'error')
+        return redirect(url_for('dashboard'))
     d = CompanyDocument.query.get_or_404(doc_id)
     if not d.document_url:
         return 'No file attached', 404
     return redirect(signed_document_url(d.document_url, d.cloudinary_public_id))
 
-@app.route('/admin/secure-documents')
+@app.route('/admin/secure-documents', methods=['POST'])
 @login_required
 @admin_required
 def secure_documents():
@@ -2352,7 +2522,7 @@ def admin_add_service():
             flash(f'Service "{name}" added')
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/service/<int:service_id>/delete')
+@app.route('/admin/service/<int:service_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def admin_delete_service(service_id):
@@ -2377,7 +2547,7 @@ def admin_add_source():
             flash(f'Source "{name}" added')
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/source/<int:source_id>/delete')
+@app.route('/admin/source/<int:source_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def admin_delete_source(source_id):
@@ -2387,7 +2557,7 @@ def admin_delete_source(source_id):
     flash(f'Source "{source.name}" removed')
     return redirect(url_for('admin_panel'))
 
-@app.route('/users/<int:user_id>/toggle')
+@app.route('/users/<int:user_id>/toggle', methods=['POST'])
 @login_required
 @admin_required
 def toggle_user(user_id):
@@ -2397,7 +2567,7 @@ def toggle_user(user_id):
     flash(f'{"Activated" if user.active else "Deactivated"} {user.name}')
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/staff/<int:user_id>/toggle')
+@app.route('/admin/staff/<int:user_id>/toggle', methods=['POST'])
 @login_required
 @admin_required
 def admin_toggle_staff(user_id):
@@ -2413,7 +2583,7 @@ def admin_toggle_staff(user_id):
     flash(f'{"Activated" if user.active else "Deactivated"} {user.name}')
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/staff/<int:user_id>/toggle-leave')
+@app.route('/admin/staff/<int:user_id>/toggle-leave', methods=['POST'])
 @login_required
 @admin_required
 def toggle_staff_leave(user_id):
@@ -2802,7 +2972,7 @@ def toggle_customer_alerts(customer_id):
         return redirect(url_for('customer_health', customer_id=customer_id))
     return redirect(url_for('customer_detail', customer_id=customer_id))
 
-@app.route('/admin/alerts/disable-all')
+@app.route('/admin/alerts/disable-all', methods=['POST'])
 @login_required
 @admin_required
 def disable_all_alerts():
@@ -2814,7 +2984,7 @@ def disable_all_alerts():
     flash(f'🔕 Report alerts turned OFF for {n} customer(s). No automated emails will send until you re-enable them individually.')
     return redirect(url_for('admin_panel'))
 
-@app.route('/customers/<int:customer_id>/delete')
+@app.route('/customers/<int:customer_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def delete_customer(customer_id):
@@ -3249,10 +3419,11 @@ def add_job():
         flash(f'{count} task(s) created successfully')
         return redirect(url_for('jobs'))
     tomorrow = (now_dubai() + timedelta(days=1)).strftime('%Y-%m-%d')
-    import json
+    # Pass the raw dict and let Jinja's |tojson encode+escape it safely in the
+    # template (avoids XSS via admin-entered service-type names).
     service_days = {jt.name: (getattr(jt, 'default_days', None) or 1) for jt in job_types}
     all_jobs = Job.query.order_by(Job.created_at.desc()).all()
-    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days=json.dumps(service_days), all_jobs=all_jobs)
+    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days_json=service_days, all_jobs=all_jobs)
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
 @login_required
@@ -3372,7 +3543,7 @@ def edit_job(job_id):
     return render_template('edit_job.html', job=job, customers=customers,
                            job_types=job_types, users=users, statuses=JOB_STATUSES)
 
-@app.route('/jobs/<int:job_id>/delete')
+@app.route('/jobs/<int:job_id>/delete', methods=['POST'])
 @login_required
 def delete_job(job_id):
     if session['role'] not in ['admin', 'operations']:
@@ -3853,7 +4024,7 @@ def edit_activity_log(log_id):
         return redirect(url_for('activity_log'))
     return redirect(url_for('activity_log'))
 
-@app.route('/activity/<int:log_id>/delete')
+@app.route('/activity/<int:log_id>/delete', methods=['POST'])
 @login_required
 def delete_activity_log(log_id):
     log = ActivityLog.query.get_or_404(log_id)
@@ -3913,7 +4084,7 @@ def admin_edit_activity_type(type_id):
     flash(f'Activity updated')
     return redirect(url_for('activity_log'))
 
-@app.route('/admin/activity-type/<int:type_id>/delete')
+@app.route('/admin/activity-type/<int:type_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def admin_delete_activity_type(type_id):
@@ -3977,7 +4148,7 @@ def admin_edit_campaign(item_id):
         flash('Campaign updated')
     return redirect(url_for('admin_panel') + '#campaigns')
 
-@app.route('/admin/campaign/<int:item_id>/delete')
+@app.route('/admin/campaign/<int:item_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def admin_delete_campaign(item_id):
@@ -4037,7 +4208,7 @@ def admin_add_jobtype():
             flash('Job type already exists')
     return redirect(url_for('admin_panel') + '#service-types')
 
-@app.route('/admin/jobtype/<int:jobtype_id>/delete')
+@app.route('/admin/jobtype/<int:jobtype_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def admin_delete_jobtype(jobtype_id):
@@ -5262,11 +5433,11 @@ def edit_document(doc_id):
             cid = doc.customer_id
             return redirect(url_for('add_document') + (f'?customer_id={cid}' if cid else ''))
         nxt = request.form.get('next') or request.args.get('next')
-        return redirect(nxt) if nxt else redirect(url_for('documents'))
+        return _safe_redirect(nxt, 'documents')
     return render_template('edit_document.html', doc=doc, doc_types=doc_types, customers=customers,
                            next_url=request.args.get('next', ''))
 
-@app.route('/documents/<int:doc_id>/delete')
+@app.route('/documents/<int:doc_id>/delete', methods=['POST'])
 @login_required
 def delete_document(doc_id):
     doc = Document.query.get_or_404(doc_id)
@@ -5274,7 +5445,7 @@ def delete_document(doc_id):
     db.session.commit()
     flash('Document removed')
     next_url = request.args.get('next')
-    return redirect(next_url) if next_url else redirect(url_for('documents'))
+    return _safe_redirect(next_url, 'documents')
 
 # ── Admin — Document Types ────────────────────────────────────────────────────
 
@@ -5292,7 +5463,7 @@ def admin_add_doctype():
             flash('Document type already exists')
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/doctype/<int:doctype_id>/delete')
+@app.route('/admin/doctype/<int:doctype_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def admin_delete_doctype(doctype_id):
@@ -5498,6 +5669,30 @@ def init_db():
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_super BOOLEAN DEFAULT FALSE',
             "UPDATE \"user\" SET is_super = TRUE WHERE email = 'admin@tahfeel.ae'",
 
+            # ── Performance indexes (H6) — speed up the filtered queries in reports,
+            #    analytics, marketing report, cron jobs, WhatsApp matching, and the
+            #    per-record lookups. IF NOT EXISTS = safe to re-run on every boot.
+            'CREATE INDEX IF NOT EXISTS idx_lead_assigned_to ON lead (assigned_to)',
+            'CREATE INDEX IF NOT EXISTS idx_lead_status ON lead (status)',
+            'CREATE INDEX IF NOT EXISTS idx_lead_created_at ON lead (created_at)',
+            'CREATE INDEX IF NOT EXISTS idx_lead_source ON lead (source)',
+            'CREATE INDEX IF NOT EXISTS idx_customer_assigned_to ON customer (assigned_to)',
+            'CREATE INDEX IF NOT EXISTS idx_customer_phone ON customer (phone)',
+            'CREATE INDEX IF NOT EXISTS idx_job_status ON job (status)',
+            'CREATE INDEX IF NOT EXISTS idx_job_revenue_date ON job (revenue_date)',
+            'CREATE INDEX IF NOT EXISTS idx_job_assigned_to ON job (assigned_to)',
+            'CREATE INDEX IF NOT EXISTS idx_job_customer_id ON job (customer_id)',
+            'CREATE INDEX IF NOT EXISTS idx_job_created_at ON job (created_at)',
+            'CREATE INDEX IF NOT EXISTS idx_document_expiry_date ON document (expiry_date)',
+            'CREATE INDEX IF NOT EXISTS idx_document_customer_id ON document (customer_id)',
+            'CREATE INDEX IF NOT EXISTS idx_document_employee_id ON document (employee_id)',
+            'CREATE INDEX IF NOT EXISTS idx_document_company_id ON document (company_id)',
+            'CREATE INDEX IF NOT EXISTS idx_lead_update_lead_id ON lead_update (lead_id)',
+            'CREATE INDEX IF NOT EXISTS idx_job_update_job_id ON job_update (job_id)',
+            'CREATE INDEX IF NOT EXISTS idx_partial_revenue_job_id ON partial_revenue (job_id)',
+            'CREATE INDEX IF NOT EXISTS idx_partial_revenue_revenue_date ON partial_revenue (revenue_date)',
+            'CREATE INDEX IF NOT EXISTS idx_wam_created_at ON whats_app_message (created_at)',
+            'CREATE INDEX IF NOT EXISTS idx_login_attempt_ip_created ON login_attempt (ip, created_at)',
         ]
         for sql in migrations:
             try:
@@ -5925,8 +6120,8 @@ def export_full_backup():
                         float(j.amount_received or 0),
                         float(j.revenue or 0),
                         j.revenue_date.strftime('%d/%m/%Y') if j.revenue_date else '',
-                        'Yes' if j.has_partner_commission else 'No',
-                        'Yes' if j.partner_commission_received else 'No',
+                        'Yes' if j.partner_commission_expected else 'No',
+                        'Yes' if (j.partner_status == 'Received') else 'No',
                         j.created_at.strftime('%d/%m/%Y %H:%M') if j.created_at else '',
                         j.due_date.strftime('%d/%m/%Y') if j.due_date else ''
                     ])
@@ -6021,7 +6216,9 @@ def analytics():
 
     # All data for period
     all_leads = Lead.query.filter(Lead.created_at >= start_dt, Lead.created_at <= end_dt).all()
-    all_jobs = Job.query.filter(Job.created_at >= start_dt, Job.created_at <= end_dt).all()
+    all_jobs = Job.query.options(
+        db.joinedload(Job.customer), db.subqueryload(Job.partial_revenues)
+    ).filter(Job.created_at >= start_dt, Job.created_at <= end_dt).all()
     all_users = User.query.filter_by(active=True).order_by(User.name).all()
     users_map = {u.id: u.name for u in User.query.all()}
 
@@ -6215,6 +6412,10 @@ from meta_webhook import meta_bp
 app.register_blueprint(meta_bp)
 from whatsapp_webhook import wa_bp
 app.register_blueprint(wa_bp)
+# Webhooks are external POSTs authenticated by HMAC signature (not a session
+# cookie), so CSRF tokens don't apply — exempt them or Meta/WhatsApp POSTs 400.
+csrf.exempt(meta_bp)
+csrf.exempt(wa_bp)
 
 # ── WhatsApp inbox (CRM-side UI) ──────────────────────────────────────────────
 WA_WINDOW = timedelta(hours=24)  # Meta free-reply window after last inbound
@@ -6292,10 +6493,13 @@ def whatsapp_thread(wa_id):
     if not msgs:
         flash('Conversation not found')
         return redirect(url_for('whatsapp_inbox'))
-    # Mark this conversation's incoming messages as read (clears the unread badge)
-    WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in', is_read=False)\
-            .update({'is_read': True})
-    db.session.commit()
+    # Mark this conversation's incoming messages as read (clears the unread badge).
+    # The 🔄 Refresh button loads with ?refresh=1 — in that case we DON'T mark as
+    # read, so refreshing to check for new messages never silently clears unread.
+    if not request.args.get('refresh'):
+        WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in', is_read=False)\
+                .update({'is_read': True})
+        db.session.commit()
 
     last_in = WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in')\
             .order_by(WhatsAppMessage.created_at.desc()).first()
@@ -7688,7 +7892,7 @@ def admin_edit_partner(partner_id):
             flash('Partner name already exists.', 'error')
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/partner/<int:partner_id>/delete')
+@app.route('/admin/partner/<int:partner_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def admin_delete_partner(partner_id):

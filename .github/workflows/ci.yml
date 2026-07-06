@@ -1,0 +1,33 @@
+name: CI smoke test
+
+# Runs the pre-deploy safety-net checks on every push and pull request.
+# A red X here means a critical path (login, CSRF, webhooks, health) is broken —
+# fix it before that commit is trusted in production.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install runtime deps needed to boot the app
+        # Subset of requirements.txt that the smoke test actually imports
+        # (weasyprint/anthropic/qrcode are loaded lazily and not needed here).
+        run: pip install flask flask-sqlalchemy flask-wtf werkzeug cloudinary openpyxl requests
+
+      - name: Byte-compile all Python (catches syntax errors)
+        run: python -m py_compile app.py meta_webhook.py whatsapp_webhook.py reports.py backup_database.py
+
+      - name: Run smoke test
+        run: python smoke_test.py
