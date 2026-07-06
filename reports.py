@@ -764,7 +764,7 @@ def export_staff_report():
             l.status or '',
             l.created_at.strftime('%d/%m/%Y') if l.created_at else '',
             l.due_date.strftime('%d/%m/%Y') if l.due_date else '',
-            float(l.potential_value or 0), cnt,
+            float(getattr(l, 'potential_value', 0) or 0), cnt,
         ])
     _write_rows(ws2, l_rows, num_cols={9, 10})
     _col_widths(ws2, [20, 22, 22, 18, 14, 14, 13, 13, 18, 12])
@@ -777,6 +777,7 @@ def export_staff_report():
 def export_partner_report():
     g = _guard_admin_finance_only()  # Admin + Finance only
     if g: return g
+    db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
     wb = openpyxl.Workbook()
     ws1 = wb.active
     ws1.title = "Partner Commissions"
@@ -807,7 +808,9 @@ def export_partner_report():
 
     _title_block(ws1, "PARTNER COMMISSION REPORT", df, dt, len(cols1))
     row = ws1.max_row + 2
-    _header_row(ws1, row, cols1)
+    for i, (title, width) in enumerate(cols1, 1):
+        _hdr(ws1.cell(row, i, title))
+        ws1.column_dimensions[get_column_letter(i)].width = width
 
     # Data rows
     for job in jobs:
@@ -854,7 +857,7 @@ def export_staff_daily():
     dt = request.args.get('date_to', '')
     if not df or not dt:
         flash('Date range required')
-        return redirect(url_for('reports.reports_page'))
+        return redirect(url_for('reports.reports_index'))
     
     from_date = datetime.strptime(df, '%Y-%m-%d')
     to_date = datetime.strptime(dt, '%Y-%m-%d')
@@ -968,7 +971,7 @@ def export_revenue():
     dt = request.args.get('date_to', '')
     if not df or not dt:
         flash('Date range required')
-        return redirect(url_for('reports.reports_page'))
+        return redirect(url_for('reports.reports_index'))
     
     from_date = datetime.strptime(df, '%Y-%m-%d')
     to_date = datetime.strptime(dt, '%Y-%m-%d')

@@ -6874,6 +6874,7 @@ def whatsapp_broadcast_import_excel():
 @admin_required
 def whatsapp_broadcast_sample_excel():
     """A blank Excel with the exact columns the import expects, so staff fill it right."""
+    import io
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     from flask import send_file
