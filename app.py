@@ -726,6 +726,13 @@ def wa_unread_count():
         return 0
 app.jinja_env.globals['wa_unread_count'] = wa_unread_count
 
+def job_status_label(s):
+    """Display label for a job status. The stored value 'Done' is shown as
+    'Done - Work Completed' to staff; the internal value is unchanged so all
+    finance/revenue logic keeps working."""
+    return 'Done - Work Completed' if s == 'Done' else (s or '')
+app.jinja_env.globals['job_status_label'] = job_status_label
+
 @app.context_processor
 def inject_birthdays():
     try:
@@ -2988,7 +2995,7 @@ def import_customers():
 
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 
-JOB_STATUSES = ['Assigned', 'Job Started', 'Processing', 'Pending Authority', 'On Hold', 'Delayed', 'Final Stage', 'Done']
+JOB_STATUSES = ['Assigned', 'Job Started', 'Processing', 'Pending Authority', 'On Hold', 'Delayed', 'Partially Completed', 'Done']
 JOB_STATUSES_FINANCE = ['Closed']  # Finance-only status
 JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES + ['Pending Finance Close', 'Closed']
 
@@ -5465,6 +5472,8 @@ def init_db():
             "UPDATE lead SET status='Contacted' WHERE status IN ('Called — No Answer','Customer Not Responding','Call Connected','Sent WhatsApp','Sent Mail','Called — Callback Requested')",
             "UPDATE lead SET status='Qualified' WHERE status='Potential Lead'",
             "UPDATE lead SET status='Proposal' WHERE status IN ('Meeting Scheduled','Quotation Sent')",
+            # Task stage rename: 'Final Stage' -> 'Partially Completed'
+            "UPDATE job SET status='Partially Completed' WHERE status='Final Stage'",
             # Normalize legacy free-text Meta source -> clean 'Meta' + channel
             "UPDATE lead SET sub_source='Facebook' WHERE sub_source IS NULL AND source LIKE 'Meta%Facebook%'",
             "UPDATE lead SET sub_source='Instagram' WHERE sub_source IS NULL AND source LIKE 'Meta%Instagram%'",

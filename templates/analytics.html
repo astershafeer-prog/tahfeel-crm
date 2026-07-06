@@ -302,7 +302,7 @@
     <div class="grid2">
       <div class="an-card">
         <div class="an-card-title">Jobs by Status</div>
-        {% set job_colors = {'Pending Finance Approval':'#94A3B8','Assigned':'#3B82F6','Job Started':'#6366F1','Processing':'#8B5CF6','Pending Authority':'#F59E0B','On Hold':'#F97316','Delayed':'#EF4444','Final Stage':'#06B6D4','Done':'#10B981','Pending Finance Close':'#F59E0B','Closed':'#059669'} %}
+        {% set job_colors = {'Pending Finance Approval':'#94A3B8','Assigned':'#3B82F6','Job Started':'#6366F1','Processing':'#8B5CF6','Pending Authority':'#F59E0B','On Hold':'#F97316','Delayed':'#EF4444','Partially Completed':'#06B6D4','Done':'#10B981','Pending Finance Close':'#F59E0B','Closed':'#059669'} %}
         {% for status, cnt in job_status_counts.most_common() %}
         {% set max_j = job_status_counts.most_common(1)[0][1] if job_status_counts else 1 %}
         <div class="pip-row">

@@ -181,7 +181,7 @@
             <td><strong>{{ job.job_type }}</strong></td>
             <td>{% if job.assignee %}<div class="av-wrap"><div class="av">{{ job.assignee.name[:2].upper() }}</div><span class="av-name">{{ job.assignee.name.split()[0] }}</span></div>{% else %}—{% endif %}</td>
             <td><span class="due-pill {% if job.due_date and job.due_date < now %}overdue{% endif %}">📅 {{ job.due_date.strftime('%d %b') if job.due_date else '—' }}</span></td>
-            <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span></td>
+            <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job_status_label(job.status) }}</span></td>
             <td><a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a></td>
           </tr>
           {% endfor %}

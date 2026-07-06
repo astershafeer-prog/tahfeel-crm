@@ -33,7 +33,7 @@
 
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
+          <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job_status_label(job.status) }}</span>
           {% if job.updates %}
           <button onclick="openTimelinePopup()" class="ib" title="Preview & Download Timeline" style="font-size:14px;">🖼</button>
           {% endif %}
@@ -452,7 +452,7 @@
               <select name="status" id="statusSelect" onchange="toggleCompletion()">
                 {% for s in statuses %}
                 {% if s != 'Closed' or session.role in ['admin','finance'] %}
-                <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+                <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ job_status_label(s) }}</option>
                 {% endif %}
                 {% endfor %}
               </select>

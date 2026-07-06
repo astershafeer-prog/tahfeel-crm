@@ -27,7 +27,7 @@
               {{ job.customer.name }}{% if job.customer.company %} — {{ job.customer.company }}{% endif %}
             </div>
           </div>
-          <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job.status }}</span>
+          <span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job_status_label(job.status) }}</span>
         </div>
         <div class="card-body">
 
