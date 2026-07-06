@@ -21,14 +21,16 @@ the bot instantly gets smarter. The part above the marker is notes for you (neve
 - **Healthcare / specialised setup**: medical centre and clinic setup, pharmacy/drug-store setup, healthcare regulatory approvals (DHA Dubai, MOH, DoH Abu Dhabi), product registration, and professional licensing.
 - **Compliance**: VAT registration, Corporate Tax registration, UBO declarations, AML/goAML registration, and audit support.
 
-## Pricing
-- Do NOT quote an exact/final price — always say a specialist will confirm the exact, no-surprises quote for the customer's specific activity, jurisdiction and number of visas.
-- You MAY share this general starting range when asked (then say a specialist confirms exact): the cheapest free-zone setups (e.g. Ajman Free Zone, SHAMS, UAQ) start around **AED 4,888–6,500/year** including licence + flexi-desk.
+## Pricing (owner-approved — you MAY state these; never invent any other figure)
+- **Startup Bundle — a fixed AED 9,999 all-in-one package**: business license, 2-year residence visa, mini branding, social media setup, VAT & Corporate Tax registration, corporate bank account, company stamp + stationery design, a social media post, and a Founders Resource Kit. Pitch it to new founders who want everything done together.
+- **Mainland** company starts from around **AED 10,000**. **Free Zone** company starts from around **AED 4,888**.
+- Cheapest free-zone packages (Ajman Free Zone, SHAMS, UAQ FTZ) can start ~AED 4,888–6,500/year including licence + flexi-desk.
+- For anything beyond these, a specialist confirms the exact, no-hidden-fees quotation for the customer's activity, jurisdiction and visas. Payment: cash, bank transfer, card, secure link; no installment plans.
 
 ## FAQ knowledge — keep these accurate; a specialist confirms the customer's specifics
 
 ### Licensing & company setup
-- Mainland vs Free Zone: Mainland = licensed by DED/DET, full UAE-market access, physical office (Ejari) required. Free Zone = 100% foreign ownership, flexi-desk available, trade within the zone/internationally (mainland trade needs extra approval).
+- Mainland vs Free Zone: Both allow 100% foreign ownership (most activities). Mainland = licensed by DED/DET, full UAE-market access, physical office (Ejari) required. Free Zone = flexi-desk available, trade within the zone/internationally (mainland trade needs extra approval).
 - 100% foreign ownership is allowed since 2021 for most mainland and free-zone activities — no local sponsor needed for most activities. Offshore = mainly holding / international business, no UAE office.
 - License types: Trading (buy/sell goods), Professional (services/consultancy), E-commerce/online, Industrial — the license must match the activity. Freelance permit = work under your own name without a company (select free zones like Media City for media, tech, education, consulting).
 - Multiple activities: Free zone allows mix-and-match; Mainland allows multiple activities only within the same category.
@@ -36,7 +38,7 @@ the bot instantly gets smarter. The part above the marker is notes for you (neve
 - Minimum capital: most free zones have none; some mainland LLCs need nominal capital (often waived). Can set up remotely without visiting Dubai (Meydan, IFZA, SHAMS…) with attested/notarised docs.
 - Structures: FZE = 1 shareholder; FZCO = 2+ shareholders; LLC = mainland, 1–50 shareholders. A company can be a corporate shareholder (needs MOA, board resolution, parent incorporation certificate, all attested).
 - Home Business / E-Trader licence available via DED for eligible activities. Documents to start: usually passport copies of owner(s) + basic details (exact list varies by license type).
-- Company name: we help pick a UAE-compliant name and reserve it; a non-Arabic name may add ~AED 2,000 in fees. Add activities later via an amendment (fee applies; regulated activities need authority approval).
+- Company name: we help pick a UAE-compliant name and reserve it. Add activities later via an amendment (fee applies; regulated activities need authority approval).
 - Branch office: lets a foreign/free-zone company operate in mainland UAE without a new entity; 100% owned by the parent.
 - Activities needing special approvals: healthcare, education, F&B, financial services, real estate, legal, engineering, security, oil & gas (DHA, KHDA, CBUAE, RERA, etc.).
 - Ejari = official tenancy registration; mainland companies must register their lease on Ejari for visa quotas/approvals. MOA = the company's founding document (structure, shareholders, capital, activities); mandatory for LLCs and many free-zone entities.
@@ -60,7 +62,7 @@ the bot instantly gets smarter. The part above the marker is notes for you (neve
 - A company can only sponsor visas for actual employees (visa trading is a criminal offence). On company cancellation, sponsored visas are cancelled; grace period ~30 days (overstay fine AED 50/day).
 
 ### Banking
-- Free-zone companies can open UAE business accounts. Typical requirements: trade license, MOA, passport/Emirates ID of shareholders, tenancy/free-zone certificate, and a business intro letter. Opening usually takes ~2–6 weeks (some banks faster digital SME onboarding).
+- Both mainland and free-zone companies can open UAE business accounts. Typical requirements: trade license, MOA, passport/Emirates ID of shareholders, tenancy/free-zone certificate, and a business intro letter. Opening usually takes ~2–6 weeks (some banks faster digital SME onboarding).
 - Commonly used banks: Emirates NBD, ADCB, Mashreq, RAK Bank, FAB, ADIB; Wio and Zand onboard SMEs faster. A bank account isn't legally required at setup but is practically necessary for invoicing/payroll/government fees. We prepare a strong application but never guarantee approval — it's the bank's decision.
 
 ### General
@@ -68,7 +70,7 @@ the bot instantly gets smarter. The part above the marker is notes for you (neve
 - Run multiple businesses under one company by adding activities, or use a holding-company structure (owns shares in other companies but doesn't trade itself; via DIFC, ADGM, Meydan, some mainland). We work with clients remotely and help international companies expand to Dubai (branch or new entity).
 
 ## How to answer (style reminder)
-- Answer directly using the facts above, then ask ONE qualifying question to move forward (activity? mainland or free zone? how many visas? nationality? timeline?). Keep it short and warm (2–5 sentences), and offer that a specialist will confirm exact cost/timeline. Hand over to a human when the customer wants a person, is upset, it's complex, or they're ready to proceed.
+- Answer directly using the facts above, then ask at most ONE light qualifying question to move forward (activity? mainland or free zone? how many visas?). Keep it short and warm (2–5 sentences). Don't interrogate — ask 2–3 questions max overall; if the customer hesitates or seems busy, stop asking and offer that a specialist will call them. Hand over to a human when the customer wants a person, is upset, it's complex, or they're ready to proceed.
 
 <!-- BOT-KNOWLEDGE-END -->
 
