@@ -279,6 +279,25 @@ AI_SYSTEM_PROMPT = (
     "about your reasoning."
 )
 
+def _load_bot_knowledge():
+    """Load the editable knowledge base (the section between the markers in
+    BOT_KNOWLEDGE.md) so editing that file + deploying updates the bot's brain
+    without touching code."""
+    try:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'BOT_KNOWLEDGE.md')
+        with open(path, encoding='utf-8') as f:
+            text = f.read()
+        if '<!-- BOT-KNOWLEDGE-START -->' in text:
+            text = text.split('<!-- BOT-KNOWLEDGE-START -->', 1)[1]
+        if '<!-- BOT-KNOWLEDGE-END -->' in text:
+            text = text.split('<!-- BOT-KNOWLEDGE-END -->', 1)[0]
+        return text.strip()
+    except Exception as e:
+        print(f'[WA] BOT_KNOWLEDGE load failed: {e}')
+        return ''
+
+AI_KNOWLEDGE = _load_bot_knowledge()
+
 def ai_reply(wa_id, text, is_first):
     """Generate a reply with Claude from the recent conversation. Raises on failure
     so the caller can fall back to the scripted menu."""
@@ -303,11 +322,15 @@ def ai_reply(wa_id, text, is_first):
     if not history:
         history = [{'role': 'user', 'content': (text or '').strip() or 'Hello'}]
 
+    system_prompt = AI_SYSTEM_PROMPT
+    if AI_KNOWLEDGE:
+        system_prompt += ('\n\n===== TAHFEEL KNOWLEDGE BASE (answer using these facts; '
+                          'never contradict them) =====\n' + AI_KNOWLEDGE)
     client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
     resp = client.messages.create(
         model=model,
         max_tokens=1024,
-        system=AI_SYSTEM_PROMPT,
+        system=system_prompt,
         messages=history,
     )
     out = ''.join(b.text for b in resp.content if b.type == 'text').strip()
