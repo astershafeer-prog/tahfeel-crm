@@ -1755,7 +1755,19 @@ def lead_detail(lead_id):
         db.session.commit()
         flash('Update saved')
         return redirect(url_for('lead_detail', lead_id=lead_id))
-    return render_template('lead_detail.html', lead=lead, now=now)
+    # WhatsApp chat link: show a "View WhatsApp chat" button only when this lead's
+    # number actually has a logged conversation.
+    wa_id = None
+    wa_has_chat = False
+    try:
+        from whatsapp_webhook import normalize_phone
+        wa_id = normalize_phone(lead.phone) if lead.phone else None
+        if wa_id:
+            wa_has_chat = WhatsAppMessage.query.filter_by(wa_id=wa_id).first() is not None
+    except Exception:
+        pass
+    return render_template('lead_detail.html', lead=lead, now=now,
+                           wa_id=wa_id, wa_has_chat=wa_has_chat)
 
 @app.route('/leads/<int:lead_id>/quality', methods=['POST'])
 @login_required

@@ -460,8 +460,23 @@ def handle_incoming(msg, contacts):
         wa_id=normalize_phone(wa_id), direction='in').first() is None
 
     # 1) log the inbound (always — so it shows in the CRM inbox even when the bot is muted)
-    log_message(wa_id, 'in', body, msg_type=mtype, wam_id=wam_id, contact_name=cname,
-                media_url=media_url, mime_type=mime_type)
+    row = log_message(wa_id, 'in', body, msg_type=mtype, wam_id=wam_id, contact_name=cname,
+                      media_url=media_url, mime_type=mime_type)
+
+    # If this number matches a known lead/customer, route the chat to that rep so
+    # it lands in the right person's inbox (uses the ids log_message already resolved
+    # — no extra phone scan). Never overrides a manual assignment.
+    try:
+        rep_id = None
+        if row.lead_id:
+            from app import Lead
+            l = Lead.query.get(row.lead_id); rep_id = l.assigned_to if l else None
+        if not rep_id and row.customer_id:
+            from app import Customer
+            cst = Customer.query.get(row.customer_id); rep_id = cst.assigned_to if cst else None
+        assign_thread_to_rep(wa_id, rep_id)
+    except Exception as e:
+        print(f'[WA] inbound auto-route skipped: {e}')
 
     # 2) auto-reply — ONLY if the bot is explicitly switched on (safe-off by default)
     if not _flag('WA_BOT_ENABLED'):
@@ -492,6 +507,25 @@ def handle_status(st):
     row = WhatsAppMessage.query.filter_by(wam_id=wam_id).first()
     if row:
         row.status = status
+        db.session.commit()
+
+
+def assign_thread_to_rep(wa_id, rep_id):
+    """Route a WhatsApp conversation to a staff member (its lead/customer's rep),
+    so it lands in that rep's inbox. Never overrides an existing manual assignment."""
+    if not rep_id:
+        return
+    from app import db, WhatsAppThread
+    key = normalize_phone(wa_id)
+    if not key:
+        return
+    thread = WhatsAppThread.query.get(key)
+    if not thread:
+        thread = WhatsAppThread(wa_id=key)
+        db.session.add(thread)
+    if not thread.assigned_to:            # respect any manual assignment already set
+        thread.assigned_to = rep_id
+        thread.assigned_at = now_dubai()
         db.session.commit()
 
 
@@ -529,6 +563,12 @@ def notify_new_lead(lead):
         log_message(lead.phone, 'out', body, msg_type='template',
                     wam_id=wam, handled_by='bot', status='sent' if wam else 'failed',
                     lead_id=lead.id)
+        # Route this conversation to the SAME rep the lead is assigned to, so the
+        # chat shows up in that rep's "Mine" inbox (matches the lead assignment).
+        try:
+            assign_thread_to_rep(lead.phone, lead.assigned_to)
+        except Exception as e:
+            print(f'[WA] thread auto-assign skipped: {e}')
         print(f'[WA] ✓ Welcome template sent to lead {lead.id} ({lead.phone})')
     except Exception as e:
         # Never let WhatsApp break lead creation
