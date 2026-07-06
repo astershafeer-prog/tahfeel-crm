@@ -6474,6 +6474,7 @@ def whatsapp_inbox():
         'all': len(thread_list),
         'unread': sum(1 for t in thread_list if t['unread'] and not t['resolved']),
         'unmatched': sum(1 for t in thread_list if not t['lead'] and not t['customer'] and not t['resolved']),
+        'leads': sum(1 for t in thread_list if t['lead'] and not t['resolved']),
         'mine': sum(1 for t in thread_list if t['assignee'] and t['assignee'].id == uid and not t['resolved']),
         'done': sum(1 for t in thread_list if t['resolved']),
     }
@@ -6487,6 +6488,8 @@ def whatsapp_inbox():
         thread_list = [t for t in thread_list if t['unread'] and not t['resolved']]
     elif flt == 'unmatched':
         thread_list = [t for t in thread_list if not t['lead'] and not t['customer'] and not t['resolved']]
+    elif flt == 'leads':
+        thread_list = [t for t in thread_list if t['lead'] and not t['resolved']]
     elif flt == 'mine':
         thread_list = [t for t in thread_list if t['assignee'] and t['assignee'].id == uid and not t['resolved']]
     elif flt == 'done':

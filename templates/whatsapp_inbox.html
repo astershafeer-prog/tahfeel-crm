@@ -64,7 +64,7 @@
     <!-- Search + filter tabs -->
     <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div style="display:flex;gap:6px;">
-        {% set tabs = [('unread','Unread',counts.unread), ('mine','Mine',counts.mine), ('unmatched','Unmatched',counts.unmatched), ('done','Done',counts.done), ('all','All',counts.all)] %}
+        {% set tabs = [('unread','Unread',counts.unread), ('mine','Mine',counts.mine), ('leads','Leads',counts.leads), ('unmatched','Unmatched',counts.unmatched), ('done','Done',counts.done), ('all','All',counts.all)] %}
         {% for key, label, c in tabs %}
         <a href="/whatsapp?filter={{ key }}{% if q %}&q={{ q }}{% endif %}"
            style="font-size:13px;padding:6px 14px;border-radius:20px;text-decoration:none;
