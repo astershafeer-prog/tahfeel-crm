@@ -6483,7 +6483,38 @@ def whatsapp_inbox():
     staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).order_by(User.name).all()
     return render_template('whatsapp_inbox.html', threads=thread_list, now=now_dubai(),
                            q=q, flt=flt, counts=counts, staff=staff,
-                           wa_templates=wa_send_context())
+                           wa_templates=wa_send_context(), wa_health=_wa_health())
+
+def _wa_health():
+    """Plain-English WhatsApp sending health for the inbox banner. Looks at whether
+    the API is configured, whether the auto-bot is on, and how many of the most
+    recent OUTGOING messages failed — so a billing/token outage is visible in the
+    CRM instead of only in server logs."""
+    def _envflag(k):
+        return os.environ.get(k, '').strip().lower() in ('1', 'true', 'yes', 'on')
+    configured = bool(os.environ.get('WA_ACCESS_TOKEN') and os.environ.get('WA_PHONE_NUMBER_ID'))
+    bot_on = _envflag('WA_BOT_ENABLED')
+    try:
+        recent = WhatsAppMessage.query.filter_by(direction='out')\
+                 .order_by(WhatsAppMessage.created_at.desc()).limit(10).all()
+    except Exception:
+        recent = []
+    total = len(recent)
+    failed = sum(1 for m in recent if (m.status or '') == 'failed')
+    if not configured:
+        level, msg = 'down', ('WhatsApp API is not configured (access token missing). '
+                              'Outgoing messages cannot be sent. Check the Railway settings.')
+    elif total and failed >= max(3, total // 2):
+        level, msg = 'down', (f'WhatsApp sending may be DOWN — {failed} of the last {total} '
+                              f'outgoing messages failed. Check your Meta WhatsApp billing and '
+                              f'that the access token has not expired.')
+    elif failed:
+        level, msg = 'warn', (f'{failed} of the last {total} outgoing messages failed. '
+                              f'Keep an eye on Meta billing / the access token.')
+    else:
+        level, msg = 'ok', 'WhatsApp sending is healthy.'
+    return {'level': level, 'msg': msg, 'bot_on': bot_on, 'configured': configured,
+            'failed': failed, 'total': total}
 
 @app.route('/whatsapp/<wa_id>')
 @login_required

@@ -20,6 +20,28 @@
       {% endfor %}{% endif %}
     {% endwith %}
 
+    <!-- Bot / WhatsApp sending health banner -->
+    {% if wa_health %}
+      {% if wa_health.level == 'down' %}
+      <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-left:5px solid #DC2626;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">🔴</span>
+        <div style="font-size:13px;color:#991B1B;"><b>WhatsApp bot problem.</b> {{ wa_health.msg }}</div>
+      </div>
+      {% elif wa_health.level == 'warn' %}
+      <div style="background:#FFFBEB;border:1px solid #FCD34D;border-left:5px solid #F59E0B;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">🟠</span>
+        <div style="font-size:13px;color:#92400E;"><b>Heads up.</b> {{ wa_health.msg }}</div>
+      </div>
+      {% else %}
+      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-left:5px solid #16A34A;border-radius:10px;padding:9px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:15px;">🟢</span>
+        <div style="font-size:12px;color:#166534;">WhatsApp sending is healthy.
+          {% if wa_health.bot_on %}Auto-bot is <b>ON</b>.{% else %}Auto-bot is <b>OFF</b> — messages are logged but no automatic replies are sent.{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    {% endif %}
+
     <div class="page-header">
       <h2>💬 WhatsApp <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ threads|length }} conversation{{ 's' if threads|length != 1 }})</span></h2>
       <span style="font-size:12px;color:#1B7A3D;display:flex;align-items:center;gap:10px;">
