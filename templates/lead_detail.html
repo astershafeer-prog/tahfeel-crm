@@ -31,6 +31,7 @@
           {% if lead.status not in ['Converted','Lost'] and last and last.followup_date and last.followup_date.date() <= now.date() %}
             <span class="badge" style="background:#FAEEDA;color:#854F0B;">⏳ Follow-up due</span>
           {% endif %}
+          {% if bot_replied %}<span class="badge" title="Customer replied on the WhatsApp bot" style="background:#E1F5EE;color:#0F6E56;">🤖 Bot reply</span>{% endif %}
           {% if wa_has_chat %}
           <a href="/whatsapp/{{ wa_id }}" title="View this customer's WhatsApp conversation"
              style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:white;text-decoration:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;">💬 View WhatsApp chat</a>

@@ -179,7 +179,7 @@
           {% for r in rows %}
           <tr class="lead-row" onclick="toggleRow(this)">
             <td style="color:#94a3b8;">{{ r.date.strftime('%d %b') if r.date else '—' }}</td>
-            <td>{{ r.name }}</td>
+            <td>{{ r.name }}{% if r.bot_replied %} <span title="Customer replied on the WhatsApp bot" style="font-size:12px;">🤖</span>{% endif %}</td>
             <td style="color:#64748b;">{{ r.source }}</td>
             <td>{{ stage_badge(r.stage) }}</td>
             <td>{{ status_badge(r.genuine) }}{% if r.junk_reason %}<span style="font-size:10px;color:#94a3b8;"> · {{ r.junk_reason }}</span>{% endif %}</td>

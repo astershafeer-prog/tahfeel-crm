@@ -1621,10 +1621,12 @@ def all_leads():
     paginated = leads[(page - 1) * per_page: page * per_page]
 
     sources = Source.query.order_by(Source.name).all()
+    bot_lead_ids = _bot_replied_lead_ids(paginated)
     return render_template('all_leads.html', leads=paginated, now=now, users=users,
                            search=search, is_default=is_default,
                            page=page, total_pages=total_pages, total=total,
-                           sources=sources, saved_filters=session.get('leads_filters', {}))
+                           sources=sources, saved_filters=session.get('leads_filters', {}),
+                           bot_lead_ids=bot_lead_ids)
 
 @app.route('/leads/export')
 @login_required
@@ -1759,15 +1761,17 @@ def lead_detail(lead_id):
     # number actually has a logged conversation.
     wa_id = None
     wa_has_chat = False
+    bot_replied = False
     try:
         from whatsapp_webhook import normalize_phone
         wa_id = normalize_phone(lead.phone) if lead.phone else None
         if wa_id:
             wa_has_chat = WhatsAppMessage.query.filter_by(wa_id=wa_id).first() is not None
+            bot_replied = WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in').first() is not None
     except Exception:
         pass
     return render_template('lead_detail.html', lead=lead, now=now,
-                           wa_id=wa_id, wa_has_chat=wa_has_chat)
+                           wa_id=wa_id, wa_has_chat=wa_has_chat, bot_replied=bot_replied)
 
 @app.route('/leads/<int:lead_id>/quality', methods=['POST'])
 @login_required
@@ -2097,6 +2101,33 @@ def _staff_remarks(lead):
         out.append({'when': u.created_at, 'text': rm})
     return out
 
+def _attempt_count(lead):
+    """Total real contact attempts = every logged outreach activity (call connected,
+    call no-answer, WhatsApp sent, email sent, quote sent, meeting). Excludes plain
+    'Note' and blank rows. Counts from the full update history, so it is correct
+    retroactively for older leads too."""
+    return sum(1 for u in lead.updates
+               if (u.activity_type or '').strip()
+               and (u.activity_type or '').strip().lower() != 'note')
+
+def _inbound_wa_ids():
+    """Normalized phone numbers that sent us at least one INBOUND WhatsApp message
+    (i.e. the customer actually replied on the bot)."""
+    try:
+        rows = db.session.query(WhatsAppMessage.wa_id).filter_by(direction='in').distinct().all()
+        return {r[0] for r in rows if r[0]}
+    except Exception:
+        return set()
+
+def _bot_replied_lead_ids(leads):
+    """Subset of the given leads' ids whose customer replied on WhatsApp (inbound msg)."""
+    try:
+        from whatsapp_webhook import normalize_phone
+    except Exception:
+        return set()
+    inbound = _inbound_wa_ids()
+    return {l.id for l in leads if l.phone and normalize_phone(l.phone) in inbound}
+
 def _marketing_leads():
     """Leads for the Marketing-Ext report: Meta-only + per-user date floor + UI filters.
     Returns (leads, floor, filters_dict)."""
@@ -2133,7 +2164,9 @@ def marketing_report():
         return redirect(url_for('dashboard'))
     from sqlalchemy import or_
     from collections import Counter
+    from whatsapp_webhook import normalize_phone
     leads, floor, f = _marketing_leads()
+    bot_ids = _inbound_wa_ids()
     rows = []
     for l in leads:
         resp = (l.first_contacted_at - l.created_at).total_seconds() if (l.first_contacted_at and l.created_at) else None
@@ -2141,8 +2174,9 @@ def marketing_report():
             'date': l.created_at, 'name': l.name or '—', 'phone': _mask_phone(l.phone),
             'source': l.sub_source or l.source or '—', 'stage': l.status or 'New',
             'genuine': l.genuine or '', 'junk_reason': l.junk_reason or '',
-            'attempts': l.attempts or 0, 'remarks': _staff_remarks(l),
+            'attempts': _attempt_count(l), 'remarks': _staff_remarks(l),
             'campaign': l.campaign or '—', 'response': _fmt_duration(resp),
+            'bot_replied': bool(l.phone and normalize_phone(l.phone) in bot_ids),
         })
     n = len(leads)
     n_contacted = sum(1 for l in leads if l.status in ('Contacted', 'Qualified', 'Proposal', 'Converted', 'Lost'))
@@ -2182,9 +2216,11 @@ def marketing_export():
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment
     from flask import send_file
+    from whatsapp_webhook import normalize_phone
     leads, floor, f = _marketing_leads()
+    bot_ids = _inbound_wa_ids()
     wb = Workbook(); ws = wb.active; ws.title = 'Leads'
-    headers = ['Date', 'Name', 'Phone', 'Source', 'Stage', 'Lead Quality', 'Attempts', 'Remarks (staff updates, with time)']
+    headers = ['Date', 'Name', 'Phone', 'Source', 'Stage', 'Lead Quality', 'Attempts', 'Bot Reply', 'Remarks (staff updates, with time)']
     for i, h in enumerate(headers, 1):
         ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
         ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
@@ -2196,16 +2232,17 @@ def marketing_export():
         history = '\n'.join(
             f"{r['when'].strftime('%d %b %Y %H:%M')} — {r['text']}" for r in _staff_remarks(l)
         )
+        bot_reply = 'Yes' if (l.phone and normalize_phone(l.phone) in bot_ids) else ''
         ws.append([
             l.created_at.strftime('%d/%m/%Y') if l.created_at else '',
             l.name or '', _mask_phone(l.phone), l.sub_source or l.source or '',
-            l.status or 'New', quality, l.attempts or 0, history,
+            l.status or 'New', quality, _attempt_count(l), bot_reply, history,
         ])
-    widths = [11, 22, 16, 10, 12, 18, 9, 70]
+    widths = [11, 22, 16, 10, 12, 18, 9, 10, 70]
     for i, w in enumerate(widths, 1):
         ws.column_dimensions[ws.cell(1, i).column_letter].width = w
     # wrap the remarks column so multi-update history expands the row
-    for row in ws.iter_rows(min_row=2, min_col=8, max_col=8):
+    for row in ws.iter_rows(min_row=2, min_col=9, max_col=9):
         row[0].alignment = Alignment(wrap_text=True, vertical='top')
     buf = io.BytesIO(); wb.save(buf); buf.seek(0)
     return send_file(buf, download_name='tahfeel_leads.xlsx', as_attachment=True,
