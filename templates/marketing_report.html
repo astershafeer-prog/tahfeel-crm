@@ -243,34 +243,6 @@
       </div>
     </div>
 
-    <!-- Response time — how fast leads are reached (tallies to total) -->
-    <div class="analytics" style="grid-template-columns:1fr;">
-      <div class="acard">
-        <div class="ahead"><span>Response time — how fast leads are reached</span><span class="rate">avg <b style="font-size:16px;color:#0F2660;">{{ avg_response }}</b></span></div>
-        <div class="funnel">
-          {% set rb = [
-            ('Under 1 hour', resp.lt1h, '#97C459', '#173404'),
-            ('1–4 hours', resp.h1_4, '#C7E0A0', '#2C4A12'),
-            ('4–24 hours', resp.h4_24, '#FAC775', '#633806'),
-            ('1–3 days', resp.d1_3, '#F3B5B4', '#7A1E1E'),
-            ('Over 3 days', resp.gt3d, '#E24B4A', '#5A1414'),
-            ('Not yet reached', resp.not_reached, '#E2E8F0', '#5F5E5A'),
-          ] %}
-          {% for label, cnt, bg, fg in rb %}
-          {% set p = (cnt / breakdown.total * 100)|round|int if breakdown.total else 0 %}
-          <div class="frow">
-            <span class="fl" style="width:100px;">{{ label }}</span>
-            <div class="fbar" style="width:{{ [p, 3]|max }}%;background:{{ bg }};"><span style="color:{{ fg }};">{{ cnt }}</span></div>
-            <span style="font-size:11px;color:#94a3b8;white-space:nowrap;">{{ p }}%</span>
-          </div>
-          {% endfor %}
-        </div>
-        <div style="margin-top:10px;font-size:11px;color:#94a3b8;border-top:0.5px solid #eef2f7;padding-top:8px;">
-          Measured from lead arrival to first time reached. Green = fast · grey = not reached yet. Adds up to <b style="color:#27500A;">{{ breakdown.total }}</b> ✓
-        </div>
-      </div>
-    </div>
-
     <div class="card">
       <table>
         <thead>
@@ -281,7 +253,7 @@
             <th style="width:96px;">Stage</th>
             <th style="width:130px;">Lead Quality</th>
             <th style="width:70px;text-align:center;">Attempts</th>
-            <th style="width:28px;"></th>
+            <th style="width:96px;"></th>
           </tr>
         </thead>
         <tbody>
@@ -293,7 +265,7 @@
             <td>{{ stage_badge(r.stage) }}</td>
             <td>{{ status_badge(r.genuine) }}{% if r.junk_reason %}<span style="font-size:10px;color:#94a3b8;"> · {{ r.junk_reason }}</span>{% endif %}</td>
             <td style="text-align:center;color:#475569;">{{ r.attempts }}</td>
-            <td style="color:#94a3b8;"><span class="chev">▸</span></td>
+            <td style="text-align:right;"><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#1A3B8B;background:#EEF4FF;padding:3px 10px;border-radius:20px;white-space:nowrap;">Details <span class="chev">▸</span></span></td>
           </tr>
           <tr class="detail-row" style="display:none;"><td colspan="7" style="padding:0 14px 12px;background:#f8fbff;">
             <div class="detail">

@@ -242,7 +242,7 @@
               {% else %}📝{% endif %}
               {% if update.activity_type %}{{ update.activity_type }} · {% endif %}<span style="color:var(--text-muted);font-weight:600;">{{ update.stage }}</span>
             </span>
-            <span class="timeline-meta">{{ update.staff_name }} · {{ update.created_at.strftime('%d %b %Y') }}</span>
+            <span class="timeline-meta">{{ update.staff_name }} · {{ update.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
           </div>
           <div class="timeline-remark" style="font-size:14px;">{{ update.remark }}</div>
           {% if update.followup_date %}
