@@ -34,29 +34,71 @@
       <h2>⚙ Admin Panel</h2>
     </div>
 
-    <!-- WhatsApp Settings — one-time config (functions live on the WhatsApp page) -->
-    <details class="acc" open id="whatsapp-settings">
-      <summary>📨 WhatsApp Settings</summary>
+    <!-- Automations — every automatic message / report in one place -->
+    <details class="acc" open id="automations">
+      <summary>🔔 Automations</summary>
       <div class="acc-inner">
       <div style="padding:14px 18px;">
-        <div style="font-size:12.5px;color:#64748B;margin-bottom:12px;line-height:1.6;">
-          Day-to-day WhatsApp work (Inbox, Templates, Broadcast, Quick replies) lives on the
-          <a href="/whatsapp" style="color:#1A3B8B;">WhatsApp page →</a>. This is only the one-time setup.
+        <div style="font-size:12.5px;color:#64748B;margin-bottom:6px;line-height:1.6;">
+          Turn each automatic message or report on or off. WhatsApp sends use your approved Meta
+          templates and run on the business number. Day-to-day WhatsApp work (Inbox, Templates,
+          Broadcast) lives on the <a href="/whatsapp" style="color:#1A3B8B;">WhatsApp page →</a>.
         </div>
-        <form method="POST" action="/admin/whatsapp-settings" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" name="wa_auto_welcome" value="on" {{ 'checked' if wa_auto_welcome }} style="width:18px;height:18px;">
-            <span style="font-size:14px;font-weight:600;color:var(--text-primary);">Auto-welcome new leads</span>
+        <form method="POST" action="/admin/automations">
+
+          <!-- 1. Auto-welcome (WhatsApp) -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;">
+            <input type="checkbox" name="wa_auto_welcome" value="on" {{ 'checked' if autos.wa_auto_welcome }} style="width:18px;height:18px;margin-top:2px;">
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-primary);">💬 Auto-welcome new leads</span>
+              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">WhatsApp · sends the approved welcome template the moment a new lead arrives (Meta ads + manually added). Inbound chats are handled by the bot, not greeted here.</span>
+            </span>
           </label>
-          <span style="font-size:12px;color:#94A3B8;flex:1;min-width:220px;">
-            Sends the approved <strong>“general”</strong> template to new leads (Meta ads + manually-added).
-            Inbound WhatsApp chats are handled by the bot, so they're not greeted here.
-          </span>
-          <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">Save</button>
+
+          <!-- 2. Birthday (WhatsApp) -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;">
+            <input type="checkbox" name="auto_birthday" value="on" {{ 'checked' if autos.auto_birthday }} style="width:18px;height:18px;margin-top:2px;">
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-primary);">🎂 Birthday wishes</span>
+              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">WhatsApp · sends the approved <strong>tahfeel_birthday</strong> template at 9 AM Dubai on each customer's birthday — once a year, customers only.</span>
+              {% if runs.birthday %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.birthday }}</span>{% endif %}
+            </span>
+          </label>
+
+          <!-- 3. Document expiry (WhatsApp) -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;">
+            <input type="checkbox" name="auto_expiry_wa" value="on" {{ 'checked' if autos.auto_expiry_wa }} style="width:18px;height:18px;margin-top:2px;">
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📄 Document expiry — WhatsApp</span>
+              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">WhatsApp · reminds the customer <strong>7 days</strong> and again <strong>3 days</strong> before a document expires (approved <strong>compliance_alert_v1</strong> template). Only customers with alerts enabled.</span>
+              {% if runs.expiry_wa %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.expiry_wa }}</span>{% endif %}
+            </span>
+          </label>
+
+          <!-- 4. Document expiry (Email) -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;">
+            <input type="checkbox" name="auto_expiry_email" value="on" {{ 'checked' if autos.auto_expiry_email }} style="width:18px;height:18px;margin-top:2px;">
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📧 Document expiry — Email</span>
+              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Email · every Monday, customers with a document expiring within 30 days (or already expired) get a reminder. Repeats weekly right up to and past expiry, until the renewed expiry date is entered.</span>
+              {% if runs.expiry_email %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.expiry_email }}</span>{% endif %}
+            </span>
+          </label>
+
+          <!-- 5. Monthly compliance report (Email) -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;border-bottom:1px solid #EEF2F7;">
+            <input type="checkbox" name="auto_monthly_report" value="on" {{ 'checked' if autos.auto_monthly_report }} style="width:18px;height:18px;margin-top:2px;">
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📊 Monthly compliance report — Email</span>
+              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Email · on the 1st of each month, every alerts-enabled customer gets their full document-status report.</span>
+              {% if runs.monthly_report %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.monthly_report }}</span>{% endif %}
+            </span>
+          </label>
+
+          <div style="margin-top:14px;">
+            <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">Save automations</button>
+          </div>
         </form>
-        <div style="font-size:11px;color:{{ '#16A34A' if wa_auto_welcome else '#94A3B8' }};margin-top:8px;">
-          Currently: <strong>{{ 'ON — new leads are being greeted automatically' if wa_auto_welcome else 'OFF — no automatic welcome is sent' }}</strong>
-        </div>
       </div>
       </div>
     </details>

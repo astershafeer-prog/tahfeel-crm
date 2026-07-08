@@ -1,0 +1,17 @@
+name: Daily Document-Expiry WhatsApp Reminders
+
+on:
+  schedule:
+    - cron: '0 5 * * *'   # 09:00 Dubai (UTC+4) = 05:00 UTC, every day
+  workflow_dispatch: {}    # allows manual run from the Actions tab
+
+jobs:
+  expiry-wa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger expiry WhatsApp reminders (7 & 3 days before)
+        run: |
+          echo "Calling expiry-wa endpoint..."
+          curl -fsS "https://tahfeelcrm.online/cron/expiry-wa?key=${{ secrets.CRON_KEY }}" -o response.json \
+            || { echo "Request failed"; exit 1; }
+          echo "Response:"; cat response.json

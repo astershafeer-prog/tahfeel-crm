@@ -614,6 +614,37 @@ def set_setting(key, value):
     row.value = value
     db.session.commit()
 
+# Default state for each automation toggle. Existing email jobs default ON so this
+# change never silently turns off something that is already running; the new
+# WhatsApp automations default OFF so nothing new fires until an admin enables it.
+AUTOMATION_DEFAULTS = {
+    'wa_auto_welcome':     'off',  # WhatsApp welcome to new leads (existing)
+    'auto_birthday':       'off',  # WhatsApp birthday wish (new)
+    'auto_expiry_wa':      'off',  # WhatsApp expiry reminder at 7 & 3 days (new)
+    'auto_expiry_email':   'on',   # weekly document-expiry email (existing behaviour)
+    'auto_monthly_report': 'on',   # monthly compliance report email (existing behaviour)
+}
+
+def automation_on(key):
+    return get_setting(key, AUTOMATION_DEFAULTS.get(key, 'off')) == 'on'
+
+def _mark_run(name, summary):
+    """Record when an automation last ran + a one-line summary, for the admin panel."""
+    try:
+        set_setting(f'run_{name}', f'{now_dubai().strftime("%d %b %Y %H:%M")} — {summary}')
+    except Exception:
+        pass
+
+class AutoMessageLog(db.Model):
+    """Dedupe + audit trail for automatic WhatsApp sends (birthday, expiry).
+    `dedupe_key` is unique so a re-run of a cron can never double-send."""
+    __tablename__ = 'auto_message_log'
+    id         = db.Column(db.Integer, primary_key=True)
+    kind       = db.Column(db.String(30), index=True)          # birthday / expiry_wa
+    dedupe_key = db.Column(db.String(160), unique=True, index=True)
+    detail     = db.Column(db.String(200))
+    sent_at    = db.Column(db.DateTime, default=now_dubai, index=True)
+
 def wa_template_active(meta_name):
     """Return an active MessageTemplate by its Meta name, or None."""
     try:
@@ -2055,10 +2086,12 @@ def admin_panel():
     job_types = ServiceType.query.order_by(ServiceType.name).all()
     doc_types = DocType.query.order_by(DocType.name).all()
     partners = Partner.query.order_by(Partner.name).all()
-    wa_auto_welcome = (get_setting('wa_auto_welcome', 'off') == 'on')
+    wa_auto_welcome = automation_on('wa_auto_welcome')
+    autos = {k: automation_on(k) for k in AUTOMATION_DEFAULTS}
+    runs = {k: get_setting(f'run_{k}') for k in ('birthday', 'expiry_wa', 'expiry_email', 'monthly_report')}
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
-                           wa_auto_welcome=wa_auto_welcome)
+                           wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs)
 
 @app.route('/admin/whatsapp-settings', methods=['POST'])
 @login_required
@@ -2067,7 +2100,18 @@ def admin_whatsapp_settings():
     """Save WhatsApp settings (one-time config) — currently the auto-welcome toggle."""
     set_setting('wa_auto_welcome', 'on' if request.form.get('wa_auto_welcome') == 'on' else 'off')
     flash('WhatsApp settings saved.')
-    return redirect(url_for('admin_panel') + '#whatsapp-settings')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/automations', methods=['POST'])
+@login_required
+@admin_required
+def admin_automations():
+    """Save the on/off state of every automation from the Automations panel.
+    A checkbox that is unticked simply isn't in the form, so it becomes 'off'."""
+    for key in AUTOMATION_DEFAULTS:
+        set_setting(key, 'on' if request.form.get(key) == 'on' else 'off')
+    flash('Automation settings saved.')
+    return redirect(url_for('admin_panel') + '#automations')
 
 
 # ── Marketing-Ext: read-only lead report for the external marketing agency ──
@@ -4655,6 +4699,8 @@ def cron_expiry_alerts():
     from flask import jsonify
     if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
         return 'Forbidden', 403
+    if not automation_on('auto_expiry_email'):
+        return jsonify({'skipped': 'weekly document-expiry email is turned OFF in the admin panel'})
     admin_email = os.environ.get('ALERT_ADMIN_EMAIL')
     alerted, results = 0, []
     for c in Customer.query.filter_by(alerts_enabled=True).all():
@@ -4667,6 +4713,7 @@ def cron_expiry_alerts():
         if ok:
             alerted += 1
         results.append(f'{c.name}: {len(items)} doc(s) -> {msg}')
+    _mark_run('expiry_email', f'{alerted} customer(s) emailed')
     return jsonify({'companies_alerted': alerted, 'details': results})
 
 @app.route('/customers/<int:customer_id>/email-health', methods=['POST'])
@@ -5100,6 +5147,8 @@ def cron_monthly_reports():
     from flask import jsonify
     if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
         return 'Forbidden', 403
+    if not automation_on('auto_monthly_report'):
+        return jsonify({'skipped': 'monthly compliance report is turned OFF in the admin panel'})
     sent, skipped, details = 0, 0, []
     for c in Customer.query.filter_by(alerts_enabled=True).all():
         try:
@@ -5111,6 +5160,109 @@ def cron_monthly_reports():
         else:
             skipped += 1
         details.append(f'{c.name}: {msg}')
+    _mark_run('monthly_report', f'{sent} report(s) sent')
+    return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
+
+def _cust_wa_number(cust):
+    """Best WhatsApp number on a customer record, normalized (or '' if none)."""
+    from whatsapp_webhook import normalize_phone
+    raw = (getattr(cust, 'whatsapp', None) or getattr(cust, 'mobile', None)
+           or getattr(cust, 'phone', None) or getattr(cust, 'phone2', None) or '')
+    return normalize_phone(raw)
+
+@app.route('/cron/birthday-wishes')
+def cron_birthday_wishes():
+    """Daily: WhatsApp the approved birthday template to any CUSTOMER whose birthday
+    is today. Once per customer per year (dedupe). GET /cron/birthday-wishes?key=CRON_KEY"""
+    from flask import jsonify
+    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+        return 'Forbidden', 403
+    if not automation_on('auto_birthday'):
+        return jsonify({'skipped': 'birthday automation is turned OFF in the admin panel'})
+    from whatsapp_webhook import send_template, log_message
+    tpl = wa_template_active('tahfeel_birthday')
+    if not tpl:
+        return jsonify({'error': 'tahfeel_birthday template is not active in WhatsApp Templates'})
+    today = now_dubai().date()
+    sent, skipped, details = 0, 0, []
+    for c in Customer.query.filter(Customer.date_of_birth.isnot(None)).all():
+        dob = c.date_of_birth
+        if not (dob.month == today.month and dob.day == today.day):
+            continue
+        key = f'birthday:{c.id}:{today.year}'
+        if AutoMessageLog.query.filter_by(dedupe_key=key).first():
+            continue  # already wished this year
+        to = _cust_wa_number(c)
+        if not to:
+            skipped += 1; details.append(f'{c.name}: no WhatsApp number'); continue
+        first = ((c.contact_person or c.name or 'there').split() or ['there'])[0]
+        wam = send_template(to, tpl.meta_name, params=[first], lang=tpl.lang or 'en')
+        body = (tpl.body_preview or f'Happy birthday, {first}!').replace('{{1}}', first)
+        log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                    handled_by='auto-birthday', status='sent' if wam else 'failed',
+                    customer_id=c.id)
+        if wam:
+            db.session.add(AutoMessageLog(kind='birthday', dedupe_key=key, detail=f'{c.name} ({to})'))
+            db.session.commit()
+            sent += 1
+        else:
+            skipped += 1
+        details.append(f'{c.name}: {"sent" if wam else "FAILED"}')
+    _mark_run('birthday', f'{sent} wish(es) sent')
+    return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
+
+@app.route('/cron/expiry-wa')
+def cron_expiry_wa():
+    """Daily: WhatsApp an expiry reminder to the customer when one of their documents
+    is exactly 7 or 3 days from expiry. Once per document per milestone (dedupe), and
+    only for customers who have alerts enabled. GET /cron/expiry-wa?key=CRON_KEY"""
+    from flask import jsonify
+    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+        return 'Forbidden', 403
+    if not automation_on('auto_expiry_wa'):
+        return jsonify({'skipped': 'expiry-WhatsApp automation is turned OFF in the admin panel'})
+    from whatsapp_webhook import send_template, log_message
+    tpl = wa_template_active('compliance_alert_v1')
+    if not tpl:
+        return jsonify({'error': 'compliance_alert_v1 template is not active in WhatsApp Templates'})
+    today = now_dubai().date()
+    MILESTONES = (7, 3)
+    sent, skipped, details = 0, 0, []
+    docs = Document.query.filter(Document.expiry_date.isnot(None),
+                                 Document.customer_id.isnot(None)).all()
+    for d in docs:
+        days = (d.expiry_date.date() - today).days
+        if days not in MILESTONES:
+            continue
+        cust = d.customer
+        if not cust or not cust.alerts_enabled:
+            continue  # respect the per-customer alert opt-in
+        key = f'expirywa:{d.id}:{d.expiry_date.date().isoformat()}:{days}'
+        if AutoMessageLog.query.filter_by(dedupe_key=key).first():
+            continue
+        to = _cust_wa_number(cust)
+        if not to:
+            skipped += 1; details.append(f'{cust.name}/{d.doc_type}: no WhatsApp number'); continue
+        first = ((cust.contact_person or cust.name or 'there').split() or ['there'])[0]
+        item = d.doc_type or 'document'
+        due = d.expiry_date.strftime('%d %b %Y')
+        params = [first, item, due]
+        wam = send_template(to, tpl.meta_name, params=params, lang=tpl.lang or 'en')
+        body = tpl.body_preview or ''
+        for n, v in enumerate(params, start=1):
+            body = body.replace('{{%d}}' % n, v)
+        log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                    handled_by='auto-expiry', status='sent' if wam else 'failed',
+                    customer_id=cust.id)
+        if wam:
+            db.session.add(AutoMessageLog(kind='expiry_wa', dedupe_key=key,
+                                          detail=f'{cust.name} · {item} · {days}d left'))
+            db.session.commit()
+            sent += 1
+        else:
+            skipped += 1
+        details.append(f'{cust.name}/{item} ({days}d): {"sent" if wam else "FAILED"}')
+    _mark_run('expiry_wa', f'{sent} reminder(s) sent')
     return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
 
 @app.route('/customers/<int:customer_id>/report.pdf')

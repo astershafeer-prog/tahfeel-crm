@@ -1,0 +1,17 @@
+name: Daily Birthday WhatsApp Wishes
+
+on:
+  schedule:
+    - cron: '0 5 * * *'   # 09:00 Dubai (UTC+4) = 05:00 UTC, every day
+  workflow_dispatch: {}    # allows manual run from the Actions tab
+
+jobs:
+  birthday:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger birthday WhatsApp wishes
+        run: |
+          echo "Calling birthday-wishes endpoint..."
+          curl -fsS "https://tahfeelcrm.online/cron/birthday-wishes?key=${{ secrets.CRON_KEY }}" -o response.json \
+            || { echo "Request failed"; exit 1; }
+          echo "Response:"; cat response.json
