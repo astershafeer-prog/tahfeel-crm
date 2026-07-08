@@ -2223,31 +2223,40 @@ def marketing_report():
             'bot_replied': bool(l.phone and normalize_phone(l.phone) in bot_ids),
         })
     n = len(leads)
-    n_contacted = sum(1 for l in leads if l.status in ('Contacted', 'Qualified', 'Proposal', 'Converted', 'Lost'))
-    n_qualified = sum(1 for l in leads if l.status in ('Qualified', 'Proposal', 'Converted'))
-    n_converted = sum(1 for l in leads if l.status == 'Converted')
     pct = lambda x: round(100 * x / n) if n else 0
-    funnel = {'new': n, 'contacted': n_contacted, 'qualified': n_qualified, 'converted': n_converted,
-              'rate': pct(n_converted), 'p_contacted': pct(n_contacted), 'p_qualified': pct(n_qualified),
-              'p_converted': pct(n_converted)}
-    # Lead-quality breakdown
-    genuine = sum(1 for l in leads if l.genuine == 'Genuine')
-    unreachable = sum(1 for l in leads if l.genuine == 'Unreachable')
-    junk = sum(1 for l in leads if l.genuine == 'Junk')
+    # ── Lead breakdown by stage — mutually EXCLUSIVE buckets that TALLY to the total ──
+    sc = Counter((l.status or 'New') for l in leads)
+    b_new        = sc.get('New', 0)                                                    # not yet initiated
+    b_processing = sum(v for k, v in sc.items() if k in ('Contacted', 'Qualified', 'Proposal'))  # being worked
+    b_converted  = sc.get('Converted', 0)
+    b_lost       = sc.get('Lost', 0)
+    b_future     = sc.get('Future', 0)
+    b_other      = n - (b_new + b_processing + b_converted + b_lost + b_future)         # any legacy/unknown status
+    breakdown = {
+        'total': n, 'new': b_new, 'processing': b_processing, 'converted': b_converted,
+        'lost': b_lost, 'future': b_future, 'other': b_other,
+        'p_new': pct(b_new), 'p_processing': pct(b_processing), 'p_converted': pct(b_converted),
+        'p_lost': pct(b_lost), 'p_future': pct(b_future), 'p_other': pct(b_other),
+    }
+    funnel = {'rate': pct(b_converted)}
+    # ── Lead quality — also tallies to the total (includes "Not reviewed") ──
+    genuine      = sum(1 for l in leads if l.genuine == 'Genuine')
+    unreachable  = sum(1 for l in leads if l.genuine == 'Unreachable')
+    junk         = sum(1 for l in leads if l.genuine == 'Junk')
+    not_reviewed = n - (genuine + unreachable + junk)
     junk_reasons = sorted(Counter((l.junk_reason or 'Unspecified') for l in leads if l.genuine == 'Junk').items(),
                           key=lambda x: -x[1])
-    reviewed = genuine + unreachable + junk
-    quality = {'genuine': genuine, 'unreachable': unreachable, 'junk': junk, 'junk_reasons': junk_reasons,
-               'p_genuine': round(100 * genuine / reviewed) if reviewed else 0,
-               'p_junk': round(100 * junk / reviewed) if reviewed else 0,
-               'p_unreachable': round(100 * unreachable / reviewed) if reviewed else 0}
+    quality = {'genuine': genuine, 'unreachable': unreachable, 'junk': junk, 'not_reviewed': not_reviewed,
+               'junk_reasons': junk_reasons, 'total': n,
+               'p_genuine': pct(genuine), 'p_junk': pct(junk),
+               'p_unreachable': pct(unreachable), 'p_not_reviewed': pct(not_reviewed)}
     resp_secs = [(l.first_contacted_at - l.created_at).total_seconds()
                  for l in leads if l.first_contacted_at and l.created_at]
     avg_response = _fmt_duration(sum(resp_secs) / len(resp_secs)) if resp_secs else '—'
-    counts = {'total': n, 'contacted': n_contacted, 'qualified': n_qualified, 'converted': n_converted, 'junk': junk}
+    counts = {'total': n, 'processing': b_processing, 'converted': b_converted, 'genuine': genuine}
     src_options = sorted({r[0] for r in db.session.query(Lead.sub_source).filter(
         or_(Lead.meta_lead_id.isnot(None), Lead.source.like('Meta%'))).all() if r[0]})
-    return render_template('marketing_report.html', rows=rows, counts=counts, funnel=funnel,
+    return render_template('marketing_report.html', rows=rows, counts=counts, funnel=funnel, breakdown=breakdown,
                            quality=quality, avg_response=avg_response, floor=floor, f=f, src_options=src_options)
 
 @app.route('/marketing-report/export')

@@ -134,30 +134,63 @@
       <a class="btn btn-dl" href="/marketing-report/export?q={{ f.q|urlencode }}&stage={{ f.stage }}&quality={{ f.quality }}&src={{ f.src|urlencode }}&from={{ f.from }}&to={{ f.to }}">⬇ Download Excel</a>
     </form>
 
+    <!-- Quick-glance KPI stats -->
+    <div class="chips">
+      <div class="chip"><div class="l">Total received</div><div class="v">{{ breakdown.total }}</div></div>
+      <div class="chip"><div class="l">Being processed</div><div class="v">{{ breakdown.processing }}</div></div>
+      <div class="chip"><div class="l">Converted</div><div class="v">{{ breakdown.converted }}</div></div>
+      <div class="chip"><div class="l">Conversion</div><div class="v">{{ funnel.rate }}%</div></div>
+      <div class="chip"><div class="l">Avg response</div><div class="v" style="font-size:15px;">{{ avg_response }}</div></div>
+    </div>
+
     <div class="analytics">
+      <!-- Lead breakdown — mutually exclusive buckets that tally to the total -->
       <div class="acard">
-        <div class="ahead"><span>Conversion funnel</span><span class="rate"><b>{{ funnel.rate }}%</b> converted</span></div>
+        <div class="ahead"><span>Lead breakdown</span><span class="rate">Total received <b style="font-size:17px;color:#0F2660;">{{ breakdown.total }}</b></span></div>
         <div class="funnel">
-          <div class="frow"><span class="fl">New</span><div class="fbar" style="width:100%;background:#E6F1FB;"><span style="color:#185FA5;">{{ funnel.new }}</span></div></div>
-          <div class="frow"><span class="fl">Contacted</span><div class="fbar" style="width:{{ [funnel.p_contacted, 6]|max }}%;background:#B5D4F4;"><span style="color:#0C447C;">{{ funnel.contacted }}</span></div></div>
-          <div class="frow"><span class="fl">Qualified</span><div class="fbar" style="width:{{ [funnel.p_qualified, 6]|max }}%;background:#FAC775;"><span style="color:#633806;">{{ funnel.qualified }}</span></div></div>
-          <div class="frow"><span class="fl">Converted</span><div class="fbar" style="width:{{ [funnel.p_converted, 6]|max }}%;background:#97C459;"><span style="color:#173404;">{{ funnel.converted }}</span></div></div>
+          {% set bd = [
+            ('New', breakdown.new, breakdown.p_new, '#E6F1FB', '#185FA5', 'not initiated'),
+            ('Processing', breakdown.processing, breakdown.p_processing, '#B5D4F4', '#0C447C', 'being worked'),
+            ('Converted', breakdown.converted, breakdown.p_converted, '#97C459', '#173404', 'won'),
+            ('Lost', breakdown.lost, breakdown.p_lost, '#F3B5B4', '#7A1E1E', ''),
+            ('Future', breakdown.future, breakdown.p_future, '#A9E0CE', '#0F6E56', 'parked'),
+          ] %}
+          {% for label, cnt, p, bg, fg, note in bd %}
+          <div class="frow">
+            <span class="fl">{{ label }}</span>
+            <div class="fbar" style="width:{{ [p, 4]|max }}%;background:{{ bg }};"><span style="color:{{ fg }};">{{ cnt }}</span></div>
+            <span style="font-size:11px;color:#94a3b8;white-space:nowrap;">{{ p }}%{% if note %} · {{ note }}{% endif %}</span>
+          </div>
+          {% endfor %}
+          {% if breakdown.other %}
+          <div class="frow"><span class="fl">Other</span><div class="fbar" style="width:{{ [breakdown.p_other, 4]|max }}%;background:#F1EFE8;"><span style="color:#5F5E5A;">{{ breakdown.other }}</span></div><span style="font-size:11px;color:#94a3b8;">{{ breakdown.p_other }}%</span></div>
+          {% endif %}
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#94a3b8;border-top:0.5px solid #eef2f7;padding-top:8px;">
+          New + Processing + Converted + Lost + Future{% if breakdown.other %} + Other{% endif %} = <b style="color:#27500A;">{{ breakdown.total }}</b> ✓ tallies
         </div>
       </div>
+
+      <!-- Lead quality — also tallies to the total (adds Not reviewed) -->
       <div class="acard">
-        <div class="ahead"><span>Lead quality</span><span class="rate" style="font-size:12px;color:#64748b;">avg response {{ avg_response }}</span></div>
+        <div class="ahead"><span>Lead quality</span><span class="rate">Total <b style="font-size:17px;color:#0F2660;">{{ quality.total }}</b></span></div>
         <div class="qbar">
-          <div style="width:{{ quality.p_genuine }}%;background:#97C459;"></div>
-          <div style="width:{{ quality.p_junk }}%;background:#E24B4A;"></div>
-          <div style="width:{{ quality.p_unreachable }}%;background:#FAC775;"></div>
+          {% if quality.p_genuine %}<div style="width:{{ quality.p_genuine }}%;background:#97C459;"></div>{% endif %}
+          {% if quality.p_junk %}<div style="width:{{ quality.p_junk }}%;background:#E24B4A;"></div>{% endif %}
+          {% if quality.p_unreachable %}<div style="width:{{ quality.p_unreachable }}%;background:#FAC775;"></div>{% endif %}
+          {% if quality.p_not_reviewed %}<div style="width:{{ quality.p_not_reviewed }}%;background:#E2E8F0;"></div>{% endif %}
         </div>
         <div class="qlist">
           <div class="qrow"><span style="color:#27500A;">● Genuine</span><b>{{ quality.genuine }}</b></div>
+          <div class="qrow"><span style="color:#A32D2D;">● Junk</span><b>{{ quality.junk }}</b></div>
           {% for reason, cnt in quality.junk_reasons %}
-          <div class="qrow sub"><span style="color:#A32D2D;">● Junk — {{ reason }}</span><span>{{ cnt }}</span></div>
+          <div class="qrow sub"><span style="color:#A32D2D;">— {{ reason }}</span><span>{{ cnt }}</span></div>
           {% endfor %}
-          {% if quality.unreachable %}<div class="qrow"><span style="color:#854F0B;">● Unreachable</span><span>{{ quality.unreachable }}</span></div>{% endif %}
-          {% if not quality.junk_reasons and not quality.genuine and not quality.unreachable %}<div style="color:#94a3b8;">Not reviewed yet</div>{% endif %}
+          <div class="qrow"><span style="color:#854F0B;">● Unreachable</span><b>{{ quality.unreachable }}</b></div>
+          <div class="qrow"><span style="color:#94a3b8;">● Not reviewed</span><b>{{ quality.not_reviewed }}</b></div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#94a3b8;border-top:0.5px solid #eef2f7;padding-top:8px;">
+          Genuine + Junk + Unreachable + Not reviewed = <b style="color:#27500A;">{{ quality.total }}</b> ✓ tallies
         </div>
       </div>
     </div>
