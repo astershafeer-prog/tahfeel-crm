@@ -1766,6 +1766,18 @@ def lead_detail(lead_id):
         if stage == 'Future' and not followup_dt:
             flash('Please pick a future revisit date for a Future lead.')
             return redirect(url_for('lead_detail', lead_id=lead_id))
+        # ── Lead quality is mandatory once a real contact is made ──
+        # A "positive action" = any logged activity that isn't a no-answer or a plain
+        # note, OR moving the lead forward. You can't judge quality on a no-answer, so
+        # those (and blank activity) can still be saved without a quality tag.
+        new_quality = request.form.get('genuine') or None
+        junk_reason_q = request.form.get('junk_reason') or None
+        _act = (activity_type or '').lower()
+        is_positive_action = bool(activity_type) and 'no answer' not in _act and _act != 'note'
+        if (lead.genuine is None and new_quality is None
+                and (is_positive_action or stage in ('Qualified', 'Proposal', 'Converted', 'Lost'))):
+            flash('Please mark the lead quality (Genuine / Junk / Unreachable) — required once you have reached the customer.')
+            return redirect(url_for('lead_detail', lead_id=lead_id))
         update = LeadUpdate(
             lead_id=lead.id, stage=stage, activity_type=activity_type, remark=remark,
             staff_name=session['user_name'], followup_date=followup_dt,
@@ -1773,6 +1785,10 @@ def lead_detail(lead_id):
             future_potential=request.form.get('future_potential')
         )
         lead.status = stage
+        # Apply a quality tag if one was chosen on the update form
+        if new_quality in ('Genuine', 'Junk', 'Unreachable'):
+            lead.genuine = new_quality
+            lead.junk_reason = junk_reason_q if new_quality in ('Junk', 'Unreachable') else None
         # Attempt counter (info only) + first-contact timestamp, driven by the activity
         act = (activity_type or '').lower()
         if 'no answer' in act or 'not reach' in act:

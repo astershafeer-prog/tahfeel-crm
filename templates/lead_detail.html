@@ -121,27 +121,6 @@
       </div>
     </div>
       <div class="card">
-        <div class="card-header"><h2>Lead quality</h2><span style="font-size:11px;color:var(--text-muted);">set manually — never automatic</span></div>
-        <div class="card-body">
-          <form method="POST" action="/leads/{{ lead.id }}/quality" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            {% set q = lead.genuine %}
-            <button name="genuine" value="Genuine" class="qbtn" style="flex:1;min-width:120px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid {{ '#0F6E56' if q=='Genuine' else '#CBD5E1' }};background:{{ '#E1F5EE' if q=='Genuine' else '#fff' }};color:{{ '#0F6E56' if q=='Genuine' else '#475569' }};">✓ Genuine</button>
-            <button name="genuine" value="Junk" class="qbtn" style="flex:1;min-width:120px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid {{ '#791F1F' if q=='Junk' else '#CBD5E1' }};background:{{ '#FCEBEB' if q=='Junk' else '#fff' }};color:{{ '#791F1F' if q=='Junk' else '#475569' }};">✕ Junk</button>
-            <button name="genuine" value="Unreachable" class="qbtn" style="flex:1;min-width:120px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid {{ '#854F0B' if q=='Unreachable' else '#CBD5E1' }};background:{{ '#FAEEDA' if q=='Unreachable' else '#fff' }};color:{{ '#854F0B' if q=='Unreachable' else '#475569' }};">⊘ Unreachable</button>
-            <select name="junk_reason" style="flex:1;min-width:160px;">
-              <option value="">Reason (if Junk/Unreachable)…</option>
-              <option {% if lead.junk_reason=='Career' %}selected{% endif %}>Career</option>
-              <option {% if lead.junk_reason=='General Enquiry' %}selected{% endif %}>General Enquiry</option>
-              <option {% if lead.junk_reason=='Wrong number' %}selected{% endif %}>Wrong number</option>
-              <option {% if lead.junk_reason=='No answer after attempts' %}selected{% endif %}>No answer after attempts</option>
-              <option {% if lead.junk_reason=='Spam / fake' %}selected{% endif %}>Spam / fake</option>
-              <option {% if lead.junk_reason=='Duplicate' %}selected{% endif %}>Duplicate</option>
-              <option {% if lead.junk_reason=='Test entry' %}selected{% endif %}>Test entry</option>
-            </select>
-          </form>
-        </div>
-      </div>
-      <div class="card">
         <div class="card-header"><h2>Update this lead</h2></div>
         <div class="card-body">
           <!-- pipeline strip (context) -->
@@ -183,6 +162,27 @@
                   <option>Note</option>
                 </select>
               </div>
+            </div>
+            <div class="form-group" id="qualityGroup">
+              <label>Lead quality <span style="color:var(--danger);">*</span>
+                <span style="font-weight:400;color:var(--text-muted);font-size:11px;">— required once you've actually reached the customer (real call/chat, not a no-answer)</span>
+              </label>
+              <input type="hidden" name="genuine" id="genuineInput" value="{{ lead.genuine or '' }}">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="button" class="qsel" data-q="Genuine" onclick="setQuality('Genuine')" style="flex:1;min-width:110px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid #CBD5E1;background:#fff;color:#475569;">✓ Genuine</button>
+                <button type="button" class="qsel" data-q="Junk" onclick="setQuality('Junk')" style="flex:1;min-width:110px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid #CBD5E1;background:#fff;color:#475569;">✕ Junk</button>
+                <button type="button" class="qsel" data-q="Unreachable" onclick="setQuality('Unreachable')" style="flex:1;min-width:110px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid #CBD5E1;background:#fff;color:#475569;">⊘ Unreachable</button>
+              </div>
+              <select name="junk_reason" id="junkReason" style="margin-top:8px;width:100%;">
+                <option value="">Reason (if Junk/Unreachable)…</option>
+                <option {% if lead.junk_reason=='Career' %}selected{% endif %}>Career</option>
+                <option {% if lead.junk_reason=='General Enquiry' %}selected{% endif %}>General Enquiry</option>
+                <option {% if lead.junk_reason=='Wrong number' %}selected{% endif %}>Wrong number</option>
+                <option {% if lead.junk_reason=='No answer after attempts' %}selected{% endif %}>No answer after attempts</option>
+                <option {% if lead.junk_reason=='Spam / fake' %}selected{% endif %}>Spam / fake</option>
+                <option {% if lead.junk_reason=='Duplicate' %}selected{% endif %}>Duplicate</option>
+                <option {% if lead.junk_reason=='Test entry' %}selected{% endif %}>Test entry</option>
+              </select>
             </div>
             <div class="lost-fields" id="lostFields" style="display:none;">
               <div class="form-group">
@@ -301,6 +301,46 @@
     }
     // Run on page load to set correct visibility
     handleStageChange();
+
+    // ── Lead quality selector + "mandatory on real contact" gate ──
+    const Q_STYLE = {
+      Genuine:     ['#0F6E56', '#E1F5EE', '#0F6E56'],
+      Junk:        ['#791F1F', '#FCEBEB', '#791F1F'],
+      Unreachable: ['#854F0B', '#FAEEDA', '#854F0B'],
+    };
+    function setQuality(v) {
+      document.getElementById('genuineInput').value = v;
+      document.querySelectorAll('.qsel').forEach(function (b) {
+        const q = b.getAttribute('data-q');
+        const on = q === v;
+        const c = Q_STYLE[q];
+        b.style.borderColor = on ? c[0] : '#CBD5E1';
+        b.style.background  = on ? c[1] : '#fff';
+        b.style.color       = on ? c[2] : '#475569';
+      });
+    }
+    // Reflect any already-set quality on page load
+    (function () {
+      const cur = document.getElementById('genuineInput').value;
+      if (cur) setQuality(cur);
+    })();
+    // Block Save when a real contact was made (or lead moved forward) but quality is blank
+    document.getElementById('updateForm').addEventListener('submit', function (e) {
+      const stage = document.getElementById('stageSelect').value;
+      const act = (document.querySelector('[name=activity_type]').value || '').toLowerCase();
+      const quality = document.getElementById('genuineInput').value;
+      const positiveAction = act && act.indexOf('no answer') === -1 && act !== 'note';
+      const forward = ['Qualified', 'Proposal', 'Converted', 'Lost'].indexOf(stage) !== -1;
+      if (!quality && (positiveAction || forward)) {
+        e.preventDefault();
+        const g = document.getElementById('qualityGroup');
+        g.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        g.style.outline = '2px solid #E24B4A';
+        g.style.borderRadius = '10px';
+        g.style.padding = '8px';
+        alert('Please mark the lead quality (Genuine / Junk / Unreachable) before saving — you logged a real contact or moved the lead forward.');
+      }
+    });
   </script>
 </body>
 </html>
