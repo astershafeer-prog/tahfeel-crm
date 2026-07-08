@@ -2253,6 +2253,18 @@ def marketing_report():
     resp_secs = [(l.first_contacted_at - l.created_at).total_seconds()
                  for l in leads if l.first_contacted_at and l.created_at]
     avg_response = _fmt_duration(sum(resp_secs) / len(resp_secs)) if resp_secs else '—'
+    # ── Response-time buckets — how fast leads are actually reached (tallies to total) ──
+    resp_buckets = {'lt1h': 0, 'h1_4': 0, 'h4_24': 0, 'd1_3': 0, 'gt3d': 0, 'not_reached': 0}
+    for l in leads:
+        if l.first_contacted_at and l.created_at:
+            hrs = (l.first_contacted_at - l.created_at).total_seconds() / 3600
+            if hrs < 1:     resp_buckets['lt1h'] += 1
+            elif hrs < 4:   resp_buckets['h1_4'] += 1
+            elif hrs < 24:  resp_buckets['h4_24'] += 1
+            elif hrs < 72:  resp_buckets['d1_3'] += 1
+            else:           resp_buckets['gt3d'] += 1
+        else:
+            resp_buckets['not_reached'] += 1
     counts = {'total': n, 'processing': b_processing, 'converted': b_converted, 'genuine': genuine}
     # ── Daily leads received — a bar per day over the filtered range (capped to 31 bars) ──
     day_counts = Counter(l.created_at.date() for l in leads if l.created_at)
@@ -2293,6 +2305,7 @@ def marketing_report():
     return render_template('marketing_report.html', rows=page_rows, counts=counts, funnel=funnel, breakdown=breakdown,
                            quality=quality, avg_response=avg_response, floor=floor, f=f, src_options=src_options,
                            daily=daily, daily_max=daily_max, daily_avg=daily_avg, src_stats=src_stats,
+                           resp=resp_buckets,
                            page=page, total_pages=total_pages, total_rows=total_rows, per_page=per_page)
 
 @app.route('/marketing-report/export')

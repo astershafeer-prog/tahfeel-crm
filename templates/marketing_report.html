@@ -243,6 +243,34 @@
       </div>
     </div>
 
+    <!-- Response time — how fast leads are reached (tallies to total) -->
+    <div class="analytics" style="grid-template-columns:1fr;">
+      <div class="acard">
+        <div class="ahead"><span>Response time — how fast leads are reached</span><span class="rate">avg <b style="font-size:16px;color:#0F2660;">{{ avg_response }}</b></span></div>
+        <div class="funnel">
+          {% set rb = [
+            ('Under 1 hour', resp.lt1h, '#97C459', '#173404'),
+            ('1–4 hours', resp.h1_4, '#C7E0A0', '#2C4A12'),
+            ('4–24 hours', resp.h4_24, '#FAC775', '#633806'),
+            ('1–3 days', resp.d1_3, '#F3B5B4', '#7A1E1E'),
+            ('Over 3 days', resp.gt3d, '#E24B4A', '#5A1414'),
+            ('Not yet reached', resp.not_reached, '#E2E8F0', '#5F5E5A'),
+          ] %}
+          {% for label, cnt, bg, fg in rb %}
+          {% set p = (cnt / breakdown.total * 100)|round|int if breakdown.total else 0 %}
+          <div class="frow">
+            <span class="fl" style="width:100px;">{{ label }}</span>
+            <div class="fbar" style="width:{{ [p, 3]|max }}%;background:{{ bg }};"><span style="color:{{ fg }};">{{ cnt }}</span></div>
+            <span style="font-size:11px;color:#94a3b8;white-space:nowrap;">{{ p }}%</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#94a3b8;border-top:0.5px solid #eef2f7;padding-top:8px;">
+          Measured from lead arrival to first time reached. Green = fast · grey = not reached yet. Adds up to <b style="color:#27500A;">{{ breakdown.total }}</b> ✓
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <table>
         <thead>
