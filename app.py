@@ -2254,10 +2254,46 @@ def marketing_report():
                  for l in leads if l.first_contacted_at and l.created_at]
     avg_response = _fmt_duration(sum(resp_secs) / len(resp_secs)) if resp_secs else '—'
     counts = {'total': n, 'processing': b_processing, 'converted': b_converted, 'genuine': genuine}
+    # ── Daily leads received — a bar per day over the filtered range (capped to 31 bars) ──
+    day_counts = Counter(l.created_at.date() for l in leads if l.created_at)
+    daily = []
+    if day_counts:
+        dmax, dmin = max(day_counts), min(day_counts)
+        if (dmax - dmin).days > 30:
+            dmin = dmax - timedelta(days=30)
+        day = dmin
+        while day <= dmax:
+            daily.append({'date': day, 'count': day_counts.get(day, 0)})
+            day += timedelta(days=1)
+    daily_max = max((d['count'] for d in daily), default=0)
+    daily_avg = round(sum(d['count'] for d in daily) / len(daily), 1) if daily else 0
+    # ── By source (fb / ig / …): volume + quality + conversions ──
+    src_stats_map = {}
+    for l in leads:
+        s = l.sub_source or l.source or '—'
+        d = src_stats_map.setdefault(s, {'total': 0, 'genuine': 0, 'converted': 0})
+        d['total'] += 1
+        if l.genuine == 'Genuine':
+            d['genuine'] += 1
+        if l.status == 'Converted':
+            d['converted'] += 1
+    src_stats = sorted(src_stats_map.items(), key=lambda kv: -kv[1]['total'])
     src_options = sorted({r[0] for r in db.session.query(Lead.sub_source).filter(
         or_(Lead.meta_lead_id.isnot(None), Lead.source.like('Meta%'))).all() if r[0]})
-    return render_template('marketing_report.html', rows=rows, counts=counts, funnel=funnel, breakdown=breakdown,
-                           quality=quality, avg_response=avg_response, floor=floor, f=f, src_options=src_options)
+    # ── Paginate the table only (the analytics above use ALL filtered leads) ──
+    per_page = 50
+    total_rows = len(rows)
+    total_pages = max(1, (total_rows + per_page - 1) // per_page)
+    try:
+        page = int(request.args.get('page', 1))
+    except (TypeError, ValueError):
+        page = 1
+    page = max(1, min(page, total_pages))
+    page_rows = rows[(page - 1) * per_page: page * per_page]
+    return render_template('marketing_report.html', rows=page_rows, counts=counts, funnel=funnel, breakdown=breakdown,
+                           quality=quality, avg_response=avg_response, floor=floor, f=f, src_options=src_options,
+                           daily=daily, daily_max=daily_max, daily_avg=daily_avg, src_stats=src_stats,
+                           page=page, total_pages=total_pages, total_rows=total_rows, per_page=per_page)
 
 @app.route('/marketing-report/export')
 @login_required

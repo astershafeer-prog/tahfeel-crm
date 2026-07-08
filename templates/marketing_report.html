@@ -195,6 +195,54 @@
       </div>
     </div>
 
+    <div class="analytics" style="grid-template-columns:1.6fr 1fr;">
+      <!-- Daily leads received -->
+      <div class="acard">
+        <div class="ahead"><span>Daily leads received</span><span class="rate">avg <b style="font-size:16px;color:#0F2660;">{{ daily_avg }}</b>/day</span></div>
+        {% if daily %}
+        <div style="display:flex;align-items:flex-end;gap:3px;height:96px;padding-top:6px;">
+          {% for d in daily %}
+          <div title="{{ d.date.strftime('%d %b %Y') }}: {{ d.count }} lead{{ 's' if d.count != 1 else '' }}"
+               style="flex:1;min-width:4px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;">
+            <span style="font-size:9px;color:#94a3b8;line-height:1;">{{ d.count if d.count else '' }}</span>
+            <div style="width:100%;border-radius:3px 3px 0 0;background:{{ '#1A8D4E' if d.count else '#eef2f7' }};height:{{ (d.count / daily_max * 78)|round|int if daily_max else 0 }}px;min-height:2px;margin-top:2px;"></div>
+          </div>
+          {% endfor %}
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-top:5px;">
+          <span>{{ daily[0].date.strftime('%d %b') }}</span>
+          {% if daily|length > 2 %}<span>{{ daily[daily|length // 2].date.strftime('%d %b') }}</span>{% endif %}
+          <span>{{ daily[-1].date.strftime('%d %b') }}</span>
+        </div>
+        {% else %}<div style="color:#94a3b8;font-size:12px;padding:24px 0;">No leads in this range.</div>{% endif %}
+      </div>
+
+      <!-- By source: volume + quality -->
+      <div class="acard">
+        <div class="ahead"><span>By source</span><span class="rate">volume · quality</span></div>
+        {% if src_stats %}
+        <table style="font-size:12px;">
+          <thead><tr>
+            <th style="padding:4px 6px;background:transparent;">Source</th>
+            <th style="padding:4px 6px;background:transparent;text-align:center;">Leads</th>
+            <th style="padding:4px 6px;background:transparent;text-align:center;">Genuine</th>
+            <th style="padding:4px 6px;background:transparent;text-align:center;">Won</th>
+          </tr></thead>
+          <tbody>
+          {% for s, st in src_stats %}
+          <tr>
+            <td style="padding:5px 6px;border-top:0.5px solid #eef2f7;font-weight:600;color:#334155;">{{ s }}</td>
+            <td style="padding:5px 6px;border-top:0.5px solid #eef2f7;text-align:center;">{{ st.total }}</td>
+            <td style="padding:5px 6px;border-top:0.5px solid #eef2f7;text-align:center;color:#27500A;">{{ st.genuine }}</td>
+            <td style="padding:5px 6px;border-top:0.5px solid #eef2f7;text-align:center;">{{ st.converted }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<div style="color:#94a3b8;font-size:12px;padding:24px 0;">No source data.</div>{% endif %}
+      </div>
+    </div>
+
     <div class="card">
       <table>
         <thead>
@@ -242,7 +290,15 @@
       </table>
     </div>
 
-    <div class="foot">Showing {{ rows|length }} lead{{ 's' if rows|length != 1 else '' }} · click a row for full history · phone numbers masked · view only</div>
+    {% if total_pages > 1 %}
+    {% set qbase = '/marketing-report?q=' ~ (f.q|urlencode) ~ '&stage=' ~ f.stage ~ '&quality=' ~ f.quality ~ '&src=' ~ (f.src|urlencode) ~ '&from=' ~ f.from ~ '&to=' ~ f.to %}
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;">
+      {% if page > 1 %}<a class="pbtn" style="text-decoration:none;" href="{{ qbase }}&page={{ page-1 }}">← Prev</a>{% endif %}
+      <span style="font-size:12px;color:#64748b;">Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}<a class="pbtn" style="text-decoration:none;" href="{{ qbase }}&page={{ page+1 }}">Next →</a>{% endif %}
+    </div>
+    {% endif %}
+    <div class="foot">Showing {{ rows|length }} of {{ total_rows }} lead{{ 's' if total_rows != 1 else '' }}{% if total_pages > 1 %} · page {{ page }}/{{ total_pages }} · 50 per page{% endif %} · click a row for full history · phone numbers masked · view only</div>
   </div>
   <script>
     function toggleRow(tr) {
