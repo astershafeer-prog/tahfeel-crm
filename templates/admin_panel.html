@@ -151,6 +151,10 @@
             Currently: <strong>{{ 'ON — Genuine leads are being sent to Meta' if capi.enabled else 'OFF — nothing is sent' }}</strong>
           </div>
         </form>
+        <form method="POST" action="/admin/capi-test" style="margin-top:10px;max-width:560px;">
+          <button type="submit" class="btn-sm" style="background:#0E7490;color:white;border-color:#0E7490;">Send test event</button>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">Save settings first. Fires one test event — confirm it in Events Manager → Test Events (uses the Test code).</span>
+        </form>
       </div>
       </div>
     </details>

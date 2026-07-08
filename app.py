@@ -2260,6 +2260,42 @@ def admin_capi_settings():
     flash('Meta CAPI settings saved.')
     return redirect(url_for('admin_panel') + '#capi')
 
+@app.route('/admin/capi-test', methods=['POST'])
+@login_required
+@admin_required
+def admin_capi_test():
+    """Fire one test event to Meta using the saved token + dataset, so an admin can
+    confirm the connection in Events Manager -> Test Events without a real lead."""
+    token = get_setting('capi_token', '')
+    dataset = get_setting('capi_dataset_id', '')
+    if not token or not dataset:
+        flash('Add the access token and Dataset/Pixel ID (and Save) first.')
+        return redirect(url_for('admin_panel') + '#capi')
+    event_name = get_setting('capi_event_name', 'Qualified') or 'Qualified'
+    test_code = get_setting('capi_test_code', '')
+    import time, hashlib, requests
+    payload = {
+        'data': [{
+            'event_name': event_name,
+            'event_time': int(time.time()),
+            'action_source': 'system_generated',
+            'user_data': {'ph': [hashlib.sha256('971500000000'.encode()).hexdigest()]},
+            'custom_data': {'lead_event_source': 'crm', 'crm': 'Tahfeel CRM', 'test': True},
+        }],
+        'access_token': token,
+    }
+    if test_code:
+        payload['test_event_code'] = test_code
+    try:
+        r = requests.post(f'https://graph.facebook.com/v19.0/{dataset}/events', json=payload, timeout=10)
+        if r.status_code == 200:
+            flash(f'✅ Test event sent — HTTP 200. Check Events Manager → Test Events. {r.text[:200]}')
+        else:
+            flash(f'⚠️ Meta returned HTTP {r.status_code}: {r.text[:250]}')
+    except Exception as e:
+        flash(f'Test failed: {e}')
+    return redirect(url_for('admin_panel') + '#capi')
+
 
 # ── Marketing-Ext: read-only lead report for the external marketing agency ──
 def _mask_phone(p):
