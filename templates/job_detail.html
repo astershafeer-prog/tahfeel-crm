@@ -186,8 +186,13 @@
       </div>
       <div class="card-body">
         {% if st_total %}
-        <div style="height:8px;background:#EEF2F7;border-radius:5px;overflow:hidden;margin-bottom:12px;">
+        <div style="height:8px;background:#EEF2F7;border-radius:5px;overflow:hidden;margin-bottom:8px;">
           <div style="height:100%;background:#10B981;width:{{ ((st_done/st_total)*100)|round|int }}%;"></div>
+        </div>
+        {% set addon_total = job.subtasks|sum(attribute='amount') %}
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:12px;">
+          <span>{{ st_total - st_done }} pending</span>
+          {% if addon_total %}<span>Add-on revenue: <b style="color:#0F6E56;">AED {{ '{:,.0f}'.format(addon_total) }}</b></span>{% endif %}
         </div>
         {% for st in job.subtasks %}
         {% set overdue = st.due_date and st.due_date.date() < now.date() and st.status != 'Done' %}
@@ -200,6 +205,7 @@
             <div style="font-size:11px;color:var(--text-muted);">
               {{ st.assignee.name if st.assignee else 'Unassigned' }}
               {% if st.due_date %} · <span style="color:{{ '#DC2626' if overdue else 'var(--text-muted)' }};">due {{ st.due_date.strftime('%d %b') }}{% if overdue %} · overdue{% endif %}</span>{% endif %}
+              {% if st.amount %} · <span style="color:#0F6E56;font-weight:600;">AED {{ '{:,.0f}'.format(st.amount) }}</span>{% endif %}
             </div>
           </div>
           <form method="post" action="/subtasks/{{ st.id }}/delete" style="margin:0;" onsubmit="return confirm('Remove this step?')">
@@ -218,6 +224,7 @@
             {% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
           </select>
           <input type="date" name="due_date" style="width:145px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+          <input type="number" name="amount" min="0" step="0.01" placeholder="AED (opt)" title="Optional revenue for this step" style="width:110px;padding:7px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
           <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">+ Add</button>
         </form>
         {% if subtask_group_names %}

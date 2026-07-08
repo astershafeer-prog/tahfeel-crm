@@ -457,6 +457,7 @@ class SubTask(db.Model):
     due_date = db.Column(db.DateTime)
     priority = db.Column(db.String(20), default='Medium')
     status = db.Column(db.String(20), default='Pending')
+    amount = db.Column(db.Float, default=0)   # optional add-on revenue (e.g. Bank Account Opening); informational
     remarks = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     completed_at = db.Column(db.DateTime, nullable=True)
@@ -3658,6 +3659,7 @@ def add_job():
         st_assigned_tos = request.form.getlist('st_assigned_to[]')
         st_due_dates = request.form.getlist('st_due_date[]')
         st_priorities = request.form.getlist('st_priority[]')
+        st_amounts = request.form.getlist('st_amount[]')
         try:
           for i, title in enumerate(st_titles):
             if not title.strip():
@@ -3665,6 +3667,10 @@ def add_job():
             st_assigned = st_assigned_tos[i] if i < len(st_assigned_tos) and st_assigned_tos[i] else None
             st_due_str = st_due_dates[i] if i < len(st_due_dates) and st_due_dates[i] else None
             st_due = datetime.strptime(st_due_str, '%Y-%m-%d') if st_due_str else now_dubai() + timedelta(days=1)
+            try:
+                st_amt = float(st_amounts[i]) if i < len(st_amounts) and st_amounts[i] else 0
+            except ValueError:
+                st_amt = 0
             subtask = SubTask(
                 job_id=job.id,
                 title=title.strip(),
@@ -3672,6 +3678,7 @@ def add_job():
                 assigned_to=int(st_assigned) if st_assigned else (job.assigned_to or session['user_id']),
                 due_date=st_due,
                 priority=st_priorities[i] if i < len(st_priorities) else 'Medium',
+                amount=st_amt,
             )
             db.session.add(subtask)
           db.session.commit()
@@ -3833,9 +3840,13 @@ def add_subtask(job_id):
         except ValueError:
             due = job.due_date or now_dubai() + timedelta(days=1)
         assigned = request.form.get('assigned_to')
+        try:
+            amt = float(request.form.get('amount') or 0)
+        except ValueError:
+            amt = 0
         st = SubTask(job_id=job.id, title=title[:200],
                      assigned_to=int(assigned) if assigned else (job.assigned_to or session['user_id']),
-                     due_date=due, priority='Medium')
+                     due_date=due, priority='Medium', amount=amt)
         db.session.add(st)
         db.session.commit()
         flash('Step added.')
@@ -6045,6 +6056,7 @@ def init_db():
             'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS service_type VARCHAR(100)',
             'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS due_date TIMESTAMP',
             'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT \'Medium\'',
+            'ALTER TABLE sub_task ADD COLUMN IF NOT EXISTS amount FLOAT DEFAULT 0',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS final_remarks TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS future_work_notes TEXT',
             'ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP',

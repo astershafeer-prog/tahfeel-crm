@@ -149,6 +149,7 @@
         '<input type="hidden" name="st_priority[]" value="Medium">' +
         '<select name="st_assigned_to[]" style="flex:1;min-width:120px;padding:7px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' + subtaskPersonOptions() + '</select>' +
         '<input type="date" name="st_due_date[]" value="' + due + '" style="width:145px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' +
+        '<input type="number" name="st_amount[]" min="0" step="0.01" placeholder="AED (opt)" title="Optional revenue for this step" style="width:110px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' +
         '<button type="button" onclick="this.parentNode.remove()" style="width:30px;height:30px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;" title="Remove step">🗑</button>';
       list.appendChild(row);
     }
