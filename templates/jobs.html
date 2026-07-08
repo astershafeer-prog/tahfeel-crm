@@ -162,7 +162,7 @@
           <a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a>
           {% if session.role in ['admin','operations'] and job.status != 'Closed' %}
           <a href="/jobs/{{ job.id }}/edit" class="ib" title="Edit">✏</a>
-          <a href="/jobs/{{ job.id }}/delete" class="ib ib-del" title="Delete" onclick="return confirm('Delete this task?')">🗑</a>
+          <a href="#" class="ib ib-del" title="Delete" onclick="deleteJob(event, {{ job.id }}); return false;">🗑</a>
           {% endif %}
         </div>
       </div>
@@ -192,6 +192,13 @@
     function confirmBulkDelete() {
       const count = document.querySelectorAll('.job-checkbox:checked').length;
       if (confirm(`Delete ${count} task(s)?`)) document.getElementById('bulkForm').submit();
+    }
+    function deleteJob(e, id) {
+      e.preventDefault();
+      if (!confirm('Delete this task?\nThis cannot be undone.')) return;
+      fetch('/jobs/' + id + '/delete', { method: 'POST' })
+        .then(function () { window.location.href = '/jobs'; })
+        .catch(function () { window.location.href = '/jobs'; });
     }
   
   function sortTable(col) {
