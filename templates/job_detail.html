@@ -220,6 +220,15 @@
           <input type="date" name="due_date" style="width:145px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
           <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">+ Add</button>
         </form>
+        {% if subtask_group_names %}
+        <form method="post" action="/jobs/{{ job.id }}/subtasks/add-group" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+          <select name="group_name" required style="flex:1;min-width:150px;padding:7px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+            <option value="">— Add all steps from a group —</option>
+            {% for gname in subtask_group_names %}<option value="{{ gname }}">{{ gname }}</option>{% endfor %}
+          </select>
+          <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">Add group</button>
+        </form>
+        {% endif %}
       </div>
     </div>
 
