@@ -3681,6 +3681,9 @@ def add_job():
                 amount=st_amt,
             )
             db.session.add(subtask)
+            # Fold add-on revenue into the task's invoice so it flows through finance
+            if st_amt:
+                job.amount_invoiced = (job.amount_invoiced or 0) + st_amt
           db.session.commit()
         except Exception as e:
           db.session.rollback()
@@ -3848,6 +3851,9 @@ def add_subtask(job_id):
                      assigned_to=int(assigned) if assigned else (job.assigned_to or session['user_id']),
                      due_date=due, priority='Medium', amount=amt)
         db.session.add(st)
+        # Fold add-on revenue into the task's invoice so it flows through finance
+        if amt:
+            job.amount_invoiced = (job.amount_invoiced or 0) + amt
         db.session.commit()
         flash('Step added.')
     return redirect(url_for('job_detail', job_id=job_id) + '#steps')
@@ -3857,6 +3863,9 @@ def add_subtask(job_id):
 def subtask_delete(sub_id):
     st = SubTask.query.get_or_404(sub_id)
     jid = st.job_id
+    # Reverse the add-on revenue from the task's invoice when the step is removed
+    if st.amount and st.job:
+        st.job.amount_invoiced = max((st.job.amount_invoiced or 0) - st.amount, 0)
     db.session.delete(st)
     db.session.commit()
     return redirect(url_for('job_detail', job_id=jid) + '#steps')
