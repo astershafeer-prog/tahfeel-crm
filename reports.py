@@ -1115,7 +1115,7 @@ def export_customer_report():
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Customer Detail"
+    ws.title = "All Clients"
 
     cols = [
         '#', 'Type', 'Name', 'Company', 'Contact Person',
@@ -1127,7 +1127,7 @@ def export_customer_report():
         'VAT Status', 'VAT Due Date', 'Corp Tax Status', 'Corp Tax Due Date',
         'Alerts Enabled', 'Alert Email', 'Alert WhatsApp', 'Notes', 'Created Date',
     ]
-    title = 'CUSTOMER DETAIL REPORT'
+    title = 'ALL CLIENTS REPORT'
     if cust_type in ('Company', 'Individual'):
         title += f' — {cust_type.upper()} ONLY'
     _title_block(ws, title, df, dt, len(cols))
@@ -1170,4 +1170,4 @@ def export_customer_report():
     _freeze(ws)
     _filter(ws, len(cols))
     suffix = cust_type if cust_type in ('Company', 'Individual') else 'All'
-    return _respond(wb, f"Customer_Detail_{suffix}_{df}_{dt}.xlsx")
+    return _respond(wb, f"All_Clients_{suffix}_{df}_{dt}.xlsx")
