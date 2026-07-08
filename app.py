@@ -462,6 +462,16 @@ class SubTask(db.Model):
     completed_at = db.Column(db.DateTime, nullable=True)
     assignee = db.relationship('User', foreign_keys=[assigned_to])
 
+class SubTaskTemplate(db.Model):
+    """Standard step for a service type (e.g. Residence Visa -> E-ID typing, Medical…).
+    Admins define these per service type; they auto-fill as sub-tasks on a new job."""
+    __tablename__ = 'subtask_template'
+    id         = db.Column(db.Integer, primary_key=True)
+    job_type   = db.Column(db.String(100), index=True)   # matches ServiceType.name / Job.job_type
+    title      = db.Column(db.String(200), nullable=False)
+    sort_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
 class DocType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
@@ -2178,9 +2188,14 @@ def admin_panel():
         'test_code': get_setting('capi_test_code', '') or '',
         'last_run': get_setting('run_capi', ''),
     }
+    # Sub-task step templates grouped by service type (for the admin editor)
+    subtask_templates = {}
+    for t in SubTaskTemplate.query.order_by(SubTaskTemplate.job_type, SubTaskTemplate.sort_order).all():
+        subtask_templates.setdefault(t.job_type, []).append(t.title)
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
-                           wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi)
+                           wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi,
+                           subtask_templates=subtask_templates)
 
 @app.route('/admin/whatsapp-settings', methods=['POST'])
 @login_required
@@ -2201,6 +2216,24 @@ def admin_automations():
         set_setting(key, 'on' if request.form.get(key) == 'on' else 'off')
     flash('Automation settings saved.')
     return redirect(url_for('admin_panel') + '#automations')
+
+@app.route('/admin/subtask-templates', methods=['POST'])
+@login_required
+@admin_required
+def admin_subtask_templates():
+    """Replace the standard steps for one service type. Steps come as a textarea,
+    one per line; blank lines ignored."""
+    job_type = (request.form.get('job_type') or '').strip()
+    if not job_type:
+        flash('Pick a service type first.')
+        return redirect(url_for('admin_panel') + '#step-templates')
+    steps = [ln.strip() for ln in (request.form.get('steps') or '').splitlines() if ln.strip()]
+    SubTaskTemplate.query.filter_by(job_type=job_type).delete()
+    for i, title in enumerate(steps):
+        db.session.add(SubTaskTemplate(job_type=job_type, title=title[:200], sort_order=i))
+    db.session.commit()
+    flash(f'Saved {len(steps)} step(s) for {job_type}.')
+    return redirect(url_for('admin_panel') + '#step-templates')
 
 @app.route('/admin/capi-settings', methods=['POST'])
 @login_required
@@ -3679,7 +3712,10 @@ def add_job():
     # template (avoids XSS via admin-entered service-type names).
     service_days = {jt.name: (getattr(jt, 'default_days', None) or 1) for jt in job_types}
     all_jobs = Job.query.order_by(Job.created_at.desc()).all()
-    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days_json=service_days, all_jobs=all_jobs)
+    subtask_templates = {}
+    for t in SubTaskTemplate.query.order_by(SubTaskTemplate.job_type, SubTaskTemplate.sort_order).all():
+        subtask_templates.setdefault(t.job_type, []).append(t.title)
+    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days_json=service_days, all_jobs=all_jobs, subtask_templates=subtask_templates)
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
 @login_required
@@ -3756,6 +3792,50 @@ def job_detail(job_id):
                            service_types=service_types, timedelta=timedelta,
                            sibling_jobs=sibling_jobs, partners=partners,
                            wa_templates=wa_send_context(job=job), quick_replies=quick_replies)
+
+@app.route('/subtasks/<int:sub_id>/toggle', methods=['POST'])
+@login_required
+def subtask_toggle(sub_id):
+    """Mark a sub-task done / not-done from the task detail page."""
+    st = SubTask.query.get_or_404(sub_id)
+    if st.status == 'Done':
+        st.status = 'Pending'
+        st.completed_at = None
+    else:
+        st.status = 'Done'
+        st.completed_at = now_dubai()
+    db.session.commit()
+    return redirect(url_for('job_detail', job_id=st.job_id) + '#steps')
+
+@app.route('/jobs/<int:job_id>/subtasks/add', methods=['POST'])
+@login_required
+def add_subtask(job_id):
+    """Add one sub-task/step to a task. Person + due default to the main task's."""
+    job = Job.query.get_or_404(job_id)
+    title = (request.form.get('title') or '').strip()
+    if title:
+        due_str = request.form.get('due_date')
+        try:
+            due = datetime.strptime(due_str, '%Y-%m-%d') if due_str else (job.due_date or now_dubai() + timedelta(days=1))
+        except ValueError:
+            due = job.due_date or now_dubai() + timedelta(days=1)
+        assigned = request.form.get('assigned_to')
+        st = SubTask(job_id=job.id, title=title[:200],
+                     assigned_to=int(assigned) if assigned else (job.assigned_to or session['user_id']),
+                     due_date=due, priority='Medium')
+        db.session.add(st)
+        db.session.commit()
+        flash('Step added.')
+    return redirect(url_for('job_detail', job_id=job_id) + '#steps')
+
+@app.route('/subtasks/<int:sub_id>/delete', methods=['POST'])
+@login_required
+def subtask_delete(sub_id):
+    st = SubTask.query.get_or_404(sub_id)
+    jid = st.job_id
+    db.session.delete(st)
+    db.session.commit()
+    return redirect(url_for('job_detail', job_id=jid) + '#steps')
 
 @app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
 @login_required

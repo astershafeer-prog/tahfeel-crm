@@ -48,7 +48,7 @@
           <div class="form-row-2">
             <div class="form-group">
               <label>Service Type *</label>
-              <select name="job_type" required id="main-service-type" onchange="updateDueDate(this,'main-due')">
+              <select name="job_type" required id="main-service-type" onchange="updateDueDate(this,'main-due');loadSubtasks()">
                 <option value="">— Select service type —</option>
                 {% for jt in job_types %}
                 <option value="{{ jt.name }}">{{ jt.name }}</option>
@@ -94,6 +94,10 @@
             <label>Service Note <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(optional — shown in task list)</span></label>
             <input type="text" name="service_note" placeholder="e.g. Typing, Printing, Medical Fitness...">
           </div>
+          <!-- Sub-tasks / Steps (auto-fills from the service's template) -->
+          <div class="section-label" style="margin-top:8px;">Sub-tasks / Steps <span style="font-size:11px;font-weight:400;color:var(--text-muted);">— auto-fills from the service's template; person &amp; due date default to the main task</span></div>
+          <div id="subtasks-list"></div>
+          <button type="button" onclick="addSubtaskRow()" style="background:white;border:1.5px dashed var(--border);color:var(--text-secondary);padding:8px 16px;border-radius:var(--radius-md);font-size:12px;cursor:pointer;width:100%;font-weight:500;margin-top:6px;">+ Add step</button>
         </div>
       </div>
 
@@ -116,6 +120,37 @@
 
   <script>
     const serviceDays = {{ service_days_json|tojson }};
+    const STEP_TEMPLATES = {{ subtask_templates|tojson }};
+
+    function subtaskPersonOptions() {
+      const main = document.getElementById('main-assigned');
+      let opts = '<option value="">— Same as main —</option>';
+      for (const o of main.options) {
+        if (o.value) opts += `<option value="${o.value}">${o.textContent}</option>`;
+      }
+      return opts;
+    }
+    function addSubtaskRow(title) {
+      const list = document.getElementById('subtasks-list');
+      const due = document.getElementById('main-due').value || '';
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;';
+      const safe = (title || '').replace(/"/g, '&quot;');
+      row.innerHTML =
+        '<input type="text" name="st_title[]" value="' + safe + '" placeholder="Step name" style="flex:2;min-width:140px;padding:7px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' +
+        '<input type="hidden" name="st_service_type[]" value="">' +
+        '<input type="hidden" name="st_priority[]" value="Medium">' +
+        '<select name="st_assigned_to[]" style="flex:1;min-width:120px;padding:7px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' + subtaskPersonOptions() + '</select>' +
+        '<input type="date" name="st_due_date[]" value="' + due + '" style="width:145px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' +
+        '<button type="button" onclick="this.parentNode.remove()" style="width:30px;height:30px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;" title="Remove step">🗑</button>';
+      list.appendChild(row);
+    }
+    function loadSubtasks() {
+      const t = document.getElementById('main-service-type').value;
+      const steps = STEP_TEMPLATES[t] || [];
+      document.getElementById('subtasks-list').innerHTML = '';
+      steps.forEach(function (s) { addSubtaskRow(s); });
+    }
 
     function updateDueDate(selectEl, dateInputId) {
       const selected = selectEl.value;

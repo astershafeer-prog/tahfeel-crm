@@ -458,6 +458,40 @@
         </div>
       </div>
 
+      <!-- Task Step Templates (sub-tasks per service type) -->
+      <div class="card" id="step-templates">
+        <div class="card-header">
+          <h2>🪜 Task Step Templates <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:#EEF4FF;padding:2px 8px;border-radius:10px;margin-left:6px;">Sub-tasks</span></h2>
+        </div>
+        <div class="card-body">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">
+            Standard steps for a service (e.g. Residence Visa → E-ID typing, Medical, Stamping). When a task of this
+            service type is created, these auto-fill as sub-tasks — one step per line, in order.
+          </div>
+          <form method="POST" action="/admin/subtask-templates">
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:11px;color:var(--text-muted);">Service type</label>
+              <select name="job_type" id="stpType" onchange="loadSteps()" required style="width:100%;padding:7px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;">
+                <option value="">— Select a service —</option>
+                {% for jt in job_types %}<option value="{{ jt.name }}">{{ jt.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:11px;color:var(--text-muted);">Steps (one per line, in order)</label>
+              <textarea name="steps" id="stpSteps" rows="7" placeholder="E-ID typing&#10;Medical fitness&#10;Stamping&#10;Visa printing" style="width:100%;padding:8px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;font-family:inherit;"></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Save steps</button>
+          </form>
+        </div>
+      </div>
+      <script>
+        const STEP_TEMPLATES = {{ subtask_templates|tojson }};
+        function loadSteps() {
+          const t = document.getElementById('stpType').value;
+          document.getElementById('stpSteps').value = (STEP_TEMPLATES[t] || []).join('\n');
+        }
+      </script>
+
       <!-- Document Types -->
       <div class="card" id="doc-types">
         <div class="card-header">

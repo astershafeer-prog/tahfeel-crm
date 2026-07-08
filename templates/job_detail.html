@@ -177,6 +177,52 @@
     </div>
     {% endif %}
 
+    <!-- Sub-tasks / Steps -->
+    <div class="card" id="steps" style="margin-bottom:12px;">
+      {% set st_total = job.subtasks|length %}
+      {% set st_done = job.subtasks|selectattr('status','equalto','Done')|list|length %}
+      <div class="card-header">
+        <h2>🪜 Steps <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ st_done }} of {{ st_total }} done</span></h2>
+      </div>
+      <div class="card-body">
+        {% if st_total %}
+        <div style="height:8px;background:#EEF2F7;border-radius:5px;overflow:hidden;margin-bottom:12px;">
+          <div style="height:100%;background:#10B981;width:{{ ((st_done/st_total)*100)|round|int }}%;"></div>
+        </div>
+        {% for st in job.subtasks %}
+        {% set overdue = st.due_date and st.due_date.date() < now.date() and st.status != 'Done' %}
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light);">
+          <form method="post" action="/subtasks/{{ st.id }}/toggle" style="margin:0;">
+            <button type="submit" title="Mark {{ 'not done' if st.status=='Done' else 'done' }}" style="width:24px;height:24px;border-radius:6px;cursor:pointer;border:1.5px solid {{ '#10B981' if st.status=='Done' else '#CBD5E1' }};background:{{ '#10B981' if st.status=='Done' else '#fff' }};color:#fff;font-size:13px;line-height:1;">{{ '✓' if st.status=='Done' else '' }}</button>
+          </form>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:{{ '#94A3B8' if st.status=='Done' else 'var(--text-primary)' }};{% if st.status=='Done' %}text-decoration:line-through;{% endif %}">{{ st.title }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">
+              {{ st.assignee.name if st.assignee else 'Unassigned' }}
+              {% if st.due_date %} · <span style="color:{{ '#DC2626' if overdue else 'var(--text-muted)' }};">due {{ st.due_date.strftime('%d %b') }}{% if overdue %} · overdue{% endif %}</span>{% endif %}
+            </div>
+          </div>
+          <form method="post" action="/subtasks/{{ st.id }}/delete" style="margin:0;" onsubmit="return confirm('Remove this step?')">
+            <button type="submit" title="Remove step" style="width:26px;height:26px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;">🗑</button>
+          </form>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">No steps yet. Add them below — or set a step template for this service type in the Admin Panel so they auto-fill on new tasks.</div>
+        {% endif %}
+        <!-- Add a step -->
+        <form method="post" action="/jobs/{{ job.id }}/subtasks/add" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+          <input type="text" name="title" placeholder="Add a step…" required style="flex:2;min-width:140px;padding:7px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+          <select name="assigned_to" style="flex:1;min-width:120px;padding:7px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+            <option value="">— Same as main —</option>
+            {% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+          </select>
+          <input type="date" name="due_date" style="width:145px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+          <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">+ Add</button>
+        </form>
+      </div>
+    </div>
+
     <!-- Finance: Approval form -->
     {% if session.role in ['finance','admin'] and job.status == 'Pending Finance Approval' %}
     <div class="card" style="margin-bottom:12px;">
