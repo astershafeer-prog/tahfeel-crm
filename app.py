@@ -2190,14 +2190,12 @@ def admin_panel():
         'test_code': get_setting('capi_test_code', '') or '',
         'last_run': get_setting('run_capi', ''),
     }
-    # Named sub-task groups (reusable step lists) for the admin editor
-    subtask_groups = {}
-    for t in SubTaskTemplate.query.order_by(SubTaskTemplate.job_type, SubTaskTemplate.sort_order).all():
-        subtask_groups.setdefault(t.job_type, []).append(t.title)
+    # Flat master list of common sub-tasks (pick from when creating a task)
+    subtask_list = SubTaskTemplate.query.order_by(SubTaskTemplate.sort_order, SubTaskTemplate.id).all()
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
                            wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi,
-                           subtask_groups=subtask_groups)
+                           subtask_list=subtask_list)
 
 @app.route('/admin/whatsapp-settings', methods=['POST'])
 @login_required
@@ -2219,32 +2217,31 @@ def admin_automations():
     flash('Automation settings saved.')
     return redirect(url_for('admin_panel') + '#automations')
 
-@app.route('/admin/subtask-templates', methods=['POST'])
+@app.route('/admin/subtask-list/add', methods=['POST'])
 @login_required
 @admin_required
-def admin_subtask_templates():
-    """Create/replace a named sub-task group. Steps come as a textarea, one per
-    line; blank lines ignored. The group name is stored in the job_type column."""
-    group = (request.form.get('group_name') or '').strip()
-    if not group:
-        flash('Give the group a name first.')
-        return redirect(url_for('admin_panel') + '#step-templates')
-    steps = [ln.strip() for ln in (request.form.get('steps') or '').splitlines() if ln.strip()]
-    SubTaskTemplate.query.filter_by(job_type=group).delete()
-    for i, title in enumerate(steps):
-        db.session.add(SubTaskTemplate(job_type=group, title=title[:200], sort_order=i))
+def admin_subtask_list_add():
+    """Add one or more sub-task names to the master list (textarea, one per line)."""
+    names = [ln.strip() for ln in (request.form.get('steps') or '').splitlines() if ln.strip()]
+    existing = {t.title for t in SubTaskTemplate.query.all()}
+    base = SubTaskTemplate.query.count()
+    added = 0
+    for name in names:
+        if name not in existing:
+            db.session.add(SubTaskTemplate(job_type='list', title=name[:200], sort_order=base + added))
+            existing.add(name)
+            added += 1
     db.session.commit()
-    flash(f'Saved {len(steps)} step(s) in group "{group}".')
+    flash(f'Added {added} sub-task(s) to the list.')
     return redirect(url_for('admin_panel') + '#step-templates')
 
-@app.route('/admin/subtask-group/delete', methods=['POST'])
+@app.route('/admin/subtask-list/<int:item_id>/delete', methods=['POST'])
 @login_required
 @admin_required
-def admin_subtask_group_delete():
-    group = (request.form.get('group_name') or '').strip()
-    SubTaskTemplate.query.filter_by(job_type=group).delete()
+def admin_subtask_list_delete(item_id):
+    t = SubTaskTemplate.query.get_or_404(item_id)
+    db.session.delete(t)
     db.session.commit()
-    flash(f'Deleted group "{group}".')
     return redirect(url_for('admin_panel') + '#step-templates')
 
 @app.route('/admin/capi-settings', methods=['POST'])
@@ -3733,10 +3730,8 @@ def add_job():
     # template (avoids XSS via admin-entered service-type names).
     service_days = {jt.name: (getattr(jt, 'default_days', None) or 1) for jt in job_types}
     all_jobs = Job.query.order_by(Job.created_at.desc()).all()
-    subtask_groups = {}
-    for t in SubTaskTemplate.query.order_by(SubTaskTemplate.job_type, SubTaskTemplate.sort_order).all():
-        subtask_groups.setdefault(t.job_type, []).append(t.title)
-    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days_json=service_days, all_jobs=all_jobs, subtask_groups=subtask_groups)
+    subtask_list_names = [t.title for t in SubTaskTemplate.query.order_by(SubTaskTemplate.sort_order, SubTaskTemplate.id).all()]
+    return render_template('add_job.html', customers=customers, job_types=job_types, users=users, tomorrow=tomorrow, service_days_json=service_days, all_jobs=all_jobs, subtask_list_names=subtask_list_names)
 
 @app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
 @login_required
@@ -3808,13 +3803,13 @@ def job_detail(job_id):
     quick_replies = QuickReply.query.filter(
         (QuickReply.staff_id == session.get('user_id')) | (QuickReply.is_global == True)
     ).order_by(QuickReply.label).all()
-    subtask_group_names = [r[0] for r in db.session.query(SubTaskTemplate.job_type).distinct().order_by(SubTaskTemplate.job_type).all() if r[0]]
+    subtask_list_names = [t.title for t in SubTaskTemplate.query.order_by(SubTaskTemplate.sort_order, SubTaskTemplate.id).all()]
     return render_template('job_detail.html', job=job, now=now,
                            statuses=JOB_STATUSES, users=users,
                            service_types=service_types, timedelta=timedelta,
                            sibling_jobs=sibling_jobs, partners=partners,
                            wa_templates=wa_send_context(job=job), quick_replies=quick_replies,
-                           subtask_group_names=subtask_group_names)
+                           subtask_list_names=subtask_list_names)
 
 @app.route('/subtasks/<int:sub_id>/toggle', methods=['POST'])
 @login_required
@@ -3869,25 +3864,6 @@ def subtask_delete(sub_id):
     db.session.delete(st)
     db.session.commit()
     return redirect(url_for('job_detail', job_id=jid) + '#steps')
-
-@app.route('/jobs/<int:job_id>/subtasks/add-group', methods=['POST'])
-@login_required
-def add_subtask_group(job_id):
-    """Add every step of a named group to this task as sub-tasks. Person + due
-    default to the main task's."""
-    job = Job.query.get_or_404(job_id)
-    group = (request.form.get('group_name') or '').strip()
-    steps = (SubTaskTemplate.query.filter_by(job_type=group)
-             .order_by(SubTaskTemplate.sort_order).all()) if group else []
-    for s in steps:
-        db.session.add(SubTask(job_id=job.id, title=s.title,
-                       assigned_to=(job.assigned_to or session['user_id']),
-                       due_date=(job.due_date or now_dubai() + timedelta(days=1)),
-                       priority='Medium'))
-    if steps:
-        db.session.commit()
-        flash(f'Added {len(steps)} step(s) from "{group}".')
-    return redirect(url_for('job_detail', job_id=job_id) + '#steps')
 
 @app.route('/jobs/<int:job_id>/edit', methods=['GET', 'POST'])
 @login_required

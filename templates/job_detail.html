@@ -216,9 +216,10 @@
         {% else %}
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">No steps yet. Add them below — or set a step template for this service type in the Admin Panel so they auto-fill on new tasks.</div>
         {% endif %}
-        <!-- Add a step -->
+        <!-- Add a step (pick from the list or type your own) -->
+        <datalist id="stepOptions">{% for n in subtask_list_names %}<option value="{{ n }}"></option>{% endfor %}</datalist>
         <form method="post" action="/jobs/{{ job.id }}/subtasks/add" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:12px;">
-          <input type="text" name="title" placeholder="Add a step…" required style="flex:2;min-width:140px;padding:7px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+          <input type="text" name="title" list="stepOptions" placeholder="Add a step… (pick from list or type)" required style="flex:2;min-width:140px;padding:7px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
           <select name="assigned_to" style="flex:1;min-width:120px;padding:7px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
             <option value="">— Same as main —</option>
             {% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
@@ -227,15 +228,6 @@
           <input type="number" name="amount" min="0" step="0.01" placeholder="AED (opt)" title="Optional revenue for this step" style="width:110px;padding:7px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
           <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">+ Add</button>
         </form>
-        {% if subtask_group_names %}
-        <form method="post" action="/jobs/{{ job.id }}/subtasks/add-group" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;">
-          <select name="group_name" required style="flex:1;min-width:150px;padding:7px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-            <option value="">— Add all steps from a group —</option>
-            {% for gname in subtask_group_names %}<option value="{{ gname }}">{{ gname }}</option>{% endfor %}
-          </select>
-          <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 14px;">Add group</button>
-        </form>
-        {% endif %}
       </div>
     </div>
 

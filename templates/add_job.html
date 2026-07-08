@@ -94,17 +94,11 @@
             <label>Service Note <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(optional — shown in task list)</span></label>
             <input type="text" name="service_note" placeholder="e.g. Typing, Printing, Medical Fitness...">
           </div>
-          <!-- Sub-tasks / Steps: add from a group, or enter manually -->
-          <div class="section-label" style="margin-top:8px;">Sub-tasks / Steps <span style="font-size:11px;font-weight:400;color:var(--text-muted);">— add from a group or enter manually; person &amp; due date default to the main task</span></div>
-          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-            <select id="groupPicker" style="flex:1;min-width:160px;padding:7px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-              <option value="">— Add steps from a group —</option>
-              {% for gname in subtask_groups.keys() %}<option value="{{ gname }}">{{ gname }}</option>{% endfor %}
-            </select>
-            <button type="button" onclick="addGroupSteps()" class="btn-primary" style="font-size:12px;padding:7px 14px;white-space:nowrap;">Add group</button>
-          </div>
+          <!-- Sub-tasks / Steps: pick from the list or type your own -->
+          <div class="section-label" style="margin-top:8px;">Sub-tasks / Steps <span style="font-size:11px;font-weight:400;color:var(--text-muted);">— pick from your list or type your own; person &amp; due date default to the main task</span></div>
+          <datalist id="stepOptions">{% for n in subtask_list_names %}<option value="{{ n }}"></option>{% endfor %}</datalist>
           <div id="subtasks-list"></div>
-          <button type="button" onclick="addSubtaskRow()" style="background:white;border:1.5px dashed var(--border);color:var(--text-secondary);padding:8px 16px;border-radius:var(--radius-md);font-size:12px;cursor:pointer;width:100%;font-weight:500;margin-top:6px;">+ Add step manually</button>
+          <button type="button" onclick="addSubtaskRow()" style="background:white;border:1.5px dashed var(--border);color:var(--text-secondary);padding:8px 16px;border-radius:var(--radius-md);font-size:12px;cursor:pointer;width:100%;font-weight:500;margin-top:6px;">+ Add step</button>
         </div>
       </div>
 
@@ -127,7 +121,6 @@
 
   <script>
     const serviceDays = {{ service_days_json|tojson }};
-    const SUBTASK_GROUPS = {{ subtask_groups|tojson }};
 
     function subtaskPersonOptions() {
       const main = document.getElementById('main-assigned');
@@ -144,7 +137,7 @@
       row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;';
       const safe = (title || '').replace(/"/g, '&quot;');
       row.innerHTML =
-        '<input type="text" name="st_title[]" value="' + safe + '" placeholder="Step name" style="flex:2;min-width:140px;padding:7px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' +
+        '<input type="text" name="st_title[]" list="stepOptions" value="' + safe + '" placeholder="Step name" style="flex:2;min-width:140px;padding:7px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' +
         '<input type="hidden" name="st_service_type[]" value="">' +
         '<input type="hidden" name="st_priority[]" value="Medium">' +
         '<select name="st_assigned_to[]" style="flex:1;min-width:120px;padding:7px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' + subtaskPersonOptions() + '</select>' +
@@ -152,12 +145,6 @@
         '<input type="number" name="st_amount[]" min="0" step="0.01" placeholder="AED (opt)" title="Optional revenue for this step" style="width:110px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">' +
         '<button type="button" onclick="this.parentNode.remove()" style="width:30px;height:30px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;" title="Remove step">🗑</button>';
       list.appendChild(row);
-    }
-    function addGroupSteps() {
-      const g = document.getElementById('groupPicker').value;
-      if (!g) return;
-      (SUBTASK_GROUPS[g] || []).forEach(function (s) { addSubtaskRow(s); });
-      document.getElementById('groupPicker').value = '';
     }
 
     function updateDueDate(selectEl, dateInputId) {
