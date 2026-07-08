@@ -103,6 +103,58 @@
       </div>
     </details>
 
+    <!-- Meta Conversions API (CAPI) — dormant until the agency provides a token -->
+    <details class="acc" id="capi">
+      <summary>📶 Meta Conversions API (lead-quality feedback)</summary>
+      <div class="acc-inner">
+      <div style="padding:14px 18px;">
+        <div style="font-size:12.5px;color:#64748B;margin-bottom:12px;line-height:1.6;">
+          Sends a “good lead” signal back to Meta whenever a lead is marked <strong>Genuine</strong>, so your Lead Ads
+          optimise for quality instead of just form-fills. Only Meta-sourced leads are sent (hashed phone/email + the
+          Meta lead id — no plain personal data). <strong>Stays off until your marketing agency provides the details
+          below and you enable it.</strong>
+        </div>
+        <form method="POST" action="/admin/capi-settings" style="display:flex;flex-direction:column;gap:12px;max-width:560px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" name="capi_enabled" value="on" {{ 'checked' if capi.enabled }} style="width:18px;height:18px;">
+            <span style="font-size:14px;font-weight:700;color:var(--text-primary);">Enable sending to Meta</span>
+          </label>
+          <div>
+            <label style="font-size:11px;color:#64748B;">Access token
+              {% if capi.token_set %}<span style="color:#16A34A;">— saved ✓ (leave blank to keep it)</span>{% else %}<span style="color:#B45309;">— not set yet</span>{% endif %}
+            </label>
+            <input type="password" name="capi_token" autocomplete="off" placeholder="{{ 'Paste a new token to replace' if capi.token_set else 'CAPI access token from Events Manager' }}" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:160px;">
+              <label style="font-size:11px;color:#64748B;">Dataset / Pixel ID</label>
+              <input type="text" name="capi_dataset_id" value="{{ capi.dataset_id }}" placeholder="e.g. 1234567890" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            </div>
+            <div style="flex:1;min-width:130px;">
+              <label style="font-size:11px;color:#64748B;">Event name</label>
+              <input type="text" name="capi_event_name" value="{{ capi.event_name }}" placeholder="Qualified" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            </div>
+            <div style="flex:1;min-width:130px;">
+              <label style="font-size:11px;color:#64748B;">Test code (optional)</label>
+              <input type="text" name="capi_test_code" value="{{ capi.test_code }}" placeholder="TEST12345" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            </div>
+          </div>
+          <div style="font-size:11px;color:#94A3B8;line-height:1.5;">
+            The <strong>event name</strong> must match what the agency sets the campaign’s “Conversion Leads” objective to
+            optimise for. Use the <strong>test code</strong> (Events Manager → Test Events) to verify a live send, then clear it.
+          </div>
+          <div>
+            <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">Save CAPI settings</button>
+          </div>
+          {% if capi.last_run %}<div style="font-size:11px;color:#16A34A;">Last send: {{ capi.last_run }}</div>{% endif %}
+          <div style="font-size:11px;color:{{ '#16A34A' if capi.enabled else '#94A3B8' }};">
+            Currently: <strong>{{ 'ON — Genuine leads are being sent to Meta' if capi.enabled else 'OFF — nothing is sent' }}</strong>
+          </div>
+        </form>
+      </div>
+      </div>
+    </details>
+
     <!-- Staff & Roles -->
     <details class="acc" open>
       <summary>👥 Staff &amp; Roles</summary>
