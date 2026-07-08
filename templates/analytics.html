@@ -213,6 +213,35 @@
     </div>
     <div class="grid2">
       <div class="an-card">
+        <div class="an-card-title">Daily Leads Received <span style="font-weight:400;color:#94A3B8;font-size:11px;">· avg {{ lead_daily_avg }}/day</span></div>
+        {% if lead_daily %}
+        <div style="display:flex;align-items:flex-end;gap:3px;height:110px;padding-top:6px;">
+          {% for d in lead_daily %}
+          <div title="{{ d.date.strftime('%d %b %Y') }}: {{ d.count }}" style="flex:1;min-width:4px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;">
+            <span style="font-size:9px;color:#94A3B8;line-height:1;">{{ d.count if d.count else '' }}</span>
+            <div style="width:100%;border-radius:3px 3px 0 0;background:{{ '#133E87' if d.count else '#EEF2F7' }};height:{{ (d.count / lead_daily_max * 88)|round|int if lead_daily_max else 0 }}px;min-height:2px;margin-top:2px;"></div>
+          </div>
+          {% endfor %}
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#94A3B8;margin-top:5px;">
+          <span>{{ lead_daily[0].date.strftime('%d %b') }}</span>
+          {% if lead_daily|length > 2 %}<span>{{ lead_daily[lead_daily|length // 2].date.strftime('%d %b') }}</span>{% endif %}
+          <span>{{ lead_daily[-1].date.strftime('%d %b') }}</span>
+        </div>
+        {% else %}<div class="empty-state">No leads in this period</div>{% endif %}
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Lead Quality</div>
+        {% set qt = lead_quality.total if lead_quality.total > 0 else 1 %}
+        <div class="bar-row"><div class="bar-label">Genuine</div><div class="bar-track"><div class="bar-fill" style="width:{{ (lead_quality.genuine/qt*100)|int }}%;background:#10B981;"></div></div><div class="bar-val">{{ lead_quality.genuine }}</div></div>
+        <div class="bar-row"><div class="bar-label">Junk</div><div class="bar-track"><div class="bar-fill" style="width:{{ (lead_quality.junk/qt*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ lead_quality.junk }}</div></div>
+        <div class="bar-row"><div class="bar-label">Unreachable</div><div class="bar-track"><div class="bar-fill" style="width:{{ (lead_quality.unreachable/qt*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ lead_quality.unreachable }}</div></div>
+        <div class="bar-row"><div class="bar-label">Not reviewed</div><div class="bar-track"><div class="bar-fill" style="width:{{ (lead_quality.not_reviewed/qt*100)|int }}%;background:#CBD5E1;"></div></div><div class="bar-val">{{ lead_quality.not_reviewed }}</div></div>
+        <div style="margin-top:8px;font-size:11px;color:#94A3B8;border-top:0.5px solid #F1F5F9;padding-top:8px;">Genuine + Junk + Unreachable + Not reviewed = <b style="color:#10B981;">{{ lead_quality.total }}</b> ✓</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="an-card">
         <div class="an-card-title">Lead Breakdown by Staff</div>
         <div style="overflow-x:auto;">
           <table style="width:100%;font-size:11px;border-collapse:collapse;">

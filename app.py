@@ -6522,9 +6522,9 @@ def analytics():
     source_counts = Counter(l.source for l in all_leads if l.source)
     top_sources = source_counts.most_common(6)
 
-    # ── Campaign performance
+    # ── Campaign performance (show all campaigns, not just the top few)
     campaign_counts = Counter(l.campaign for l in all_leads if l.campaign)
-    top_campaigns = campaign_counts.most_common(5)
+    top_campaigns = campaign_counts.most_common()
 
     # ── Monthly revenue trend (last 6 months)
     monthly_revenue = []
@@ -6658,6 +6658,26 @@ def analytics():
     staff_totals = {staff.name: sum(lead_breakdown[status].get(staff.name, 0) for status in all_statuses) for staff in sales_staff}
     grand_total = sum(status_totals.values())
 
+    # ── Daily leads received (bar chart for the Leads tab; capped to 45 bars) ──
+    lead_day_counts = Counter(l.created_at.date() for l in all_leads if l.created_at)
+    lead_daily = []
+    if lead_day_counts:
+        dmax_l, dmin_l = max(lead_day_counts), min(lead_day_counts)
+        if (dmax_l - dmin_l).days > 45:
+            dmin_l = dmax_l - timedelta(days=45)
+        d = dmin_l
+        while d <= dmax_l:
+            lead_daily.append({'date': d, 'count': lead_day_counts.get(d, 0)})
+            d += timedelta(days=1)
+    lead_daily_max = max((x['count'] for x in lead_daily), default=0)
+    lead_daily_avg = round(sum(x['count'] for x in lead_daily) / len(lead_daily), 1) if lead_daily else 0
+    # ── Lead quality breakdown (tallies to total leads, incl. Not reviewed) ──
+    q_genuine = sum(1 for l in all_leads if l.genuine == 'Genuine')
+    q_junk = sum(1 for l in all_leads if l.genuine == 'Junk')
+    q_unreach = sum(1 for l in all_leads if l.genuine == 'Unreachable')
+    lead_quality = {'genuine': q_genuine, 'junk': q_junk, 'unreachable': q_unreach,
+                    'not_reviewed': total_leads - (q_genuine + q_junk + q_unreach), 'total': total_leads}
+
     return render_template('analytics.html',
         now=now, period=period, tab=tab,
         total_leads=total_leads, converted=len(converted), lost=len(lost),
@@ -6672,6 +6692,8 @@ def analytics():
         users_map=users_map,
         lead_breakdown=lead_breakdown, all_statuses=all_statuses, sales_staff=sales_staff,
         status_totals=status_totals, staff_totals=staff_totals, grand_total=grand_total,
+        lead_daily=lead_daily, lead_daily_max=lead_daily_max, lead_daily_avg=lead_daily_avg,
+        lead_quality=lead_quality,
         total_jobs=total_jobs, completed_jobs=len(completed_jobs),
         active_jobs_ops=len(active_jobs_ops), overdue_jobs=len(overdue_jobs),
         avg_completion=avg_completion, top_job_types=top_job_types, avg_by_job_type=avg_by_job_type,
