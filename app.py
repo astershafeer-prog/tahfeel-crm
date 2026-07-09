@@ -7640,6 +7640,26 @@ def whatsapp_mark_done(wa_id):
     flash('Marked done — moved to the Done filter.' if resolving else 'Conversation reopened.')
     return redirect(request.referrer or url_for('whatsapp_inbox'))
 
+@app.route('/whatsapp/bulk-done', methods=['POST'])
+@login_required
+def whatsapp_bulk_done():
+    """Mark several conversations Done at once (from the inbox checkboxes)."""
+    wa_ids = request.form.getlist('wa_ids')
+    count = 0
+    for wid in wa_ids:
+        thread = WhatsAppThread.query.get(wid)
+        if not thread:
+            thread = WhatsAppThread(wa_id=wid)
+            db.session.add(thread)
+        if not thread.resolved:
+            thread.resolved = True
+            thread.resolved_at = now_dubai()
+            thread.resolved_by = session.get('user_name')
+            count += 1
+    db.session.commit()
+    flash(f'{count} conversation(s) marked done.')
+    return redirect(request.referrer or url_for('whatsapp_inbox'))
+
 @app.route('/whatsapp/<wa_id>/bot-toggle', methods=['POST'])
 @login_required
 def whatsapp_bot_toggle(wa_id):

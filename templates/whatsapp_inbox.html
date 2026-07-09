@@ -81,6 +81,18 @@
       </form>
     </div>
 
+    {% if threads %}
+    <div style="display:flex;align-items:center;gap:12px;background:#EEF4FF;border:1px solid #C7D2FE;border-radius:10px;padding:7px 14px;margin-bottom:10px;">
+      <label style="font-size:12px;color:#1A3B8B;display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" id="selectAllChats" onclick="toggleAllChats()" style="width:15px;height:15px;"> Select all shown
+      </label>
+      <span style="font-size:12px;color:#64748B;"><b id="chatSelCount">0</b> selected</span>
+      <div style="flex:1;"></div>
+      <button type="button" id="bulkDoneBtn" onclick="bulkDone()" disabled
+              style="font-size:12px;background:#16A34A;color:white;border:none;border-radius:20px;padding:6px 14px;cursor:pointer;opacity:.5;">✓ Mark selected Done</button>
+    </div>
+    {% endif %}
+
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #25D366;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
       {% if not threads %}
         <div style="padding:48px 20px;text-align:center;color:var(--text-muted);">
@@ -90,6 +102,7 @@
       {% else %}
         {% for t in threads %}
         <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #F1F5F9;{% if t.unread %}background:#F0FBF4;{% endif %}">
+          <input type="checkbox" class="chat-check" value="{{ t.wa_id }}" onclick="event.stopPropagation(); updateChatSel();" title="Select this chat" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;">
           <a href="/whatsapp/{{ t.wa_id }}" style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;text-decoration:none;color:inherit;">
             <div style="width:44px;height:44px;border-radius:50%;background:#25D366;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;">
               {{ (t.name or t.wa_id)[:2]|upper }}
@@ -134,8 +147,33 @@
     setInterval(function () {
       var nm = document.getElementById('nmOverlay');
       var modalOpen = nm && nm.style.display === 'flex';
-      if (!document.hidden && !modalOpen) location.reload();
+      var selecting = document.querySelectorAll('.chat-check:checked').length > 0;
+      if (!document.hidden && !modalOpen && !selecting) location.reload();
     }, 60000);
+
+    // --- Bulk "Mark Done" from the inbox checkboxes ---
+    function updateChatSel() {
+      var n = document.querySelectorAll('.chat-check:checked').length;
+      document.getElementById('chatSelCount').textContent = n;
+      var btn = document.getElementById('bulkDoneBtn');
+      btn.disabled = n === 0;
+      btn.style.opacity = n === 0 ? '.5' : '1';
+    }
+    function toggleAllChats() {
+      var on = document.getElementById('selectAllChats').checked;
+      document.querySelectorAll('.chat-check').forEach(function (c) { c.checked = on; });
+      updateChatSel();
+    }
+    function bulkDone() {
+      var ids = Array.prototype.slice.call(document.querySelectorAll('.chat-check:checked')).map(function (c) { return c.value; });
+      if (!ids.length) return;
+      if (!confirm('Mark ' + ids.length + ' conversation(s) as Done?\nThey reopen automatically if the customer replies.')) return;
+      var body = new URLSearchParams();
+      ids.forEach(function (id) { body.append('wa_ids', id); });
+      fetch('/whatsapp/bulk-done', { method: 'POST', body: body })
+        .then(function () { location.reload(); })
+        .catch(function () { location.reload(); });
+    }
 
     // --- New-message alert: sound + browser notification, survives the 15s reload via localStorage ---
     var CURRENT_UNREAD = {{ counts.unread }};

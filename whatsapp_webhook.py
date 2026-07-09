@@ -463,6 +463,18 @@ def handle_incoming(msg, contacts):
     row = log_message(wa_id, 'in', body, msg_type=mtype, wam_id=wam_id, contact_name=cname,
                       media_url=media_url, mime_type=mime_type)
 
+    # A new inbound re-opens a "Done" chat, so a customer reply is never missed in
+    # the Done tab — the conversation pops back into the active inbox.
+    try:
+        from app import db as _db, WhatsAppThread
+        _t = WhatsAppThread.query.get(normalize_phone(wa_id))
+        if _t and _t.resolved:
+            _t.resolved = False
+            _t.resolved_at = None
+            _db.session.commit()
+    except Exception as e:
+        print(f'[WA] reopen-on-inbound skipped: {e}')
+
     # If this number matches a known lead/customer, route the chat to that rep so
     # it lands in the right person's inbox (uses the ids log_message already resolved
     # — no extra phone scan). Never overrides a manual assignment.
