@@ -7079,6 +7079,14 @@ def whatsapp_thread(wa_id):
     name = next((m.contact_name for m in msgs if m.contact_name), None)
     lead_id = next((m.lead_id for m in msgs if m.lead_id), None)
     customer_id = next((m.customer_id for m in msgs if m.customer_id), None)
+    # Fallback: if no message was stamped with a lead/customer, match by phone so an
+    # existing lead/client is still detected (and the "Convert to Lead" button hidden).
+    if not lead_id and not customer_id:
+        try:
+            from whatsapp_webhook import find_contact
+            lead_id, customer_id = find_contact(wa_id)
+        except Exception:
+            pass
     thread = WhatsAppThread.query.get(wa_id)
     staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).order_by(User.name).all()
     quick_replies = QuickReply.query.filter(
