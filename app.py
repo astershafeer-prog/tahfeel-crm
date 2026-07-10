@@ -3873,6 +3873,42 @@ def subtask_toggle(sub_id):
     db.session.commit()
     return redirect(url_for('job_detail', job_id=st.job_id) + '#steps')
 
+@app.route('/jobs/<int:job_id>/status-update', methods=['POST'])
+@login_required
+def job_status_update(job_id):
+    """Send the customer a WhatsApp status update (approved template, logged).
+    Dormant until the 'status_update' template is activated in WhatsApp Templates."""
+    from whatsapp_webhook import send_template, log_message, normalize_phone
+    job = Job.query.get_or_404(job_id)
+    back = request.referrer or url_for('job_detail', job_id=job_id)
+    tpl_name = get_setting('wa_status_template', 'status_update') or 'status_update'
+    tpl = wa_template_active(tpl_name)
+    if not tpl:
+        flash(f'Status-update template isn\'t active yet — activate "{tpl_name}" in WhatsApp → Templates first.', 'error')
+        return redirect(back)
+    cust = job.customer
+    to = normalize_phone((cust.whatsapp or cust.mobile or cust.phone or cust.phone2) if cust else '')
+    if not to:
+        flash('No WhatsApp number on record for this customer.', 'error')
+        return redirect(back)
+    status_text = (request.form.get('status_text') or '').strip()
+    if not status_text:
+        flash('Pick a status to send.', 'error')
+        return redirect(back)
+    first = ((cust.contact_person or cust.name or 'there').split() or ['there'])[0]
+    service = job.job_type or 'application'
+    params = [first, service, status_text]
+    wam = send_template(to, tpl.meta_name, params=params, lang=tpl.lang or 'en')
+    body = tpl.body_preview or ''
+    for n, v in enumerate(params, start=1):
+        body = body.replace('{{%d}}' % n, v)
+    log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                handled_by=session.get('user_name', 'staff'),
+                status='sent' if wam else 'failed', customer_id=cust.id if cust else None)
+    flash('Status update sent on WhatsApp.' if wam else 'WhatsApp send failed — check the number/template.',
+          'success' if wam else 'error')
+    return redirect(back)
+
 @app.route('/jobs/<int:job_id>/subtasks/add', methods=['POST'])
 @login_required
 def add_subtask(job_id):
@@ -6375,6 +6411,18 @@ def init_db():
                 _re.body_preview = _reengage_body
                 db.session.commit()
                 print('Upgraded re-engage template to 2 variables')
+            # Task status-update template (customer-facing progress update), inactive
+            # until an admin approves it in Meta + activates it in WhatsApp Templates.
+            if not MessageTemplate.query.filter_by(meta_name='status_update').first():
+                db.session.add(MessageTemplate(
+                    label='Task status update', meta_name='status_update',
+                    category='Utility', var_fields='first_name,service,custom',
+                    body_preview=('Dear {{1}}, here is an update on your {{2}}: the current status '
+                                  'is *{{3}}*. We will keep you informed of any further progress.\n\n'
+                                  'Thank you,\nTahfeel Business Setup Services'),
+                    active=False))
+                db.session.commit()
+                print('Seeded status-update template (inactive)')
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(ServiceType(name=jt))
