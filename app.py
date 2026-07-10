@@ -264,6 +264,25 @@ class LeadUpdate(db.Model):
     lost_reason = db.Column(db.String(100))
     future_potential = db.Column(db.String(20))
 
+class Enquiry(db.Model):
+    """A quick question/callback capture (lighter than a Lead). Staff log it fast,
+    set a remind date, then Resolve it or Convert it to a Lead. Kept separate so raw
+    enquiries don't inflate lead metrics; resolution time is tracked for analytics."""
+    id           = db.Column(db.Integer, primary_key=True)
+    name         = db.Column(db.String(120))
+    phone        = db.Column(db.String(30))
+    enquiry      = db.Column(db.Text, nullable=False)   # what they asked
+    service      = db.Column(db.String(100))            # optional service of interest
+    assigned_to  = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    remind_date  = db.Column(db.Date, nullable=True)    # follow-up / remind me
+    status       = db.Column(db.String(20), default='Open')   # Open / Resolved
+    remarks      = db.Column(db.Text)
+    created_by   = db.Column(db.String(100))
+    created_at   = db.Column(db.DateTime, default=now_dubai)
+    resolved_at  = db.Column(db.DateTime, nullable=True)
+    converted_lead_id = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=True)
+    assignee     = db.relationship('User', foreign_keys=[assigned_to])
+
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -1916,6 +1935,96 @@ def set_lead_quality(lead_id):
         capi_send_lead_quality(lead)
     flash(f'Lead marked {value or "unreviewed"}')
     return redirect(url_for('lead_detail', lead_id=lead_id))
+
+# ── Enquiries — quick question/callback capture (lighter than a lead) ──────────
+@app.route('/enquiries')
+@login_required
+def enquiries():
+    if session.get('role') == 'finance':
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
+    now = now_dubai()
+    flt = (request.args.get('status') or 'Open').strip()
+    q = Enquiry.query
+    if flt in ('Open', 'Resolved'):
+        q = q.filter(Enquiry.status == flt)
+    if session.get('role') == 'sales' and not request.args.get('all'):
+        q = q.filter(Enquiry.assigned_to == session.get('user_id'))
+    items = q.order_by(Enquiry.created_at.desc()).all()
+    all_e = Enquiry.query.all()
+    resolved = [e for e in all_e if e.status == 'Resolved' and e.resolved_at]
+    avg_res = _fmt_duration(sum((e.resolved_at - e.created_at).total_seconds() for e in resolved) / len(resolved)) if resolved else '—'
+    stats = {
+        'total': len(all_e),
+        'open': sum(1 for e in all_e if e.status == 'Open'),
+        'resolved': len(resolved),
+        'avg_res': avg_res,
+        'due': sum(1 for e in all_e if e.status == 'Open' and e.remind_date and e.remind_date <= now.date()),
+    }
+    users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'admin'])).all()
+    tomorrow = (now + timedelta(days=1)).strftime('%Y-%m-%d')
+    return render_template('enquiries.html', items=items, stats=stats, flt=flt, users=users, now=now, tomorrow=tomorrow)
+
+@app.route('/enquiries/add', methods=['POST'])
+@login_required
+def enquiry_add():
+    text = (request.form.get('enquiry') or '').strip()
+    if not text:
+        flash('Please type the enquiry.')
+        return redirect(url_for('enquiries'))
+    remind = request.form.get('remind_date')
+    try:
+        rd = datetime.strptime(remind, '%Y-%m-%d').date() if remind else None
+    except ValueError:
+        rd = None
+    assigned = request.form.get('assigned_to')
+    e = Enquiry(name=(request.form.get('name') or '').strip() or None,
+                phone=(request.form.get('phone') or '').strip() or None,
+                enquiry=text, service=(request.form.get('service') or '').strip() or None,
+                assigned_to=int(assigned) if assigned else session.get('user_id'),
+                remind_date=rd, created_by=session.get('user_name'))
+    db.session.add(e)
+    db.session.commit()
+    flash('Enquiry logged.')
+    return redirect(url_for('enquiries'))
+
+@app.route('/enquiries/<int:eid>/resolve', methods=['POST'])
+@login_required
+def enquiry_resolve(eid):
+    e = Enquiry.query.get_or_404(eid)
+    if e.status != 'Resolved':
+        e.status, e.resolved_at = 'Resolved', now_dubai()
+    else:
+        e.status, e.resolved_at = 'Open', None
+    db.session.commit()
+    return redirect(request.referrer or url_for('enquiries'))
+
+@app.route('/enquiries/<int:eid>/convert-lead', methods=['POST'])
+@login_required
+def enquiry_convert_lead(eid):
+    e = Enquiry.query.get_or_404(eid)
+    if e.converted_lead_id:
+        flash('This enquiry was already converted to a lead.')
+        return redirect(url_for('lead_detail', lead_id=e.converted_lead_id))
+    lead = Lead(name=e.name or 'Enquiry', phone=e.phone, source='Enquiry',
+                service=e.service, status='New',
+                assigned_to=e.assigned_to or session.get('user_id'),
+                remarks=e.enquiry)
+    db.session.add(lead)
+    db.session.commit()
+    e.converted_lead_id, e.status, e.resolved_at = lead.id, 'Resolved', now_dubai()
+    db.session.commit()
+    flash('Converted to a lead.')
+    return redirect(url_for('lead_detail', lead_id=lead.id))
+
+@app.route('/enquiries/<int:eid>/delete', methods=['POST'])
+@login_required
+def enquiry_delete(eid):
+    e = Enquiry.query.get_or_404(eid)
+    db.session.delete(e)
+    db.session.commit()
+    flash('Enquiry deleted.')
+    return redirect(url_for('enquiries'))
 
 @app.route('/leads/import', methods=['GET', 'POST'])
 @login_required

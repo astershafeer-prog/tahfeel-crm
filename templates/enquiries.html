@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel — Enquiries</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('enquiries') }}
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <h2 style="color:#0F2660;">❓ Enquiries</h2>
+    <p style="font-size:13px;color:#64748b;margin-bottom:14px;">Quick-log a question or callback, set a reminder, then resolve it or convert it to a lead.</p>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">
+      {% set cards = [('Total', stats.total, '#0F2660'), ('Open', stats.open, '#185FA5'), ('Due now', stats.due, '#B45309'), ('Resolved', stats.resolved, '#0F6E56'), ('Avg resolve', stats.avg_res, '#6B21A8')] %}
+      {% for label, val, col in cards %}
+      <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;padding:12px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">{{ label }}</div>
+        <div style="font-size:20px;font-weight:700;color:{{ col }};">{{ val }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Quick add -->
+    <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:#0F2660;margin-bottom:10px;">＋ Log a new enquiry</div>
+      <form method="post" action="/enquiries/add" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div><label style="display:block;font-size:11px;color:#64748b;">Name</label><input type="text" name="name" placeholder="Caller name" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:150px;"></div>
+        <div><label style="display:block;font-size:11px;color:#64748b;">Phone</label><input type="text" name="phone" placeholder="Phone" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:140px;"></div>
+        <div style="flex:1;min-width:220px;"><label style="display:block;font-size:11px;color:#64748b;">Enquiry <span style="color:#DC2626;">*</span></label><input type="text" name="enquiry" required placeholder="e.g. Family visa without residence proof?" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;"></div>
+        <div><label style="display:block;font-size:11px;color:#64748b;">Service</label><input type="text" name="service" placeholder="optional" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:120px;"></div>
+        <div><label style="display:block;font-size:11px;color:#64748b;">Assign to</label>
+          <select name="assigned_to" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            <option value="">— Me —</option>
+            {% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div><label style="display:block;font-size:11px;color:#64748b;">Remind on</label><input type="date" name="remind_date" value="{{ tomorrow }}" style="padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;"></div>
+        <button type="submit" class="btn-primary">Log enquiry</button>
+      </form>
+    </div>
+
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      {% for key, label in [('Open','Open'), ('Resolved','Resolved'), ('All','All')] %}
+      <a href="/enquiries?status={{ key }}" style="text-decoration:none;font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;{% if flt==key or (key=='All' and flt not in ['Open','Resolved']) %}background:#1A3B8B;color:#fff;{% else %}background:#fff;color:#475569;border:1px solid #e2e8f0;{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+
+    <!-- List -->
+    <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#f8fafc;color:#64748b;">
+          <th style="text-align:left;padding:10px;">Enquiry</th>
+          <th style="text-align:left;padding:10px;width:150px;">Contact</th>
+          <th style="text-align:left;padding:10px;width:120px;">Assigned</th>
+          <th style="text-align:left;padding:10px;width:110px;">Remind</th>
+          <th style="text-align:left;padding:10px;width:220px;">Actions</th>
+        </tr></thead>
+        <tbody>
+        {% for e in items %}
+        {% set due = e.status=='Open' and e.remind_date and e.remind_date <= now.date() %}
+        <tr style="border-top:1px solid #eef2f7;{% if due %}background:#FFF7ED;{% endif %}">
+          <td style="padding:10px;">
+            <div style="color:#1e293b;">{{ e.enquiry }}</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:2px;">
+              {% if e.service %}{{ e.service }} · {% endif %}logged {{ e.created_at.strftime('%d %b') }}{% if e.created_by %} by {{ e.created_by }}{% endif %}
+              {% if e.status=='Resolved' %} · <span style="color:#0F6E56;font-weight:600;">✓ Resolved</span>{% endif %}
+            </div>
+          </td>
+          <td style="padding:10px;">
+            <div style="font-weight:600;color:#0F2660;">{{ e.name or '—' }}</div>
+            {% if e.phone %}<div style="font-size:11px;color:#64748b;">{{ e.phone }}</div>{% endif %}
+          </td>
+          <td style="padding:10px;color:#475569;">{{ e.assignee.name if e.assignee else '—' }}</td>
+          <td style="padding:10px;">{% if e.remind_date %}<span style="color:{{ '#DC2626' if due else '#64748b' }};font-weight:{{ '700' if due else '400' }};">{{ e.remind_date.strftime('%d %b') }}{% if due %} · due{% endif %}</span>{% else %}<span style="color:#cbd5e1;">—</span>{% endif %}</td>
+          <td style="padding:10px;">
+            <div style="display:flex;gap:5px;flex-wrap:wrap;">
+              {% if e.converted_lead_id %}
+              <a href="/leads/{{ e.converted_lead_id }}" style="font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;background:#E6EEFF;color:#1A3B8B;text-decoration:none;">◉ View lead</a>
+              {% else %}
+              <form method="post" action="/enquiries/{{ e.id }}/resolve" style="margin:0;">
+                <button type="submit" style="font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;border:1px solid {{ '#CBD5E1' if e.status=='Resolved' else '#16A34A' }};background:{{ '#F1F5F9' if e.status=='Resolved' else '#fff' }};color:{{ '#64748B' if e.status=='Resolved' else '#16A34A' }};cursor:pointer;">{{ '↩ Reopen' if e.status=='Resolved' else '✓ Resolve' }}</button>
+              </form>
+              <form method="post" action="/enquiries/{{ e.id }}/convert-lead" style="margin:0;" onsubmit="return confirm('Create a lead from this enquiry?');">
+                <button type="submit" style="font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;border:none;background:#1A3B8B;color:#fff;cursor:pointer;">➡ To Lead</button>
+              </form>
+              {% endif %}
+              <form method="post" action="/enquiries/{{ e.id }}/delete" style="margin:0;" onsubmit="return confirm('Delete this enquiry?');">
+                <button type="submit" title="Delete" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;">🗑</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="padding:28px;text-align:center;color:#94a3b8;">No enquiries here yet. Log one above.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

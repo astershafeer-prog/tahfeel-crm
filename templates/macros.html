@@ -218,6 +218,7 @@ loadTheme();
   <a href="/dashboard" {% if active=='dashboard' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">⊞ Dashboard</a>
   {% if session.role != 'finance' %}
   <a href="/leads" {% if active=='leads' or active=='add_lead' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">◉ Leads</a>
+  <a href="/enquiries" {% if active=='enquiries' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">❓ Enquiries</a>
   {% endif %}
   <a href="/jobs" {% if active=='jobs' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">✓ Tasks</a>
   <a href="/customers" {% if active=='customers' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">👥 Clients</a>
