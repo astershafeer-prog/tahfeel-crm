@@ -15,7 +15,10 @@
       {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    <h2 style="color:#0F2660;">❓ Enquiries</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <h2 style="color:#0F2660;">❓ Enquiries</h2>
+      <a href="/enquiries/export" class="btn-primary" style="background:#1a8d4e;border-color:#1a8d4e;text-decoration:none;">⬇ Export to Excel</a>
+    </div>
     <p style="font-size:13px;color:#64748b;margin-bottom:14px;">Quick-log a question or callback, set a reminder, then resolve it or convert it to a lead.</p>
 
     <!-- Stats -->
@@ -27,6 +30,22 @@
         <div style="font-size:20px;font-weight:700;color:{{ col }};">{{ val }}</div>
       </div>
       {% endfor %}
+    </div>
+
+    <!-- Breakdown (what kind / who) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;padding:14px;">
+        <div style="font-size:12px;font-weight:700;color:#0F2660;margin-bottom:8px;">By type / service</div>
+        {% for name, cnt in by_service %}
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;border-bottom:1px solid #f1f5f9;"><span style="color:#475569;">{{ name }}</span><b style="color:#1A3B8B;">{{ cnt }}</b></div>
+        {% else %}<div style="color:#94a3b8;font-size:12px;">No enquiries yet.</div>{% endfor %}
+      </div>
+      <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;padding:14px;">
+        <div style="font-size:12px;font-weight:700;color:#0F2660;margin-bottom:8px;">By staff</div>
+        {% for name, cnt in by_staff %}
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;border-bottom:1px solid #f1f5f9;"><span style="color:#475569;">{{ name }}</span><b style="color:#1A3B8B;">{{ cnt }}</b></div>
+        {% else %}<div style="color:#94a3b8;font-size:12px;">—</div>{% endfor %}
+      </div>
     </div>
 
     <!-- Quick add -->

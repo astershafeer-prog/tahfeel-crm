@@ -1963,7 +1963,11 @@ def enquiries():
     }
     users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'admin'])).all()
     tomorrow = (now + timedelta(days=1)).strftime('%Y-%m-%d')
-    return render_template('enquiries.html', items=items, stats=stats, flt=flt, users=users, now=now, tomorrow=tomorrow)
+    from collections import Counter
+    by_service = Counter((e.service or 'Unspecified') for e in all_e).most_common()
+    by_staff = Counter((e.assignee.name if e.assignee else 'Unassigned') for e in all_e).most_common()
+    return render_template('enquiries.html', items=items, stats=stats, flt=flt, users=users, now=now,
+                           tomorrow=tomorrow, by_service=by_service, by_staff=by_staff)
 
 @app.route('/enquiries/add', methods=['POST'])
 @login_required
@@ -2016,6 +2020,39 @@ def enquiry_convert_lead(eid):
     db.session.commit()
     flash('Converted to a lead.')
     return redirect(url_for('lead_detail', lead_id=lead.id))
+
+@app.route('/enquiries/export')
+@login_required
+def enquiries_export():
+    if session.get('role') == 'finance':
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    wb = Workbook(); ws = wb.active; ws.title = 'Enquiries'
+    headers = ['#', 'Date', 'Name', 'Phone', 'Enquiry', 'Service', 'Assigned To',
+               'Remind Date', 'Status', 'Resolved On', 'Time to Resolve', 'Converted to Lead #']
+    for i, h in enumerate(headers, 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    rows = Enquiry.query.order_by(Enquiry.created_at.desc()).all()
+    for i, e in enumerate(rows, 1):
+        rt = _fmt_duration((e.resolved_at - e.created_at).total_seconds()) if e.resolved_at else ''
+        ws.append([
+            i, e.created_at.strftime('%d/%m/%Y %H:%M') if e.created_at else '',
+            e.name or '', e.phone or '', e.enquiry or '', e.service or '',
+            e.assignee.name if e.assignee else '', e.remind_date.strftime('%d/%m/%Y') if e.remind_date else '',
+            e.status or '', e.resolved_at.strftime('%d/%m/%Y') if e.resolved_at else '', rt,
+            e.converted_lead_id or '',
+        ])
+    for i, w in enumerate([4, 16, 20, 16, 50, 18, 18, 14, 12, 14, 16, 16], 1):
+        ws.column_dimensions[ws.cell(1, i).column_letter].width = w
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return send_file(buf, download_name=f'tahfeel_enquiries_{now_dubai().strftime("%Y%m%d")}.xlsx',
+                     as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.route('/enquiries/<int:eid>/delete', methods=['POST'])
 @login_required
