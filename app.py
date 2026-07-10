@@ -891,7 +891,7 @@ def inject_globals():
             else:
                 from datetime import datetime as _dt
                 last = _dt.strptime(last_backup, '%Y-%m-%d')
-                if (now_dubai() - last).days >= 14:
+                if (now_dubai() - last).days >= 3:
                     result['show_backup_reminder'] = True
     except:
         pass
@@ -5720,10 +5720,22 @@ def documents():
     (including already-expired). Adding documents happens at the customer/
     company level now, so this page is alert-only, not a general browser."""
     now = now_dubai()
-    search = request.args.get('search', '').strip().lower()
-    expiry_filter = request.args.get('expiry', '')
-    belongs_filter = request.args.get('belongs_to', '')
-    doc_type_filter = request.args.get('doc_type', '')
+    # Remember the last-used filters so opening a document and returning keeps the view.
+    DFK = ['search', 'expiry', 'belongs_to', 'doc_type']
+    if request.args.get('reset') == '1':
+        session.pop('docs_filters', None)
+        return redirect(url_for('documents'))
+    if any(request.args.get(k) for k in DFK):
+        session['docs_filters'] = {k: request.args.get(k, '') for k in DFK}
+        args = request.args
+    elif 'docs_filters' in session:
+        args = session['docs_filters']
+    else:
+        args = request.args
+    search = (args.get('search', '') or '').strip().lower()
+    expiry_filter = args.get('expiry', '')
+    belongs_filter = args.get('belongs_to', '')
+    doc_type_filter = args.get('doc_type', '')
 
     try:
         all_docs = Document.query.filter(Document.expiry_date.isnot(None)).order_by(Document.expiry_date).all()
