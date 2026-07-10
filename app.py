@@ -7266,7 +7266,10 @@ def _wa_health():
     configured = bool(os.environ.get('WA_ACCESS_TOKEN') and os.environ.get('WA_PHONE_NUMBER_ID'))
     bot_on = _envflag('WA_BOT_ENABLED')
     try:
+        # Only the last 24h — an old failure shouldn't keep re-triggering the banner
+        # for days just because few messages were sent since.
         recent = WhatsAppMessage.query.filter_by(direction='out')\
+                 .filter(WhatsAppMessage.created_at >= now_dubai() - timedelta(hours=24))\
                  .order_by(WhatsAppMessage.created_at.desc()).limit(10).all()
     except Exception:
         recent = []
@@ -7928,15 +7931,22 @@ def whatsapp_test_send():
     result = None
     number = (request.form.get('number') or request.args.get('number') or '').strip()
     if request.method == 'POST' and number:
-        from whatsapp_webhook import send_template, last_send_error, normalize_phone
+        from whatsapp_webhook import send_template, last_send_error, normalize_phone, log_message
         to = normalize_phone(number)
         tmpl = os.environ.get('WA_WELCOME_TEMPLATE', 'general')
         lang = os.environ.get('WA_WELCOME_LANG', 'en_GB')
         pname = os.environ.get('WA_WELCOME_PARAM_NAME', 'customer_name')
         param_names = [pname] if pname else None
         wam = send_template(to, tmpl, params=['Test'], lang=lang, param_names=param_names)
+        # Log the test like any other outbound — CRITICAL: the wam_id row is what
+        # Meta's delivery receipt attaches to, so tick-status + failure reasons work.
+        log_message(to, 'out', f'[test] Welcome template ({tmpl}) — test send', msg_type='template',
+                    wam_id=wam, handled_by=session.get('user_name', 'admin'),
+                    status='sent' if wam else 'failed')
         if wam:
-            result = {'ok': True, 'msg': f'✅ Sent successfully (message id {wam}). This number CAN receive WhatsApp — so failures to it are NOT "number not on WhatsApp".'}
+            result = {'ok': True, 'msg': f'✅ Meta accepted it (message id …{wam[-12:]}). Now open this number\'s chat in the CRM: '
+                                          f'one tick = sent, two ticks = DELIVERED (proof). If it fails on delivery instead, '
+                                          f'it will appear on Failed sends with Meta\'s reason.'}
         else:
             result = {'ok': False, 'msg': last_send_error() or 'Failed, but Meta returned no reason.'}
     return render_template('wa_test_send.html', result=result, number=number)
