@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel — WhatsApp Failures</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('whatsapp') }}
+  <div class="container">
+    <a href="/whatsapp" style="color:#64748b;text-decoration:none;font-size:13px;">← WhatsApp</a>
+    <h2 style="color:#0F2660;margin-top:6px;">⚠ Failed WhatsApp sends</h2>
+    <p style="font-size:13px;color:#64748b;margin-bottom:14px;">The last 60 outgoing messages Meta rejected, with the reason. Most failures are the <strong>24-hour window</strong> (a free-text reply after the customer went quiet &gt;24h) — normal, not a fault.</p>
+
+    <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#f8fafc;color:#64748b;">
+          <th style="text-align:left;padding:10px;width:150px;">When</th>
+          <th style="text-align:left;padding:10px;width:130px;">To</th>
+          <th style="text-align:left;padding:10px;width:90px;">Type</th>
+          <th style="text-align:left;padding:10px;">Reason</th>
+        </tr></thead>
+        <tbody>
+        {% for m in fails %}
+        <tr style="border-top:1px solid #eef2f7;">
+          <td style="padding:10px;color:#64748b;">{{ m.created_at.strftime('%d %b %Y, %H:%M') if m.created_at else '' }}</td>
+          <td style="padding:10px;"><a href="/whatsapp/{{ m.wa_id }}" style="color:#1A3B8B;text-decoration:none;">{{ m.wa_id }}</a></td>
+          <td style="padding:10px;color:#475569;">{{ m.msg_type or 'text' }}</td>
+          <td style="padding:10px;color:#B91C1C;">{{ m.error or '(reason not captured — sent before this update)' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="padding:28px;text-align:center;color:#0F6E56;">✓ No failed sends. WhatsApp is healthy.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

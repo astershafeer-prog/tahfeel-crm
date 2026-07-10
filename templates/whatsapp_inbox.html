@@ -30,7 +30,8 @@
       {% elif wa_health.level == 'warn' %}
       <div style="background:#FFFBEB;border:1px solid #FCD34D;border-left:5px solid #F59E0B;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
         <span style="font-size:20px;">🟠</span>
-        <div style="font-size:13px;color:#92400E;"><b>Heads up.</b> {{ wa_health.msg }}</div>
+        <div style="font-size:13px;color:#92400E;flex:1;"><b>Heads up.</b> {{ wa_health.msg }}</div>
+        {% if session.role == 'admin' %}<a href="/whatsapp/failures" style="font-size:12px;font-weight:600;color:#92400E;white-space:nowrap;">See why →</a>{% endif %}
       </div>
       {% else %}
       <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-left:5px solid #16A34A;border-radius:10px;padding:9px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">

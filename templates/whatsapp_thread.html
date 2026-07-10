@@ -106,7 +106,7 @@
               {% if m.status == 'read' %}<span style="color:#34B7F1;font-weight:700;" title="Read">✓✓</span>
               {% elif m.status == 'delivered' %}<span title="Delivered">✓✓</span>
               {% elif m.status == 'sent' %}<span title="Sent">✓</span>
-              {% elif m.status == 'failed' %}<span style="color:#c0392b;" title="Failed">⚠</span>{% endif %}
+              {% elif m.status == 'failed' %}<span style="color:#c0392b;cursor:help;" title="Failed{% if m.error %} — {{ m.error }}{% endif %}">⚠ {% if m.error %}<span style="font-size:10px;color:#94a3b8;">{{ m.error[:60] }}{% if m.error|length > 60 %}…{% endif %}</span>{% endif %}</span>{% endif %}
             </div>
           </div>
         {% endif %}

@@ -564,6 +564,7 @@ class WhatsAppMessage(db.Model):
     msg_type     = db.Column(db.String(20), default='text')  # text / template / image…
     wam_id       = db.Column(db.String(80), index=True)   # WhatsApp message id (dedupe)
     status       = db.Column(db.String(20))               # sent/delivered/read/failed
+    error        = db.Column(db.String(300))              # Meta's reason when a send fails
     handled_by   = db.Column(db.String(40), default='bot')  # 'bot' or staff name
     is_read      = db.Column(db.Boolean, default=False)   # inbound: has a staff seen it?
     lead_id      = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=True)
@@ -6380,6 +6381,7 @@ def init_db():
             # WhatsApp: media message support
             'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS media_url VARCHAR(500)',
             'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS mime_type VARCHAR(50)',
+            'ALTER TABLE whats_app_message ADD COLUMN IF NOT EXISTS error VARCHAR(300)',
             # Super Admin flag: can edit other admins + self (fixed to admin@tahfeel.ae)
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_super BOOLEAN DEFAULT FALSE',
             "UPDATE \"user\" SET is_super = TRUE WHERE email = 'admin@tahfeel.ae'",
@@ -7908,6 +7910,16 @@ def whatsapp_task_updates_send():
             sent += 1
     flash(f'Status update sent to {sent} customer(s).')
     return redirect(url_for('whatsapp_task_updates'))
+
+@app.route('/whatsapp/failures')
+@login_required
+@admin_required
+def whatsapp_failures():
+    """Recent failed outgoing WhatsApp sends + Meta's reason — so admins can see
+    'why' directly in the CRM instead of digging through Railway logs."""
+    fails = (WhatsAppMessage.query.filter_by(direction='out', status='failed')
+             .order_by(WhatsAppMessage.created_at.desc()).limit(60).all())
+    return render_template('whatsapp_failures.html', fails=fails)
 
 @app.route('/whatsapp/<wa_id>/done', methods=['POST'])
 @login_required

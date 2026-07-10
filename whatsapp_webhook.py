@@ -51,10 +51,30 @@ def _match_key(p):
 
 
 # ── Graph API: send ───────────────────────────────────────────────────────────
+# Last outbound-send error (read by log_message when a send fails, so the reason is
+# stored on the message + visible in the CRM chat instead of only the server logs).
+_LAST_ERROR = {'text': None}
+
+def last_send_error():
+    return _LAST_ERROR.get('text')
+
+def _extract_wa_error(text):
+    """Pull Meta's human message out of the error JSON, trimmed for the chat tooltip."""
+    try:
+        import json as _json
+        err = (_json.loads(text) or {}).get('error') or {}
+        msg = err.get('message') or ''
+        det = (err.get('error_data') or {}).get('details') or ''
+        out = (msg + (' — ' + det if det else '')).strip()
+        return out[:280] if out else text[:280]
+    except Exception:
+        return (text or '')[:280]
+
 def _send(payload):
     token   = _cfg('WA_ACCESS_TOKEN')
     phone_id = _cfg('WA_PHONE_NUMBER_ID')
     if not token or not phone_id:
+        _LAST_ERROR['text'] = 'WhatsApp not configured (access token / phone id missing).'
         print('[WA] Not configured (WA_ACCESS_TOKEN / WA_PHONE_NUMBER_ID missing) — skip send')
         return None
     url = f'{GRAPH}/{phone_id}/messages'
@@ -62,12 +82,15 @@ def _send(payload):
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=15)
         if r.status_code >= 300:
+            _LAST_ERROR['text'] = _extract_wa_error(r.text)
             print(f'[WA] Send failed {r.status_code}: {r.text[:300]}')
             return None
         data = r.json()
         wam = (data.get('messages') or [{}])[0].get('id')
+        _LAST_ERROR['text'] = None
         return wam
     except Exception as e:
+        _LAST_ERROR['text'] = str(e)[:280]
         print(f'[WA] Send error: {e}')
         return None
 
@@ -159,6 +182,7 @@ def log_message(wa_id, direction, body, msg_type='text', wam_id=None,
     from app import db, WhatsAppMessage
     if lead_id is None and customer_id is None:
         lead_id, customer_id = find_contact(wa_id)
+    send_err = last_send_error() if status == 'failed' else None
     row = WhatsAppMessage(
         wa_id        = normalize_phone(wa_id),
         contact_name = contact_name,
@@ -167,6 +191,7 @@ def log_message(wa_id, direction, body, msg_type='text', wam_id=None,
         msg_type     = msg_type,
         wam_id       = wam_id,
         status       = status,
+        error        = send_err,
         handled_by   = handled_by,
         lead_id      = lead_id,
         customer_id  = customer_id,
