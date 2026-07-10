@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel — Task Updates</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('whatsapp') }}
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <a href="/whatsapp" style="color:#64748b;text-decoration:none;font-size:13px;">← WhatsApp</a>
+    <h2 style="color:#0F2660;margin-top:6px;">📢 Task Updates — bulk WhatsApp</h2>
+    <p style="font-size:13px;color:#64748b;margin-bottom:14px;">Pick active tasks and send each customer a status update on the business WhatsApp (approved template, logged).</p>
+
+    {% if not tpl_active %}
+    <div style="background:#FFF6E6;color:#854F0B;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;">
+      ⚠️ The <strong>status_update</strong> template isn't active yet — approve it in Meta, then activate it in <a href="/whatsapp/templates" style="color:#854F0B;font-weight:600;">WhatsApp → Templates</a> to enable sending.
+    </div>
+    {% endif %}
+
+    <form method="get" action="/whatsapp/task-updates" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;background:#fff;padding:14px;border-radius:10px;border:0.5px solid #e2e8f0;">
+      <input type="hidden" name="apply" value="1">
+      <div>
+        <label style="display:block;font-size:11px;color:#64748b;margin-bottom:3px;">Task stage</label>
+        <select name="status" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+          <option value="">All active</option>
+          {% for s in statuses %}<option value="{{ s }}" {% if status_f==s %}selected{% endif %}>{{ job_status_label(s) }}</option>{% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn-primary">Show tasks</button>
+    </form>
+
+    {% if applied %}
+    <form method="post" action="/whatsapp/task-updates/send" onsubmit="return confirmSend();">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;background:#EEF4FF;border:1px solid #C7D2FE;border-radius:10px;padding:10px 14px;">
+        <label style="font-size:12px;color:#1A3B8B;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="selAll" onclick="toggleAll()"> Select all</label>
+        <span style="font-size:12px;color:#64748b;"><b id="selCount">0</b> selected</span>
+        <div style="flex:1;"></div>
+        <label style="font-size:12px;color:#334155;">Status to send:</label>
+        <select name="status_text" required style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+          <option value="">— Select —</option>
+          <option>Processing</option>
+          <option>Documents received</option>
+          <option>Documents submitted to authority</option>
+          <option>Under government review</option>
+          <option>Payment pending</option>
+          <option>Ready for collection</option>
+          <option>Completed</option>
+        </select>
+        <button type="submit" class="btn-primary" style="background:#25D366;border-color:#25D366;" {% if not tpl_active %}disabled title="Activate the status_update template first"{% endif %}>Send on WhatsApp</button>
+      </div>
+
+      <div style="background:#fff;border-radius:10px;border:0.5px solid #e2e8f0;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="background:#f8fafc;color:#64748b;">
+            <th style="width:36px;padding:9px;"></th>
+            <th style="text-align:left;padding:9px;">Customer</th>
+            <th style="text-align:left;padding:9px;">Service</th>
+            <th style="text-align:left;padding:9px;">Current stage</th>
+          </tr></thead>
+          <tbody>
+          {% for j in jobs %}
+          <tr style="border-top:1px solid #eef2f7;">
+            <td style="text-align:center;padding:9px;"><input type="checkbox" name="job_ids" value="{{ j.id }}" class="jchk" onchange="updCount()"></td>
+            <td style="padding:9px;font-weight:600;color:#0F2660;">{{ j.customer.name }}</td>
+            <td style="padding:9px;color:#475569;">{{ j.job_type }}</td>
+            <td style="padding:9px;"><span class="badge" style="background:#EEF2FF;color:#3730A3;">{{ job_status_label(j.status) }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="padding:24px;text-align:center;color:#94a3b8;">No active tasks with a WhatsApp number for this filter.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:8px;">{{ jobs|length }} task(s) shown · only tasks with a customer WhatsApp number appear.</div>
+    </form>
+    {% endif %}
+  </div>
+  <script>
+    function updCount(){ document.getElementById('selCount').textContent = document.querySelectorAll('.jchk:checked').length; }
+    function toggleAll(){ var on=document.getElementById('selAll').checked; document.querySelectorAll('.jchk').forEach(function(c){c.checked=on;}); updCount(); }
+    function confirmSend(){ var n=document.querySelectorAll('.jchk:checked').length; if(!n){ alert('Select at least one task.'); return false; } return confirm('Send the status update to '+n+' customer(s) on WhatsApp?'); }
+  </script>
+</body>
+</html>

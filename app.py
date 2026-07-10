@@ -7706,6 +7706,63 @@ def whatsapp_reengage():
                            templates=wa_send_context(), sources=sources, lead_statuses=lead_statuses,
                            today_sent=today_sent, daily_cap=daily_cap, recent=recent, now=now_dubai())
 
+@app.route('/whatsapp/task-updates')
+@login_required
+@admin_required
+def whatsapp_task_updates():
+    """Bulk task status broadcast: pick active tasks, send each customer the approved
+    status_update template. Dormant until that template is active."""
+    applied = bool(request.args.get('apply'))
+    status_f = (request.args.get('status') or '').strip()
+    active_q = Job.query.filter(Job.status.notin_(['Done', 'Closed', 'Closed - Pending Partner Commission']))
+    jobs = []
+    if applied:
+        q = active_q.options(db.joinedload(Job.customer))
+        if status_f and status_f != 'All':
+            q = q.filter(Job.status == status_f)
+        jobs = [j for j in q.order_by(Job.due_date.asc()).all()
+                if j.customer and _cust_wa_number(j.customer)]
+    statuses = sorted({j.status for j in active_q.all() if j.status})
+    tpl = wa_template_active(get_setting('wa_status_template', 'status_update') or 'status_update')
+    return render_template('task_updates.html', applied=applied, jobs=jobs, status_f=status_f,
+                           statuses=statuses, tpl_active=bool(tpl), now=now_dubai())
+
+@app.route('/whatsapp/task-updates/send', methods=['POST'])
+@login_required
+@admin_required
+def whatsapp_task_updates_send():
+    from whatsapp_webhook import send_template, log_message
+    tpl = wa_template_active(get_setting('wa_status_template', 'status_update') or 'status_update')
+    if not tpl:
+        flash('Activate the status_update template in WhatsApp → Templates first.', 'error')
+        return redirect(url_for('whatsapp_task_updates'))
+    status_text = (request.form.get('status_text') or '').strip()
+    job_ids = request.form.getlist('job_ids')
+    if not status_text or not job_ids:
+        flash('Pick a status and at least one task.', 'error')
+        return redirect(url_for('whatsapp_task_updates'))
+    sent = 0
+    for jid in job_ids:
+        job = Job.query.get(int(jid)) if str(jid).isdigit() else None
+        if not job or not job.customer:
+            continue
+        to = _cust_wa_number(job.customer)
+        if not to:
+            continue
+        first = ((job.customer.contact_person or job.customer.name or 'there').split() or ['there'])[0]
+        params = [first, job.job_type or 'application', status_text]
+        wam = send_template(to, tpl.meta_name, params=params, lang=tpl.lang or 'en')
+        body = tpl.body_preview or ''
+        for n, v in enumerate(params, start=1):
+            body = body.replace('{{%d}}' % n, v)
+        log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                    handled_by=session.get('user_name', 'staff'),
+                    status='sent' if wam else 'failed', customer_id=job.customer.id)
+        if wam:
+            sent += 1
+    flash(f'Status update sent to {sent} customer(s).')
+    return redirect(url_for('whatsapp_task_updates'))
+
 @app.route('/whatsapp/<wa_id>/done', methods=['POST'])
 @login_required
 def whatsapp_mark_done(wa_id):
