@@ -6413,16 +6413,26 @@ def init_db():
                 print('Upgraded re-engage template to 2 variables')
             # Task status-update template (customer-facing progress update), inactive
             # until an admin approves it in Meta + activates it in WhatsApp Templates.
-            if not MessageTemplate.query.filter_by(meta_name='status_update').first():
+            _status_body = ('Hello {{1}},\n\nThis is a quick update regarding your task with Tahfeel.\n\n'
+                            'Your *{{2}}* task is currently in the *{{3}}* stage and our team is actively '
+                            'processing it. At this time, no action is required from your side. This message '
+                            'is for your information only.\n\nWe will keep you informed as your application '
+                            'progresses. If we require any documents or additional information, we will '
+                            'contact you promptly.\n\nIf you have any questions in the meantime, simply reply '
+                            'to this message or reach out to your Account Manager.\n\nThank you,\n'
+                            'Tahfeel Business Setup.')
+            _st = MessageTemplate.query.filter_by(meta_name='status_update').first()
+            if not _st:
                 db.session.add(MessageTemplate(
                     label='Task status update', meta_name='status_update',
                     category='Utility', var_fields='first_name,service,custom',
-                    body_preview=('Dear {{1}}, here is an update on your {{2}}: the current status '
-                                  'is *{{3}}*. We will keep you informed of any further progress.\n\n'
-                                  'Thank you,\nTahfeel Business Setup Services'),
-                    active=False))
+                    body_preview=_status_body, active=False))
                 db.session.commit()
                 print('Seeded status-update template (inactive)')
+            elif _st.body_preview != _status_body:
+                _st.body_preview = _status_body
+                db.session.commit()
+                print('Updated status-update template preview')
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(ServiceType(name=jt))
