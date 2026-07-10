@@ -7281,8 +7281,8 @@ def _wa_health():
                               f'outgoing messages failed. Check your Meta WhatsApp billing and '
                               f'that the access token has not expired.')
     elif failed:
-        level, msg = 'warn', (f'{failed} of the last {total} outgoing messages failed. '
-                              f'Keep an eye on Meta billing / the access token.')
+        level, msg = 'warn', (f'{failed} of the last {total} outgoing messages failed — '
+                              f'usually a lead whose number isn\'t on WhatsApp. Click "See why" for the exact reason.')
     else:
         level, msg = 'ok', 'WhatsApp sending is healthy.'
     return {'level': level, 'msg': msg, 'bot_on': bot_on, 'configured': configured,
