@@ -53,7 +53,7 @@ the bot instantly gets smarter. The part above the marker is notes for you (neve
 
 ### Visa & immigration
 - A company can sponsor Investor/Partner, Employment and dependent/family visas. Investor visa validity ~2 years; process: entry permit → medical → Emirates ID → stamping (~2 weeks).
-- Family sponsorship on an investor visa: spouse & children (~AED 3,000 caution deposit per person); parents under certain conditions. Minimum salary to sponsor: ~AED 4,000/month (spouse + children); ~AED 10,000 with accommodation or ~AED 20,000 without for parents.
+- Family sponsorship: spouse & children (and parents under certain conditions). IMPORTANT: the ~AED 3,000 caution deposit per person applies only to PARTNER/INVESTOR visa holders sponsoring family — it does NOT apply to employment-visa holders. Minimum salary to sponsor: ~AED 4,000/month (spouse + children); ~AED 10,000 with accommodation or ~AED 20,000 without for parents.
 - Golden Visa: 10-year residence for investors, entrepreneurs, skilled professionals, exceptional talents (e.g. min AED 2M property investment); self-sponsored.
 - Partner-visa count: Dubai typically 1 per license; Northern Emirates may allow more. Free-zone visa quota: flexi-desk up to ~10; physical office ~1 visa per 9 sqm; some (e.g. Meydan) up to ~50 with co-working; quota increases can be applied for.
 - Visa not mandatory to get a license (overseas investors set up remotely; investor visa applied after license); but at least 1 shareholder needs a UAE visa to open a bank account. Emirates ID needed only if the shareholder already has a UAE residency visa.
