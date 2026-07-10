@@ -3508,10 +3508,22 @@ JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES + ['Pending Finan
 def jobs():
     now = now_dubai()
     role = session['role']
-    sort = request.args.get('sort', 'due')
-    order = request.args.get('order', 'asc')
-    status_filter = request.args.get('status', '')
-    
+    # Remember the last-used filters so returning from a task keeps the same view.
+    FJK = ['status', 'priority', 'assigned_to', 'staff', 'representative', 'date', 'from_date', 'to_date', 'customer', 'sort', 'order']
+    if request.args.get('reset') == '1':
+        session.pop('jobs_filters', None)
+        return redirect(url_for('jobs'))
+    if any(request.args.get(k) for k in FJK):
+        session['jobs_filters'] = {k: request.args.get(k, '') for k in FJK}
+        args = request.args
+    elif 'jobs_filters' in session:
+        args = session['jobs_filters']
+    else:
+        args = request.args
+    sort = args.get('sort') or 'due'
+    order = args.get('order') or 'asc'
+    status_filter = args.get('status', '')
+
     try:
         # Exclude Done and Closed by default unless explicitly filtered
         if not status_filter:
@@ -3526,13 +3538,13 @@ def jobs():
         else:
             job_list = Job.query.options(db.joinedload(Job.customer).joinedload(Customer.rep)).filter(Job.status == status_filter).order_by(Job.due_date.asc()).all()
         
-        priority_filter = request.args.get('priority', '')
-        assigned_filter = request.args.get('assigned_to', '') or request.args.get('staff', '')
-        date_filter = request.args.get('date', '')
-        from_date = request.args.get('from_date', '')
-        to_date = request.args.get('to_date', '')
+        priority_filter = args.get('priority', '')
+        assigned_filter = args.get('assigned_to', '') or args.get('staff', '')
+        date_filter = args.get('date', '')
+        from_date = args.get('from_date', '')
+        to_date = args.get('to_date', '')
 
-        customer_search = request.args.get('customer', '').strip().lower()
+        customer_search = (args.get('customer', '') or '').strip().lower()
         if customer_search:
             job_list = [j for j in job_list if customer_search in (j.customer.name or '').lower() or customer_search in (j.customer.company or '').lower()]
         if status_filter and status_filter not in ["Closed", "Done"]:
@@ -3543,7 +3555,7 @@ def jobs():
             try:
                 job_list = [j for j in job_list if j.assigned_to == int(assigned_filter)]
             except: pass
-        representative_filter = request.args.get('representative', '')
+        representative_filter = args.get('representative', '')
         if representative_filter:
             try:
                 job_list = [j for j in job_list if j.customer and j.customer.assigned_to == int(representative_filter)]
