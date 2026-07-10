@@ -7265,6 +7265,7 @@ def _wa_health():
         recent = []
     total = len(recent)
     failed = sum(1 for m in recent if (m.status or '') == 'failed')
+    fail_id = max((m.id for m in recent if (m.status or '') == 'failed'), default=0)
     if not configured:
         level, msg = 'down', ('WhatsApp API is not configured (access token missing). '
                               'Outgoing messages cannot be sent. Check the Railway settings.')
@@ -7278,7 +7279,7 @@ def _wa_health():
     else:
         level, msg = 'ok', 'WhatsApp sending is healthy.'
     return {'level': level, 'msg': msg, 'bot_on': bot_on, 'configured': configured,
-            'failed': failed, 'total': total}
+            'failed': failed, 'total': total, 'fail_id': fail_id}
 
 @app.route('/whatsapp/<wa_id>')
 @login_required
