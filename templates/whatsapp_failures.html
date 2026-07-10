@@ -11,7 +11,10 @@
   {{ topbar() }}
   {{ nav('whatsapp') }}
   <div class="container">
-    <a href="/whatsapp" style="color:#64748b;text-decoration:none;font-size:13px;">← WhatsApp</a>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <a href="/whatsapp" style="color:#64748b;text-decoration:none;font-size:13px;">← WhatsApp</a>
+      <a href="/whatsapp/test-send" style="color:#1A3B8B;text-decoration:none;font-size:13px;font-weight:600;">🧪 Test a number →</a>
+    </div>
     <h2 style="color:#0F2660;margin-top:6px;">⚠ Failed WhatsApp sends</h2>
     <p style="font-size:13px;color:#64748b;margin-bottom:14px;">The last 60 outgoing messages Meta rejected, with the reason. Common causes: <strong>the number isn't on WhatsApp</strong> (e.g. an auto-welcome to a lead with a wrong/fake number — most common), or a free-text reply sent <strong>after the 24-hour window</strong>. Usually harmless — the lead/customer still exists; only that one message didn't reach them.</p>
 

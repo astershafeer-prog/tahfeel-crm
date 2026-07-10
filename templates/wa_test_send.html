@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel — WhatsApp Test Send</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('whatsapp') }}
+  <div class="container" style="max-width:640px;">
+    <a href="/whatsapp/failures" style="color:#64748b;text-decoration:none;font-size:13px;">← Failed sends</a>
+    <h2 style="color:#0F2660;margin-top:6px;">🧪 WhatsApp Test Send</h2>
+    <p style="font-size:13px;color:#64748b;margin-bottom:14px;">Send the approved welcome template to any number and see Meta's exact result. Use this to prove whether a number can receive WhatsApp, or read the precise failure reason — no Railway logs needed.</p>
+
+    <form method="post" action="/whatsapp/test-send" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;background:#fff;padding:16px;border-radius:10px;border:0.5px solid #e2e8f0;">
+      <div style="flex:1;min-width:200px;">
+        <label style="display:block;font-size:11px;color:#64748b;margin-bottom:3px;">Phone number (with country code)</label>
+        <input type="text" name="number" value="{{ number }}" required placeholder="e.g. +971 52 546 2662" style="width:100%;padding:9px 11px;font-size:14px;border:1px solid #cbd5e1;border-radius:6px;box-sizing:border-box;">
+      </div>
+      <button type="submit" class="btn-primary" style="background:#25D366;border-color:#25D366;" onclick="this.innerText='Sending…'">Send test</button>
+    </form>
+
+    {% if result %}
+    <div style="margin-top:16px;padding:14px 16px;border-radius:10px;border:1px solid {{ '#BBF7D0' if result.ok else '#FECACA' }};background:{{ '#F0FDF4' if result.ok else '#FEF2F2' }};">
+      <div style="font-size:12px;font-weight:700;color:{{ '#166534' if result.ok else '#B91C1C' }};text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">{{ 'Success' if result.ok else 'Meta rejected it' }}</div>
+      <div style="font-size:13px;color:#334155;line-height:1.6;">{{ result.msg }}</div>
+    </div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:8px;">This send is also logged in the number's chat like any other message.</div>
+    {% endif %}
+  </div>
+</body>
+</html>

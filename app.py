@@ -7919,6 +7919,28 @@ def whatsapp_task_updates_send():
     flash(f'Status update sent to {sent} customer(s).')
     return redirect(url_for('whatsapp_task_updates'))
 
+@app.route('/whatsapp/test-send', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def whatsapp_test_send():
+    """Send the welcome template to a number on demand and show Meta's exact result
+    — so we can diagnose failures live without digging in Railway logs."""
+    result = None
+    number = (request.form.get('number') or request.args.get('number') or '').strip()
+    if request.method == 'POST' and number:
+        from whatsapp_webhook import send_template, last_send_error, normalize_phone
+        to = normalize_phone(number)
+        tmpl = os.environ.get('WA_WELCOME_TEMPLATE', 'general')
+        lang = os.environ.get('WA_WELCOME_LANG', 'en_GB')
+        pname = os.environ.get('WA_WELCOME_PARAM_NAME', 'customer_name')
+        param_names = [pname] if pname else None
+        wam = send_template(to, tmpl, params=['Test'], lang=lang, param_names=param_names)
+        if wam:
+            result = {'ok': True, 'msg': f'✅ Sent successfully (message id {wam}). This number CAN receive WhatsApp — so failures to it are NOT "number not on WhatsApp".'}
+        else:
+            result = {'ok': False, 'msg': last_send_error() or 'Failed, but Meta returned no reason.'}
+    return render_template('wa_test_send.html', result=result, number=number)
+
 @app.route('/whatsapp/failures')
 @login_required
 @admin_required
