@@ -997,12 +997,9 @@ def export_revenue():
         PartialRevenue.revenue_date <= to_date.date()
     ).order_by(PartialRevenue.revenue_date.desc()).all()
     
-    # If no jobs and no partials found, try getting ALL closed jobs (for debugging)
-    if not jobs and not partial_revenues:
-        jobs = Job.query.filter(
-            Job.status.in_(['Closed', 'Closed - Pending Partner Commission'])
-        ).order_by(Job.created_at.desc()).limit(50).all()
-    
+    # (No debug fallback: if the selected range has no revenue, the report is
+    #  empty for that range — never dump unrelated dates.)
+
     # Create Excel
     wb = openpyxl.Workbook()
     ws = wb.active
