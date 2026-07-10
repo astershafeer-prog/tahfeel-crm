@@ -177,27 +177,6 @@
     </div>
     {% endif %}
 
-    <!-- Send status update to the customer (approved WhatsApp template) -->
-    <div class="card" style="margin-bottom:12px;">
-      <div class="card-header"><h2>📩 Update the customer</h2></div>
-      <div class="card-body">
-        <form method="post" action="/jobs/{{ job.id }}/status-update" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;" onsubmit="return confirm('Send this status update to the customer on WhatsApp?');">
-          <select name="status_text" required style="flex:1;min-width:200px;padding:8px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-            <option value="">— Select a status to send —</option>
-            <option>Processing</option>
-            <option>Documents received</option>
-            <option>Documents submitted to authority</option>
-            <option>Under government review</option>
-            <option>Payment pending</option>
-            <option>Ready for collection</option>
-            <option>Completed</option>
-          </select>
-          <button type="submit" class="btn-primary" style="background:#25D366;border-color:#25D366;">Send on WhatsApp</button>
-        </form>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Sends an approved WhatsApp update to the customer from the business number (logged in the CRM). Activate the <strong>status_update</strong> template in WhatsApp → Templates to enable it.</div>
-      </div>
-    </div>
-
     <!-- Sub-tasks / Steps -->
     <div class="card" id="steps" style="margin-bottom:12px;">
       {% set st_total = job.subtasks|length %}
