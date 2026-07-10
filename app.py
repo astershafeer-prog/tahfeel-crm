@@ -2482,7 +2482,7 @@ def _attempt_count(lead):
     retroactively for older leads too."""
     return sum(1 for u in lead.updates
                if (u.activity_type or '').strip()
-               and (u.activity_type or '').strip().lower() != 'note')
+               and (u.activity_type or '').strip().lower() not in ('note', 'quality'))
 
 def _inbound_wa_ids():
     """Normalized phone numbers that sent us at least one INBOUND WhatsApp message
@@ -3660,9 +3660,15 @@ def jobs():
     if request.args.get('reset') == '1':
         session.pop('jobs_filters', None)
         return redirect(url_for('jobs'))
-    if any(request.args.get(k) for k in FJK):
-        session['jobs_filters'] = {k: request.args.get(k, '') for k in FJK}
-        args = request.args
+    if any(k in request.args for k in FJK):
+        # MERGE the params present in the URL over the saved set (don't replace the
+        # whole dict) — otherwise a link carrying only ?sort=... or ?all=1 would wipe
+        # the user's saved status/staff filters. The filter form submits every field
+        # (including empties), so clearing filters via the form still works.
+        saved = dict(session.get('jobs_filters') or {})
+        saved.update({k: request.args.get(k, '') for k in FJK if k in request.args})
+        session['jobs_filters'] = saved
+        args = saved
     elif 'jobs_filters' in session:
         args = session['jobs_filters']
     else:
@@ -5671,13 +5677,6 @@ def cron_monthly_reports():
         details.append(f'{c.name}: {msg}')
     _mark_run('monthly_report', f'{sent} report(s) sent')
     return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
-
-def _cust_wa_number(cust):
-    """Best WhatsApp number on a customer record, normalized (or '' if none)."""
-    from whatsapp_webhook import normalize_phone
-    raw = (getattr(cust, 'whatsapp', None) or getattr(cust, 'mobile', None)
-           or getattr(cust, 'phone', None) or getattr(cust, 'phone2', None) or '')
-    return normalize_phone(raw)
 
 @app.route('/cron/birthday-wishes')
 def cron_birthday_wishes():
