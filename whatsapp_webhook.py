@@ -535,7 +535,9 @@ def handle_incoming(msg, contacts):
             print(f'[WA] hand-over failed: {e}')
 
 def handle_status(st):
-    """Delivery receipts for our outbound messages (sent/delivered/read/failed)."""
+    """Delivery receipts for our outbound messages (sent/delivered/read/failed).
+    A 'failed' receipt carries Meta's reason (errors[]) — store it on the message so
+    the CRM can show WHY, not just that it failed."""
     from app import db, WhatsAppMessage
     wam_id = st.get('id')
     status = st.get('status')
@@ -544,6 +546,15 @@ def handle_status(st):
     row = WhatsAppMessage.query.filter_by(wam_id=wam_id).first()
     if row:
         row.status = status
+        if status == 'failed':
+            errs = st.get('errors') or []
+            if errs:
+                e = errs[0] or {}
+                det = ((e.get('error_data') or {}).get('details')) or ''
+                msg = e.get('message') or e.get('title') or ''
+                reason = (f"[{e.get('code')}] {msg}" + (f' — {det}' if det else '')).strip()
+                row.error = reason[:300]
+                print(f'[WA] Delivery failed for {wam_id}: {reason[:200]}')
         db.session.commit()
 
 
