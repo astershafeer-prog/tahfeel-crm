@@ -29,6 +29,11 @@
       <div style="font-size:13px;color:#334155;line-height:1.6;">{{ result.msg }}</div>
     </div>
     <div style="font-size:11px;color:#94a3b8;margin-top:8px;">This send is also logged in the number's chat like any other message.</div>
+    {% if result.ok %}
+    <div style="margin-top:8px;padding:10px 12px;border-radius:8px;background:#FFFBEB;border:1px solid #FCD34D;font-size:12px;color:#92400E;line-height:1.6;">
+      <b>Note:</b> "Success" means Meta <i>accepted</i> the message. Meta can still fail it on <i>delivery</i> a few seconds later — if that happens, this message will appear on the <a href="/whatsapp/failures" style="color:#92400E;font-weight:700;">Failed sends</a> page <b>with Meta's exact reason</b> (delivery reasons are now captured). So: wait ~a minute, check Failed sends; if it's not there, it was truly delivered.
+    </div>
+    {% endif %}
     {% endif %}
   </div>
 </body>
