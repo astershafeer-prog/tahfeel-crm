@@ -19,6 +19,10 @@
     <div class="page-header">
       <h2>Tasks <span class="page-subtitle">({{ jobs|length }} shown)</span></h2>
       <div style="display:flex;gap:8px;align-items:center;">
+        {% if session.role == 'operations' %}
+        <a href="/jobs" style="text-decoration:none;font-size:12px;font-weight:600;padding:6px 13px;border-radius:20px;{% if mine_only %}background:#1A3B8B;color:#fff;{% else %}background:#fff;color:#475569;border:1px solid #e2e8f0;{% endif %}">My Tasks</a>
+        <a href="/jobs?all=1" style="text-decoration:none;font-size:12px;font-weight:600;padding:6px 13px;border-radius:20px;{% if not mine_only %}background:#1A3B8B;color:#fff;{% else %}background:#fff;color:#475569;border:1px solid #e2e8f0;{% endif %}">All Tasks</a>
+        {% endif %}
         {% if session.role in ['admin', 'operations'] %}
         <button id="bulkDeleteBtn" class="btn-bulk-delete" style="display:none;" onclick="confirmBulkDelete()">🗑 Delete (<span id="selectedCount">0</span>)</button>
         {% endif %}

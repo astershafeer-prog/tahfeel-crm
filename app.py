@@ -3656,7 +3656,7 @@ def jobs():
     now = now_dubai()
     role = session['role']
     # Remember the last-used filters so returning from a task keeps the same view.
-    FJK = ['status', 'priority', 'assigned_to', 'staff', 'representative', 'date', 'from_date', 'to_date', 'customer', 'sort', 'order']
+    FJK = ['status', 'priority', 'assigned_to', 'staff', 'representative', 'date', 'from_date', 'to_date', 'customer', 'sort', 'order', 'all']
     if request.args.get('reset') == '1':
         session.pop('jobs_filters', None)
         return redirect(url_for('jobs'))
@@ -3726,6 +3726,13 @@ def jobs():
                     td = datetime.strptime(to_date, '%Y-%m-%d').date()
                     job_list = [j for j in job_list if j.due_date and j.due_date.date() <= td]
                 except: pass
+        # Operations staff default to THEIR own tasks (their to-do list) unless they
+        # explicitly view all (?all=1) or filter by a specific staff member.
+        mine_only = (role == 'operations' and args.get('all') != '1'
+                     and not assigned_filter and not representative_filter)
+        if mine_only:
+            job_list = [j for j in job_list if j.assigned_to == session.get('user_id')]
+
         overdue = [j for j in job_list if j.due_date and j.due_date < now and j.status not in ['Done', 'Pending Finance Approval']]
 
         # Global stats — same for all roles, pulled from full DB
@@ -3762,7 +3769,7 @@ def jobs():
             pass
         flash('System update applied. Please refresh.')
         return redirect(url_for('dashboard'))
-    return render_template('jobs.html', jobs=job_list, now=now, overdue=overdue,
+    return render_template('jobs.html', jobs=job_list, now=now, overdue=overdue, mine_only=mine_only,
                            statuses=JOB_STATUSES + (['Closed'] if session.get('role') in ['admin','finance'] else []), users=users,
                            status_filter=status_filter, priority_filter=priority_filter,
                            assigned_filter=assigned_filter, date_filter=date_filter,
