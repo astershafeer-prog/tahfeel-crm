@@ -53,25 +53,29 @@
       {% endif %}
     {% endif %}
 
-    <div class="page-header">
-      <h2>💬 WhatsApp <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ threads|length }} conversation{{ 's' if threads|length != 1 }})</span></h2>
-      <span style="font-size:12px;color:#1B7A3D;display:flex;align-items:center;gap:10px;">
-        <button type="button" onclick="location.reload()" title="Refresh conversations" style="background:#2563EB;color:white;border:none;border-radius:20px;padding:6px 16px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 0 0 3px rgba(37,99,235,0.25);">🔄 Refresh</button>
+    <div class="page-header" style="flex-wrap:wrap;row-gap:8px;">
+      <h2 style="white-space:nowrap;">💬 WhatsApp <span style="font-size:14px;color:var(--text-muted);font-weight:400;">({{ threads|length }} conversation{{ 's' if threads|length != 1 }})</span></h2>
+      <span style="font-size:12px;color:#1B7A3D;display:flex;align-items:center;gap:10px;white-space:nowrap;">
+        <button type="button" onclick="location.reload()" title="Refresh conversations" style="background:#2563EB;color:white;border:none;border-radius:20px;padding:6px 16px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 0 0 3px rgba(37,99,235,0.25);white-space:nowrap;">🔄 Refresh</button>
         {% if wa_templates %}
-        <button type="button" onclick="openNewMsg()" style="background:#25D366;color:white;border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">✉ New message</button>
+        <button type="button" onclick="openNewMsg()" style="background:#25D366;color:white;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">✉ New message</button>
         {% endif %}
-        {% if session.role == 'admin' %}
-        <a href="/whatsapp/reengage" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">♻️ Re-engage</a>
-        <a href="/whatsapp/task-updates" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📢 Task Updates</a>
-        <a href="/whatsapp/broadcast" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📢 Broadcast</a>
-        <a href="/whatsapp/templates" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📨 Templates</a>
-        <a href="/whatsapp/failures" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">⚠️ See Failures</a>
-        {% endif %}
-        <a href="/whatsapp/quick-replies" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">📋 Quick replies</a>
         <span id="notif-toggle" style="cursor:pointer;font-size:16px;" title="Click to enable sound + browser notifications for new messages">🔔</span>
         <span style="width:8px;height:8px;border-radius:50%;background:#25D366;display:inline-block;"></span>
         Live · updated {{ now.strftime('%H:%M:%S') }}
       </span>
+    </div>
+
+    <!-- Tools row: admin utilities as pill chips -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px;">
+      {% if session.role == 'admin' %}
+      <a href="/whatsapp/reengage" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;background:#EEF4FF;border:1px solid #DBE7FF;border-radius:20px;padding:5px 12px;white-space:nowrap;">♻️ Re-engage</a>
+      <a href="/whatsapp/task-updates" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;background:#EEF4FF;border:1px solid #DBE7FF;border-radius:20px;padding:5px 12px;white-space:nowrap;">📣 Task Updates</a>
+      <a href="/whatsapp/broadcast" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;background:#EEF4FF;border:1px solid #DBE7FF;border-radius:20px;padding:5px 12px;white-space:nowrap;">📢 Broadcast</a>
+      <a href="/whatsapp/templates" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;background:#EEF4FF;border:1px solid #DBE7FF;border-radius:20px;padding:5px 12px;white-space:nowrap;">📨 Templates</a>
+      <a href="/whatsapp/failures" style="font-size:12px;color:#B45309;text-decoration:none;font-weight:600;background:#FFFBEB;border:1px solid #FDE68A;border-radius:20px;padding:5px 12px;white-space:nowrap;">⚠️ See Failures</a>
+      {% endif %}
+      <a href="/whatsapp/quick-replies" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;background:#EEF4FF;border:1px solid #DBE7FF;border-radius:20px;padding:5px 12px;white-space:nowrap;">📋 Quick replies</a>
     </div>
 
     <!-- Search + filter tabs -->
