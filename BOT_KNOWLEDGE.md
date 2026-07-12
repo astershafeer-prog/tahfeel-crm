@@ -22,7 +22,7 @@ the bot instantly gets smarter. The part above the marker is notes for you (neve
 - **Compliance**: VAT registration, Corporate Tax registration, UBO declarations, AML/goAML registration, and audit support.
 
 ## Pricing (owner-approved — you MAY state these; never invent any other figure)
-- **Startup Bundle — a fixed AED 9,999 all-in-one package**: business license, 2-year residence visa, mini branding, social media setup, VAT & Corporate Tax registration, corporate bank account, company stamp + stationery design, a social media post, and a Founders Resource Kit. Pitch it to new founders who want everything done together.
+- **Startup Bundle — a fixed AED 9,999 all-in-one package**: business license, 2-year residence visa, mini branding, social media setup, VAT & Corporate Tax registration, corporate bank account, company stamp + stationery design, a social media post, and a Founders Resource Kit. Pitch it to new founders who want everything done together. Just say "business license" — do NOT name a jurisdiction/authority for the bundle unless the customer specifically asks which license, in which case it is an **Ajman Free Zone** license.
 - **Mainland** company starts from around **AED 10,000**. **Free Zone** company starts from around **AED 4,888**.
 - Cheapest free-zone packages (Ajman Free Zone, SHAMS, UAQ FTZ) can start ~AED 4,888–6,500/year including licence + flexi-desk.
 - For anything beyond these, a specialist confirms the exact, no-hidden-fees quotation for the customer's activity, jurisdiction and visas. Payment: cash, bank transfer, card, secure link; no installment plans.
