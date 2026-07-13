@@ -240,7 +240,9 @@
         <tbody>
           {% for o in owners %}
           <tr>
-            <td><strong>{{ o.name }}</strong></td>
+            <td><strong>{{ o.name }}</strong>
+              {% if o.mobile or o.date_of_birth %}<div style="font-size:11px;color:var(--text-muted);">{{ o.mobile or '' }}{% if o.mobile and o.date_of_birth %} · {% endif %}{% if o.date_of_birth %}🎂 {{ o.date_of_birth.strftime('%d %b') }}{% endif %}</div>{% endif %}
+            </td>
             <td>{{ o.role or '—' }}</td>
             <td>{{ (o.share_pct|round(2)) ~ '%' if o.share_pct is not none else '—' }}</td>
             <td>{{ o.nationality or '—' }}</td>
@@ -252,7 +254,8 @@
                   data-id="{{ o.id }}" data-name="{{ o.name|e }}" data-role="{{ o.role|e if o.role else '' }}"
                   data-share="{{ o.share_pct if o.share_pct is not none else '' }}" data-nat="{{ o.nationality|e if o.nationality else '' }}"
                   data-pno="{{ o.passport_no|e if o.passport_no else '' }}" data-pexp="{{ o.passport_expiry.strftime('%Y-%m-%d') if o.passport_expiry else '' }}"
-                  data-eno="{{ o.eid_no|e if o.eid_no else '' }}" data-eexp="{{ o.eid_expiry.strftime('%Y-%m-%d') if o.eid_expiry else '' }}">Edit</button>
+                  data-eno="{{ o.eid_no|e if o.eid_no else '' }}" data-eexp="{{ o.eid_expiry.strftime('%Y-%m-%d') if o.eid_expiry else '' }}"
+                  data-dob="{{ o.date_of_birth.strftime('%Y-%m-%d') if o.date_of_birth else '' }}" data-mobile="{{ o.mobile|e if o.mobile else '' }}">Edit</button>
                 <form method="POST" action="/owners/{{ o.id }}/delete" onsubmit="return confirm('Remove {{ o.name }}?');" style="margin:0;">
                   <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);">🗑</button>
                 </form>
@@ -356,6 +359,8 @@
           <div class="form-group"><label>Passport Expiry</label><input type="date" name="passport_expiry"></div>
           <div class="form-group"><label>Emirates ID No.</label><input type="text" name="eid_no"></div>
           <div class="form-group"><label>Emirates ID Expiry</label><input type="date" name="eid_expiry"></div>
+          <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Used for the automatic birthday WhatsApp</div></div>
+          <div class="form-group"><label>Mobile / WhatsApp</label><input type="text" name="mobile" placeholder="+971 5X XXX XXXX"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Birthday wish is sent to this number</div></div>
         </div>
         <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
           <button type="button" class="btn-sm" onclick="closeOwnerModal()">Cancel</button>
@@ -379,6 +384,8 @@
           <div class="form-group"><label>Passport Expiry</label><input type="date" name="passport_expiry" id="oePexp"></div>
           <div class="form-group"><label>Emirates ID No.</label><input type="text" name="eid_no" id="oeEno"></div>
           <div class="form-group"><label>Emirates ID Expiry</label><input type="date" name="eid_expiry" id="oeEexp"></div>
+          <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth" id="oeDob"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Used for the automatic birthday WhatsApp</div></div>
+          <div class="form-group"><label>Mobile / WhatsApp</label><input type="text" name="mobile" id="oeMobile" placeholder="+971 5X XXX XXXX"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Birthday wish is sent to this number</div></div>
         </div>
         <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
           <button type="button" class="btn-sm" onclick="closeOwnerEdit()">Cancel</button>
@@ -403,6 +410,8 @@
       document.getElementById('oePexp').value = btn.getAttribute('data-pexp') || '';
       document.getElementById('oeEno').value = btn.getAttribute('data-eno') || '';
       document.getElementById('oeEexp').value = btn.getAttribute('data-eexp') || '';
+      document.getElementById('oeDob').value = btn.getAttribute('data-dob') || '';
+      document.getElementById('oeMobile').value = btn.getAttribute('data-mobile') || '';
       document.getElementById('ownerEdit').classList.add('active');
     }
     function closeOwnerEdit(){ document.getElementById('ownerEdit').classList.remove('active'); }

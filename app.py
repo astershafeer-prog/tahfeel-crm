@@ -458,6 +458,8 @@ class Owner(db.Model):
     passport_expiry = db.Column(db.Date)
     eid_no = db.Column(db.String(60))
     eid_expiry = db.Column(db.Date)
+    date_of_birth = db.Column(db.Date)         # drives the auto birthday WhatsApp
+    mobile = db.Column(db.String(30))          # owner's own WhatsApp — birthday wish target
     created_at = db.Column(db.DateTime, default=datetime.now)
     company = db.relationship('Customer', foreign_keys=[customer_id])
 
@@ -5081,9 +5083,12 @@ def _owner_from_form(o):
         o.share_pct = float(request.form.get('share_pct')) if request.form.get('share_pct') else None
     except ValueError:
         o.share_pct = None
+    o.mobile = (request.form.get('mobile') or '').strip() or None
     pe = request.form.get('passport_expiry'); ee = request.form.get('eid_expiry')
     o.passport_expiry = datetime.strptime(pe, '%Y-%m-%d').date() if pe else None
     o.eid_expiry = datetime.strptime(ee, '%Y-%m-%d').date() if ee else None
+    dob = request.form.get('date_of_birth')
+    o.date_of_birth = datetime.strptime(dob, '%Y-%m-%d').date() if dob else None
     return o
 
 @app.route('/customers/<int:customer_id>/owners/add', methods=['POST'])
@@ -5707,13 +5712,15 @@ def cron_monthly_reports():
 @app.route('/cron/birthday-wishes')
 def cron_birthday_wishes():
     """Daily: WhatsApp the approved birthday template to any CUSTOMER whose birthday
-    is today. Once per customer per year (dedupe). GET /cron/birthday-wishes?key=CRON_KEY"""
+    is today, and to any company OWNER/authorized person (sent to their own mobile;
+    skipped if none saved). Once per person per year (dedupe).
+    GET /cron/birthday-wishes?key=CRON_KEY"""
     from flask import jsonify
     if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
         return 'Forbidden', 403
     if not automation_on('auto_birthday'):
         return jsonify({'skipped': 'birthday automation is turned OFF in the admin panel'})
-    from whatsapp_webhook import send_template, log_message
+    from whatsapp_webhook import send_template, log_message, normalize_phone
     tpl = wa_template_active('tahfeel_birthday')
     if not tpl:
         return jsonify({'error': 'tahfeel_birthday template is not active in WhatsApp Templates'})
@@ -5742,6 +5749,30 @@ def cron_birthday_wishes():
         else:
             skipped += 1
         details.append(f'{c.name}: {"sent" if wam else "FAILED"}')
+    # Company owners / authorized persons — wish goes to the OWNER's own mobile only
+    for o in Owner.query.filter(Owner.date_of_birth.isnot(None)).all():
+        dob = o.date_of_birth
+        if not (dob.month == today.month and dob.day == today.day):
+            continue
+        key = f'birthday:owner:{o.id}:{today.year}'
+        if AutoMessageLog.query.filter_by(dedupe_key=key).first():
+            continue  # already wished this year
+        to = normalize_phone(o.mobile or '')
+        if not to:
+            skipped += 1; details.append(f'{o.name} (owner): no mobile saved'); continue
+        first = ((o.name or 'there').split() or ['there'])[0]
+        wam = send_template(to, tpl.meta_name, params=[first], lang=tpl.lang or 'en')
+        body = (tpl.body_preview or f'Happy birthday, {first}!').replace('{{1}}', first)
+        log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                    handled_by='auto-birthday', status='sent' if wam else 'failed',
+                    customer_id=o.customer_id)
+        if wam:
+            db.session.add(AutoMessageLog(kind='birthday', dedupe_key=key, detail=f'{o.name} — owner of {o.company.name if o.company else "?"} ({to})'))
+            db.session.commit()
+            sent += 1
+        else:
+            skipped += 1
+        details.append(f'{o.name} (owner): {"sent" if wam else "FAILED"}')
     _mark_run('birthday', f'{sent} wish(es) sent')
     return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
 
@@ -6417,6 +6448,9 @@ def init_db():
             # Super Admin flag: can edit other admins + self (fixed to admin@tahfeel.ae)
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_super BOOLEAN DEFAULT FALSE',
             "UPDATE \"user\" SET is_super = TRUE WHERE email = 'admin@tahfeel.ae'",
+            # Owner: date of birth (auto birthday wish) + own mobile to send it to
+            'ALTER TABLE owner ADD COLUMN IF NOT EXISTS date_of_birth DATE',
+            'ALTER TABLE owner ADD COLUMN IF NOT EXISTS mobile VARCHAR(30)',
 
             # ── Performance indexes (H6) — speed up the filtered queries in reports,
             #    analytics, marketing report, cron jobs, WhatsApp matching, and the
