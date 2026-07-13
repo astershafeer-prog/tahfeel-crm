@@ -3647,6 +3647,22 @@ def import_customers():
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 
 JOB_STATUSES = ['Assigned', 'Job Started', 'Processing', 'Pending Authority', 'On Hold', 'Delayed', 'Partially Completed', 'Done']
+# Rolling stages: these progress stages only move FORWARD for non-admin users.
+# Pending Authority / On Hold / Delayed are situational states, not ladder steps —
+# a task can enter/leave them any time, but on exit can't land below its highest stage.
+JOB_STAGE_RANK = {'Assigned': 1, 'Job Started': 2, 'Processing': 3, 'Partially Completed': 4, 'Done': 5}
+
+def job_stage_floor(job):
+    """Rank of the task's current ladder stage. If it's parked in a situational
+    state (On Hold etc.), the most recent ladder stage before that — so it can't
+    exit the parking state to an earlier stage. Uses current position, not the
+    all-time high, so an admin rollback lets staff progress forward again."""
+    if job.status in JOB_STAGE_RANK:
+        return JOB_STAGE_RANK[job.status]
+    for u in job.updates:  # newest first
+        if u.status in JOB_STAGE_RANK:
+            return JOB_STAGE_RANK[u.status]
+    return 0
 JOB_STATUSES_FINANCE = ['Closed']  # Finance-only status
 JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES + ['Pending Finance Close', 'Closed']
 
@@ -3978,6 +3994,11 @@ def job_detail(job_id):
             flash('Remark is required')
             return redirect(url_for('job_detail', job_id=job_id))
         new_status = request.form.get('status', job.status)
+        # Rolling stages: non-admin can never move a task back to an earlier stage
+        if (role != 'admin' and new_status != job.status and new_status in JOB_STAGE_RANK
+                and JOB_STAGE_RANK[new_status] < job_stage_floor(job)):
+            flash('Task stages only move forward — this task already passed that stage. Ask an admin if it was set by mistake.')
+            return redirect(url_for('job_detail', job_id=job_id))
         if role == 'staff' and new_status == 'Pending Finance Approval':
             new_status = job.status
         # When ops marks Done → stays as Done, appears in Finance queue
@@ -4012,8 +4033,13 @@ def job_detail(job_id):
         (QuickReply.staff_id == session.get('user_id')) | (QuickReply.is_global == True)
     ).order_by(QuickReply.label).all()
     subtask_list_names = [t.title for t in SubTaskTemplate.query.order_by(SubTaskTemplate.sort_order, SubTaskTemplate.id).all()]
+    # Stages already passed — hidden from the dropdown for non-admin (rolling stages)
+    locked_stages = []
+    if role != 'admin':
+        floor = job_stage_floor(job)
+        locked_stages = [s for s, r in JOB_STAGE_RANK.items() if r < floor]
     return render_template('job_detail.html', job=job, now=now,
-                           statuses=JOB_STATUSES, users=users,
+                           statuses=JOB_STATUSES, users=users, locked_stages=locked_stages,
                            service_types=service_types, timedelta=timedelta,
                            sibling_jobs=sibling_jobs, partners=partners,
                            wa_templates=wa_send_context(job=job), quick_replies=quick_replies,

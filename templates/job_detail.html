@@ -505,7 +505,7 @@
               <label>Status *</label>
               <select name="status" id="statusSelect" onchange="toggleCompletion()">
                 {% for s in statuses %}
-                {% if s != 'Closed' or session.role in ['admin','finance'] %}
+                {% if (s != 'Closed' or session.role in ['admin','finance']) and (s == job.status or s not in locked_stages) %}
                 <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ job_status_label(s) }}</option>
                 {% endif %}
                 {% endfor %}
