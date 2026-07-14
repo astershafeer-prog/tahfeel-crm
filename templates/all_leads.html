@@ -27,7 +27,14 @@
       <div class="header-btns">
         <button class="btn-bulk-delete" id="bulkDeleteBtn" onclick="confirmBulkDelete()">🗑 Delete Selected (<span id="selectedCount">0</span>)</button>
         <a href="/leads/import" class="btn-sm">📥 Import</a>
-        <a href="/leads/export" class="btn-sm">⬇ Export</a>
+        <details style="position:relative;display:inline-block;">
+          <summary class="btn-sm" style="list-style:none;cursor:pointer;display:inline-block;">⬇ Export ▾</summary>
+          <div style="position:absolute;right:0;top:calc(100% + 4px);background:white;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.12);min-width:170px;z-index:50;overflow:hidden;">
+            <a href="/leads/export" style="display:block;padding:9px 14px;font-size:13px;color:var(--text-primary);text-decoration:none;">📋 All leads</a>
+            <a href="/leads/export?quality=Genuine" style="display:block;padding:9px 14px;font-size:13px;color:#059669;text-decoration:none;border-top:1px solid #F1F5F9;">✅ Genuine only</a>
+            <a href="/leads/export?quality=Junk" style="display:block;padding:9px 14px;font-size:13px;color:#B91C1C;text-decoration:none;border-top:1px solid #F1F5F9;">🗑 Junk only</a>
+          </div>
+        </details>
         <a href="/leads/add" class="btn-add">+ Add Lead</a>
       </div>
     </div>

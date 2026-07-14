@@ -1769,7 +1769,8 @@ def export_leads():
     ws = wb.active
     ws.title = "Leads"
     headers = ['Name', 'Company', 'Phone', 'Phone 2', 'Email', 'Address', 'Source',
-               'Service', 'Lead Type', 'Assigned To', 'Due Date', 'Status', 'Remarks', 'Created']
+               'Service', 'Lead Type', 'Assigned To', 'Due Date', 'Status', 'Lead Quality',
+               'Remarks', 'Created']
     ws.append(headers)
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
@@ -1782,18 +1783,22 @@ def export_leads():
             lead.email or '', lead.address or '', lead.source or '', lead.service or '',
             lead.lead_type or '', lead.assignee.name if lead.assignee else '',
             lead.due_date.strftime('%d %b %Y') if lead.due_date else '',
-            lead.status or '', lead.remarks or '',
+            lead.status or '', lead.genuine or 'Not reviewed', lead.remarks or '',
             lead.created_at.strftime('%d %b %Y') if lead.created_at else '',
         ])
     for col in ws.columns:
         max_length = max(len(str(cell.value or '')) for cell in col)
         ws.column_dimensions[col[0].column_letter].width = max_length + 4
+    # Excel column filters (dropdown arrows on the header row)
+    ws.auto_filter.ref = ws.dimensions
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
     response = make_response(output.read())
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    response.headers['Content-Disposition'] = f'attachment; filename=tahfeel_leads_{now.strftime("%Y%m%d")}.xlsx'
+    quality = (request.args.get('quality') or '').lower()
+    suffix = f'_{quality}' if quality in ('genuine', 'junk', 'unreachable', 'unreviewed') else ''
+    response.headers['Content-Disposition'] = f'attachment; filename=tahfeel_leads{suffix}_{now.strftime("%Y%m%d")}.xlsx'
     return response
 
 @app.route('/leads/add', methods=['GET', 'POST'])
