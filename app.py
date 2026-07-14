@@ -5717,9 +5717,9 @@ def cron_monthly_reports():
 @app.route('/cron/birthday-wishes')
 def cron_birthday_wishes():
     """Daily: WhatsApp the approved birthday template to any CUSTOMER whose birthday
-    is today, and to any company OWNER/authorized person (sent to their own mobile;
-    skipped if none saved). Once per person per year (dedupe).
-    GET /cron/birthday-wishes?key=CRON_KEY"""
+    is today, and to any company OWNER/authorized person or EMPLOYEE (sent to their
+    own mobile; skipped if none saved; resigned/terminated employees excluded).
+    Once per person per year (dedupe). GET /cron/birthday-wishes?key=CRON_KEY"""
     from flask import jsonify
     if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
         return 'Forbidden', 403
@@ -5778,6 +5778,33 @@ def cron_birthday_wishes():
         else:
             skipped += 1
         details.append(f'{o.name} (owner): {"sent" if wam else "FAILED"}')
+    # Customer-company employees — wish goes to the EMPLOYEE's own mobile only.
+    # Resigned/Terminated staff are never wished.
+    for e in Employee.query.filter(Employee.date_of_birth.isnot(None)).all():
+        dob = e.date_of_birth
+        if not (dob.month == today.month and dob.day == today.day):
+            continue
+        if (e.status or 'Active') in ('Resigned', 'Terminated'):
+            continue
+        key = f'birthday:employee:{e.id}:{today.year}'
+        if AutoMessageLog.query.filter_by(dedupe_key=key).first():
+            continue  # already wished this year
+        to = normalize_phone(e.mobile or '')
+        if not to:
+            skipped += 1; details.append(f'{e.name} (employee): no mobile saved'); continue
+        first = ((e.name or 'there').split() or ['there'])[0]
+        wam = send_template(to, tpl.meta_name, params=[first], lang=tpl.lang or 'en')
+        body = (tpl.body_preview or f'Happy birthday, {first}!').replace('{{1}}', first)
+        log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                    handled_by='auto-birthday', status='sent' if wam else 'failed',
+                    customer_id=e.customer_id)
+        if wam:
+            db.session.add(AutoMessageLog(kind='birthday', dedupe_key=key, detail=f'{e.name} — employee of {e.company.name if e.company else "?"} ({to})'))
+            db.session.commit()
+            sent += 1
+        else:
+            skipped += 1
+        details.append(f'{e.name} (employee): {"sent" if wam else "FAILED"}')
     _mark_run('birthday', f'{sent} wish(es) sent')
     return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
 
