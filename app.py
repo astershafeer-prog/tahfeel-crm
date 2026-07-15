@@ -7098,9 +7098,12 @@ def export_full_backup():
 @app.route('/analytics')
 @login_required
 def analytics():
-    if session.get('role') not in ['admin', 'finance']:
+    if session.get('role') not in ['admin', 'finance', 'sales', 'operations']:
         flash('Access denied')
         return redirect(url_for('dashboard'))
+    # Sales/operations: lead numbers are scoped to THEIR OWN leads; they only get
+    # the Leads, Documents and Companies tabs (no company-wide revenue/staff data).
+    scoped = session['role'] in ('sales', 'operations')
 
     now = now_dubai()
     today = now.date()
@@ -7127,6 +7130,8 @@ def analytics():
 
     # All data for period
     all_leads = Lead.query.filter(Lead.created_at >= start_dt, Lead.created_at <= end_dt).all()
+    if scoped:
+        all_leads = [l for l in all_leads if l.assigned_to == session['user_id']]
     all_jobs = Job.query.options(
         db.joinedload(Job.customer), db.subqueryload(Job.partial_revenues)
     ).filter(Job.created_at >= start_dt, Job.created_at <= end_dt).all()
@@ -7275,11 +7280,16 @@ def analytics():
 
     # Tab from request
     tab = request.args.get('tab', 'overview')
+    if scoped and tab not in ('sales', 'documents', 'companies'):
+        tab = 'sales'
     
     # ── Lead breakdown by staff and status (for pivot table)
     # Get all statuses and staff
     all_statuses = sorted(set(l.status for l in all_leads if l.status), key=lambda s: (s != 'New', s))  # "New" first, then alphabetical
-    sales_staff = [u for u in all_users if u.role == 'sales']  # Only Sales role, not admin
+    if scoped:
+        sales_staff = [u for u in all_users if u.id == session['user_id']]  # own column only
+    else:
+        sales_staff = [u for u in all_users if u.role == 'sales']  # Only Sales role, not admin
     
     # Create breakdown: {status: {staff_name: count}}
     lead_breakdown = {}

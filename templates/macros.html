@@ -232,8 +232,10 @@ loadTheme();
   {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
   <a href="/reports" {% if active=='reports' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📊 Reports</a>
   {% endif %}
-  {% if session.role in ['admin', 'finance'] %}
+  {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
   <a href="/analytics" {% if active=='analytics' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📈 Analytics</a>
+  {% endif %}
+  {% if session.role in ['admin', 'finance'] %}
   <a href="/partner-commissions" {% if active=='partner-commissions' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">💰 Commissions</a>
   {% endif %}
   {% if session.role == 'admin' or session.get('user_email') == 'saadatahfeel@gmail.com' %}

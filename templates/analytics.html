@@ -83,14 +83,24 @@
     </div>
 
     <!-- Tab Navigation -->
+    {% set full_access = session.role in ['admin', 'finance'] %}
     <div class="tab-nav">
+      {% if full_access %}
       <a href="/analytics?tab=overview&period={{ period }}" class="tab-btn {% if tab=='overview' %}active{% endif %}">⊞ Overview</a>
-      <a href="/analytics?tab=sales&period={{ period }}" class="tab-btn {% if tab=='sales' %}active{% endif %}">📋 Leads</a>
+      {% endif %}
+      <a href="/analytics?tab=sales&period={{ period }}" class="tab-btn {% if tab=='sales' %}active{% endif %}">📋 Leads{% if not full_access %} (mine){% endif %}</a>
+      {% if full_access %}
       <a href="/analytics?tab=operations&period={{ period }}" class="tab-btn {% if tab=='operations' %}active{% endif %}">✓ Operations</a>
+      {% endif %}
       <a href="/analytics?tab=documents&period={{ period }}" class="tab-btn {% if tab=='documents' %}active{% endif %}">📄 Documents</a>
+      {% if full_access %}
       <a href="/analytics?tab=staff&period={{ period }}" class="tab-btn {% if tab=='staff' %}active{% endif %}">👤 Staff</a>
+      {% endif %}
       <a href="/analytics?tab=companies" class="tab-btn {% if tab=='companies' %}active{% endif %}">🏢 Companies</a>
     </div>
+    {% if not full_access and tab == 'sales' %}
+    <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:8px 14px;margin-bottom:14px;font-size:12px;color:#1D4ED8;">👤 These lead numbers are yours only — leads assigned to you.</div>
+    {% endif %}
 
     <!-- ══ OVERVIEW TAB ══ -->
     {% if tab == 'overview' %}
@@ -285,6 +295,7 @@
           </table>
         </div>
       </div>
+      {% if full_access %}
       <div class="an-card">
         <div class="an-card-title">Revenue — Invoiced vs Received</div>
         <div style="display:flex;align-items:flex-end;gap:6px;height:120px;margin-bottom:12px;">
@@ -307,6 +318,7 @@
           <div style="text-align:center;"><div style="font-size:10px;color:#94A3B8;">Pending</div><div style="font-size:14px;font-weight:700;color:#EF4444;">{{ '{:,.0f}'.format(total_outstanding) }}</div></div>
         </div>
       </div>
+      {% endif %}
     </div>
     <div class="grid3">
       <div class="an-card">
