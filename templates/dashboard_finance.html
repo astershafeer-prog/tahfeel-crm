@@ -103,6 +103,17 @@
 
     </div>
 
+    <!-- Upcoming birthdays (customers + owners + employees) -->
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #EC4899;padding:10px 20px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between;gap:16px;">
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">🎂 Birthdays</div>
+      <div style="display:flex;gap:28px;align-items:center;flex:1;justify-content:center;">
+        <a href="/reports/birthdays?range=today" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#EC4899;">{{ bday_counts.today }}</div><div style="font-size:10px;color:#94A3B8;">Today</div></a>
+        <a href="/reports/birthdays?range=week" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#F59E0B;">{{ bday_counts.week }}</div><div style="font-size:10px;color:#94A3B8;">This Week</div></a>
+        <a href="/reports/birthdays?range=month" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A3B8B;">{{ bday_counts.month }}</div><div style="font-size:10px;color:#94A3B8;">This Month</div></a>
+      </div>
+      <a href="/reports/birthdays" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;white-space:nowrap;">View all →</a>
+    </div>
+
     <!-- Pending Finance Approval -->
     <div class="card card-pending-finance" style="margin-bottom:14px;">
       <div class="card-header">

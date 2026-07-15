@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Birthday Report</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+  <style>
+    .kpi{background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;}
+    .kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .kpi-val{font-size:26px;font-weight:800;color:#1A2333;}
+    .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+    .kind-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;}
+    .days-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('') }}
+
+  <div class="container" style="max-width:1100px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header" style="margin-bottom:16px;">
+      <div>
+        <h2 style="color:#133E87;">🎂 Birthday Report</h2>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Customers, company owners &amp; employees with a date of birth on file — sorted by next birthday</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <a href="/reports/birthdays?range=today" class="btn-sm {% if rng=='today' %}btn-primary{% else %}btn-secondary{% endif %}">Today</a>
+        <a href="/reports/birthdays?range=week" class="btn-sm {% if rng=='week' %}btn-primary{% else %}btn-secondary{% endif %}">This Week</a>
+        <a href="/reports/birthdays?range=month" class="btn-sm {% if rng=='month' %}btn-primary{% else %}btn-secondary{% endif %}">This Month</a>
+        <a href="/reports/birthdays?range=all" class="btn-sm {% if rng=='all' %}btn-primary{% else %}btn-secondary{% endif %}">All</a>
+      </div>
+    </div>
+
+    <div class="grid4">
+      <div class="kpi" style="border-top:4px solid #EC4899;"><div class="kpi-label">Today</div><div class="kpi-val" style="color:#EC4899;">{{ counts.today }}</div></div>
+      <div class="kpi" style="border-top:4px solid #F59E0B;"><div class="kpi-label">Next 7 Days</div><div class="kpi-val" style="color:#F59E0B;">{{ counts.week }}</div></div>
+      <div class="kpi" style="border-top:4px solid #133E87;"><div class="kpi-label">Next 30 Days</div><div class="kpi-val">{{ counts.month }}</div></div>
+      <div class="kpi" style="border-top:4px solid #64748B;"><div class="kpi-label">Total on File</div><div class="kpi-val" style="color:#64748B;">{{ counts.all }}</div></div>
+    </div>
+
+    <div class="card">
+      {% if people %}
+      <table>
+        <thead>
+          <tr><th>When</th><th>Name</th><th>Type</th><th>Company</th><th>Birthday</th><th>Turning</th><th>Mobile / WhatsApp</th></tr>
+        </thead>
+        <tbody>
+          {% for p in people %}
+          <tr {% if p.days == 0 %}style="background:#FDF2F8;"{% endif %}>
+            <td>
+              {% if p.days == 0 %}<span class="days-badge" style="background:#EC4899;color:white;">🎂 Today!</span>
+              {% elif p.days == 1 %}<span class="days-badge" style="background:#FFFBEB;color:#92400E;">Tomorrow</span>
+              {% else %}<span class="days-badge" style="background:#F1F5F9;color:#475569;">in {{ p.days }} days</span>{% endif %}
+            </td>
+            <td><a href="{{ p.link }}" style="font-weight:600;color:#1A2333;text-decoration:none;">{{ p.name }}</a></td>
+            <td>
+              {% if p.kind == 'Customer' %}<span class="kind-badge" style="background:#EFF6FF;color:#1D4ED8;">Customer</span>
+              {% elif p.kind == 'Owner' %}<span class="kind-badge" style="background:#F5F3FF;color:#6D28D9;">Owner</span>
+              {% else %}<span class="kind-badge" style="background:#ECFDF5;color:#047857;">Employee</span>{% endif %}
+            </td>
+            <td style="font-size:12px;color:var(--text-secondary);">{{ p.company or '—' }}</td>
+            <td style="font-size:12px;">{{ p.next.strftime('%d %b') }} <span style="color:#94A3B8;">({{ p.dob.strftime('%d %b %Y') }})</span></td>
+            <td style="font-size:12px;font-weight:600;">{{ p.age }}</td>
+            <td style="font-size:12px;">
+              {% if p.mobile %}{{ p.mobile }}
+              {% else %}<span style="color:#B91C1C;font-size:11px;">⚠ No number — auto wish can't be sent</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="text-align:center;padding:40px;color:#94A3B8;font-size:13px;">
+        No birthdays in this range.
+        {% if counts.all == 0 %}<br>Add dates of birth on customers, owners, and employees to see them here.{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

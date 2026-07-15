@@ -969,6 +969,56 @@ def inject_birthdays():
         print(f'Birthday error: {e}')
     return {'birthdays_today': []}
 
+def _next_birthday_info(dob, today):
+    """(next_birthday_date, days_until, age_turning) for a date of birth."""
+    try:
+        nxt = dob.replace(year=today.year)
+    except ValueError:                       # 29 Feb on a non-leap year
+        nxt = dob.replace(year=today.year, day=28)
+    if nxt < today:
+        try:
+            nxt = dob.replace(year=today.year + 1)
+        except ValueError:
+            nxt = dob.replace(year=today.year + 1, day=28)
+    return nxt, (nxt - today).days, nxt.year - dob.year
+
+def birthday_people(today):
+    """Everyone with a date of birth on file — customers, company owners/authorized
+    persons, and (active) employees — sorted by how soon their next birthday is."""
+    people = []
+    for c in Customer.query.filter(Customer.date_of_birth.isnot(None)).all():
+        people.append({'kind': 'Customer', 'name': c.contact_person or c.name,
+                       'company': c.name if c.customer_type == 'Company' else '',
+                       'dob': c.date_of_birth, 'mobile': c.whatsapp or c.mobile or c.phone or c.phone2,
+                       'link': f'/customers/{c.id}'})
+    for o in Owner.query.filter(Owner.date_of_birth.isnot(None)).all():
+        people.append({'kind': 'Owner', 'name': o.name,
+                       'company': o.company.name if o.company else '',
+                       'dob': o.date_of_birth, 'mobile': o.mobile,
+                       'link': f'/customers/{o.customer_id}'})
+    for e in Employee.query.filter(Employee.date_of_birth.isnot(None)).all():
+        if (e.status or 'Active') in ('Resigned', 'Terminated'):
+            continue
+        people.append({'kind': 'Employee', 'name': e.name,
+                       'company': e.company.name if e.company else '',
+                       'dob': e.date_of_birth, 'mobile': e.mobile,
+                       'link': f'/customers/{e.customer_id}'})
+    for p in people:
+        p['next'], p['days'], p['age'] = _next_birthday_info(p['dob'], today)
+    people.sort(key=lambda p: (p['days'], p['name']))
+    return people
+
+def birthday_counts(today):
+    """Dashboard summary: birthdays today / next 7 days / next 30 days."""
+    try:
+        ppl = birthday_people(today)
+        return {'today': sum(1 for p in ppl if p['days'] == 0),
+                'week': sum(1 for p in ppl if p['days'] <= 7),
+                'month': sum(1 for p in ppl if p['days'] <= 30)}
+    except Exception:
+        return {'today': 0, 'week': 0, 'month': 0}
+
+
 def _safe_redirect(target, fallback_endpoint='dashboard', **fallback_kwargs):
     """Redirect only to a same-site relative path. Blocks open-redirect payloads
     (e.g. //evil.com or https://evil.com) coming from user-supplied `next`/return
@@ -1335,7 +1385,7 @@ def dashboard():
         tasks_processing = len([j for j in all_active_jobs if j.status == 'Processing'])
         tasks_pending_approval = len(pending_approval)
         return render_template('dashboard_finance.html',
-                               now=now,
+                               now=now, bday_counts=birthday_counts(now.date()),
                                date_filter=date_filter,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                all_jobs=active_jobs,
@@ -1569,9 +1619,10 @@ def dashboard():
             birthdays_today = [c for c in all_customers if c.date_of_birth and c.date_of_birth.month == today.month and c.date_of_birth.day == today.day]
         except:
             birthdays_today = []
+        bday_counts = birthday_counts(now.date())
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads,
-                               birthdays_today=birthdays_today,
+                               birthdays_today=birthdays_today, bday_counts=bday_counts,
                                wl_filter=wl_filter, wl_from=wl_from, wl_to=wl_to,
                                total=total, overdue_leads=overdue_leads,
                                converted=converted, lost=lost, new_leads=new_leads, initiated=initiated,
@@ -1655,8 +1706,9 @@ def dashboard():
         birthdays_today = [c for c in all_customers_bday if c.date_of_birth and c.date_of_birth.month == today_date.month and c.date_of_birth.day == today_date.day]
     except:
         birthdays_today = []
+    bday_counts = birthday_counts(now.date())
     return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
-                           birthdays_today=birthdays_today,
+                           birthdays_today=birthdays_today, bday_counts=bday_counts,
                            converted=converted, lost=lost, new_leads=new_leads, initiated=initiated,
                            future=future, future_due=future_due,
                            my_jobs=my_jobs, overdue_jobs=overdue_jobs,
@@ -5713,6 +5765,28 @@ def cron_monthly_reports():
         details.append(f'{c.name}: {msg}')
     _mark_run('monthly_report', f'{sent} report(s) sent')
     return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
+
+@app.route('/reports/birthdays')
+@login_required
+def birthday_report():
+    now = now_dubai()
+    today = now.date()
+    people = birthday_people(today)
+    counts = {'today': sum(1 for p in people if p['days'] == 0),
+              'week': sum(1 for p in people if p['days'] <= 7),
+              'month': sum(1 for p in people if p['days'] <= 30),
+              'all': len(people)}
+    rng = request.args.get('range', 'month')
+    if rng == 'today':
+        shown = [p for p in people if p['days'] == 0]
+    elif rng == 'week':
+        shown = [p for p in people if p['days'] <= 7]
+    elif rng == 'all':
+        shown = people
+    else:
+        rng = 'month'
+        shown = [p for p in people if p['days'] <= 30]
+    return render_template('birthday_report.html', people=shown, counts=counts, rng=rng, now=now)
 
 @app.route('/cron/birthday-wishes')
 def cron_birthday_wishes():
