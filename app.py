@@ -7240,7 +7240,83 @@ def analytics():
     lead_quality = {'genuine': q_genuine, 'junk': q_junk, 'unreachable': q_unreach,
                     'not_reviewed': total_leads - (q_genuine + q_junk + q_unreach), 'total': total_leads}
 
+    # ── Company portfolio (snapshot of the whole client base — NOT period-filtered) ──
+    pf = None
+    if tab == 'companies':
+        import calendar as _cal
+        companies = Customer.query.filter_by(customer_type='Company').all()
+        status_counts = Counter((c.ac_status or 'Not set') for c in companies)
+        juris_counts = Counter((c.jurisdiction or 'Not set') for c in companies)
+        fz_counts = Counter((c.freezone_name or 'Not set') for c in companies if c.jurisdiction == 'Free Zone')
+        emirate_counts = Counter((c.emirate or 'Not set') for c in companies)
+        legal_counts = Counter((c.legal_form or 'Not set') for c in companies)
+        activity_counts = Counter((c.business_activity or '').strip().title()
+                                  for c in companies if (c.business_activity or '').strip())
+        # Last task per company (one grouped query — drives the dormancy view)
+        last_job = dict(db.session.query(Job.customer_id, db.func.max(Job.created_at))
+                        .group_by(Job.customer_id).all())
+        finished = ('Done', 'Closed', 'Pending Finance Close', 'Closed - Pending Partner Commission')
+        open_by_cust = Counter(cid for (cid,) in
+                               db.session.query(Job.customer_id).filter(Job.status.notin_(finished)).all())
+        buckets = {'m1': 0, 'm3': 0, 'm6': 0, 'older': 0, 'never': 0}
+        dormant = []
+        mgr_data = {}
+        for c in companies:
+            lj = last_job.get(c.id)
+            days = (now - lj).days if lj else None
+            if days is None:
+                buckets['never'] += 1
+            elif days <= 30:
+                buckets['m1'] += 1
+            elif days <= 90:
+                buckets['m3'] += 1
+            elif days <= 180:
+                buckets['m6'] += 1
+            else:
+                buckets['older'] += 1
+            is_dormant = days is None or days > 90
+            if is_dormant:
+                dormant.append({'id': c.id, 'name': c.name, 'days': days,
+                                'last': lj, 'manager': c.rep.name if c.rep else '—'})
+            m = mgr_data.setdefault(c.rep.name if c.rep else 'Unassigned',
+                                    {'companies': 0, 'active': 0, 'open_tasks': 0, 'dormant': 0})
+            m['companies'] += 1
+            if c.ac_status == 'Active':
+                m['active'] += 1
+            m['open_tasks'] += open_by_cust.get(c.id, 0)
+            if is_dormant:
+                m['dormant'] += 1
+        dormant.sort(key=lambda d: -(d['days'] if d['days'] is not None else 999999))
+        managers = sorted(mgr_data.items(), key=lambda kv: (kv[0] == 'Unassigned', -kv[1]['companies']))
+        # Growth: new companies added per month, last 12 months
+        growth = []
+        for i in range(11, -1, -1):
+            m_, y_ = now.month - i, now.year
+            if m_ <= 0:
+                m_, y_ = m_ + 12, y_ - 1
+            growth.append({'month': _cal.month_abbr[m_],
+                           'count': sum(1 for c in companies if c.created_at
+                                        and c.created_at.year == y_ and c.created_at.month == m_)})
+        pf = {
+            'total': len(companies),
+            'status': status_counts.most_common(),
+            'active': status_counts.get('Active', 0),
+            'employees': Employee.query.count(),
+            'owners': Owner.query.count(),
+            'juris': juris_counts.most_common(),
+            'freezones': fz_counts.most_common(10),
+            'emirates': emirate_counts.most_common(),
+            'legal': legal_counts.most_common(),
+            'activities': activity_counts.most_common(10),
+            'activities_notset': sum(1 for c in companies if not (c.business_activity or '').strip()),
+            'buckets': buckets,
+            'dormant': dormant[:20], 'dormant_total': len(dormant),
+            'managers': managers,
+            'growth': growth, 'max_growth': max((g['count'] for g in growth), default=1) or 1,
+        }
+
     return render_template('analytics.html',
+        pf=pf,
         now=now, period=period, tab=tab,
         total_leads=total_leads, converted=len(converted), lost=len(lost),
         conversion_rate=conversion_rate,
