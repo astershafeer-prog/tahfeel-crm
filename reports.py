@@ -539,6 +539,53 @@ def export_finance_report():
 
 
 # ── 4. Task Report
+@reports_bp.route('/reports/enquiries/export')
+def export_enquiries_report():
+    g = _guard_sales_operations()  # Admin + Finance + Sales + Operations
+    if g: return g
+    import app as _a
+    db, Enquiry = _a.db, _a.Enquiry
+    df_d, dt_d, df, dt = _dates(request)
+    q = (db.session.query(Enquiry)
+         .filter(Enquiry.created_at >= df_d, Enquiry.created_at <= dt_d))
+    # Sales see their own enquiries (same scoping as the Enquiries page)
+    if session.get('role') == 'sales':
+        q = q.filter(Enquiry.assigned_to == session.get('user_id'))
+    items = q.order_by(Enquiry.created_at.desc()).all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Enquiry Report"
+    cols = ['#', 'Enquiry Date', 'Name', 'Phone', 'Enquiry', 'Service',
+            'Assigned To', 'Next Follow-up', 'Status', 'Resolved On',
+            'Days to Resolve', 'Converted to Lead']
+    _title_block(ws, "ENQUIRY REPORT", df, dt, len(cols))
+    _headers(ws, cols)
+
+    rows, resolved_cnt, converted_cnt = [], 0, 0
+    for i, e in enumerate(items, 1):
+        if e.status == 'Resolved': resolved_cnt += 1
+        if e.converted_lead_id: converted_cnt += 1
+        days = (e.resolved_at - e.created_at).days if (e.resolved_at and e.created_at) else ''
+        rows.append([
+            i, e.created_at.strftime('%d/%m/%Y %H:%M') if e.created_at else '',
+            e.name or '', e.phone or '', e.enquiry or '', e.service or '',
+            e.assignee.name if e.assignee else '—',
+            e.remind_date.strftime('%d/%m/%Y') if e.remind_date else '',
+            e.status or '', e.resolved_at.strftime('%d/%m/%Y') if e.resolved_at else '',
+            days, f'Lead #{e.converted_lead_id}' if e.converted_lead_id else '',
+        ])
+    er = _write_rows(ws, rows, num_cols={11})
+    ws.merge_cells(start_row=er, start_column=1, end_row=er, end_column=len(cols))
+    c = ws.cell(row=er, column=1,
+                value=(f"Total: {len(items)}    Open: {len(items) - resolved_cnt}    "
+                       f"Resolved: {resolved_cnt}    Converted to lead: {converted_cnt}"))
+    _tot(c)
+    _col_widths(ws, [4, 16, 18, 15, 45, 16, 16, 13, 11, 12, 10, 14])
+    _freeze(ws)
+    _filter(ws, len(cols))
+    return _respond(wb, f"Enquiry_Report_{df}_{dt}.xlsx")
+
 @reports_bp.route('/reports/tasks/export')
 def export_task_report():
     g = _guard_sales_operations()  # Sales + Operations + Admin + Finance

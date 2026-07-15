@@ -94,6 +94,78 @@ def _send(payload):
         print(f'[WA] Send error: {e}')
         return None
 
+# ── Number health: quality rating + messaging tier (from Meta, cached) ───────
+_QUALITY_CACHE = {'t': 0.0, 'data': None}
+TIER_LIMITS = {'TIER_50': 50, 'TIER_250': 250, 'TIER_1K': 1000, 'TIER_10K': 10000,
+               'TIER_100K': 100000, 'TIER_UNLIMITED': None}
+
+def number_quality(force=False):
+    """Our WhatsApp number's quality rating (GREEN/YELLOW/RED) and daily
+    business-initiated conversation tier, straight from Meta. Cached 10 minutes
+    so the inbox doesn't hit the Graph API on every page load. On fetch failure
+    the last known value is returned (never raises)."""
+    import time
+    if not force and _QUALITY_CACHE['data'] is not None and time.time() - _QUALITY_CACHE['t'] < 600:
+        return _QUALITY_CACHE['data']
+    token = _cfg('WA_ACCESS_TOKEN'); phone_id = _cfg('WA_PHONE_NUMBER_ID')
+    if not token or not phone_id:
+        return None
+    try:
+        r = requests.get(f'{GRAPH}/{phone_id}',
+                         params={'fields': 'quality_rating,messaging_limit_tier',
+                                 'access_token': token}, timeout=8)
+        d = r.json() if r.status_code < 300 else {}
+        if not d or 'error' in d:
+            print(f'[WA] quality fetch failed: {str(d)[:200]}')
+            return _QUALITY_CACHE['data']
+        tier = d.get('messaging_limit_tier') or ''
+        data = {'quality': (d.get('quality_rating') or 'UNKNOWN').upper(),
+                'tier': tier, 'tier_limit': TIER_LIMITS.get(tier)}
+        _QUALITY_CACHE['data'], _QUALITY_CACHE['t'] = data, time.time()
+        return data
+    except Exception as e:
+        print(f'[WA] quality fetch error: {e}')
+        return _QUALITY_CACHE['data']
+
+_COST_CACHE = {'t': 0.0, 'data': None}
+
+def conversation_costs(force=False):
+    """This month's WhatsApp conversation count + approximate cost (USD) from
+    Meta's conversation analytics. Needs the WA_WABA_ID env var (the WhatsApp
+    Business Account id); returns None until it is set. Cached 1 hour."""
+    import time
+    waba = _cfg('WA_WABA_ID'); token = _cfg('WA_ACCESS_TOKEN')
+    if not waba or not token:
+        return None
+    if not force and _COST_CACHE['data'] is not None and time.time() - _COST_CACHE['t'] < 3600:
+        return _COST_CACHE['data']
+    try:
+        now = now_dubai()
+        start = int(datetime(now.year, now.month, 1).timestamp())
+        end = int(datetime.now().timestamp())
+        field = (f'conversation_analytics.start({start}).end({end}).granularity(MONTHLY)'
+                 f'.phone_numbers([]).dimensions(["CONVERSATION_CATEGORY"])')
+        r = requests.get(f'{GRAPH}/{waba}', params={'fields': field, 'access_token': token}, timeout=8)
+        d = r.json() if r.status_code < 300 else {}
+        if not d or 'error' in d:
+            print(f'[WA] cost fetch failed: {str(d)[:200]}')
+            return _COST_CACHE['data']
+        pts = []
+        for bucket in ((d.get('conversation_analytics') or {}).get('data') or []):
+            pts += bucket.get('data_points') or []
+        by_cat = {}
+        for p in pts:
+            c = (p.get('conversation_category') or 'OTHER').title()
+            by_cat[c] = by_cat.get(c, 0) + (p.get('conversation') or 0)
+        data = {'conversations': sum(p.get('conversation') or 0 for p in pts),
+                'cost_usd': round(sum(p.get('cost') or 0 for p in pts), 2),
+                'by_category': by_cat}
+        _COST_CACHE['data'], _COST_CACHE['t'] = data, time.time()
+        return data
+    except Exception as e:
+        print(f'[WA] cost fetch error: {e}')
+        return _COST_CACHE['data']
+
 def send_text(to, body):
     """Free-form text — ONLY allowed inside the 24h customer-service window."""
     return _send({

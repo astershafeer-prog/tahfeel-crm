@@ -113,10 +113,23 @@
                 <button type="submit" style="font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;border:none;background:#1A3B8B;color:#fff;cursor:pointer;">➡ To Lead</button>
               </form>
               {% endif %}
+              <button type="button" onclick="var r=document.getElementById('dates-{{ e.id }}');r.style.display=(r.style.display==='none'?'table-row':'none');" title="Change enquiry / follow-up dates" style="font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;border:1px solid #CBD5E1;background:#fff;color:#475569;cursor:pointer;">📅 Dates</button>
               <form method="post" action="/enquiries/{{ e.id }}/delete" style="margin:0;" onsubmit="return confirm('Delete this enquiry?');">
                 <button type="submit" title="Delete" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;">🗑</button>
               </form>
             </div>
+          </td>
+        </tr>
+        <tr id="dates-{{ e.id }}" style="display:none;background:#F8FAFC;">
+          <td colspan="5" style="padding:8px 12px;border-top:1px dashed #E2E8F0;">
+            <form method="post" action="/enquiries/{{ e.id }}/dates" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+              <div><label style="display:block;font-size:11px;color:#64748b;">Enquiry date</label>
+                <input type="date" name="enquiry_date" value="{{ e.created_at.strftime('%Y-%m-%d') if e.created_at else '' }}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></div>
+              <div><label style="display:block;font-size:11px;color:#64748b;">Next follow-up (remind)</label>
+                <input type="date" name="remind_date" value="{{ e.remind_date.strftime('%Y-%m-%d') if e.remind_date else '' }}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></div>
+              <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 16px;">Save</button>
+              <button type="button" onclick="document.getElementById('dates-{{ e.id }}').style.display='none';" style="font-size:12px;padding:7px 12px;border-radius:6px;border:1px solid #CBD5E1;background:#fff;color:#64748b;cursor:pointer;">Cancel</button>
+            </form>
           </td>
         </tr>
         {% else %}

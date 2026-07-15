@@ -2114,6 +2114,28 @@ def enquiries_export():
                      as_attachment=True,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+@app.route('/enquiries/<int:eid>/dates', methods=['POST'])
+@login_required
+def enquiry_dates(eid):
+    """Change an enquiry's date and/or its next follow-up (remind) date."""
+    e = Enquiry.query.get_or_404(eid)
+    ed = (request.form.get('enquiry_date') or '').strip()
+    rd = (request.form.get('remind_date') or '').strip()
+    if ed:
+        try:
+            d = datetime.strptime(ed, '%Y-%m-%d').date()
+            # Keep the original logged time — only the day changes
+            e.created_at = datetime.combine(d, e.created_at.time() if e.created_at else now_dubai().time())
+        except ValueError:
+            pass
+    try:
+        e.remind_date = datetime.strptime(rd, '%Y-%m-%d').date() if rd else None
+    except ValueError:
+        pass
+    db.session.commit()
+    flash('Enquiry dates updated.')
+    return redirect(request.referrer or url_for('enquiries'))
+
 @app.route('/enquiries/<int:eid>/delete', methods=['POST'])
 @login_required
 def enquiry_delete(eid):
@@ -7539,8 +7561,34 @@ def _wa_health():
                               f'usually a lead whose number isn\'t on WhatsApp. Click "See why" for the exact reason.')
     else:
         level, msg = 'ok', 'WhatsApp sending is healthy.'
+    # Meta number quality + daily tier (+ our estimate of conversations used today)
+    quality = tier_limit = used_today = costs = None
+    try:
+        from whatsapp_webhook import number_quality, conversation_costs
+        nq = number_quality()
+        if nq:
+            quality, tier_limit = nq['quality'], nq['tier_limit']
+            # Estimate: distinct customers we STARTED conversations with (templates)
+            # in the last 24h — Meta's limit counts conversations, not messages.
+            used_today = db.session.query(WhatsAppMessage.wa_id).filter(
+                WhatsAppMessage.direction == 'out',
+                WhatsAppMessage.msg_type == 'template',
+                WhatsAppMessage.created_at >= now_dubai() - timedelta(hours=24)
+            ).distinct().count()
+            # Number quality trumps the send-failure heuristics in the banner
+            if quality == 'RED':
+                level = 'down'
+                msg = ('Meta rates this number\'s quality as RED — messaging limits can be '
+                       'reduced or the number blocked. Pause broadcasts and review recent sends. ' + msg)
+            elif quality == 'YELLOW' and level == 'ok':
+                level, msg = 'warn', ('Meta rates this number\'s quality as YELLOW (some recipients '
+                                      'reported or blocked messages). Ease off marketing sends until it recovers.')
+        costs = conversation_costs()
+    except Exception as e:
+        print(f'[WA] health extras error: {e}')
     return {'level': level, 'msg': msg, 'bot_on': bot_on, 'configured': configured,
-            'failed': failed, 'total': total, 'fail_id': fail_id}
+            'failed': failed, 'total': total, 'fail_id': fail_id,
+            'quality': quality, 'tier_limit': tier_limit, 'used_today': used_today, 'costs': costs}
 
 @app.route('/whatsapp/<wa_id>')
 @login_required
