@@ -5,6 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tahfeel — Enquiries</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <style>
+    .eq-kpi{background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+    .eq-kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+    .eq-kpi-val{font-size:24px;font-weight:800;}
+    .eq-card{background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+    .eq-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;}
+    .act-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:7px;border:1px solid #E2E8F0;background:#fff;color:#475569;cursor:pointer;text-decoration:none;white-space:nowrap;line-height:1.2;transition:background .12s;}
+    .act-btn:hover{background:#F8FAFC;}
+    .eq-row{border-top:1px solid #EEF2F7;transition:background .12s;}
+    .eq-row:hover{background:#F8FAFC;}
+    .eq-row.due{background:#FFF9F2;}
+    .eq-row.due:hover{background:#FFF3E4;}
+    .av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+    .eq-input{padding:8px 10px;border:1px solid #CBD5E1;border-radius:7px;font-size:13px;background:#fff;}
+    .eq-label{display:block;font-size:11px;color:#64748B;font-weight:600;margin-bottom:3px;}
+  </style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
@@ -16,53 +32,55 @@
     {% endwith %}
 
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-      <h2 style="color:#0F2660;">❓ Enquiries</h2>
+      <div>
+        <h2 style="color:#0F2660;margin-bottom:2px;">❓ Enquiries</h2>
+        <div style="font-size:12px;color:#94A3B8;">Quick-log a question or callback, set a reminder, then resolve it or convert it to a lead.</div>
+      </div>
       <a href="/enquiries/export" class="btn-primary" style="background:#1a8d4e;border-color:#1a8d4e;text-decoration:none;">⬇ Export to Excel</a>
     </div>
-    <p style="font-size:13px;color:#64748b;margin-bottom:14px;">Quick-log a question or callback, set a reminder, then resolve it or convert it to a lead.</p>
 
     <!-- Stats -->
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">
-      {% set cards = [('Total', stats.total, '#0F2660'), ('Open', stats.open, '#185FA5'), ('Due now', stats.due, '#B45309'), ('Resolved', stats.resolved, '#0F6E56'), ('Avg resolve', stats.avg_res, '#6B21A8')] %}
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0;">
+      {% set cards = [('Total', stats.total, '#133E87'), ('Open', stats.open, '#3B82F6'), ('Due now', stats.due, '#EF4444'), ('Resolved', stats.resolved, '#10B981'), ('Avg resolve', stats.avg_res, '#8B5CF6')] %}
       {% for label, val, col in cards %}
-      <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;padding:12px;">
-        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">{{ label }}</div>
-        <div style="font-size:20px;font-weight:700;color:{{ col }};">{{ val }}</div>
+      <div class="eq-kpi" style="border-top:4px solid {{ col }};">
+        <div class="eq-kpi-label">{{ label }}</div>
+        <div class="eq-kpi-val" style="color:{{ col }};">{{ val }}</div>
       </div>
       {% endfor %}
     </div>
 
     <!-- Breakdown (what kind / who) -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-      <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div class="eq-card" style="padding:14px 16px;">
         <div style="font-size:12px;font-weight:700;color:#0F2660;margin-bottom:8px;">By type / service</div>
         {% for name, cnt in by_service %}
-        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;border-bottom:1px solid #f1f5f9;"><span style="color:#475569;">{{ name }}</span><b style="color:#1A3B8B;">{{ cnt }}</b></div>
-        {% else %}<div style="color:#94a3b8;font-size:12px;">No enquiries yet.</div>{% endfor %}
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid #F1F5F9;"><span style="color:#475569;">{{ name }}</span><b style="color:#1A3B8B;">{{ cnt }}</b></div>
+        {% else %}<div style="color:#94A3B8;font-size:12px;">No enquiries yet.</div>{% endfor %}
       </div>
-      <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div class="eq-card" style="padding:14px 16px;">
         <div style="font-size:12px;font-weight:700;color:#0F2660;margin-bottom:8px;">By staff</div>
         {% for name, cnt in by_staff %}
-        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;border-bottom:1px solid #f1f5f9;"><span style="color:#475569;">{{ name }}</span><b style="color:#1A3B8B;">{{ cnt }}</b></div>
-        {% else %}<div style="color:#94a3b8;font-size:12px;">—</div>{% endfor %}
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid #F1F5F9;"><span style="color:#475569;">{{ name }}</span><b style="color:#1A3B8B;">{{ cnt }}</b></div>
+        {% else %}<div style="color:#94A3B8;font-size:12px;">—</div>{% endfor %}
       </div>
     </div>
 
     <!-- Quick add -->
-    <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:16px;">
+    <div class="eq-card" style="padding:14px 16px;margin-bottom:16px;border-top:4px solid #1A3B8B;">
       <div style="font-size:13px;font-weight:700;color:#0F2660;margin-bottom:10px;">＋ Log a new enquiry</div>
-      <form method="post" action="/enquiries/add" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-        <div><label style="display:block;font-size:11px;color:#64748b;">Name</label><input type="text" name="name" placeholder="Caller name" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:150px;"></div>
-        <div><label style="display:block;font-size:11px;color:#64748b;">Phone</label><input type="text" name="phone" placeholder="Phone" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:140px;"></div>
-        <div style="flex:1;min-width:220px;"><label style="display:block;font-size:11px;color:#64748b;">Enquiry <span style="color:#DC2626;">*</span></label><input type="text" name="enquiry" required placeholder="e.g. Family visa without residence proof?" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;"></div>
-        <div><label style="display:block;font-size:11px;color:#64748b;">Service</label><input type="text" name="service" placeholder="optional" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:120px;"></div>
-        <div><label style="display:block;font-size:11px;color:#64748b;">Assign to</label>
-          <select name="assigned_to" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+      <form method="post" action="/enquiries/add" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div><label class="eq-label">Name</label><input type="text" name="name" placeholder="Caller name" class="eq-input" style="width:150px;"></div>
+        <div><label class="eq-label">Phone</label><input type="text" name="phone" placeholder="Phone" class="eq-input" style="width:140px;"></div>
+        <div style="flex:1;min-width:220px;"><label class="eq-label">Enquiry <span style="color:#DC2626;">*</span></label><input type="text" name="enquiry" required placeholder="e.g. Family visa without residence proof?" class="eq-input" style="width:100%;box-sizing:border-box;"></div>
+        <div><label class="eq-label">Service</label><input type="text" name="service" placeholder="optional" class="eq-input" style="width:120px;"></div>
+        <div><label class="eq-label">Assign to</label>
+          <select name="assigned_to" class="eq-input">
             <option value="">— Me —</option>
             {% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
           </select>
         </div>
-        <div><label style="display:block;font-size:11px;color:#64748b;">Remind on</label><input type="date" name="remind_date" value="{{ tomorrow }}" style="padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;"></div>
+        <div><label class="eq-label">Remind on</label><input type="date" name="remind_date" value="{{ tomorrow }}" class="eq-input"></div>
         <button type="submit" class="btn-primary">Log enquiry</button>
       </form>
     </div>
@@ -70,70 +88,89 @@
     <!-- Filter tabs -->
     <div style="display:flex;gap:6px;margin-bottom:12px;">
       {% for key, label in [('Open','Open'), ('Resolved','Resolved'), ('All','All')] %}
-      <a href="/enquiries?status={{ key }}" style="text-decoration:none;font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;{% if flt==key or (key=='All' and flt not in ['Open','Resolved']) %}background:#1A3B8B;color:#fff;{% else %}background:#fff;color:#475569;border:1px solid #e2e8f0;{% endif %}">{{ label }}</a>
+      <a href="/enquiries?status={{ key }}" style="text-decoration:none;font-size:12px;font-weight:600;padding:6px 16px;border-radius:20px;{% if flt==key or (key=='All' and flt not in ['Open','Resolved']) %}background:#1A3B8B;color:#fff;{% else %}background:#fff;color:#475569;border:1px solid #E2E8F0;{% endif %}">{{ label }}</a>
       {% endfor %}
     </div>
 
     <!-- List -->
-    <div style="background:#fff;border:0.5px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+    <div class="eq-card" style="overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr style="background:#f8fafc;color:#64748b;">
-          <th style="text-align:left;padding:10px;">Enquiry</th>
-          <th style="text-align:left;padding:10px;width:150px;">Contact</th>
-          <th style="text-align:left;padding:10px;width:120px;">Assigned</th>
-          <th style="text-align:left;padding:10px;width:110px;">Remind</th>
-          <th style="text-align:left;padding:10px;width:220px;">Actions</th>
+        <thead><tr style="background:#F8FAFC;">
+          <th style="text-align:left;padding:10px 14px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Enquiry</th>
+          <th style="text-align:left;padding:10px;width:170px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Contact</th>
+          <th style="text-align:left;padding:10px;width:150px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Assigned</th>
+          <th style="text-align:left;padding:10px;width:110px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Follow-up</th>
+          <th style="text-align:left;padding:10px 14px;width:250px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Actions</th>
         </tr></thead>
         <tbody>
+        {% set av_colors = ['#1A3B8B','#10B981','#8B5CF6','#F59E0B','#EF4444','#06B6D4','#EC4899'] %}
         {% for e in items %}
         {% set due = e.status=='Open' and e.remind_date and e.remind_date <= now.date() %}
-        <tr style="border-top:1px solid #eef2f7;{% if due %}background:#FFF7ED;{% endif %}">
-          <td style="padding:10px;">
-            <div style="color:#1e293b;">{{ e.enquiry }}</div>
-            <div style="font-size:11px;color:#94a3b8;margin-top:2px;">
-              {% if e.service %}{{ e.service }} · {% endif %}logged {{ e.created_at.strftime('%d %b') }}{% if e.created_by %} by {{ e.created_by }}{% endif %}
-              {% if e.status=='Resolved' %} · <span style="color:#0F6E56;font-weight:600;">✓ Resolved</span>{% endif %}
+        <tr class="eq-row {% if due %}due{% endif %}">
+          <td style="padding:12px 14px;">
+            <div style="color:#1E293B;font-weight:600;">{{ e.enquiry }}</div>
+            <div style="font-size:11px;color:#94A3B8;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              {% if e.service %}<span class="eq-badge" style="background:#EFF6FF;color:#1D4ED8;">{{ e.service }}</span>{% endif %}
+              {% if e.status=='Resolved' %}<span class="eq-badge" style="background:#ECFDF5;color:#047857;">✓ Resolved</span>
+              {% elif due %}<span class="eq-badge" style="background:#FEF2F2;color:#B91C1C;">Due for follow-up</span>
+              {% else %}<span class="eq-badge" style="background:#F1F5F9;color:#64748B;">Open</span>{% endif %}
+              <span>logged {{ e.created_at.strftime('%d %b') }}{% if e.created_by %} by {{ e.created_by }}{% endif %}</span>
             </div>
           </td>
-          <td style="padding:10px;">
+          <td style="padding:12px 10px;">
             <div style="font-weight:600;color:#0F2660;">{{ e.name or '—' }}</div>
-            {% if e.phone %}<div style="font-size:11px;color:#64748b;">{{ e.phone }}</div>{% endif %}
+            {% if e.phone %}
+            <div style="font-size:11px;color:#64748B;display:flex;align-items:center;gap:6px;margin-top:2px;">{{ e.phone }}
+              <a href="https://wa.me/{{ e.phone|replace(' ','')|replace('+','') }}" target="_blank" title="Open WhatsApp chat" style="background:#25D366;color:#fff;font-size:9px;font-weight:700;padding:1px 7px;border-radius:10px;text-decoration:none;">WA</a>
+            </div>
+            {% endif %}
           </td>
-          <td style="padding:10px;color:#475569;">{{ e.assignee.name if e.assignee else '—' }}</td>
-          <td style="padding:10px;">{% if e.remind_date %}<span style="color:{{ '#DC2626' if due else '#64748b' }};font-weight:{{ '700' if due else '400' }};">{{ e.remind_date.strftime('%d %b') }}{% if due %} · due{% endif %}</span>{% else %}<span style="color:#cbd5e1;">—</span>{% endif %}</td>
-          <td style="padding:10px;">
-            <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <td style="padding:12px 10px;">
+            {% if e.assignee %}
+            <div style="display:flex;align-items:center;gap:7px;">
+              <span class="av" style="background:{{ av_colors[e.assignee.id % 7] }};">{{ e.assignee.name[:2].upper() }}</span>
+              <span style="font-size:12px;color:#475569;">{{ e.assignee.name }}</span>
+            </div>
+            {% else %}<span style="color:#CBD5E1;">—</span>{% endif %}
+          </td>
+          <td style="padding:12px 10px;">
+            {% if e.remind_date %}
+            <span class="eq-badge" style="{% if due %}background:#FEF2F2;color:#B91C1C;{% else %}background:#F1F5F9;color:#475569;{% endif %}font-size:11px;">{{ e.remind_date.strftime('%d %b') }}{% if due %} · due{% endif %}</span>
+            {% else %}<span style="color:#CBD5E1;">—</span>{% endif %}
+          </td>
+          <td style="padding:12px 14px;">
+            <div style="display:flex;gap:6px;align-items:center;">
               {% if e.converted_lead_id %}
-              <a href="/leads/{{ e.converted_lead_id }}" style="font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;background:#E6EEFF;color:#1A3B8B;text-decoration:none;">◉ View lead</a>
+              <a href="/leads/{{ e.converted_lead_id }}" class="act-btn" style="background:#E6EEFF;border-color:#C7D8FF;color:#1A3B8B;">◉ View lead</a>
               {% else %}
               <form method="post" action="/enquiries/{{ e.id }}/resolve" style="margin:0;">
-                <button type="submit" style="font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;border:1px solid {{ '#CBD5E1' if e.status=='Resolved' else '#16A34A' }};background:{{ '#F1F5F9' if e.status=='Resolved' else '#fff' }};color:{{ '#64748B' if e.status=='Resolved' else '#16A34A' }};cursor:pointer;">{{ '↩ Reopen' if e.status=='Resolved' else '✓ Resolve' }}</button>
+                <button type="submit" class="act-btn" title="{{ 'Reopen this enquiry' if e.status=='Resolved' else 'Mark resolved' }}" style="{% if e.status!='Resolved' %}border-color:#A7F3D0;color:#047857;{% endif %}">{{ '↩ Reopen' if e.status=='Resolved' else '✓ Resolve' }}</button>
               </form>
               <form method="post" action="/enquiries/{{ e.id }}/convert-lead" style="margin:0;" onsubmit="return confirm('Create a lead from this enquiry?');">
-                <button type="submit" style="font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;border:none;background:#1A3B8B;color:#fff;cursor:pointer;">➡ To Lead</button>
+                <button type="submit" class="act-btn" title="Convert to a lead" style="background:#1A3B8B;border-color:#1A3B8B;color:#fff;">➡ Lead</button>
               </form>
               {% endif %}
-              <button type="button" onclick="var r=document.getElementById('dates-{{ e.id }}');r.style.display=(r.style.display==='none'?'table-row':'none');" title="Change enquiry / follow-up dates" style="font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;border:1px solid #CBD5E1;background:#fff;color:#475569;cursor:pointer;">📅 Dates</button>
+              <button type="button" class="act-btn" title="Change enquiry / follow-up dates" onclick="var r=document.getElementById('dates-{{ e.id }}');r.style.display=(r.style.display==='none'?'table-row':'none');">📅</button>
               <form method="post" action="/enquiries/{{ e.id }}/delete" style="margin:0;" onsubmit="return confirm('Delete this enquiry?');">
-                <button type="submit" title="Delete" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;">🗑</button>
+                <button type="submit" class="act-btn" title="Delete" style="border-color:#FECACA;background:#FEF2F2;color:#B91C1C;">🗑</button>
               </form>
             </div>
           </td>
         </tr>
         <tr id="dates-{{ e.id }}" style="display:none;background:#F8FAFC;">
-          <td colspan="5" style="padding:8px 12px;border-top:1px dashed #E2E8F0;">
+          <td colspan="5" style="padding:10px 14px;border-top:1px dashed #E2E8F0;">
             <form method="post" action="/enquiries/{{ e.id }}/dates" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-              <div><label style="display:block;font-size:11px;color:#64748b;">Enquiry date</label>
-                <input type="date" name="enquiry_date" value="{{ e.created_at.strftime('%Y-%m-%d') if e.created_at else '' }}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></div>
-              <div><label style="display:block;font-size:11px;color:#64748b;">Next follow-up (remind)</label>
-                <input type="date" name="remind_date" value="{{ e.remind_date.strftime('%Y-%m-%d') if e.remind_date else '' }}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></div>
+              <div><label class="eq-label">Enquiry date</label>
+                <input type="date" name="enquiry_date" value="{{ e.created_at.strftime('%Y-%m-%d') if e.created_at else '' }}" class="eq-input" style="font-size:12px;padding:6px 8px;"></div>
+              <div><label class="eq-label">Next follow-up (remind)</label>
+                <input type="date" name="remind_date" value="{{ e.remind_date.strftime('%Y-%m-%d') if e.remind_date else '' }}" class="eq-input" style="font-size:12px;padding:6px 8px;"></div>
               <button type="submit" class="btn-primary" style="font-size:12px;padding:7px 16px;">Save</button>
-              <button type="button" onclick="document.getElementById('dates-{{ e.id }}').style.display='none';" style="font-size:12px;padding:7px 12px;border-radius:6px;border:1px solid #CBD5E1;background:#fff;color:#64748b;cursor:pointer;">Cancel</button>
+              <button type="button" class="act-btn" onclick="document.getElementById('dates-{{ e.id }}').style.display='none';">Cancel</button>
             </form>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="padding:28px;text-align:center;color:#94a3b8;">No enquiries here yet. Log one above.</td></tr>
+        <tr><td colspan="5" style="padding:32px;text-align:center;color:#94A3B8;">No enquiries here yet. Log one above.</td></tr>
         {% endfor %}
         </tbody>
       </table>
