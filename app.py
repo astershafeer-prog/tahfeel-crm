@@ -969,55 +969,6 @@ def inject_birthdays():
         print(f'Birthday error: {e}')
     return {'birthdays_today': []}
 
-# ── Meta Ads spend → lead cost (dormant until env vars are set) ───────────────
-_ADS_CACHE = {}
-
-def meta_ads_configured():
-    return bool(os.environ.get('META_ADS_TOKEN') and os.environ.get('META_AD_ACCOUNT_ID'))
-
-def meta_ads_spend(start_dt, end_dt):
-    """Per-campaign Meta ad spend for a date range via the Marketing API.
-    Needs META_ADS_TOKEN (system-user token with ads_read) + META_AD_ACCOUNT_ID.
-    Returns {'campaigns': {name: spend}, 'total': x, 'currency': 'AED'} or None
-    when not configured / fetch fails. Cached 1 hour per date range."""
-    import time, json as _json, requests as _rq
-    token = os.environ.get('META_ADS_TOKEN')
-    acct = (os.environ.get('META_AD_ACCOUNT_ID') or '').strip()
-    if not token or not acct:
-        return None
-    if not acct.startswith('act_'):
-        acct = 'act_' + acct
-    key = (acct, start_dt.strftime('%Y-%m-%d'), end_dt.strftime('%Y-%m-%d'))
-    hit = _ADS_CACHE.get(key)
-    if hit and time.time() - hit[0] < 3600:
-        return hit[1]
-    try:
-        r = _rq.get(f'https://graph.facebook.com/v19.0/{acct}/insights',
-                    params={'level': 'campaign', 'fields': 'campaign_name,spend',
-                            'time_range': _json.dumps({'since': key[1], 'until': key[2]}),
-                            'limit': 200, 'access_token': token}, timeout=10)
-        d = r.json()
-        if 'error' in d:
-            print(f'[ADS] insights failed: {str(d)[:250]}')
-            return hit[1] if hit else None
-        camps = {}
-        for row in d.get('data', []):
-            name = row.get('campaign_name') or '(unnamed)'
-            camps[name] = camps.get(name, 0) + float(row.get('spend') or 0)
-        currency = ''
-        try:
-            rc = _rq.get(f'https://graph.facebook.com/v19.0/{acct}',
-                         params={'fields': 'currency', 'access_token': token}, timeout=8)
-            currency = (rc.json() or {}).get('currency') or ''
-        except Exception:
-            pass
-        data = {'campaigns': camps, 'total': round(sum(camps.values()), 2), 'currency': currency}
-        _ADS_CACHE[key] = (time.time(), data)
-        return data
-    except Exception as e:
-        print(f'[ADS] insights error: {e}')
-        return hit[1] if hit else None
-
 def _next_birthday_info(dob, today):
     """(next_birthday_date, days_until, age_turning) for a date of birth."""
     try:
@@ -7177,51 +7128,6 @@ def export_full_backup():
         return redirect(url_for('admin_panel'))
 
 
-@app.route('/ads-check')
-@login_required
-@admin_required
-def ads_check():
-    """Admin diagnostic: shows exactly what Meta says when we ask for ad spend,
-    so a token/permission/account problem is visible instead of a generic error."""
-    import json as _json, requests as _rq
-    token = os.environ.get('META_ADS_TOKEN')
-    acct = (os.environ.get('META_AD_ACCOUNT_ID') or '').strip()
-    out = ['<h2 style="font-family:sans-serif">Meta Ads connection check</h2>',
-           '<pre style="font-family:monospace;font-size:13px;background:#f6f8fa;padding:16px;'
-           'border-radius:8px;white-space:pre-wrap;line-height:1.6;">']
-    out.append(f"META_ADS_TOKEN set:      {'YES (' + str(len(token)) + ' chars)' if token else 'NO — missing'}")
-    out.append(f"META_AD_ACCOUNT_ID set:  {acct if acct else 'NO — missing'}")
-    if not token or not acct:
-        out.append("\n>> Add the missing Railway variable(s), then reload this page.")
-        return ''.join(out) + '</pre>'
-    if not acct.startswith('act_'):
-        acct = 'act_' + acct
-        out.append(f"(using {acct})")
-    out.append("\n--- Test 1: is the token valid? (who owns it) ---")
-    try:
-        r = _rq.get('https://graph.facebook.com/v19.0/me',
-                    params={'access_token': token}, timeout=10)
-        out.append(_json.dumps(r.json(), indent=2))
-    except Exception as e:
-        out.append(f"error: {e}")
-    out.append("\n--- Test 2: can it read this ad account's spend? ---")
-    try:
-        r = _rq.get(f'https://graph.facebook.com/v19.0/{acct}/insights',
-                    params={'level': 'campaign', 'fields': 'campaign_name,spend',
-                            'date_preset': 'this_month', 'limit': 5,
-                            'access_token': token}, timeout=10)
-        out.append(f"HTTP {r.status_code}")
-        out.append(_json.dumps(r.json(), indent=2))
-    except Exception as e:
-        out.append(f"error: {e}")
-    out.append("\n\nMeta error-code guide:")
-    out.append("  190  -> token invalid or expired (regenerate it)")
-    out.append("  100 / 'does not exist / cannot be loaded'")
-    out.append("       -> wrong ad account ID, OR the token's system user has no access to it")
-    out.append("  200 / 10 / 'permission'")
-    out.append("       -> token is missing ads_read, or the ad account isn't assigned to the system user")
-    return ''.join(out) + '</pre>'
-
 @app.route('/analytics')
 @login_required
 def analytics():
@@ -7451,45 +7357,6 @@ def analytics():
     lead_quality = {'genuine': q_genuine, 'junk': q_junk, 'unreachable': q_unreach,
                     'not_reviewed': total_leads - (q_genuine + q_junk + q_unreach), 'total': total_leads}
 
-    # ── Meta Ads lead cost (Leads tab, admin/finance only; dormant until env vars set) ──
-    ads = None
-    ads_configured = meta_ads_configured()
-    if tab == 'sales' and not scoped and ads_configured:
-        spend = meta_ads_spend(start_dt, end_dt)
-        if spend:
-            by_camp = {}
-            no_campaign = 0
-            for l in all_leads:
-                if not l.campaign:
-                    no_campaign += 1
-                    continue
-                d = by_camp.setdefault(l.campaign, {'leads': 0, 'genuine': 0, 'converted': 0})
-                d['leads'] += 1
-                if l.genuine == 'Genuine':
-                    d['genuine'] += 1
-                if l.status in won_s:
-                    d['converted'] += 1
-            ads_rows = []
-            # Campaigns with spend (even if they produced no CRM leads — that's worth seeing)
-            for camp, sp in sorted(spend['campaigns'].items(), key=lambda kv: -kv[1]):
-                st = by_camp.pop(camp, {'leads': 0, 'genuine': 0, 'converted': 0})
-                ads_rows.append({'campaign': camp, 'spend': round(sp, 2), **st,
-                                 'cpl': round(sp / st['leads'], 2) if st['leads'] else None,
-                                 'cpg': round(sp / st['genuine'], 2) if st['genuine'] else None,
-                                 'cpc': round(sp / st['converted'], 2) if st['converted'] else None})
-            # Campaigns that produced leads in the period but had no spend rows
-            for camp, st in sorted(by_camp.items(), key=lambda kv: -kv[1]['leads']):
-                ads_rows.append({'campaign': camp, 'spend': 0, **st,
-                                 'cpl': None, 'cpg': None, 'cpc': None})
-            t_leads = sum(r['leads'] for r in ads_rows)
-            t_gen = sum(r['genuine'] for r in ads_rows)
-            t_conv = sum(r['converted'] for r in ads_rows)
-            ads = {'rows': ads_rows, 'total_spend': spend['total'], 'currency': spend['currency'],
-                   'no_campaign': no_campaign, 'leads': t_leads, 'genuine': t_gen, 'converted': t_conv,
-                   'cpl': round(spend['total'] / t_leads, 2) if t_leads else None,
-                   'cpg': round(spend['total'] / t_gen, 2) if t_gen else None,
-                   'cpc': round(spend['total'] / t_conv, 2) if t_conv else None}
-
     # ── Company portfolio (snapshot of the whole client base — NOT period-filtered) ──
     pf = None
     if tab == 'companies':
@@ -7566,7 +7433,7 @@ def analytics():
         }
 
     return render_template('analytics.html',
-        pf=pf, ads=ads, ads_configured=ads_configured,
+        pf=pf,
         now=now, period=period, tab=tab,
         total_leads=total_leads, converted=len(converted), lost=len(lost),
         conversion_rate=conversion_rate,
