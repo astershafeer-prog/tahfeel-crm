@@ -7021,7 +7021,18 @@ def check_birthdays():
 @login_required
 def invoice_generator():
     services = [s.name for s in Service.query.order_by(Service.name).all()]
-    return render_template('invoice_generator.html', services=services)
+    # Existing customers for the "pick a saved customer" dropdown (auto-fills Bill To)
+    cust_rows = Customer.query.order_by(Customer.name).all()
+    customers = [{
+        'id': c.id,
+        'name': c.contact_person or c.name or '',
+        'company': (c.name if c.customer_type == 'Company' else (c.company or '')) or '',
+        'phone': c.mobile or c.phone or c.whatsapp or c.phone2 or '',
+        'email': c.email or '',
+        'address': c.address or '',
+        'trn': '',
+    } for c in cust_rows]
+    return render_template('invoice_generator.html', services=services, customers=customers)
    
 @app.route('/admin/backup/export')
 @login_required

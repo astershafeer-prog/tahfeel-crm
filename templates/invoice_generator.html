@@ -136,6 +136,11 @@
       </div>
       <div class="inv-card purple">
         <h3>Bill To</h3>
+        <div class="inv-row"><div class="inv-ff"><label>Pick a saved customer <span class="opt">(optional — auto-fills below)</span></label>
+          <select id="invPick" onchange="fillCustomer('inv', this.value)" style="width:100%;">
+            <option value="">— Type manually or choose a saved customer —</option>
+            {% for c in customers %}<option value="{{ c.id }}">{{ c.name }}{% if c.company and c.company != c.name %} — {{ c.company }}{% endif %}{% if c.phone %} · {{ c.phone }}{% endif %}</option>{% endfor %}
+          </select></div></div>
         <div class="inv-row c2">
           <div class="inv-ff"><label>Customer Name <span class="req">*</span></label><input type="text" id="invCustName" placeholder="Full name"></div>
           <div class="inv-ff"><label>Company <span class="opt">(optional)</span></label><input type="text" id="invCustCo" placeholder="Company name"></div>
@@ -212,6 +217,11 @@
       </div>
       <div class="inv-card purple">
         <h3>Customer Details</h3>
+        <div class="inv-row"><div class="inv-ff"><label>Pick a saved customer <span class="opt">(optional — auto-fills below)</span></label>
+          <select id="invsPick" onchange="fillCustomer('invs', this.value)" style="width:100%;">
+            <option value="">— Type manually or choose a saved customer —</option>
+            {% for c in customers %}<option value="{{ c.id }}">{{ c.name }}{% if c.company and c.company != c.name %} — {{ c.company }}{% endif %}{% if c.phone %} · {{ c.phone }}{% endif %}</option>{% endfor %}
+          </select></div></div>
         <div class="inv-row"><div class="inv-ff"><label>Customer Name</label><input type="text" id="invsCustName" placeholder="Full name or company name"></div></div>
         <div class="inv-row c2">
           <div class="inv-ff"><label>Email <span class="opt">(optional)</span></label><input type="email" id="invsCustEmail" placeholder="customer@email.com"></div>
@@ -287,6 +297,11 @@
       </div>
       <div class="inv-card purple">
         <h3>Bill To</h3>
+        <div class="inv-row"><div class="inv-ff"><label>Pick a saved customer <span class="opt">(optional — auto-fills below)</span></label>
+          <select id="qtPick" onchange="fillCustomer('qt', this.value)" style="width:100%;">
+            <option value="">— Type manually or choose a saved customer —</option>
+            {% for c in customers %}<option value="{{ c.id }}">{{ c.name }}{% if c.company and c.company != c.name %} — {{ c.company }}{% endif %}{% if c.phone %} · {{ c.phone }}{% endif %}</option>{% endfor %}
+          </select></div></div>
         <div class="inv-row c2">
           <div class="inv-ff"><label>Customer Name <span class="req">*</span></label><input type="text" id="qtCustName" placeholder="Full name"></div>
           <div class="inv-ff"><label>Company <span class="opt">(optional)</span></label><input type="text" id="qtCustCo" placeholder="Company name"></div>
@@ -360,6 +375,25 @@
 
 <script>
 const services = {{ services|tojson }};
+const savedCustomers = {{ customers|tojson }};
+// Auto-fill the Bill To / Customer fields from a saved customer.
+// Only sets fields that exist for that document type, and won't wipe a field
+// the customer record doesn't have (so partial records don't blank your typing).
+function fillCustomer(prefix, id){
+  if(!id) return;
+  var c = savedCustomers.find(function(x){ return String(x.id) === String(id); });
+  if(!c) return;
+  function set(suffix, val){
+    var el = document.getElementById(prefix + suffix);
+    if(el && val) el.value = val;
+  }
+  set('CustName', c.name);
+  set('CustCo', c.company);
+  set('CustPhone', c.phone);
+  set('CustEmail', c.email);
+  set('CustAddr', c.address);
+  set('CustTrn', c.trn);
+}
 let invRowN=0, invsRowN=0, qtRowN=0, remN=0;
 const LOGO='/static/img/logo.jpg';
 const COVER='/static/img/quotation/cover.jpeg';
