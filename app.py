@@ -7560,7 +7560,18 @@ def _wa_health():
     total = len(recent)
     failed = sum(1 for m in recent if (m.status or '') == 'failed')
     fail_id = max((m.id for m in recent if (m.status or '') == 'failed'), default=0)
-    if not configured:
+    # Balance-empty detection: Meta rejects sends with a payment error (code 131042
+    # or a message mentioning payment/funds) when the prepaid WhatsApp balance runs
+    # out. That's the clearest "recharge now" signal Meta gives, so surface it loudly.
+    def _is_payment_err(m):
+        e = (m.error or '').lower()
+        return '131042' in e or 'payment' in e or 'insufficient' in e or 'funds' in e or 'balance' in e
+    balance_empty = any((m.status or '') == 'failed' and _is_payment_err(m) for m in recent)
+    if balance_empty:
+        level, msg = 'down', ('WhatsApp balance looks EMPTY — Meta is rejecting sends with a payment '
+                              'error. Top up your WhatsApp balance in Meta WhatsApp Manager → Billing, '
+                              'then messages will resume.')
+    elif not configured:
         level, msg = 'down', ('WhatsApp API is not configured (access token missing). '
                               'Outgoing messages cannot be sent. Check the Railway settings.')
     elif total and failed >= max(3, total // 2):
