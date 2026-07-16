@@ -6,6 +6,14 @@
   <title>Tahfeel CRM — Document Alerts</title>
     <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .doc-th{text-align:left;padding:11px 14px;font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:700;letter-spacing:.5px;}
+    .doc-row{border-bottom:1px solid #F1F5F9;transition:background .12s;}
+    .doc-row:hover{background:#F8FAFC !important;}
+    .doc-act{display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:7px;text-decoration:none;border:1px solid transparent;cursor:pointer;white-space:nowrap;line-height:1.4;box-sizing:border-box;transition:filter .12s;}
+    .doc-act:hover{filter:brightness(0.95);}
+    .doc-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;}
+  </style>
 </head>
 <body>
     {%- from 'macros.html' import topbar, nav, birthday_banner -%}
@@ -88,51 +96,52 @@
       </form>
     </div>
 
-    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;overflow:hidden;">
-      <table style="width:100%;border-collapse:collapse;">
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:900px;">
         <thead>
           <tr style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">
-            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Name</th>
-            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Company</th>
-            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Document Type</th>
-            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Expiry Date</th>
-            <th style="text-align:left;padding:10px 14px;font-size:11px;color:#64748B;text-transform:uppercase;">Action</th>
+            <th class="doc-th">Name</th>
+            <th class="doc-th">Company</th>
+            <th class="doc-th">Document Type</th>
+            <th class="doc-th">Expiry Date</th>
+            <th class="doc-th" style="text-align:right;">Action</th>
           </tr>
         </thead>
         <tbody>
           {% for doc in documents %}
           {% set days = (doc.expiry_date - now).days %}
-          <tr style="border-bottom:1px solid #F1F5F9;{% if days < 0 %}background:#FEF2F2;{% elif days <= 30 %}background:#FFFBFB;{% endif %}">
-            <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#1A2333;">{{ doc.owner_name }}</td>
-            <td style="padding:10px 14px;font-size:13px;color:#334155;">
-              {% if doc.customer %}<a href="/customers/{{ doc.customer_id }}" style="color:#1A3B8B;text-decoration:none;">{{ doc.customer.company or doc.customer.name }}</a>{% else %}—{% endif %}
+          <tr class="doc-row" style="{% if days < 0 %}background:#FEF2F2;{% elif days <= 30 %}background:#FFFBFB;{% endif %}">
+            <td style="padding:12px 14px;font-size:13px;font-weight:600;color:#1A2333;">{{ doc.owner_name }}</td>
+            <td style="padding:12px 14px;font-size:13px;color:#334155;">
+              {% if doc.customer %}<a href="/customers/{{ doc.customer_id }}" style="color:#1A3B8B;text-decoration:none;font-weight:500;">{{ doc.customer.company or doc.customer.name }}</a>{% else %}<span style="color:#CBD5E1;">—</span>{% endif %}
             </td>
-            <td style="padding:10px 14px;font-size:13px;color:#334155;">{{ doc.doc_type }}</td>
-            <td style="padding:10px 14px;font-size:13px;">
+            <td style="padding:12px 14px;font-size:13px;color:#334155;">{{ doc.doc_type }}</td>
+            <td style="padding:12px 14px;font-size:13px;white-space:nowrap;">
               <span style="font-weight:600;{% if days < 0 %}color:#B91C1C;{% elif days <= 30 %}color:#DC2626;{% elif days <= 60 %}color:#B45309;{% else %}color:#334155;{% endif %}">
                 {{ doc.expiry_date.strftime('%d %b %Y') }}
               </span>
-              {% if days < 0 %}<span style="background:#FEE2E2;color:#991B1B;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px;">EXPIRED</span>
-              {% elif days <= 60 %}<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px;">{{ days }}d left</span>{% endif %}
+              {% if days < 0 %}<span class="doc-badge" style="background:#FEE2E2;color:#991B1B;margin-left:6px;">EXPIRED</span>
+              {% elif days <= 30 %}<span class="doc-badge" style="background:#FEE2E2;color:#B91C1C;margin-left:6px;">{{ days }}d left</span>
+              {% elif days <= 60 %}<span class="doc-badge" style="background:#FEF3C7;color:#92400E;margin-left:6px;">{{ days }}d left</span>
+              {% else %}<span class="doc-badge" style="background:#F1F5F9;color:#64748B;margin-left:6px;">{{ days }}d left</span>{% endif %}
             </td>
-            <td style="padding:10px 14px;">
-              {% set btn = "display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;text-decoration:none;border:none;cursor:pointer;white-space:nowrap;line-height:1.5;box-sizing:border-box;" %}
-              <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;max-width:250px;">
+            <td style="padding:12px 14px;">
+              <div style="display:flex;flex-wrap:nowrap;gap:6px;align-items:center;justify-content:flex-end;">
                 {% if doc.file_url %}
-                <a href="/documents/{{ doc.id }}/file" target="_blank" style="{{ btn }}background:#EBF2FF;color:#1A3B8B;">📎 View</a>
+                <a href="/documents/{{ doc.id }}/file" target="_blank" class="doc-act" style="background:#EBF2FF;color:#1A3B8B;" title="View attached file">📎 View</a>
                 {% endif %}
                 {% if doc.customer and doc.customer.phone and days <= 30 %}
 {% set doc_rep = (doc.customer.rep.name + '%0A📞 ' + doc.customer.rep.phone|replace(' ','')|replace('+','%2B') + '%0ATahfeel Business Setup Services%0A📞 +971 50 394 5656') if doc.customer.rep and doc.customer.rep.phone else 'Tahfeel Business Setup Services%0A📞 +971 50 394 5656' %}
                 <a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ doc.customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0AWe%20would%20like%20to%20remind%20you%20that%20your%20*{{ doc.doc_type|replace(' ','%20') }}*%20is%20due%20to%20expire%20on%20*{{ doc.expiry_date.strftime('%d %b %Y')|replace(' ','%20') }}*.%0A%0ATo%20avoid%20any%20penalties%20or%20service%20disruptions%2C%20kindly%20get%20in%20touch%20with%20us%20at%20your%20earliest%20convenience%20so%20we%20can%20assist%20with%20the%20renewal%20process.%0A%0AWarm%20regards%2C%0A{{ doc_rep }}"
-                   target="_blank" style="{{ btn }}background:#25D366;color:white;" title="Personal WhatsApp from your own number (not logged)">💬 Personal</a>
+                   target="_blank" class="doc-act" style="background:#25D366;color:white;" title="Personal WhatsApp from your own number (not logged)">💬 Personal</a>
                 {% endif %}
                 {% if expiry_tpl and doc.customer and (doc.customer.whatsapp or doc.customer.mobile or doc.customer.phone or doc.customer.phone2) %}
                 <form method="POST" action="/documents/{{ doc.id }}/whatsapp-remind" style="display:inline-flex;margin:0;" onsubmit="return confirm('Send an official renewal reminder to {{ doc.customer.name }} from the business WhatsApp? It will be logged in the CRM.');">
-                  <button type="submit" title="Approved reminder from the business number — logged in the CRM, replies come to the inbox" style="{{ btn }}background:#128C7E;color:white;">📨 Reminder</button>
+                  <button type="submit" class="doc-act" style="background:#128C7E;color:white;" title="Approved reminder from the business number — logged in the CRM, replies come to the inbox">📨 Reminder</button>
                 </form>
                 {% endif %}
-                <a href="/documents/{{ doc.id }}/edit" style="{{ btn }}background:#F1F5F9;color:#334155;">✏ Edit</a>
-                <a href="/documents/{{ doc.id }}/delete" onclick="return confirm('Remove this document?')" style="{{ btn }}background:#FEE2E2;color:#B91C1C;">🗑 Delete</a>
+                <a href="/documents/{{ doc.id }}/edit" class="doc-act" style="background:#F1F5F9;color:#334155;" title="Edit document">✏ Edit</a>
+                <a href="/documents/{{ doc.id }}/delete" onclick="return confirm('Remove this document?')" class="doc-act" style="background:#FEE2E2;color:#B91C1C;" title="Delete document">🗑</a>
               </div>
             </td>
           </tr>
