@@ -339,6 +339,68 @@
       </div>
     </div>
 
+    {% if full_access %}
+    <!-- Meta Ads lead cost (admin/finance) -->
+    <div class="an-card">
+      <div class="an-card-title">💸 Meta Ads — What a Lead Really Costs
+        {% if ads %}<span style="font-weight:400;color:#94A3B8;font-size:11px;">· spend this period: <b style="color:#1A2333;">{{ ads.currency }} {{ '{:,.2f}'.format(ads.total_spend) }}</b></span>{% endif %}
+      </div>
+      {% if ads %}
+      <div style="overflow-x:auto;">
+        <table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1.5px solid #E2E8F0;">
+              <th style="text-align:left;padding:8px 6px;font-weight:700;color:#64748B;text-transform:uppercase;font-size:10px;">Campaign</th>
+              <th style="text-align:right;padding:8px 6px;font-weight:700;color:#64748B;text-transform:uppercase;font-size:10px;">Spend</th>
+              <th style="text-align:center;padding:8px 6px;font-weight:700;color:#64748B;text-transform:uppercase;font-size:10px;">Leads</th>
+              <th style="text-align:right;padding:8px 6px;font-weight:700;color:#64748B;text-transform:uppercase;font-size:10px;">Cost / Lead</th>
+              <th style="text-align:center;padding:8px 6px;font-weight:700;color:#64748B;text-transform:uppercase;font-size:10px;">Genuine</th>
+              <th style="text-align:right;padding:8px 6px;font-weight:700;color:#10B981;text-transform:uppercase;font-size:10px;">Cost / Genuine</th>
+              <th style="text-align:center;padding:8px 6px;font-weight:700;color:#64748B;text-transform:uppercase;font-size:10px;">Converted</th>
+              <th style="text-align:right;padding:8px 6px;font-weight:700;color:#8B5CF6;text-transform:uppercase;font-size:10px;">Cost / Conversion</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in ads.rows %}
+            <tr style="border-bottom:0.5px solid #F8FAFC;">
+              <td style="padding:9px 6px;color:#1A2333;font-weight:600;">{{ r.campaign }}</td>
+              <td style="padding:9px 6px;text-align:right;color:#475569;">{{ '{:,.2f}'.format(r.spend) }}</td>
+              <td style="padding:9px 6px;text-align:center;font-weight:700;color:{{ '#1A3B8B' if r.leads else '#EF4444' }};">{{ r.leads if r.leads else '0 ⚠' }}</td>
+              <td style="padding:9px 6px;text-align:right;color:#475569;">{{ '{:,.2f}'.format(r.cpl) if r.cpl is not none else '—' }}</td>
+              <td style="padding:9px 6px;text-align:center;font-weight:700;color:#10B981;">{{ r.genuine or '—' }}</td>
+              <td style="padding:9px 6px;text-align:right;font-weight:700;color:#10B981;">{{ '{:,.2f}'.format(r.cpg) if r.cpg is not none else '—' }}</td>
+              <td style="padding:9px 6px;text-align:center;font-weight:700;color:#8B5CF6;">{{ r.converted or '—' }}</td>
+              <td style="padding:9px 6px;text-align:right;font-weight:700;color:#8B5CF6;">{{ '{:,.2f}'.format(r.cpc) if r.cpc is not none else '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="border-top:1.5px solid #E2E8F0;background:#F8FAFC;">
+              <td style="padding:8px 6px;font-weight:700;color:#1A3B8B;">Total</td>
+              <td style="padding:8px 6px;text-align:right;font-weight:700;color:#1A3B8B;">{{ '{:,.2f}'.format(ads.total_spend) }}</td>
+              <td style="padding:8px 6px;text-align:center;font-weight:700;color:#1A3B8B;">{{ ads.leads }}</td>
+              <td style="padding:8px 6px;text-align:right;font-weight:700;color:#1A3B8B;">{{ '{:,.2f}'.format(ads.cpl) if ads.cpl is not none else '—' }}</td>
+              <td style="padding:8px 6px;text-align:center;font-weight:700;color:#10B981;">{{ ads.genuine }}</td>
+              <td style="padding:8px 6px;text-align:right;font-weight:700;color:#10B981;">{{ '{:,.2f}'.format(ads.cpg) if ads.cpg is not none else '—' }}</td>
+              <td style="padding:8px 6px;text-align:center;font-weight:700;color:#8B5CF6;">{{ ads.converted }}</td>
+              <td style="padding:8px 6px;text-align:right;font-weight:700;color:#8B5CF6;">{{ '{:,.2f}'.format(ads.cpc) if ads.cpc is not none else '—' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#94A3B8;">
+        Spend from Meta Marketing API · leads/quality/conversions from the CRM, matched by campaign name.
+        {% if ads.no_campaign %} {{ ads.no_campaign }} lead(s) in this period have no campaign tag and are not counted here.{% endif %}
+        "0 ⚠" = campaign spent money but produced no CRM leads in the period.
+      </div>
+      {% elif ads_configured %}
+      <div class="empty-state">Couldn't fetch spend from Meta right now — check that the token is valid and has <b>ads_read</b> on the ad account. It retries automatically.</div>
+      {% else %}
+      <div class="empty-state">Not connected yet. Add <b>META_ADS_TOKEN</b> and <b>META_AD_ACCOUNT_ID</b> in Railway → this card fills itself with spend, cost per lead, cost per <b>genuine</b> lead, and cost per conversion.</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <!-- ══ OPERATIONS TAB ══ -->
     {% elif tab == 'operations' %}
     <div class="grid4">
