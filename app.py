@@ -7080,17 +7080,36 @@ def check_birthdays():
 @login_required
 def invoice_generator():
     services = [s.name for s in Service.query.order_by(Service.name).all()]
-    # Existing customers for the "pick a saved customer" dropdown (auto-fills Bill To)
+    # Existing customers for the "pick a saved customer" dropdown (auto-fills Bill To).
+    # Companies are listed by COMPANY name (not their contact person) and grouped
+    # separately — leading with contact_person made the list look individual-only.
     cust_rows = Customer.query.order_by(Customer.name).all()
-    customers = [{
-        'id': c.id,
-        'name': c.contact_person or c.name or '',
-        'company': (c.name if c.customer_type == 'Company' else (c.company or '')) or '',
-        'phone': c.mobile or c.phone or c.whatsapp or c.phone2 or '',
-        'email': c.email or '',
-        'address': c.address or '',
-        'trn': '',
-    } for c in cust_rows]
+    customers = []
+    for c in cust_rows:
+        is_co = (c.customer_type == 'Company')
+        co_name = (c.name if is_co else (c.company or '')) or ''
+        person = (c.contact_person or '').strip()
+        phone = c.mobile or c.phone or c.whatsapp or c.phone2 or ''
+        if is_co:
+            label = co_name or person or 'Unnamed company'
+            if person:
+                label += f' · {person}'
+        else:
+            label = (c.name or 'Unnamed') + (f' · {co_name}' if co_name else '')
+        if phone:
+            label += f' · {phone}'
+        customers.append({
+            'id': c.id,
+            'is_company': is_co,
+            'label': label,
+            # Bill To "Customer Name": the person if we know them, else the company
+            'name': (person or c.name or '') if is_co else (c.name or ''),
+            'company': co_name,
+            'phone': phone,
+            'email': c.email or '',
+            'address': c.address or '',
+            'trn': '',
+        })
     return render_template('invoice_generator.html', services=services, customers=customers)
    
 @app.route('/admin/backup/export')

@@ -139,7 +139,12 @@
         <div class="inv-row"><div class="inv-ff"><label>Pick a saved customer <span class="opt">(optional — auto-fills below)</span></label>
           <select id="invPick" onchange="fillCustomer('inv', this.value)" style="width:100%;">
             <option value="">— Type manually or choose a saved customer —</option>
-            {% for c in customers %}<option value="{{ c.id }}">{{ c.name }}{% if c.company and c.company != c.name %} — {{ c.company }}{% endif %}{% if c.phone %} · {{ c.phone }}{% endif %}</option>{% endfor %}
+            <optgroup label="🏢 Companies">
+              {% for c in customers if c.is_company %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}
+            </optgroup>
+            <optgroup label="👤 Individuals">
+              {% for c in customers if not c.is_company %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}
+            </optgroup>
           </select></div></div>
         <div class="inv-row c2">
           <div class="inv-ff"><label>Customer Name <span class="req">*</span></label><input type="text" id="invCustName" placeholder="Full name"></div>
@@ -220,7 +225,12 @@
         <div class="inv-row"><div class="inv-ff"><label>Pick a saved customer <span class="opt">(optional — auto-fills below)</span></label>
           <select id="invsPick" onchange="fillCustomer('invs', this.value)" style="width:100%;">
             <option value="">— Type manually or choose a saved customer —</option>
-            {% for c in customers %}<option value="{{ c.id }}">{{ c.name }}{% if c.company and c.company != c.name %} — {{ c.company }}{% endif %}{% if c.phone %} · {{ c.phone }}{% endif %}</option>{% endfor %}
+            <optgroup label="🏢 Companies">
+              {% for c in customers if c.is_company %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}
+            </optgroup>
+            <optgroup label="👤 Individuals">
+              {% for c in customers if not c.is_company %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}
+            </optgroup>
           </select></div></div>
         <div class="inv-row"><div class="inv-ff"><label>Customer Name</label><input type="text" id="invsCustName" placeholder="Full name or company name"></div></div>
         <div class="inv-row c2">
@@ -300,7 +310,12 @@
         <div class="inv-row"><div class="inv-ff"><label>Pick a saved customer <span class="opt">(optional — auto-fills below)</span></label>
           <select id="qtPick" onchange="fillCustomer('qt', this.value)" style="width:100%;">
             <option value="">— Type manually or choose a saved customer —</option>
-            {% for c in customers %}<option value="{{ c.id }}">{{ c.name }}{% if c.company and c.company != c.name %} — {{ c.company }}{% endif %}{% if c.phone %} · {{ c.phone }}{% endif %}</option>{% endfor %}
+            <optgroup label="🏢 Companies">
+              {% for c in customers if c.is_company %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}
+            </optgroup>
+            <optgroup label="👤 Individuals">
+              {% for c in customers if not c.is_company %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}
+            </optgroup>
           </select></div></div>
         <div class="inv-row c2">
           <div class="inv-ff"><label>Customer Name <span class="req">*</span></label><input type="text" id="qtCustName" placeholder="Full name"></div>
@@ -387,7 +402,12 @@ function fillCustomer(prefix, id){
     var el = document.getElementById(prefix + suffix);
     if(el && val) el.value = val;
   }
-  set('CustName', c.name);
+  // The Simple Invoice has no separate Company box. Billing a company there must
+  // use the COMPANY name, otherwise the invoice would go out addressed to the
+  // contact person and the company name would be dropped entirely.
+  var hasCompanyBox = !!document.getElementById(prefix + 'CustCo');
+  var nameVal = (!hasCompanyBox && c.is_company && c.company) ? c.company : c.name;
+  set('CustName', nameVal);
   set('CustCo', c.company);
   set('CustPhone', c.phone);
   set('CustEmail', c.email);
