@@ -130,11 +130,14 @@
             ('AC Status', customer.ac_status),
             ('AC Opening Date', customer.ac_opening_date.strftime('%d %b %Y') if customer.ac_opening_date else None),
             ('Legal Form', customer.legal_form), ('Jurisdiction', customer.jurisdiction),
-            ('Licensing Authority', customer.licensing_authority), ('Free Zone', customer.freezone_name),
+            ('Licensing Authority', customer.licensing_authority),
             ('Emirate', customer.emirate), ('Country', customer.country_incorp),
             ('Business Activity', customer.business_activity), ('P.O. Box', customer.po_box),
             ('Mobile', customer.mobile), ('WhatsApp', customer.whatsapp), ('Website', customer.website)
           ] %}
+          {# 'Free Zone Name' is retired (it duplicated Licensing Authority and was never
+             on the Add form). Only shown when an old record still holds a value. #}
+          {% if customer.freezone_name %}{% set fields = fields + [('Free Zone (old field)', customer.freezone_name)] %}{% endif %}
           {% for label, val in fields %}
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">{{ label }}</div>

@@ -7472,7 +7472,10 @@ def analytics():
         companies = Customer.query.filter_by(customer_type='Company').all()
         status_counts = Counter((c.ac_status or 'Not set') for c in companies)
         juris_counts = Counter((c.jurisdiction or 'Not set') for c in companies)
-        fz_counts = Counter((c.freezone_name or 'Not set') for c in companies if c.jurisdiction == 'Free Zone')
+        # Licensing authority across ALL companies. Was previously freezone_name, but
+        # that field was never on the Add form so it was always blank; licensing_authority
+        # is a managed dropdown on both forms, so this actually reflects the portfolio.
+        fz_counts = Counter((c.licensing_authority or 'Not set') for c in companies)
         emirate_counts = Counter((c.emirate or 'Not set') for c in companies)
         legal_counts = Counter((c.legal_form or 'Not set') for c in companies)
         activity_counts = Counter((c.business_activity or '').strip().title()
@@ -7529,7 +7532,7 @@ def analytics():
             'employees': Employee.query.count(),
             'owners': Owner.query.count(),
             'juris': juris_counts.most_common(),
-            'freezones': fz_counts.most_common(10),
+            'freezones': fz_counts.most_common(12),
             'emirates': emirate_counts.most_common(),
             'legal': legal_counts.most_common(),
             'activities': activity_counts.most_common(10),

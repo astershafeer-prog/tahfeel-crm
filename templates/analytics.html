@@ -559,12 +559,12 @@
         {% if not pf.juris %}<div class="empty-state">No companies yet</div>{% endif %}
       </div>
       <div class="an-card">
-        <div class="an-card-title">Free Zones</div>
+        <div class="an-card-title">Licensing Authority / Free Zone</div>
         {% set max_f = pf.freezones[0][1] if pf.freezones else 1 %}
         {% for name, cnt in pf.freezones %}
-        <div class="bar-row"><div class="bar-label" title="{{ name }}">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_f)*100)|int }}%;background:#10B981;"></div></div><div class="bar-val">{{ cnt }}</div></div>
+        <div class="bar-row"><div class="bar-label" title="{{ name }}">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_f)*100)|int }}%;background:{{ '#CBD5E1' if name == 'Not set' else '#10B981' }};"></div></div><div class="bar-val">{{ cnt }}</div></div>
         {% endfor %}
-        {% if not pf.freezones %}<div class="empty-state">No free-zone companies (or zone not filled in)</div>{% endif %}
+        {% if not pf.freezones %}<div class="empty-state">No companies yet</div>{% endif %}
       </div>
       <div class="an-card">
         <div class="an-card-title">Emirates</div>
