@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Call Log</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+  <style>
+    .cl-kpi{background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;padding:14px 16px;}
+    .cl-kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+    .cl-kpi-val{font-size:24px;font-weight:800;}
+    .cl-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;}
+    .cl-th{text-align:left;padding:11px 14px;font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:700;letter-spacing:.5px;}
+    .cl-row{border-bottom:1px solid #F1F5F9;transition:background .12s;}
+    .cl-row:hover{background:#F8FAFC;}
+    .cl-ff{display:flex;flex-direction:column;gap:4px;}
+    .cl-ff label{font-size:11px;color:#64748B;font-weight:600;}
+    .cl-ff select, .cl-ff input{padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;background:#fff;}
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('call_log') }}
+
+  <div class="container" style="max-width:1150px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header" style="margin-bottom:16px;">
+      <div>
+        <h2 style="color:#133E87;">📞 Call Log</h2>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Monthly friendly-call worklist — who we've spoken to in {{ month_name }}, and who's still to call.</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+      <div class="cl-kpi" style="border-top:4px solid #133E87;"><div class="cl-kpi-label">Clients (filtered)</div><div class="cl-kpi-val">{{ stats.total }}</div></div>
+      <div class="cl-kpi" style="border-top:4px solid #10B981;"><div class="cl-kpi-label">Spoken to · {{ month_name[:3] }}</div><div class="cl-kpi-val" style="color:#10B981;">{{ stats.reached }}</div></div>
+      <div class="cl-kpi" style="border-top:4px solid #F59E0B;"><div class="cl-kpi-label">Still to Call</div><div class="cl-kpi-val" style="color:#F59E0B;">{{ stats.pending }}</div></div>
+      <div class="cl-kpi" style="border-top:4px solid #8B5CF6;"><div class="cl-kpi-label">Coverage</div><div class="cl-kpi-val" style="color:#8B5CF6;">{{ stats.pct }}%</div></div>
+    </div>
+
+    <!-- Filters -->
+    <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:4px solid #64748B;border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+      <form method="get">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end;">
+          <div class="cl-ff"><label>Search</label><input type="text" name="search" value="{{ search }}" placeholder="Name or company…"></div>
+          <div class="cl-ff"><label>Type</label>
+            <select name="type">
+              <option value="">All types</option>
+              <option value="Company" {% if f_type=='Company' %}selected{% endif %}>🏢 Companies</option>
+              <option value="Individual" {% if f_type=='Individual' %}selected{% endif %}>👤 Individuals</option>
+            </select>
+          </div>
+          <div class="cl-ff"><label>Call status ({{ month_name[:3] }})</label>
+            <select name="status">
+              <option value="">All</option>
+              <option value="pending" {% if f_status=='pending' %}selected{% endif %}>⏳ Still to call</option>
+              <option value="tried" {% if f_status=='tried' %}selected{% endif %}>📵 Tried, no answer</option>
+              <option value="reached" {% if f_status=='reached' %}selected{% endif %}>✓ Spoken to</option>
+            </select>
+          </div>
+          <div class="cl-ff"><label>Account manager</label>
+            <select name="rep">
+              <option value="">Everyone</option>
+              {% for u in users %}<option value="{{ u.id }}" {% if f_rep==u.id|string %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button type="submit" class="btn-primary" style="height:37px;padding:0 20px;">Apply</button>
+            <a href="/call-log" class="btn-reset" style="height:37px;display:flex;align-items:center;padding:0 14px;">Reset</a>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Worklist -->
+    <div style="background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:820px;">
+        <thead>
+          <tr style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">
+            <th class="cl-th">Client</th>
+            <th class="cl-th">Type</th>
+            <th class="cl-th">Account Manager</th>
+            <th class="cl-th">{{ month_name[:3] }} Status</th>
+            <th class="cl-th">Last Call</th>
+            <th class="cl-th" style="text-align:right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in items %}
+          {% set c = it.c %}
+          <tr class="cl-row">
+            <td style="padding:12px 14px;">
+              <a href="/customers/{{ c.id }}/calls" style="font-size:13px;font-weight:600;color:#1A2333;text-decoration:none;">{{ c.name }}</a>
+              {% set num = c.mobile or c.phone or c.whatsapp or c.phone2 %}
+              {% if num %}<div style="font-size:11px;color:#94A3B8;">{{ num }}</div>{% else %}<div style="font-size:11px;color:#B91C1C;">⚠ no number</div>{% endif %}
+            </td>
+            <td style="padding:12px 14px;">
+              {% if c.customer_type == 'Company' %}<span class="cl-badge" style="background:#EFF6FF;color:#1D4ED8;">🏢 Company</span>
+              {% else %}<span class="cl-badge" style="background:#F1F5F9;color:#475569;">👤 Individual</span>{% endif %}
+            </td>
+            <td style="padding:12px 14px;font-size:12px;color:#475569;">{{ c.rep.name if c.rep else '—' }}</td>
+            <td style="padding:12px 14px;">
+              {% if it.status == 'reached' %}<span class="cl-badge" style="background:#ECFDF5;color:#047857;">✓ Spoken to</span>
+              {% elif it.status == 'tried' %}<span class="cl-badge" style="background:#FFFBEB;color:#92400E;">Tried, no answer</span>
+              {% else %}<span class="cl-badge" style="background:#FEF2F2;color:#B91C1C;">Still to call</span>{% endif %}
+            </td>
+            <td style="padding:12px 14px;font-size:12px;color:#64748B;white-space:nowrap;">
+              {% if it.last %}{{ it.last.called_at.strftime('%d %b %Y') }} <span style="color:#94A3B8;">· {{ it.last.outcome }}</span>{% else %}<span style="color:#CBD5E1;">never</span>{% endif %}
+            </td>
+            <td style="padding:12px 14px;text-align:right;white-space:nowrap;">
+              {% set num = c.mobile or c.phone or c.whatsapp or c.phone2 %}
+              {% if num %}<a href="https://wa.me/{{ num|replace(' ','')|replace('+','') }}" target="_blank" class="btn-sm" style="background:#25D366;border-color:#25D366;color:#fff;font-size:11px;">WA</a>{% endif %}
+              <a href="/customers/{{ c.id }}/calls" class="btn-sm" style="font-size:11px;">Open Log →</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" style="padding:36px;text-align:center;color:#94A3B8;">No clients match these filters.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pagination" style="margin-top:14px;">
+      {% set args = request.args.to_dict() %}
+      {% if page > 1 %}{% set _ = args.update({'page': page-1}) %}<a href="?{{ args|urlencode }}" class="page-btn">‹ Prev</a>{% else %}<span class="page-btn disabled">‹ Prev</span>{% endif %}
+      <span class="page-btn active">{{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}{% set _ = args.update({'page': page+1}) %}<a href="?{{ args|urlencode }}" class="page-btn">Next ›</a>{% else %}<span class="page-btn disabled">Next ›</span>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>

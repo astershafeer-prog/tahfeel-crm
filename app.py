@@ -5304,6 +5304,81 @@ def attempted_this_month_ids(when=None):
         CustomerCall.called_at >= start, CustomerCall.called_at < nxt).distinct().all()
     return {r[0] for r in rows}
 
+@app.route('/call-log')
+@login_required
+def call_log():
+    """Worklist for the monthly friendly-call cycle — every client, whether we've
+    spoken to them this month, filterable, with a link into each one's call log.
+    The person assigned to the calls lives on this page."""
+    if session.get('role') not in ('admin', 'finance', 'sales', 'operations'):
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
+    now = now_dubai()
+    f_type = request.args.get('type', '')            # '' | Company | Individual
+    f_status = request.args.get('status', '')        # '' | reached | pending | tried
+    f_rep = request.args.get('rep', '')
+    search = (request.args.get('search') or '').strip().lower()
+
+    connected_ids = called_this_month_ids(now)
+    attempted_ids = attempted_this_month_ids(now)
+    # Last call per customer, in one pass (newest first)
+    last_call = {}
+    for c in CustomerCall.query.order_by(CustomerCall.called_at.desc()).all():
+        last_call.setdefault(c.customer_id, c)
+
+    q = Customer.query
+    if f_type in ('Company', 'Individual'):
+        q = q.filter(Customer.customer_type == f_type)
+    if f_rep:
+        try:
+            q = q.filter(Customer.assigned_to == int(f_rep))
+        except ValueError:
+            pass
+    rows_all = q.order_by(Customer.name).all()
+
+    def status_of(cid):
+        if cid in connected_ids:
+            return 'reached'
+        if cid in attempted_ids:
+            return 'tried'
+        return 'pending'
+
+    items = []
+    for c in rows_all:
+        if search and search not in (c.name or '').lower() and search not in (c.company or '').lower():
+            continue
+        st = status_of(c.id)
+        # 'pending' filter means "still needs a real conversation" — tried-not-reached
+        # counts as pending here, because the job isn't done until they answer.
+        if f_status == 'reached' and st != 'reached':
+            continue
+        if f_status == 'tried' and st != 'tried':
+            continue
+        if f_status == 'pending' and st == 'reached':
+            continue
+        items.append({'c': c, 'status': st, 'last': last_call.get(c.id)})
+
+    # Worklist order: still-to-call first, then by name
+    order = {'pending': 0, 'tried': 1, 'reached': 2}
+    items.sort(key=lambda x: (order[x['status']], (x['c'].name or '').lower()))
+
+    total = len(items)
+    reached = sum(1 for x in items if x['status'] == 'reached')
+    stats = {'total': total, 'reached': reached, 'pending': total - reached,
+             'pct': round(100 * reached / total) if total else 0}
+
+    page = max(1, int(request.args.get('page', 1)))
+    per_page = 40
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    paginated = items[(page - 1) * per_page: page * per_page]
+
+    users = User.query.filter_by(active=True).order_by(User.name).all()
+    return render_template('call_log.html', items=paginated, stats=stats, now=now,
+                           f_type=f_type, f_status=f_status, f_rep=f_rep, search=request.args.get('search', ''),
+                           users=users, page=page, total_pages=total_pages,
+                           month_name=now.strftime('%B'))
+
 @app.route('/customers/<int:customer_id>/calls')
 @login_required
 def customer_calls(customer_id):

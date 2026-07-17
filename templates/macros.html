@@ -222,6 +222,9 @@ loadTheme();
   <a href="/enquiries" {% if active=='enquiries' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">❓ Enquiries</a>
   <a href="/jobs" {% if active=='jobs' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">✓ Tasks</a>
   <a href="/customers" {% if active=='customers' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">👥 Clients</a>
+  {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
+  <a href="/call-log" {% if active=='call_log' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📞 Call Log</a>
+  {% endif %}
   <a href="/whatsapp" {% if active=='whatsapp' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">💬 WhatsApp{% set _wau = wa_unread_count() %}{% if _wau %}<span style="background:#25D366;color:white;font-size:10px;font-weight:700;border-radius:20px;padding:1px 7px;min-width:16px;text-align:center;">{{ _wau }}</span>{% endif %}</a>
   <a href="/documents" {% if active=='documents' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Documents</a>
   <a href="/health-check" {% if active=='health-check' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🛡 Compliance</a>
