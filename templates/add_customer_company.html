@@ -60,6 +60,9 @@
             </div>
 
             <div class="form-group" style="grid-column:1/-1;"><div class="section-label" style="margin-top:8px;">🏢 Company Details</div></div>
+            <div class="form-group"><label>AC Code</label><input type="text" name="ac_code"></div>
+            <div class="form-group"><label>Trade Name</label><input type="text" name="trade_name"></div>
+            <div class="form-group"><label>Mobile</label><input type="text" name="mobile" placeholder="+971 5X XXX XXXX"></div>
             <div class="form-group"><label>AC Opening Date</label><input type="date" name="ac_opening_date"></div>
             <div class="form-group"><label>AC Status</label><select name="ac_status"><option value="">— Select —</option>{% for s in ['Active','Under Formation','Inactive','Closed'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group"><label>Legal Form</label><select name="legal_form"><option value="">— Select —</option>{% for s in ['LLC','Sole Establishment','Civil Company','Branch','Free Zone Company','Free Zone Establishment','Offshore','Other'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
@@ -71,9 +74,12 @@
               </select>
             </div>
             <div class="form-group"><label>Emirate</label><select name="emirate"><option value="">— Select —</option>{% for s in ['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah','Fujairah','Umm Al Quwain'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
+            <div class="form-group"><label>Country of Incorporation</label><input type="text" name="country_incorp" placeholder="e.g. UAE"></div>
+            <div class="form-group"><label>P.O. Box</label><input type="text" name="po_box"></div>
             <div class="form-group"><label>Business Activity</label><input type="text" name="business_activity"></div>
             <div class="form-group"><label>Website</label><input type="text" name="website" placeholder="www.company.com"></div>
             <div class="form-group"><label>UAE Pass Access Number</label><input type="text" name="uae_pass_number" placeholder="+971 5X XXX XXXX"></div>
+            <div class="form-group"><label>UAE Pass Name</label><input type="text" name="uae_pass_name" placeholder="Name on the UAE Pass account"></div>
 
             <div class="form-group" style="grid-column:1/-1;"><div class="section-label" style="margin-top:8px;">🧾 Tax &amp; Compliance</div></div>
             <div class="form-group"><label>VAT / Tax Filing</label><select name="vat_status"><option value="">— N/A —</option><option value="Not filed">Not filed</option><option value="Filed">Filed → roll to next quarter</option></select></div>
