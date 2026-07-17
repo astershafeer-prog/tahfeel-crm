@@ -41,7 +41,7 @@
     {% endwith %}
 
     <div class="page-header">
-      <h2>Clients <span class="page-subtitle">({{ total }} total)</span></h2>
+      <h2>Clients <span class="page-subtitle">({{ total }} {% if search or rep_filter or type_filter or status_filter or legal_filter or juris_filter or auth_filter %}matching{% else %}total{% endif %} — 🏢 {{ n_company }} companies · 👤 {{ n_individual }} individuals)</span></h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
         {% if birthdays_today %}
         <a href="/customers?birthday=today" class="btn-sm" style="background:#FDF2F8;border:1px solid #FBCFE8;color:#9D174D;display:flex;align-items:center;gap:4px;">🎂 Birthdays <span style="background:#EC4899;color:white;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;">{{ birthdays_today|length }}</span></a>
@@ -60,7 +60,7 @@
     <div class="filter-card" style="border-top:4px solid #1A3B8B;">
       <div class="filter-card-head">
         <div class="filter-card-title">⊟ Filters</div>
-        {% if search or rep_filter or type_filter or status_filter %}<a href="/customers" class="btn-reset" style="font-size:11px;">Reset</a>{% endif %}
+        {% if search or rep_filter or type_filter or status_filter or legal_filter or juris_filter or auth_filter %}<a href="/customers" class="btn-reset" style="font-size:11px;">Reset</a>{% endif %}
       </div>
       <form method="get">
         <div class="ff" style="margin-bottom:12px;">
@@ -87,11 +87,31 @@
             </select>
           </div>
           <div class="ff">
-            <label>Status</label>
+            <label>Account Status</label>
             <select name="status">
               <option value="">All Statuses</option>
-              <option value="Active" {% if status_filter=='Active' %}selected{% endif %}>Active</option>
-              <option value="Inactive" {% if status_filter=='Inactive' %}selected{% endif %}>Inactive</option>
+              {% for s in statuses %}<option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="ff">
+            <label>Jurisdiction</label>
+            <select name="jurisdiction">
+              <option value="">All Jurisdictions</option>
+              {% for j in jurisdictions %}<option value="{{ j }}" {% if juris_filter==j %}selected{% endif %}>{{ j }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="ff">
+            <label>Licensing Authority</label>
+            <select name="authority">
+              <option value="">All Authorities</option>
+              {% for a in authority_opts %}<option value="{{ a }}" {% if auth_filter==a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="ff">
+            <label>Legal Form</label>
+            <select name="legal_form">
+              <option value="">All Legal Forms</option>
+              {% for l in legal_forms %}<option value="{{ l }}" {% if legal_filter==l %}selected{% endif %}>{{ l }}</option>{% endfor %}
             </select>
           </div>
           <div style="display:flex;gap:8px;">

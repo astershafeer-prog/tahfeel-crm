@@ -64,7 +64,12 @@
             <div class="form-group"><label>AC Status</label><select name="ac_status"><option value="">— Select —</option>{% for s in ['Active','Under Formation','Inactive','Closed'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group"><label>Legal Form</label><select name="legal_form"><option value="">— Select —</option>{% for s in ['LLC','Sole Establishment','Civil Company','Branch','Free Zone Company','Free Zone Establishment','Offshore','Other'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group"><label>Jurisdiction</label><select name="jurisdiction"><option value="">— Select —</option>{% for s in ['Mainland','Free Zone','Offshore'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
-            <div class="form-group"><label>Licensing Authority</label><input type="text" name="licensing_authority" placeholder="e.g. Dubai DED, DMCC, JAFZA, IFZA"></div>
+            <div class="form-group"><label>Licensing Authority</label>
+              <select name="licensing_authority">
+                <option value="">— Select —</option>
+                {% for a in authorities %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+              </select>
+            </div>
             <div class="form-group"><label>Emirate</label><select name="emirate"><option value="">— Select —</option>{% for s in ['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah','Fujairah','Umm Al Quwain'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group"><label>Business Activity</label><input type="text" name="business_activity"></div>
             <div class="form-group"><label>Website</label><input type="text" name="website" placeholder="www.company.com"></div>

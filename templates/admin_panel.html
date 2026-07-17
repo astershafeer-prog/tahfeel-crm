@@ -366,6 +366,49 @@
         </div>
       </div>
 
+      <!-- Licensing Authorities -->
+      <div class="card" id="authorities">
+        <div class="card-header">
+          <h2>🏛 Licensing Authorities <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--info-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Customers</span></h2>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Shown as a dropdown on the company form and in Customers → Filters. Renaming one updates every customer using it.</div>
+          <form method="POST" action="/admin/authority/add">
+            <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;">
+              <div class="form-group" style="margin:0;flex:1;">
+                <input type="text" name="name" required placeholder="e.g. SPCFZ">
+              </div>
+              <button type="submit" class="btn-primary" style="white-space:nowrap;">+ Add</button>
+            </div>
+          </form>
+          <hr class="divider">
+          <input type="text" oninput="laFilter(this)" placeholder="Filter authorities..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;box-sizing:border-box;">
+          {% if authorities %}
+            {% for a in authorities %}
+            <div class="la-row" style="padding:8px 0;border-bottom:1px solid var(--border-light);">
+              <div id="la-view-{{ a.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
+                <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
+                <span style="font-size:13px;">{{ a.name }}</span>
+                <div style="display:flex;gap:5px;">
+                  <button onclick="laEdit({{ a.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Rename">✏</button>
+                  <form method="POST" action="/admin/authority/{{ a.id }}/delete" style="margin:0;" onsubmit="return confirm('Remove {{ a.name }} from the list? Customers already saved with it keep the value.')">
+                    <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
+                  </form>
+                </div>
+              </div>
+              <form id="la-form-{{ a.id }}" method="POST" action="/admin/authority/{{ a.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
+                <input type="text" name="name" value="{{ a.name }}" required style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
+                <button type="button" onclick="laCancel({{ a.id }})" class="btn-sm">Cancel</button>
+              </form>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty">No licensing authorities yet.</div>
+          {% endif %}
+        </div>
+      </div>
+
       <!-- Campaigns -->
       <div class="card" id="campaigns">
         <div class="card-header">
@@ -626,6 +669,14 @@
     function jtCancel(id) { document.getElementById('jt-view-'+id).style.display='flex'; document.getElementById('jt-form-'+id).style.display='none'; }
     function svEdit(id) { document.getElementById('sv-view-'+id).style.display='none'; document.getElementById('sv-form-'+id).style.display='flex'; }
     function svCancel(id) { document.getElementById('sv-view-'+id).style.display='flex'; document.getElementById('sv-form-'+id).style.display='none'; }
+    function laEdit(id) { document.getElementById('la-view-'+id).style.display='none'; document.getElementById('la-form-'+id).style.display='flex'; }
+    function laCancel(id) { document.getElementById('la-view-'+id).style.display='grid'; document.getElementById('la-form-'+id).style.display='none'; }
+    function laFilter(input) {
+      const q = input.value.toLowerCase();
+      document.querySelectorAll('.la-row').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    }
     function soEdit(id) { document.getElementById('so-view-'+id).style.display='none'; document.getElementById('so-form-'+id).style.display='flex'; }
     function soCancel(id) { document.getElementById('so-view-'+id).style.display='flex'; document.getElementById('so-form-'+id).style.display='none'; }
     function caEdit(id) { document.getElementById('ca-view-'+id).style.display='none'; document.getElementById('ca-form-'+id).style.display='flex'; }

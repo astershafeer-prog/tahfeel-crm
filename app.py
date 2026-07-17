@@ -310,6 +310,15 @@ class Campaign(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
 
+class LicensingAuthority(db.Model):
+    """Admin-managed list of licensing authorities / free zones (DED, DMCC, IFZA…).
+    Kept as a list so the customer form is a dropdown — free text made the same
+    authority spell three different ways and broke filtering/reporting."""
+    __tablename__ = 'licensing_authority'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, unique=True)
+    sort_order = db.Column(db.Integer, default=0)
+
 class ServiceType(db.Model):
     __tablename__ = 'job_type'  # keep same DB table name
     id = db.Column(db.Integer, primary_key=True)
@@ -2420,10 +2429,11 @@ def admin_panel():
     }
     # Flat master list of common sub-tasks (pick from when creating a task)
     subtask_list = SubTaskTemplate.query.order_by(SubTaskTemplate.sort_order, SubTaskTemplate.id).all()
+    authorities = LicensingAuthority.query.order_by(LicensingAuthority.sort_order, LicensingAuthority.name).all()
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
                            wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi,
-                           subtask_list=subtask_list)
+                           subtask_list=subtask_list, authorities=authorities)
 
 @app.route('/admin/whatsapp-settings', methods=['POST'])
 @login_required
@@ -3119,6 +3129,60 @@ def admin_delete_source(source_id):
     flash(f'Source "{source.name}" removed')
     return redirect(url_for('admin_panel'))
 
+# ── Licensing authorities (admin-managed list behind the customer dropdown) ──
+@app.route('/admin/authority/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_authority():
+    name = (request.form.get('name') or '').strip()
+    if name:
+        if LicensingAuthority.query.filter_by(name=name).first():
+            flash('That licensing authority already exists')
+        else:
+            nxt = (db.session.query(db.func.max(LicensingAuthority.sort_order)).scalar() or 0) + 1
+            db.session.add(LicensingAuthority(name=name, sort_order=nxt))
+            db.session.commit()
+            flash(f'Licensing authority "{name}" added')
+    return redirect(url_for('admin_panel') + '#authorities')
+
+@app.route('/admin/authority/<int:auth_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_authority(auth_id):
+    a = LicensingAuthority.query.get_or_404(auth_id)
+    new = (request.form.get('name') or '').strip()
+    if not new or new == a.name:
+        return redirect(url_for('admin_panel') + '#authorities')
+    if LicensingAuthority.query.filter(LicensingAuthority.name == new,
+                                       LicensingAuthority.id != auth_id).first():
+        flash('That licensing authority already exists')
+        return redirect(url_for('admin_panel') + '#authorities')
+    old = a.name
+    # Carry existing customer records over to the new spelling, otherwise a rename
+    # would orphan every company still holding the old text.
+    moved = Customer.query.filter_by(licensing_authority=old).update(
+        {'licensing_authority': new}, synchronize_session=False)
+    a.name = new
+    db.session.commit()
+    flash(f'Renamed "{old}" → "{new}"' + (f' · {moved} customer record(s) updated' if moved else ''))
+    return redirect(url_for('admin_panel') + '#authorities')
+
+@app.route('/admin/authority/<int:auth_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_authority(auth_id):
+    a = LicensingAuthority.query.get_or_404(auth_id)
+    # Company records keep their saved text — removing the option never edits customers
+    in_use = Customer.query.filter_by(licensing_authority=a.name).count()
+    db.session.delete(a)
+    db.session.commit()
+    if in_use:
+        flash(f'"{a.name}" removed from the list. {in_use} customer(s) still show it — '
+              f'they keep the value until you edit them.')
+    else:
+        flash(f'Licensing authority "{a.name}" removed')
+    return redirect(url_for('admin_panel') + '#authorities')
+
 @app.route('/users/<int:user_id>/toggle', methods=['POST'])
 @login_required
 @admin_required
@@ -3158,6 +3222,16 @@ def toggle_staff_leave(user_id):
 
 # ── Customers ────────────────────────────────────────────────────────────────
 
+def _authority_names(current=None):
+    """Options for the licensing-authority dropdown: the admin-managed list, plus
+    `current` if a customer holds an older free-text value that isn't on the list —
+    otherwise opening their Edit form would silently blank it."""
+    names = [a.name for a in LicensingAuthority.query
+             .order_by(LicensingAuthority.sort_order, LicensingAuthority.name).all()]
+    if current and current not in names:
+        names.append(current)
+    return names
+
 @app.route('/customers')
 @login_required
 def customers():
@@ -3167,6 +3241,9 @@ def customers():
     rep_filter = request.args.get('representative', '')
     type_filter = request.args.get('type', '')
     status_filter = request.args.get('status', '')
+    legal_filter = request.args.get('legal_form', '')
+    juris_filter = request.args.get('jurisdiction', '')
+    auth_filter = request.args.get('authority', '')
     birthdays_today = []
     try:
         # Ensure columns exist first
@@ -3198,6 +3275,12 @@ def customers():
             customer_list = [c for c in customer_list if (c.customer_type or 'Individual') == type_filter]
         if status_filter:
             customer_list = [c for c in customer_list if c.ac_status == status_filter]
+        if legal_filter:
+            customer_list = [c for c in customer_list if c.legal_form == legal_filter]
+        if juris_filter:
+            customer_list = [c for c in customer_list if c.jurisdiction == juris_filter]
+        if auth_filter:
+            customer_list = [c for c in customer_list if c.licensing_authority == auth_filter]
         try:
             bday_list = Customer.query.filter(Customer.date_of_birth != None).all()
             birthdays_today = [c for c in bday_list if c.date_of_birth and
@@ -3214,10 +3297,24 @@ def customers():
     page = max(1, min(page, total_pages))
     paginated = customer_list[(page-1)*per_page : page*per_page]
     users = User.query.filter_by(active=True).order_by(User.name).all()
+    # Filter dropdown options — union of the managed list and whatever is actually
+    # in the data, so older free-text values stay searchable instead of disappearing.
+    def _opts(col, extra=()):
+        rows = db.session.query(col).filter(col.isnot(None), col != '').distinct().all()
+        return sorted({r[0] for r in rows} | set(extra))
+    # How many of the filtered results are companies vs individuals (answers
+    # "how many companies do we have in DMCC?" straight from the filter bar)
+    n_company = sum(1 for c in customer_list if c.customer_type == 'Company')
     return render_template('customers.html', customers=paginated, page=page, total_pages=total_pages,
                            total=total, search=request.args.get('search',''),
                            birthdays_today=birthdays_today, now=now, birthday_filter=birthday_filter,
-                           users=users, rep_filter=rep_filter, type_filter=type_filter, status_filter=status_filter)
+                           users=users, rep_filter=rep_filter, type_filter=type_filter, status_filter=status_filter,
+                           legal_filter=legal_filter, juris_filter=juris_filter, auth_filter=auth_filter,
+                           legal_forms=_opts(Customer.legal_form),
+                           jurisdictions=_opts(Customer.jurisdiction, ('Mainland', 'Free Zone', 'Offshore')),
+                           authority_opts=_opts(Customer.licensing_authority, _authority_names()),
+                           statuses=_opts(Customer.ac_status, ('Active', 'Under Formation', 'Inactive', 'Closed')),
+                           n_company=n_company, n_individual=total - n_company)
 
 @app.route('/api/customer-phone-exists')
 @login_required
@@ -3373,7 +3470,8 @@ def add_customer():
     ctype = request.args.get('type', '')
     if ctype not in ('Individual', 'Company'):
         return render_template('add_customer_choose.html', converted_leads=converted_leads)
-    return render_template(_customer_type_template(ctype), converted_leads=converted_leads, sources=sources, users=users, doc_types=doc_types)
+    return render_template(_customer_type_template(ctype), converted_leads=converted_leads, sources=sources, users=users, doc_types=doc_types,
+                           authorities=_authority_names())
 
 @app.route('/customers/<int:customer_id>')
 @login_required
@@ -3521,7 +3619,8 @@ def edit_customer(customer_id):
     doc_types = DocType.query.order_by(DocType.name).all()
     existing_docs = Document.query.filter_by(customer_id=customer_id).order_by(Document.expiry_date).all()
     now = now_dubai()
-    return render_template('edit_customer.html', customer=customer, sources=sources, users=users, doc_types=doc_types, existing_docs=existing_docs, now=now)
+    return render_template('edit_customer.html', customer=customer, sources=sources, users=users, doc_types=doc_types, existing_docs=existing_docs, now=now,
+                           authorities=_authority_names(customer.licensing_authority))
 
 @app.route('/customers/<int:customer_id>/toggle-alerts', methods=['POST'])
 @login_required
@@ -6579,6 +6678,8 @@ def init_db():
             # Owner: date of birth (auto birthday wish) + own mobile to send it to
             'ALTER TABLE owner ADD COLUMN IF NOT EXISTS date_of_birth DATE',
             'ALTER TABLE owner ADD COLUMN IF NOT EXISTS mobile VARCHAR(30)',
+            # Licensing authority list (table itself created by create_all)
+            'ALTER TABLE licensing_authority ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0',
 
             # ── Performance indexes (H6) — speed up the filtered queries in reports,
             #    analytics, marketing report, cron jobs, WhatsApp matching, and the
@@ -6640,6 +6741,13 @@ def init_db():
                     db.session.add(Source(name=s))
                 db.session.commit()
                 print('Default sources created')
+            # Licensing authorities / free zones — seeded once; admin can add/rename/remove
+            if LicensingAuthority.query.count() == 0:
+                for i, a in enumerate(['DED', 'DMCC', 'DIFC', 'IFZA', 'JAFZA',
+                                       'AJMNV', 'AJMFZ', 'RAKEZ', 'SHAMS']):
+                    db.session.add(LicensingAuthority(name=a, sort_order=i))
+                db.session.commit()
+                print('Default licensing authorities created')
             # Always ensure 'Meta' source exists (leads from Meta Lead Ads)
             if not Source.query.filter_by(name='Meta').first():
                 db.session.add(Source(name='Meta'))

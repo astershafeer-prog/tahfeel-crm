@@ -120,7 +120,12 @@
             <div class="form-group company-only"><label>AC Status</label><select name="ac_status"><option value="">— Select —</option>{% for s in ['Active','Under Formation','Inactive','Closed'] %}<option value="{{ s }}" {% if customer.ac_status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group company-only"><label>Legal Form</label><select name="legal_form"><option value="">— Select —</option>{% for s in ['LLC','Sole Establishment','Civil Company','Branch','Free Zone Company','Free Zone Establishment','Offshore','Other'] %}<option value="{{ s }}" {% if customer.legal_form==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group company-only"><label>Jurisdiction</label><select name="jurisdiction"><option value="">— Select —</option>{% for s in ['Mainland','Free Zone','Offshore'] %}<option value="{{ s }}" {% if customer.jurisdiction==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
-            <div class="form-group company-only"><label>Licensing Authority</label><input type="text" name="licensing_authority" value="{{ customer.licensing_authority or '' }}" placeholder="e.g. Dubai DED, DMCC, JAFZA, IFZA"></div>
+            <div class="form-group company-only"><label>Licensing Authority</label>
+              <select name="licensing_authority">
+                <option value="">— Select —</option>
+                {% for a in authorities %}<option value="{{ a }}" {% if customer.licensing_authority == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+              </select>
+            </div>
             <div class="form-group company-only"><label>Emirate</label><select name="emirate"><option value="">— Select —</option>{% for s in ['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah','Fujairah','Umm Al Quwain'] %}<option value="{{ s }}" {% if customer.emirate==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group company-only"><label>Business Activity</label><input type="text" name="business_activity" value="{{ customer.business_activity or '' }}"></div>
             <div class="form-group company-only"><label>Website</label><input type="text" name="website" value="{{ customer.website or '' }}" placeholder="www.company.com"></div>
