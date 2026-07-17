@@ -472,6 +472,27 @@ class Owner(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     company = db.relationship('Customer', foreign_keys=[customer_id])
 
+class CustomerCall(db.Model):
+    """A relationship/check-in call logged against a customer.
+
+    Fills a real gap: Leads have LeadUpdate and Jobs have JobUpdate, but until now
+    a CUSTOMER had no activity history at all — once a lead converted, the record of
+    every conversation stopped. Also drives the monthly friendly-call cycle: a company
+    counts as covered for a month only when a call actually CONNECTED, not merely
+    when someone attempted it."""
+    __tablename__ = 'customer_call'
+    id          = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False, index=True)
+    called_by   = db.Column(db.Integer, db.ForeignKey('user.id'))
+    called_at   = db.Column(db.DateTime, default=now_dubai, index=True)
+    outcome     = db.Column(db.String(30))     # Connected / No answer / Busy / Switched off / Wrong number
+    notes       = db.Column(db.Text)           # what the customer actually said
+    created_at  = db.Column(db.DateTime, default=now_dubai)
+    caller      = db.relationship('User', foreign_keys=[called_by])
+    customer    = db.relationship('Customer', foreign_keys=[customer_id])
+
+CALL_OUTCOMES = ['Connected', 'No answer', 'Busy', 'Switched off', 'Wrong number']
+
 class Partner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
@@ -3484,10 +3505,20 @@ def customer_detail(customer_id):
     owners = Owner.query.filter_by(customer_id=customer_id).order_by(Owner.id).all()
     total_invoiced = sum(j.amount_invoiced or 0 for j in jobs)
     total_received = sum(j.amount_received or 0 for j in jobs)
+    calls = CustomerCall.query.filter_by(customer_id=customer_id)\
+             .order_by(CustomerCall.called_at.desc()).all()
+    # Context for the caller: when did we last actually DO something for them, so a
+    # "friendly check-in" isn't made to someone we spoke to yesterday about a task.
+    last_job = Job.query.filter_by(customer_id=customer_id)\
+                .order_by(Job.created_at.desc()).first()
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
                            documents=docs, employees=employees, owners=owners, now=now, today=now.date(),
                            total_invoiced=total_invoiced, total_received=total_received,
-                           wa_templates=wa_send_context(customer=customer))
+                           wa_templates=wa_send_context(customer=customer),
+                           calls=calls, call_outcomes=CALL_OUTCOMES,
+                           called_this_month=customer_id in called_this_month_ids(now),
+                           last_job=last_job,
+                           services=[s.name for s in Service.query.order_by(Service.name).all()])
 
 
 @app.route('/customers/<int:customer_id>/health')
@@ -5250,6 +5281,87 @@ def add_employee_document(employee_id):
     flash('Document added')
     return redirect(url_for('employee_detail', employee_id=emp.id))
 
+# ─────────────────────── Customer call log ───────────────────────────
+def _month_bounds(d):
+    """First moment of d's calendar month, and first moment of the next month."""
+    start = datetime(d.year, d.month, 1)
+    nxt = datetime(d.year + 1, 1, 1) if d.month == 12 else datetime(d.year, d.month + 1, 1)
+    return start, nxt
+
+def called_this_month_ids(when=None):
+    """Customer ids with a CONNECTED call in `when`'s calendar month. Connected —
+    not merely attempted — is what counts as covered for the month."""
+    start, nxt = _month_bounds(when or now_dubai())
+    rows = db.session.query(CustomerCall.customer_id).filter(
+        CustomerCall.outcome == 'Connected',
+        CustomerCall.called_at >= start, CustomerCall.called_at < nxt).distinct().all()
+    return {r[0] for r in rows}
+
+def attempted_this_month_ids(when=None):
+    """Customer ids with ANY call logged this calendar month (connected or not)."""
+    start, nxt = _month_bounds(when or now_dubai())
+    rows = db.session.query(CustomerCall.customer_id).filter(
+        CustomerCall.called_at >= start, CustomerCall.called_at < nxt).distinct().all()
+    return {r[0] for r in rows}
+
+@app.route('/customers/<int:customer_id>/calls/add', methods=['POST'])
+@login_required
+def add_customer_call(customer_id):
+    c = Customer.query.get_or_404(customer_id)
+    outcome = (request.form.get('outcome') or '').strip()
+    if outcome not in CALL_OUTCOMES:
+        flash('Pick a call outcome.', 'error')
+        return redirect(url_for('customer_detail', customer_id=customer_id) + '#calls')
+    notes = (request.form.get('notes') or '').strip()
+    # The point of the call is the update, not the tick — a connected call with no
+    # note is exactly the box-ticking this feature is meant to avoid.
+    if outcome == 'Connected' and not notes:
+        flash('You spoke to them — please write what they said before saving.', 'error')
+        return redirect(url_for('customer_detail', customer_id=customer_id) + '#calls')
+    when = (request.form.get('called_at') or '').strip()
+    try:
+        called_at = datetime.strptime(when, '%Y-%m-%d') if when else now_dubai()
+    except ValueError:
+        called_at = now_dubai()
+    db.session.add(CustomerCall(customer_id=c.id, called_by=session.get('user_id'),
+                                called_at=called_at, outcome=outcome, notes=notes or None))
+    db.session.commit()
+    flash('Call logged.' if outcome == 'Connected' else f'Logged: {outcome}.')
+    return redirect(url_for('customer_detail', customer_id=customer_id) + '#calls')
+
+@app.route('/calls/<int:call_id>/delete', methods=['POST'])
+@login_required
+def delete_customer_call(call_id):
+    call = CustomerCall.query.get_or_404(call_id)
+    cid = call.customer_id
+    if session.get('role') != 'admin' and call.called_by != session.get('user_id'):
+        flash('You can only remove your own call log entries.')
+        return redirect(url_for('customer_detail', customer_id=cid) + '#calls')
+    db.session.delete(call)
+    db.session.commit()
+    flash('Call log entry removed.')
+    return redirect(url_for('customer_detail', customer_id=cid) + '#calls')
+
+@app.route('/customers/<int:customer_id>/calls/<int:call_id>/to-lead', methods=['POST'])
+@login_required
+def call_to_lead(customer_id, call_id):
+    """A friendly call that surfaced work → push it into the sales pipeline instead
+    of letting it die in a note."""
+    c = Customer.query.get_or_404(customer_id)
+    call = CustomerCall.query.get_or_404(call_id)
+    service = (request.form.get('service') or '').strip() or None
+    lead = Lead(name=c.contact_person or c.name, company=(c.name if c.customer_type == 'Company' else c.company),
+                phone=c.mobile or c.phone or c.whatsapp, email=c.email,
+                source='Existing Client', service=service, status='New',
+                assigned_to=c.assigned_to or session.get('user_id'),
+                genuine='Genuine',   # an existing client we spoke to is not a junk lead
+                remarks=f'From a check-in call on {call.called_at.strftime("%d %b %Y")}: {call.notes or ""}',
+                due_date=now_dubai() + timedelta(days=1))
+    db.session.add(lead)
+    db.session.commit()
+    flash(f'Opportunity created as a lead for {lead.name}.')
+    return redirect(url_for('lead_detail', lead_id=lead.id))
+
 # ─────────────────────────── Owners / UBO ───────────────────────────
 def _owner_from_form(o):
     o.name = (request.form.get('name') or o.name or '').strip()
@@ -6758,6 +6870,11 @@ def init_db():
                 db.session.add(Source(name='WhatsApp - AI Bot'))
                 db.session.commit()
                 print("Ensured 'WhatsApp - AI Bot' source exists")
+            # Source for opportunities raised during a customer check-in call
+            if not Source.query.filter_by(name='Existing Client').first():
+                db.session.add(Source(name='Existing Client'))
+                db.session.commit()
+                print("Ensured 'Existing Client' source exists")
             # Starter WhatsApp templates — seeded INACTIVE; admin activates each one
             # after creating + approving the same name/wording in Meta Business Manager
             if MessageTemplate.query.count() == 0:
@@ -7505,10 +7622,75 @@ def analytics():
         finished = ('Done', 'Closed', 'Pending Finance Close', 'Closed - Pending Partner Commission')
         open_by_cust = Counter(cid for (cid,) in
                                db.session.query(Job.customer_id).filter(Job.status.notin_(finished)).all())
+        # ── Scan inputs: documents, tax, call coverage, data gaps ──
+        docs_by_cust = {}
+        for d in Document.query.filter(Document.expiry_date.isnot(None)).all():
+            if d.customer_id:
+                docs_by_cust.setdefault(d.customer_id, []).append(d)
+        connected_ids = called_this_month_ids(now)
+        attempted_ids = attempted_this_month_ids(now)
+        owners_by_cust = Counter(cid for (cid,) in db.session.query(Owner.customer_id).all())
+        docs_expired = docs_30 = docs_60 = 0
+        expiring_rows = []
+        gaps = {'no_wa': 0, 'no_rep': 0, 'no_owner': 0, 'no_authority': 0, 'no_activity': 0}
+        tax = {'vat_notfiled': 0, 'vat_overdue': 0, 'ct_notfiled': 0, 'ct_overdue': 0, 'vat_na': 0}
+        calls = {'connected': 0, 'attempted_only': 0, 'none': 0}
         buckets = {'m1': 0, 'm3': 0, 'm6': 0, 'older': 0, 'never': 0}
         dormant = []
+        uncalled = []
         mgr_data = {}
         for c in companies:
+            # -- document expiry health (renewal pipeline)
+            worst = None
+            for d in docs_by_cust.get(c.id, []):
+                dl = (d.expiry_date.date() - today).days if hasattr(d.expiry_date, 'date') else (d.expiry_date - today).days
+                if worst is None or dl < worst[0]:
+                    worst = (dl, d)
+            if worst:
+                dl, d = worst
+                if dl < 0:
+                    docs_expired += 1
+                elif dl <= 30:
+                    docs_30 += 1
+                elif dl <= 60:
+                    docs_60 += 1
+                if dl <= 60:
+                    expiring_rows.append({'id': c.id, 'name': c.name, 'doc': d.doc_type,
+                                          'days': dl, 'date': d.expiry_date,
+                                          'manager': c.rep.name if c.rep else '—'})
+            # -- tax compliance
+            if (c.vat_status or '') == 'Not filed':
+                tax['vat_notfiled'] += 1
+                if c.vat_due_date and c.vat_due_date < today:
+                    tax['vat_overdue'] += 1
+            elif not (c.vat_status or ''):
+                tax['vat_na'] += 1
+            if (c.corp_tax_status or '') == 'Not filed':
+                tax['ct_notfiled'] += 1
+                if c.corp_tax_due_date and c.corp_tax_due_date < today:
+                    tax['ct_overdue'] += 1
+            # -- data gaps (a fix-list, not just a stat)
+            if not (c.whatsapp or c.mobile or c.phone or c.phone2):
+                gaps['no_wa'] += 1
+            if not c.assigned_to:
+                gaps['no_rep'] += 1
+            if not owners_by_cust.get(c.id):
+                gaps['no_owner'] += 1
+            if not c.licensing_authority:
+                gaps['no_authority'] += 1
+            if not (c.business_activity or '').strip():
+                gaps['no_activity'] += 1
+            # -- monthly call coverage (connected is what counts)
+            if c.id in connected_ids:
+                calls['connected'] += 1
+            elif c.id in attempted_ids:
+                calls['attempted_only'] += 1
+                uncalled.append({'id': c.id, 'name': c.name, 'tried': True,
+                                 'manager': c.rep.name if c.rep else '—'})
+            else:
+                calls['none'] += 1
+                uncalled.append({'id': c.id, 'name': c.name, 'tried': False,
+                                 'manager': c.rep.name if c.rep else '—'})
             lj = last_job.get(c.id)
             days = (now - lj).days if lj else None
             if days is None:
@@ -7526,13 +7708,16 @@ def analytics():
                 dormant.append({'id': c.id, 'name': c.name, 'days': days,
                                 'last': lj, 'manager': c.rep.name if c.rep else '—'})
             m = mgr_data.setdefault(c.rep.name if c.rep else 'Unassigned',
-                                    {'companies': 0, 'active': 0, 'open_tasks': 0, 'dormant': 0})
+                                    {'companies': 0, 'active': 0, 'open_tasks': 0, 'dormant': 0,
+                                     'called': 0})
             m['companies'] += 1
             if c.ac_status == 'Active':
                 m['active'] += 1
             m['open_tasks'] += open_by_cust.get(c.id, 0)
             if is_dormant:
                 m['dormant'] += 1
+            if c.id in connected_ids:
+                m['called'] += 1
         dormant.sort(key=lambda d: -(d['days'] if d['days'] is not None else 999999))
         managers = sorted(mgr_data.items(), key=lambda kv: (kv[0] == 'Unassigned', -kv[1]['companies']))
         # Growth: new companies added per month, last 12 months
@@ -7560,6 +7745,15 @@ def analytics():
             'dormant': dormant[:20], 'dormant_total': len(dormant),
             'managers': managers,
             'growth': growth, 'max_growth': max((g['count'] for g in growth), default=1) or 1,
+            # ── scan report ──
+            'docs_expired': docs_expired, 'docs_30': docs_30, 'docs_60': docs_60,
+            'expiring': sorted(expiring_rows, key=lambda r: r['days'])[:20],
+            'expiring_total': len(expiring_rows),
+            'tax': tax, 'gaps': gaps, 'calls': calls,
+            'call_pct': round(100 * calls['connected'] / len(companies)) if companies else 0,
+            'uncalled': sorted(uncalled, key=lambda r: r['name'])[:20],
+            'uncalled_total': len(uncalled),
+            'month_name': now.strftime('%B'),
         }
 
     return render_template('analytics.html',

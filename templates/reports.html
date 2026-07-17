@@ -119,6 +119,27 @@
       </div>
       {% endif %}
 
+      <!-- Customer Call Report - Admin + Finance + Sales + Operations -->
+      {% if role in ['admin', 'finance', 'sales', 'operations'] %}
+      <div class="card" style="border-top:4px solid #0F6E56;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:22px;">📞</span>
+          <div>
+            <div style="font-weight:700;color:#0F6E56;font-size:15px;">Customer Call Report</div>
+            <div style="font-size:12px;color:#94A3B8;">Monthly friendly-call coverage per company</div>
+          </div>
+        </div>
+        <ul style="font-size:12px;color:#475569;padding-left:16px;margin:0 0 14px 0;line-height:2;">
+          <li>Every company and its account manager</li>
+          <li>Spoken to / tried but not reached / not called</li>
+          <li>Attempts, last call date & outcome</li>
+          <li>The actual update the customer gave</li>
+          <li>Summary: % actually spoken to</li>
+        </ul>
+        <button class="btn-add" style="width:100%;text-align:center;background:#0F6E56;" onclick="exportReport('calls')">⬇ Export to Excel</button>
+      </div>
+      {% endif %}
+
       <!-- Enquiry Report - Admin + Finance + Sales + Operations -->
       {% if role in ['admin', 'finance', 'sales', 'operations'] %}
       <div class="card" style="border-top:4px solid #B45309;">
@@ -344,6 +365,7 @@
         finance: '/reports/finance/export',
         tasks: '/reports/tasks/export',
         enquiries: '/reports/enquiries/export',
+        calls: '/reports/calls/export',
         documents: '/reports/documents/export',
         staff: '/reports/staff/export',
         'partner-commissions': '/reports/partner-commissions/export',

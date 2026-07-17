@@ -548,6 +548,105 @@
       </div>
     </div>
 
+    <!-- ══ SCAN: what needs action ══ -->
+    <div class="grid4">
+      <div class="kpi" style="border-top:4px solid #B91C1C;">
+        <div class="kpi-label">Expired Documents</div>
+        <div class="kpi-val" style="color:#B91C1C;">{{ pf.docs_expired }}</div>
+        <div class="kpi-sub">Companies with a doc already expired</div>
+      </div>
+      <div class="kpi" style="border-top:4px solid #F59E0B;">
+        <div class="kpi-label">Expiring ≤ 30 Days</div>
+        <div class="kpi-val" style="color:#F59E0B;">{{ pf.docs_30 }}</div>
+        <div class="kpi-sub">Renewal work to win now</div>
+      </div>
+      <div class="kpi" style="border-top:4px solid #EF4444;">
+        <div class="kpi-label">Tax Overdue</div>
+        <div class="kpi-val" style="color:#EF4444;">{{ pf.tax.vat_overdue + pf.tax.ct_overdue }}</div>
+        <div class="kpi-sub">VAT {{ pf.tax.vat_overdue }} · Corp tax {{ pf.tax.ct_overdue }}</div>
+      </div>
+      <div class="kpi" style="border-top:4px solid {{ '#10B981' if pf.call_pct >= 80 else '#F59E0B' }};">
+        <div class="kpi-label">Called in {{ pf.month_name }}</div>
+        <div class="kpi-val" style="color:{{ '#10B981' if pf.call_pct >= 80 else '#F59E0B' }};">{{ pf.call_pct }}%</div>
+        <div class="kpi-sub">{{ pf.calls.connected }} of {{ pf.total }} actually spoken to</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <!-- Renewal pipeline -->
+      <div class="an-card">
+        <div class="an-card-title">⚠️ Documents Expired or Expiring ≤60 Days
+          <span style="font-weight:400;color:#94A3B8;font-size:11px;">· each company's most urgent document — this is renewal revenue</span>
+        </div>
+        {% for r in pf.expiring %}
+        <div class="doc-row">
+          <div>
+            <a href="/customers/{{ r.id }}" style="font-size:12px;font-weight:600;color:#1A2333;text-decoration:none;">{{ r.name }}</a>
+            <div style="font-size:10px;color:#94A3B8;">{{ r.doc }} · {{ r.manager }}</div>
+          </div>
+          {% if r.days < 0 %}
+          <span class="exp-badge" style="background:#FEE2E2;color:#991B1B;">EXPIRED {{ -r.days }}d ago</span>
+          {% else %}
+          <span class="exp-badge" style="background:#FFFBEB;color:#92400E;">{{ r.days }}d left</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% if pf.expiring_total > pf.expiring|length %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ pf.expiring_total - pf.expiring|length }} more — see <a href="/documents" style="color:#1A3B8B;">Documents</a></div>{% endif %}
+        {% if not pf.expiring %}<div class="empty-state">No company documents expiring within 60 days ✅</div>{% endif %}
+      </div>
+
+      <!-- Not called this month -->
+      <div class="an-card">
+        <div class="an-card-title">📞 Not Yet Reached in {{ pf.month_name }}
+          <span style="font-weight:400;color:#94A3B8;font-size:11px;">· your call list for the rest of the month</span>
+        </div>
+        {% for r in pf.uncalled %}
+        <div class="doc-row">
+          <div>
+            <a href="/customers/{{ r.id }}#calls" style="font-size:12px;font-weight:600;color:#1A2333;text-decoration:none;">{{ r.name }}</a>
+            <div style="font-size:10px;color:#94A3B8;">{{ r.manager }}</div>
+          </div>
+          {% if r.tried %}
+          <span class="exp-badge" style="background:#FFFBEB;color:#92400E;">tried, no answer</span>
+          {% else %}
+          <span class="exp-badge" style="background:#F1F5F9;color:#64748B;">not called</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% if pf.uncalled_total > pf.uncalled|length %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ pf.uncalled_total - pf.uncalled|length }} more to call</div>{% endif %}
+        {% if not pf.uncalled %}<div class="empty-state">Every company has been spoken to this month 🎉</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="grid2">
+      <!-- Tax compliance -->
+      <div class="an-card">
+        <div class="an-card-title">🧾 Tax Compliance</div>
+        {% set tmax = [pf.tax.vat_notfiled, pf.tax.ct_notfiled, pf.tax.vat_overdue, pf.tax.ct_overdue, 1]|max %}
+        <div class="bar-row"><div class="bar-label">VAT not filed</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.vat_notfiled/tmax)*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ pf.tax.vat_notfiled }}</div></div>
+        <div class="bar-row"><div class="bar-label">VAT past due date</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.vat_overdue/tmax)*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ pf.tax.vat_overdue }}</div></div>
+        <div class="bar-row"><div class="bar-label">Corp tax not filed</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.ct_notfiled/tmax)*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ pf.tax.ct_notfiled }}</div></div>
+        <div class="bar-row"><div class="bar-label">Corp tax past due</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.ct_overdue/tmax)*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ pf.tax.ct_overdue }}</div></div>
+        <div style="margin-top:8px;font-size:11px;color:#94A3B8;border-top:0.5px solid #F1F5F9;padding-top:8px;">
+          {{ pf.tax.vat_na }} companies have no VAT status set — they aren't counted above.
+        </div>
+      </div>
+
+      <!-- Data gaps -->
+      <div class="an-card">
+        <div class="an-card-title">🧹 Data Gaps <span style="font-weight:400;color:#94A3B8;font-size:11px;">· fix these and the rest of this page gets accurate</span></div>
+        {% set gmax = [pf.gaps.no_wa, pf.gaps.no_rep, pf.gaps.no_owner, pf.gaps.no_authority, pf.gaps.no_activity, 1]|max %}
+        <div class="bar-row"><div class="bar-label" title="Automations can't reach them">No phone / WhatsApp</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_wa/gmax)*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ pf.gaps.no_wa }}</div></div>
+        <div class="bar-row"><div class="bar-label">No account manager</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_rep/gmax)*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ pf.gaps.no_rep }}</div></div>
+        <div class="bar-row"><div class="bar-label">No owner on file</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_owner/gmax)*100)|int }}%;background:#8B5CF6;"></div></div><div class="bar-val">{{ pf.gaps.no_owner }}</div></div>
+        <div class="bar-row"><div class="bar-label">No licensing authority</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_authority/gmax)*100)|int }}%;background:#06B6D4;"></div></div><div class="bar-val">{{ pf.gaps.no_authority }}</div></div>
+        <div class="bar-row"><div class="bar-label">No business activity</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_activity/gmax)*100)|int }}%;background:#94A3B8;"></div></div><div class="bar-val">{{ pf.gaps.no_activity }}</div></div>
+        <div style="margin-top:8px;font-size:11px;color:#94A3B8;border-top:0.5px solid #F1F5F9;padding-top:8px;">
+          "No phone/WhatsApp" is the one that bites — birthday wishes and expiry reminders silently skip those companies.
+        </div>
+      </div>
+    </div>
+
     <div class="grid3">
       <div class="an-card">
         <div class="an-card-title">Jurisdiction</div>
@@ -579,16 +678,18 @@
     <div class="grid2">
       <div class="an-card">
         <div class="an-card-title">Account Managers — Company Book</div>
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;padding:8px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.2fr;gap:8px;padding:8px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;">
           <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Manager</span>
           <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Companies</span>
           <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Active</span>
           <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Open Tasks</span>
           <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Dormant</span>
+          <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Called ({{ pf.month_name[:3] }})</span>
         </div>
         {% set colors = ['#1A3B8B','#10B981','#8B5CF6','#F59E0B','#EF4444','#06B6D4','#EC4899'] %}
         {% for name, m in pf.managers %}
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;padding:10px 12px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
+        {% set cpct = ((m.called / m.companies * 100)|int) if m.companies else 0 %}
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.2fr;gap:8px;padding:10px 12px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="av" style="background:{{ '#94A3B8' if name == 'Unassigned' else colors[loop.index0 % 7] }};">{{ name[:2].upper() }}</div>
             <span style="font-size:12px;font-weight:{{ '400' if name == 'Unassigned' else '700' }};color:{{ '#94A3B8' if name == 'Unassigned' else '#1A2333' }};">{{ name }}</span>
@@ -597,6 +698,9 @@
           <span style="font-size:13px;font-weight:700;color:#10B981;text-align:center;">{{ m.active }}</span>
           <span style="font-size:13px;font-weight:700;color:#133E87;text-align:center;">{{ m.open_tasks }}</span>
           <span style="font-size:13px;font-weight:700;color:{{ '#EF4444' if m.dormant else '#CBD5E1' }};text-align:center;">{{ m.dormant if m.dormant else '—' }}</span>
+          <span style="font-size:12px;font-weight:700;text-align:center;color:{{ '#10B981' if cpct >= 80 else ('#F59E0B' if cpct > 0 else '#EF4444') }};">
+            {{ m.called }}/{{ m.companies }} <span style="font-size:10px;font-weight:400;color:#94A3B8;">({{ cpct }}%)</span>
+          </span>
         </div>
         {% endfor %}
         {% if not pf.managers %}<div class="empty-state">No companies yet</div>{% endif %}

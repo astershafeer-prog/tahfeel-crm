@@ -539,6 +539,66 @@ def export_finance_report():
 
 
 # ── 4. Task Report
+@reports_bp.route('/reports/calls/export')
+def export_calls_report():
+    """Monthly friendly-call coverage: every company, whether we actually SPOKE to
+    them in the period, and what they said."""
+    g = _guard_sales_operations()
+    if g: return g
+    import app as _a
+    db, Customer, User = _a.db, _a.Customer, _a.User
+    CustomerCall = _a.CustomerCall
+    df_d, dt_d, df, dt = _dates(request)
+
+    companies = (db.session.query(Customer).filter(Customer.customer_type == 'Company')
+                 .order_by(Customer.name).all())
+    if session.get('role') == 'sales':
+        companies = [c for c in companies if c.assigned_to == session.get('user_id')]
+
+    calls = (db.session.query(CustomerCall)
+             .filter(CustomerCall.called_at >= df_d, CustomerCall.called_at <= dt_d).all())
+    by_cust = {}
+    for c in calls:
+        by_cust.setdefault(c.customer_id, []).append(c)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Call Report"
+    cols = ['#', 'Company', 'Account Manager', 'Status', 'Attempts',
+            'Last Call', 'Outcome', 'Update from the customer']
+    _title_block(ws, "MONTHLY CUSTOMER CALL REPORT", df, dt, len(cols))
+    _headers(ws, cols)
+
+    rows, spoke, tried, never = [], 0, 0, 0
+    for i, c in enumerate(companies, 1):
+        cl = sorted(by_cust.get(c.id, []), key=lambda x: x.called_at or datetime.min)
+        connected = [x for x in cl if x.outcome == 'Connected']
+        if connected:
+            status = 'Spoken to'; spoke += 1
+        elif cl:
+            status = 'Tried, not reached'; tried += 1
+        else:
+            status = 'Not called'; never += 1
+        last = connected[-1] if connected else (cl[-1] if cl else None)
+        rows.append([
+            i, c.name or '',
+            c.rep.name if c.rep else '—',
+            status, len(cl),
+            last.called_at.strftime('%d/%m/%Y') if last and last.called_at else '',
+            last.outcome if last else '',
+            (last.notes or '') if last else '',
+        ])
+    er = _write_rows(ws, rows, num_cols={5})
+    ws.merge_cells(start_row=er, start_column=1, end_row=er, end_column=len(cols))
+    pct = round(100 * spoke / len(companies)) if companies else 0
+    _tot(ws.cell(row=er, column=1,
+                 value=(f"Companies: {len(companies)}    Spoken to: {spoke} ({pct}%)    "
+                        f"Tried but not reached: {tried}    Never called: {never}")))
+    _col_widths(ws, [4, 34, 18, 18, 9, 12, 14, 60])
+    _freeze(ws)
+    _filter(ws, len(cols))
+    return _respond(wb, f"Call_Report_{df}_{dt}.xlsx")
+
 @reports_bp.route('/reports/enquiries/export')
 def export_enquiries_report():
     g = _guard_sales_operations()  # Admin + Finance + Sales + Operations

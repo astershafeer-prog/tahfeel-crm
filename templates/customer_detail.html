@@ -231,6 +231,84 @@
     {% endif %}
 
     {% if customer.customer_type == 'Company' %}
+    <!-- Call log / monthly check-in -->
+    <div class="card" id="calls" style="margin-bottom:12px;border-top:4px solid {{ '#10B981' if called_this_month else '#F59E0B' }};">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <h2>📞 Call Log <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ calls|length }}</span></h2>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          {% if called_this_month %}
+          <span style="background:#ECFDF5;color:#047857;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Spoken to this month</span>
+          {% else %}
+          <span style="background:#FFFBEB;color:#92400E;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">Not yet reached this month</span>
+          {% endif %}
+          <button class="btn-add" style="font-size:12px;padding:6px 14px;" onclick="document.getElementById('callForm').style.display=(document.getElementById('callForm').style.display==='none'?'block':'none');">+ Log a Call</button>
+        </div>
+      </div>
+
+      {# Context before dialling: don't "check in" with someone we're already working with #}
+      <div style="font-size:11px;color:var(--text-muted);padding:0 4px 10px;">
+        {% if last_job %}Last task for this client: <b style="color:var(--text-secondary);">{{ last_job.job_type }}</b> — {{ last_job.created_at.strftime('%d %b %Y') }} ({{ (now - last_job.created_at).days }} days ago).
+        {% else %}No task has ever been created for this client.{% endif %}
+      </div>
+
+      <div id="callForm" style="display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <form method="POST" action="/customers/{{ customer.id }}/calls/add">
+          <div class="form-row-2">
+            <div class="form-group"><label>Outcome <span style="color:var(--danger);">*</span></label>
+              <select name="outcome" id="callOutcome" required onchange="callNoteHint()">
+                <option value="">— Select —</option>
+                {% for o in call_outcomes %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group"><label>Call date</label><input type="date" name="called_at" value="{{ now.strftime('%Y-%m-%d') }}"></div>
+          </div>
+          <div class="form-group">
+            <label>What did they say? <span id="noteReq" style="color:var(--danger);display:none;">* required when connected</span></label>
+            <textarea name="notes" id="callNotes" rows="3" placeholder="Their update, any issues, anything they need..."></textarea>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button type="button" class="btn-sm" onclick="document.getElementById('callForm').style.display='none';">Cancel</button>
+            <button type="submit" class="btn-primary">Save call</button>
+          </div>
+        </form>
+      </div>
+
+      {% if calls %}
+      <table>
+        <thead><tr><th style="width:110px;">Date</th><th style="width:120px;">Outcome</th><th>Update</th><th style="width:120px;">By</th><th style="width:150px;"></th></tr></thead>
+        <tbody>
+          {% for c in calls %}
+          <tr>
+            <td style="font-size:12px;white-space:nowrap;">{{ c.called_at.strftime('%d %b %Y') }}</td>
+            <td>
+              {% if c.outcome == 'Connected' %}<span style="background:#ECFDF5;color:#047857;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;">✓ Connected</span>
+              {% else %}<span style="background:#F1F5F9;color:#64748B;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;">{{ c.outcome }}</span>{% endif %}
+            </td>
+            <td style="font-size:12px;color:var(--text-secondary);">{{ c.notes or '—' }}</td>
+            <td style="font-size:12px;">{{ c.caller.name if c.caller else '—' }}</td>
+            <td>
+              <div style="display:flex;gap:6px;justify-content:flex-end;">
+                {% if c.outcome == 'Connected' %}
+                <form method="POST" action="/customers/{{ customer.id }}/calls/{{ c.id }}/to-lead" style="margin:0;" onsubmit="return confirm('Create a lead from this call? It will enter the sales pipeline.');">
+                  <button type="submit" class="btn-sm" style="border-color:#1A3B8B;color:#1A3B8B;font-size:11px;" title="This call raised an opportunity — create a lead">➡ Opportunity</button>
+                </form>
+                {% endif %}
+                {% if session.role == 'admin' or c.called_by == session.user_id %}
+                <form method="POST" action="/calls/{{ c.id }}/delete" style="margin:0;" onsubmit="return confirm('Remove this call log entry?');">
+                  <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);font-size:11px;">🗑</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No calls logged yet. Click <strong>+ Log a Call</strong> after your next check-in.</div>
+      {% endif %}
+    </div>
+
     <!-- Owners / UBO -->
     <div class="card" style="margin-bottom:12px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
@@ -418,6 +496,12 @@
       document.getElementById('ownerEdit').classList.add('active');
     }
     function closeOwnerEdit(){ document.getElementById('ownerEdit').classList.remove('active'); }
+    // The note is the point of a connected call — show that it's required.
+    function callNoteHint(){
+      var connected = document.getElementById('callOutcome').value === 'Connected';
+      document.getElementById('noteReq').style.display = connected ? 'inline' : 'none';
+      document.getElementById('callNotes').required = connected;
+    }
     ['empModal','ownerModal','ownerEdit'].forEach(function(id){
       var m=document.getElementById(id);
       if(m) m.addEventListener('click', function(e){ if(e.target===this) m.classList.remove('active'); });
