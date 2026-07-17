@@ -5304,20 +5304,44 @@ def attempted_this_month_ids(when=None):
         CustomerCall.called_at >= start, CustomerCall.called_at < nxt).distinct().all()
     return {r[0] for r in rows}
 
+@app.route('/customers/<int:customer_id>/calls')
+@login_required
+def customer_calls(customer_id):
+    """Full call history for a client, on its own page — the log grows for years,
+    so it would swamp the client detail page. Available for companies AND
+    individuals; only the monthly coverage cycle is company-only."""
+    c = Customer.query.get_or_404(customer_id)
+    now = now_dubai()
+    calls = CustomerCall.query.filter_by(customer_id=customer_id)\
+             .order_by(CustomerCall.called_at.desc()).all()
+    connected = [x for x in calls if x.outcome == 'Connected']
+    last_job = Job.query.filter_by(customer_id=customer_id)\
+                .order_by(Job.created_at.desc()).first()
+    stats = {
+        'total': len(calls),
+        'connected': len(connected),
+        'reach_rate': round(100 * len(connected) / len(calls)) if calls else 0,
+        'last_connected': connected[0].called_at if connected else None,
+    }
+    return render_template('customer_calls.html', customer=c, calls=calls, now=now,
+                           call_outcomes=CALL_OUTCOMES, stats=stats, last_job=last_job,
+                           called_this_month=customer_id in called_this_month_ids(now))
+
 @app.route('/customers/<int:customer_id>/calls/add', methods=['POST'])
 @login_required
 def add_customer_call(customer_id):
     c = Customer.query.get_or_404(customer_id)
+    back = url_for('customer_calls', customer_id=customer_id)
     outcome = (request.form.get('outcome') or '').strip()
     if outcome not in CALL_OUTCOMES:
         flash('Pick a call outcome.', 'error')
-        return redirect(url_for('customer_detail', customer_id=customer_id) + '#calls')
+        return redirect(back)
     notes = (request.form.get('notes') or '').strip()
     # The point of the call is the update, not the tick — a connected call with no
     # note is exactly the box-ticking this feature is meant to avoid.
     if outcome == 'Connected' and not notes:
         flash('You spoke to them — please write what they said before saving.', 'error')
-        return redirect(url_for('customer_detail', customer_id=customer_id) + '#calls')
+        return redirect(back)
     when = (request.form.get('called_at') or '').strip()
     try:
         called_at = datetime.strptime(when, '%Y-%m-%d') if when else now_dubai()
@@ -5327,20 +5351,21 @@ def add_customer_call(customer_id):
                                 called_at=called_at, outcome=outcome, notes=notes or None))
     db.session.commit()
     flash('Call logged.' if outcome == 'Connected' else f'Logged: {outcome}.')
-    return redirect(url_for('customer_detail', customer_id=customer_id) + '#calls')
+    return redirect(back)
 
 @app.route('/calls/<int:call_id>/delete', methods=['POST'])
 @login_required
 def delete_customer_call(call_id):
     call = CustomerCall.query.get_or_404(call_id)
     cid = call.customer_id
+    back = url_for('customer_calls', customer_id=cid)
     if session.get('role') != 'admin' and call.called_by != session.get('user_id'):
         flash('You can only remove your own call log entries.')
-        return redirect(url_for('customer_detail', customer_id=cid) + '#calls')
+        return redirect(back)
     db.session.delete(call)
     db.session.commit()
     flash('Call log entry removed.')
-    return redirect(url_for('customer_detail', customer_id=cid) + '#calls')
+    return redirect(back)
 
 @app.route('/customers/<int:customer_id>/calls/<int:call_id>/to-lead', methods=['POST'])
 @login_required

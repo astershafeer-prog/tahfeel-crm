@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Call Log</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+  <style>
+    .cl-kpi{background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;padding:14px 16px;}
+    .cl-kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+    .cl-kpi-val{font-size:24px;font-weight:800;}
+    .cl-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;}
+    .cl-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #F1F5F9;}
+    .cl-dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('') }}
+
+  <div class="container" style="max-width:1000px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="margin-bottom:6px;">
+      <a href="/customers/{{ customer.id }}" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">← Back to {{ customer.name }}</a>
+    </div>
+
+    <div class="page-header" style="margin-bottom:16px;">
+      <div>
+        <h2 style="color:#133E87;">📞 Call Log</h2>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">
+          {{ customer.name }}
+          {% if customer.customer_type == 'Company' %}<span class="cl-badge" style="background:#EFF6FF;color:#1D4ED8;margin-left:4px;">🏢 Company</span>
+          {% else %}<span class="cl-badge" style="background:#F1F5F9;color:#475569;margin-left:4px;">👤 Individual</span>{% endif %}
+          {% if customer.rep %} · Account manager: <b style="color:#475569;">{{ customer.rep.name }}</b>{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        {% set num = customer.mobile or customer.phone or customer.whatsapp or customer.phone2 %}
+        {% if num %}
+        <a href="tel:{{ num|replace(' ','') }}" class="btn-sm" title="Call this number">📞 {{ num }}</a>
+        <a href="https://wa.me/{{ num|replace(' ','')|replace('+','') }}" target="_blank" class="btn-sm" style="background:#25D366;border-color:#25D366;color:#fff;">WhatsApp</a>
+        {% else %}
+        <span class="cl-badge" style="background:#FEF2F2;color:#B91C1C;">⚠ No phone number on file</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+      <div class="cl-kpi" style="border-top:4px solid #133E87;">
+        <div class="cl-kpi-label">Total Calls</div>
+        <div class="cl-kpi-val">{{ stats.total }}</div>
+      </div>
+      <div class="cl-kpi" style="border-top:4px solid #10B981;">
+        <div class="cl-kpi-label">Actually Spoke</div>
+        <div class="cl-kpi-val" style="color:#10B981;">{{ stats.connected }}</div>
+      </div>
+      <div class="cl-kpi" style="border-top:4px solid #8B5CF6;">
+        <div class="cl-kpi-label">Reach Rate</div>
+        <div class="cl-kpi-val" style="color:#8B5CF6;">{{ stats.reach_rate }}%</div>
+      </div>
+      <div class="cl-kpi" style="border-top:4px solid {{ '#10B981' if called_this_month else '#F59E0B' }};">
+        <div class="cl-kpi-label">This Month</div>
+        <div class="cl-kpi-val" style="font-size:15px;padding-top:6px;color:{{ '#10B981' if called_this_month else '#F59E0B' }};">
+          {{ '✓ Spoken to' if called_this_month else 'Not reached' }}
+        </div>
+      </div>
+    </div>
+
+    {# Context before dialling — don't 'check in' with someone we're mid-job with #}
+    <div style="background:#F8FAFC;border:0.5px solid #E2E8F0;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#475569;">
+      {% if last_job %}Last task for this client: <b>{{ last_job.job_type }}</b> — {{ last_job.created_at.strftime('%d %b %Y') }}
+        ({{ (now - last_job.created_at).days }} days ago){% if (now - last_job.created_at).days <= 7 %}
+        <span style="color:#B45309;font-weight:600;"> — you're already working with them this week.</span>{% endif %}
+      {% else %}No task has ever been created for this client.{% endif %}
+    </div>
+
+    <!-- Log a call -->
+    <div class="card" style="margin-bottom:16px;border-top:4px solid #10B981;">
+      <div class="card-header"><h2>＋ Log a Call</h2></div>
+      <form method="POST" action="/customers/{{ customer.id }}/calls/add">
+        <div class="form-row-2">
+          <div class="form-group"><label>Outcome <span style="color:var(--danger);">*</span></label>
+            <select name="outcome" id="callOutcome" required onchange="callNoteHint()">
+              <option value="">— Select —</option>
+              {% for o in call_outcomes %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group"><label>Call date</label><input type="date" name="called_at" value="{{ now.strftime('%Y-%m-%d') }}"></div>
+        </div>
+        <div class="form-group">
+          <label>What did they say? <span id="noteReq" style="color:var(--danger);display:none;">* required when connected</span></label>
+          <textarea name="notes" id="callNotes" rows="3" placeholder="Their update, any issues, anything they need…"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <button type="submit" class="btn-primary">Save call</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="card-header"><h2>History <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ calls|length }}</span></h2></div>
+      {% if calls %}
+      {% for c in calls %}
+      <div class="cl-item">
+        <div class="cl-dot" style="background:{{ '#10B981' if c.outcome == 'Connected' else '#CBD5E1' }};"></div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;">
+            <span style="font-size:12px;font-weight:700;color:#1A2333;">{{ c.called_at.strftime('%d %b %Y') }}</span>
+            {% if c.outcome == 'Connected' %}<span class="cl-badge" style="background:#ECFDF5;color:#047857;">✓ Connected</span>
+            {% else %}<span class="cl-badge" style="background:#F1F5F9;color:#64748B;">{{ c.outcome }}</span>{% endif %}
+            <span style="font-size:11px;color:#94A3B8;">by {{ c.caller.name if c.caller else '—' }}</span>
+          </div>
+          {% if c.notes %}<div style="font-size:13px;color:#334155;">{{ c.notes }}</div>{% endif %}
+        </div>
+        <div style="display:flex;gap:6px;align-items:flex-start;">
+          {% if c.outcome == 'Connected' %}
+          <form method="POST" action="/customers/{{ customer.id }}/calls/{{ c.id }}/to-lead" style="margin:0;" onsubmit="return confirm('Create a lead from this call? It will enter the sales pipeline.');">
+            <button type="submit" class="btn-sm" style="border-color:#1A3B8B;color:#1A3B8B;font-size:11px;white-space:nowrap;" title="This call raised an opportunity — create a lead">➡ Opportunity</button>
+          </form>
+          {% endif %}
+          {% if session.role == 'admin' or c.called_by == session.user_id %}
+          <form method="POST" action="/calls/{{ c.id }}/delete" style="margin:0;" onsubmit="return confirm('Remove this call log entry?');">
+            <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);font-size:11px;">🗑</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty" style="padding:32px;text-align:center;color:#94A3B8;">
+        No calls logged yet. Use <strong>Log a Call</strong> above after your next check-in.<br>
+        <span style="font-size:11px;">Tip: after saving a <b>Connected</b> call, an <b>➡ Opportunity</b> button appears on it — use that if they mentioned work they need.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    // The note is the point of a connected call — show that it's required.
+    function callNoteHint(){
+      var connected = document.getElementById('callOutcome').value === 'Connected';
+      document.getElementById('noteReq').style.display = connected ? 'inline' : 'none';
+      document.getElementById('callNotes').required = connected;
+    }
+  </script>
+</body>
+</html>
