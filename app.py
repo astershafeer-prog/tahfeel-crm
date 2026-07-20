@@ -7964,6 +7964,51 @@ def whatsapp_inbox():
                            q=q, flt=flt, counts=counts, staff=staff,
                            wa_templates=wa_send_context(), wa_health=_wa_health())
 
+# Words/codes Meta uses when it rejects a send over payment/balance. Deliberately
+# NOT bare 'insufficient' — that also appears in permission errors and would false-alarm.
+WA_PAYMENT_HINTS = ('131042', 'payment', 'billing', 'balance', 'insufficient fund',
+                    'insufficient credit', 'out of credit', 'top up', 'topup', 'unpaid')
+
+def wa_is_payment_error(text):
+    e = (text or '').lower()
+    return any(h in e for h in WA_PAYMENT_HINTS)
+
+def wa_balance_state():
+    """The failed message proving the WhatsApp balance is currently empty, or None.
+
+    STATE-based, not event-based. Compares the newest payment-rejected send against
+    the newest SUCCESSFUL send: if the payment failure is the more recent of the two,
+    the balance is still empty — however long ago it happened and however quiet things
+    have been since. A success afterwards means it was topped up, so the alert clears
+    itself with no manual step.
+
+    (The first version only scanned the last 10 sends in 24h, so if the balance ran
+    dry on a quiet evening the banner vanished overnight and the CRM went back to
+    reporting 'healthy' while sending was still broken.)
+    """
+    try:
+        # If the balance is empty every subsequent send fails the same way, so the
+        # newest payment error is comfortably inside a recent slice of failures.
+        fails = WhatsAppMessage.query.filter(
+            WhatsAppMessage.direction == 'out',
+            WhatsAppMessage.status == 'failed',
+            WhatsAppMessage.error.isnot(None)
+        ).order_by(WhatsAppMessage.created_at.desc()).limit(50).all()
+        last_pay_fail = next((m for m in fails if wa_is_payment_error(m.error)), None)
+        if not last_pay_fail:
+            return None
+        last_ok = WhatsAppMessage.query.filter(
+            WhatsAppMessage.direction == 'out',
+            WhatsAppMessage.status.in_(('sent', 'delivered', 'read'))
+        ).order_by(WhatsAppMessage.created_at.desc()).first()
+        if (last_ok and last_ok.created_at and last_pay_fail.created_at
+                and last_ok.created_at > last_pay_fail.created_at):
+            return None                      # something sent fine since → topped up
+        return last_pay_fail
+    except Exception as e:
+        print(f'[WA] balance state check failed: {e}')
+        return None
+
 def _wa_health():
     """Plain-English WhatsApp sending health for the inbox banner. Looks at whether
     the API is configured, whether the auto-bot is on, and how many of the most
@@ -7984,17 +8029,12 @@ def _wa_health():
     total = len(recent)
     failed = sum(1 for m in recent if (m.status or '') == 'failed')
     fail_id = max((m.id for m in recent if (m.status or '') == 'failed'), default=0)
-    # Balance-empty detection: Meta rejects sends with a payment error (code 131042
-    # or a message mentioning payment/funds) when the prepaid WhatsApp balance runs
-    # out. That's the clearest "recharge now" signal Meta gives, so surface it loudly.
-    def _is_payment_err(m):
-        e = (m.error or '').lower()
-        return '131042' in e or 'payment' in e or 'insufficient' in e or 'funds' in e or 'balance' in e
-    balance_empty = any((m.status or '') == 'failed' and _is_payment_err(m) for m in recent)
-    if balance_empty:
-        level, msg = 'down', ('WhatsApp balance looks EMPTY — Meta is rejecting sends with a payment '
-                              'error. Top up your WhatsApp balance in Meta WhatsApp Manager → Billing, '
-                              'then messages will resume.')
+    bal_fail = wa_balance_state()
+    if bal_fail:
+        _when = bal_fail.created_at.strftime('%d %b, %H:%M') if bal_fail.created_at else 'recently'
+        level, msg = 'down', (f'WhatsApp balance looks EMPTY — Meta rejected a send with a payment '
+                              f'error on {_when} and nothing has sent successfully since. '
+                              f'Top up in Meta → Billing; this clears itself once a message goes out.')
     elif not configured:
         level, msg = 'down', ('WhatsApp API is not configured (access token missing). '
                               'Outgoing messages cannot be sent. Check the Railway settings.')
