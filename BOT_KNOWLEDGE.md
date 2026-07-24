@@ -21,11 +21,22 @@ the bot instantly gets smarter. The part above the marker is notes for you (neve
 - **Healthcare / specialised setup**: medical centre and clinic setup, pharmacy/drug-store setup, healthcare regulatory approvals (DHA Dubai, MOH, DoH Abu Dhabi), product registration, and professional licensing.
 - **Compliance**: VAT registration, Corporate Tax registration, UBO declarations, AML/goAML registration, and audit support.
 
-## Pricing (owner-approved — you MAY state these; never invent any other figure)
-- **Startup Bundle — a fixed AED 9,999 all-in-one package**: business license, 2-year residence visa, mini branding, social media setup, VAT & Corporate Tax registration, corporate bank account, company stamp + stationery design, a social media post, and a Founders Resource Kit. Pitch it to new founders who want everything done together. Just say "business license" — do NOT name a jurisdiction/authority for the bundle unless the customer specifically asks which license, in which case it is an **Ajman Free Zone** license.
-- **Mainland** company starts from around **AED 10,000**. **Free Zone** company starts from around **AED 4,888**.
-- Cheapest free-zone packages (Ajman Free Zone, SHAMS, UAQ FTZ) can start ~AED 4,888–6,500/year including licence + flexi-desk.
-- For anything beyond these, a specialist confirms the exact, no-hidden-fees quotation for the customer's activity, jurisdiction and visas. Payment: cash, bank transfer, card, secure link; no installment plans.
+## Pricing & Bundles (owner-approved FIXED prices — you MAY state these; never invent any other figure)
+All bundle prices are fixed and EXCLUDE government fees (only mention that if the customer asks about total cost). Only recommend a bundle when the customer is genuinely interested — don't push.
+
+- **Licence only:** Mainland from ~AED 10,000; Free Zone from ~AED 4,888 (cheapest free zones — Ajman FZ, SHAMS, UAQ FTZ — from ~AED 4,888–6,500/yr incl. licence + flexi-desk).
+
+**The 5 Bundles:**
+1. **Launchpad — AED 2,999** (worth 6,000+): a marketing/branding launch kit for people STARTING a new business. Does NOT include the trade licence or a visa. Includes a branding & launch kit — company stamp, business cards, logo (2 concepts, 2 revisions), stationery, mini brand book + 1-page brand guidelines, social media setup (FB/IG/LinkedIn), 4 social posters, import code, digital founder's kit, brand registration guidelines — plus, complimentary for new licence holders: bank account opening assistance, corporate tax registration, VAT registration, business structure advice.
+   - **Full start combo: Free Zone licence + 2-year visa + Launchpad = AED 9,999** (all-in-one for a new founder). For the licence, say just "business licence"; only if asked which, it's an **Ajman Free Zone** licence.
+2. **Scaleup — AED 4,999** (worth 9,000+): growth & systems for growing SMEs ready to scale. Includes a basic website (up to 5 pages; domain/hosting separate), 2 business email IDs, advanced brand guidelines, company profile, WhatsApp automation, Google Business Profile setup, a 3-month content calendar, plus 12 months of ongoing support (1 year free PRO service, VAT filing 4 quarters, corporate tax filing, monthly compliance report).
+3. **Compliance 360 — AED 1,999** (introductory, limited-period — say so; worth 5,000): compliance-focused, for small businesses (new OR already running) with fewer than 5 staff. Managed for 12 months: VAT filing (4 quarters), WPS monitoring & clearing, monthly compliance report, trade licence renewal (excl. Ejari & government fees), 1 year free PRO service, corporate tax submission. Excludes bookkeeping & audited statements.
+4. **Blueprint — AED 3,999** (worth 7,000): strategy & advisory for SMEs/founders/family businesses. Includes business strategy consultation, market & competitor research, pricing strategy, a 90-day roadmap, LinkedIn optimization, revenue model design, basic budgeting. Advisory only — execution not included.
+5. **Compass — AED 7,999** (worth 12,000): senior strategy for CEOs/MDs/founders preparing to raise or expand. Includes a pitch deck, 1:1 business coaching (2 sessions), personal branding strategy, detailed budgeting, AI toolkit audit, technical implementation guidance, and payment gateway + BNPL (Tabby & Tamara) setup support. Advisory/setup-support only.
+
+**Which bundle for whom (suggest only if interested):** new business + branding/marketing → Launchpad (or the AED 9,999 full combo if they also need licence + visa); scaling → Scaleup; wants compliance handled (small biz, under 5 staff) → Compliance 360; wants a plan/strategy → Blueprint; senior leader raising/expanding → Compass.
+
+- For anything beyond these fixed prices, a specialist confirms the exact, no-hidden-fees quotation. Payment: cash, bank transfer, card, secure link; no installment plans.
 
 ## FAQ knowledge — keep these accurate; a specialist confirms the customer's specifics
 
