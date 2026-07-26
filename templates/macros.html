@@ -288,6 +288,42 @@ loadTheme();
 </script>
 {% endmacro %}
 
+{% macro not_provided() %}<span style="color:#94A3B8;font-style:italic;">Not provided</span>{% endmacro %}
+
+{% macro needs_attention_banner(items) %}
+{% if items %}
+<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <div style="font-size:13px;font-weight:800;color:#92400E;white-space:nowrap;">⚠ Needs Attention</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;">
+    {% for item in items %}
+    <a href="{{ item.url }}" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:white;border:1px solid #FDE68A;color:#92400E;font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;">
+      {{ item.label }}
+      {% if item.tahfeel_n %}<span style="background:#0F2660;color:white;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;">incl. {{ item.tahfeel_n }} Tahfeel</span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro testimonial_nudge_banner(nudges) %}
+{% if nudges %}
+{% for n in nudges %}
+<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+  <div style="font-size:13px;color:#1E3A8A;">
+    ⭐ <strong>{{ n.customer.name }}</strong>'s task ({{ n.job.job_type }}) closed a few days ago — worth asking for a testimonial?
+  </div>
+  <div style="display:flex;gap:8px;flex-shrink:0;">
+    <a href="/jobs/{{ n.job.id }}" style="text-decoration:none;background:#0F2660;color:white;font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;">Request now</a>
+    <form method="POST" action="/customers/{{ n.customer.id }}/dismiss-testimonial-nudge" style="margin:0;">
+      <button type="submit" style="background:white;border:1px solid #BFDBFE;color:#1E3A8A;font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;cursor:pointer;">Dismiss</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endmacro %}
+
 {% macro welcome(now) %}
 <div class="welcome-banner">
   <div class="welcome-text">

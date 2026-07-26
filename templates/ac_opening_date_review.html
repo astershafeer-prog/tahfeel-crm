@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — AC Opening Date Review</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('admin') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <a href="/admin" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to Admin</a>
+
+    <div class="page-header" style="margin-bottom:10px;">
+      <h2>🏷 AC Opening Date Review</h2>
+    </div>
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B45309;padding:16px 18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+      <div style="font-size:13px;color:#475569;line-height:1.6;">
+        These clients have an <strong>AC Opening Date</strong> that exactly matches the date their record was
+        created in the CRM — usually because the add-client form's today-default was left unedited, not because
+        the license really opened on that day. Open each client, verify the real license issuance date (correct it
+        if wrong), then click <strong>Confirmed correct</strong> if the match is a genuine coincidence.
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
+        <div style="font-size:20px;font-weight:800;color:{{ '#16A34A' if unverified == 0 else '#B45309' }};">{{ unverified }} of {{ total }} unverified</div>
+        <div style="flex:1;max-width:280px;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;">
+          <div style="height:100%;background:#16A34A;width:{{ ((total - unverified) / total * 100) if total else 100 }}%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #1A3B8B;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
+      {% if suspects %}
+      <table>
+        <thead>
+          <tr><th>Client</th><th>AC Opening Date</th><th>CRM Entry Date</th><th>Status</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for c in suspects %}
+          <tr>
+            <td><a href="/customers/{{ c.id }}" style="color:#1A3B8B;font-weight:600;text-decoration:none;font-size:13px;">{{ c.name }}</a>{% if c.company %}<div style="font-size:11px;color:#94A3B8;">{{ c.company }}</div>{% endif %}</td>
+            <td style="font-size:13px;">{{ c.ac_opening_date.strftime('%d %b %Y') }}</td>
+            <td style="font-size:13px;color:var(--text-muted);">{{ c.created_at.strftime('%d %b %Y') }}</td>
+            <td>
+              {% if c.ac_opening_date_confirmed %}
+              <span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">✓ Confirmed correct</span>
+              {% else %}
+              <span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">⚠ Unverified</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if not c.ac_opening_date_confirmed %}
+              <form method="POST" action="/customers/{{ c.id }}/confirm-ac-opening-date" style="margin:0;">
+                <button type="submit" class="btn-sm" style="font-size:11px;">Confirmed correct</button>
+              </form>
+              {% else %}
+              <a href="/customers/{{ c.id }}" class="ib" title="Open">👁</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty" style="padding:40px;text-align:center;color:var(--text-muted);">No clients have an AC Opening Date matching their CRM entry date. 🎉</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

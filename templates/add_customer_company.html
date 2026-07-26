@@ -36,8 +36,11 @@
               <input type="text" name="contact_person" required placeholder="Person to contact">
             </div>
             <div class="form-group">
-              <label>Mobile *</label>
-              <input type="text" name="phone" required placeholder="+971 50 000 0000">
+              <label>Primary Contact Mobile *</label>
+              <div style="display:flex;gap:6px;">
+                <select id="phoneCountry" style="width:130px;flex-shrink:0;"></select>
+                <input type="text" name="phone" id="primaryPhone" required placeholder="50 000 0000" style="flex:1;">
+              </div>
             </div>
             <div class="form-group">
               <label>Alternative Number</label>
@@ -62,8 +65,12 @@
             <div class="form-group" style="grid-column:1/-1;"><div class="section-label" style="margin-top:8px;">🏢 Company Details</div></div>
             <div class="form-group"><label>AC Code</label><input type="text" name="ac_code"></div>
             <div class="form-group"><label>Trade Name</label><input type="text" name="trade_name"></div>
-            <div class="form-group"><label>Mobile</label><input type="text" name="mobile" placeholder="+971 5X XXX XXXX"></div>
-            <div class="form-group"><label>AC Opening Date</label><input type="date" name="ac_opening_date"></div>
+            <div class="form-group"><label>Company Landline</label><input type="text" name="mobile" placeholder="+971 4 XXX XXXX"></div>
+            <div class="form-group">
+              <label>AC Opening Date</label>
+              <input type="date" name="ac_opening_date" id="acOpeningDate">
+              <div id="acOpeningDateHint" style="display:none;font-size:11px;color:#B45309;margin-top:3px;">Default date — replace with actual license issuance date.</div>
+            </div>
             <div class="form-group"><label>AC Status</label><select name="ac_status"><option value="">— Select —</option>{% for s in ['Active','Under Formation','Inactive','Closed'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group"><label>Legal Form</label><select name="legal_form"><option value="">— Select —</option>{% for s in ['LLC','Sole Establishment','Civil Company','Branch','Free Zone Company','Free Zone Establishment','Offshore','Other'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group"><label>Jurisdiction</label><select name="jurisdiction"><option value="">— Select —</option>{% for s in ['Mainland','Free Zone','Offshore'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
@@ -93,6 +100,14 @@
                 <option value="">— Select source —</option>
                 {% for s in sources %}<option value="{{ s.name }}">{{ s.name }}</option>{% endfor %}
               </select>
+            </div>
+            <div class="form-group">
+              <label>Attribution</label>
+              <select name="attribution_source">
+                <option value="">— Select —</option>
+                {% for s in attribution_sources %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+              </select>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">For long-term marketing attribution — separate from Source above</div>
             </div>
             <div class="form-group">
               <label>Primary Representative *</label>
@@ -183,8 +198,12 @@
     }
   </script>
 
+  <script src="/static/js/phone_country.js"></script>
   <script>
-    document.querySelectorAll('input[name="phone"], input[name="phone2"]').forEach(function(el) {
+    // Primary phone gets a real country-code selector (TASK 1.4), defaulting to +971.
+    initPhoneCountry(document.getElementById('primaryPhone'), document.getElementById('phoneCountry'));
+
+    document.querySelectorAll('input[name="phone2"]').forEach(function(el) {
       if (!el.value || el.value.trim() === '') { el.value = '+971 '; }
       el.addEventListener('focus', function() {
         if (this.value === '+971 ') { var len = this.value.length; this.setSelectionRange(len, len); }
@@ -211,10 +230,29 @@
       if (document.getElementById('waSame') && document.getElementById('waSame').checked) syncWhatsApp();
     });
 
-    // Default AC opening date to today
+    // Default AC opening date to today — flagged amber until the staff member
+    // actually edits it, so it isn't mistaken for a real license issuance date.
     (function() {
-      var d = document.querySelector('input[name="ac_opening_date"]');
-      if (d && !d.value) { d.value = new Date().toISOString().slice(0, 10); }
+      var d = document.getElementById('acOpeningDate');
+      var hint = document.getElementById('acOpeningDateHint');
+      if (!d) return;
+      function markDefault() {
+        d.style.background = '#FFFBEB';
+        d.style.borderColor = '#FDE68A';
+        d.style.color = '#B45309';
+        if (hint) hint.style.display = 'block';
+      }
+      function markEdited() {
+        d.style.background = '';
+        d.style.borderColor = '';
+        d.style.color = '';
+        if (hint) hint.style.display = 'none';
+      }
+      if (!d.value) {
+        d.value = new Date().toISOString().slice(0, 10);
+        markDefault();
+      }
+      d.addEventListener('input', markEdited);
     })();
 
     // Duplicate-phone soft warning: confirm popup you can dismiss, no data lost

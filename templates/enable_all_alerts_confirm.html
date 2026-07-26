@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Enable Alerts for All Clients</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('admin') }}
+  <div class="container" style="max-width:640px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <a href="/admin" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to Admin</a>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B45309;box-shadow:0 2px 8px rgba(0,0,0,0.05);padding:24px;">
+      <h2 style="margin-top:0;color:#0F2660;">🔔 Enable Compliance Alerts for All Clients</h2>
+      <p style="font-size:14px;color:#475569;line-height:1.6;">
+        This turns document-expiry alerts <strong>ON</strong> for every client who currently has them off.
+        Once enabled, each client will start receiving automated document-compliance reminders.
+      </p>
+
+      <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:16px 18px;margin:18px 0;">
+        <div style="font-size:28px;font-weight:800;color:#B45309;">{{ count }} of {{ total }}</div>
+        <div style="font-size:13px;color:#92400E;">client(s) will be switched from OFF to ON</div>
+      </div>
+
+      <div style="font-size:13px;color:#475569;margin-bottom:18px;">
+        <strong>Channels:</strong>
+        <ul style="margin:6px 0 0;padding-left:20px;line-height:1.8;">
+          <li>💬 <strong>WhatsApp</strong> — primary (7-day / 3-day reminders before a document expires, via the approved <code>compliance_alert_v1</code> template)</li>
+          <li>📧 <strong>Email</strong> — backup (weekly summary of documents expiring within 30 days)</li>
+        </ul>
+      </div>
+
+      <div style="font-size:12px;color:#94A3B8;margin-bottom:20px;">
+        Each client can still opt out individually from their profile at any time. This action does not delete or change any data — only the alert toggle.
+      </div>
+
+      <form method="POST" action="/admin/alerts/enable-all" onsubmit="return confirm('Enable compliance alerts for {{ count }} client(s)? This cannot be easily undone in bulk — you would need to turn them off one by one, or use Turn OFF all alerts.');">
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <a href="/admin" class="btn-sm">Cancel</a>
+          <button type="submit" class="btn-sm" style="background:#B45309;color:white;border-color:#B45309;">🔔 Confirm — Enable Alerts for {{ count }} Client(s)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

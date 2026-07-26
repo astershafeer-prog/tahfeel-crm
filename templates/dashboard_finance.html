@@ -10,10 +10,12 @@
   {{ theme_loader() }}
 </head>
 <body>
-  {%- from 'macros.html' import topbar, nav, welcome -%}
+  {%- from 'macros.html' import topbar, nav, welcome, needs_attention_banner, testimonial_nudge_banner -%}
   {{ topbar() }}
   {{ nav('dashboard') }}
   <div class="container">
+    {{ needs_attention_banner(needs_attention) }}
+    {{ testimonial_nudge_banner(testimonial_nudges) }}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
@@ -39,7 +41,8 @@
         <a href="/jobs" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Active</span><span style="font-size:22px;font-weight:700;color:#1A3B8B;">{{ tasks_active }}</span></a>
         <a href="/jobs?status=Overdue" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Overdue</span><span style="font-size:22px;font-weight:700;color:#EF4444;">{{ tasks_overdue }}</span></a>
         <a href="/jobs?status=Processing" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Processing</span><span style="font-size:22px;font-weight:700;color:#F59E0B;">{{ tasks_processing }}</span></a>
-        <a href="/jobs?status=Pending+Finance+Approval" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;"><span style="font-size:13px;color:#475569;">Pending Approval</span><span style="font-size:22px;font-weight:700;color:#8B5CF6;">{{ tasks_pending_approval }}</span></a>
+        <a href="/jobs?status=Pending+Finance+Approval" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #F8FAFC;"><span style="font-size:13px;color:#475569;">Pending Approval</span><span style="font-size:22px;font-weight:700;color:#8B5CF6;">{{ tasks_pending_approval }}</span></a>
+        <a href="/jobs/ready-to-close" style="text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:7px 0;"><span style="font-size:13px;color:#475569;">Ready to Close</span><span style="font-size:22px;font-weight:700;color:#16A34A;">{{ ready_to_close_count }}</span></a>
       </div>
 
       <!-- Finance Block -->

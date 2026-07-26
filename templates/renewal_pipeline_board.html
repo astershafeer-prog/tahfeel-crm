@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Renewal Pipeline</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .rp-board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start;}
+    @media(max-width:1100px){.rp-board{grid-template-columns:1fr;}}
+    .rp-col{background:#F6F8FB;border-radius:12px;padding:10px;min-height:60px;}
+    .rp-col-hd{display:flex;justify-content:space-between;align-items:center;padding:6px 6px 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;}
+    .rp-count{background:rgba(0,0,0,.08);border-radius:20px;padding:1px 9px;font-size:11px;}
+    .rp-card{background:white;border-radius:10px;border:1px solid #E8ECF2;padding:10px 12px;margin-bottom:8px;text-decoration:none;display:block;color:inherit;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .rp-card:hover{box-shadow:0 4px 10px rgba(0,0,0,.08);border-color:#CBD5E1;}
+    .rp-card .nm{font-size:13px;font-weight:700;color:#0F2660;}
+    .rp-card .doc{font-size:11.5px;color:#475569;margin-top:2px;}
+    .rp-card .days{font-size:11px;font-weight:700;margin-top:5px;display:inline-block;}
+    .rp-card .mgr{font-size:10.5px;color:#94A3B8;margin-top:4px;}
+    .rp-empty{padding:14px 8px;text-align:center;color:#B0BAC9;font-size:12px;}
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('health-check') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <a href="/health-check" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to Compliance Center</a>
+
+    <div class="page-header" style="margin-bottom:10px;">
+      <h2>🗂 Renewal Pipeline Board</h2>
+      <form method="GET" action="/health-check/pipeline" style="margin:0;">
+        <select name="manager" onchange="this.form.submit()" style="padding:8px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#fff;">
+          <option value="">All account managers</option>
+          {% for m in managers %}<option value="{{ m }}" {% if manager_filter == m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+        </select>
+        {% if manager_filter %}<a href="/health-check/pipeline" style="margin-left:8px;font-size:12px;color:var(--text-muted);">Clear</a>{% endif %}
+      </form>
+    </div>
+    <div style="font-size:12px;color:#94A3B8;margin-bottom:14px;">This filter is a convenience view only — every staff member can see every client, regardless of assignment.</div>
+
+    <div class="rp-board">
+      {% for key, title, color in [
+        ('expired', 'Expired', '#B91C1C'), ('d30', '≤ 30 days', '#DC2626'),
+        ('d60', '31–60 days', '#B45309'), ('d90', '61–90 days', '#CA8A04'),
+        ('d90plus', '90+ days', '#16A34A')
+      ] %}
+      <div class="rp-col">
+        <div class="rp-col-hd" style="color:{{ color }};">{{ title }} <span class="rp-count">{{ columns[key]|length }}</span></div>
+        {% for card in columns[key] %}
+        <a class="rp-card" href="/customers/{{ card.customer.id }}" style="border-top:3px solid {{ color }};">
+          <div class="nm">{{ card.customer.name }}</div>
+          <div class="doc">{{ card.doc.doc_type }}</div>
+          <div class="days" style="color:{{ color }};">{% if card.days < 0 %}Expired {{ -card.days }}d ago{% else %}{{ card.days }}d left{% endif %}</div>
+          <div class="mgr">👤 {{ card.manager }}</div>
+        </a>
+        {% else %}
+        <div class="rp-empty">None</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</body>
+</html>

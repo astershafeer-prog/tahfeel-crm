@@ -26,7 +26,13 @@
             <div class="form-group"><label>Company</label><input type="text" name="company" placeholder="Company or business name"></div>
           </div>
           <div class="form-row-2">
-            <div class="form-group"><label>Phone *</label><input type="text" name="phone" required placeholder="+971 50 000 0000"></div>
+            <div class="form-group">
+              <label>Phone *</label>
+              <div style="display:flex;gap:6px;">
+                <select id="phoneCountry" style="width:130px;flex-shrink:0;"></select>
+                <input type="text" name="phone" id="primaryPhone" required placeholder="50 000 0000" style="flex:1;">
+              </div>
+            </div>
             <div class="form-group"><label>Phone 2</label><input type="text" name="phone2" placeholder="+971 50 000 0000"></div>
           </div>
           <div class="form-row-2">
@@ -84,9 +90,13 @@
   <script src="/static/js/searchable_select.js"></script>
   <script>makeSearchable('lead-service', 'Search service...');</script>
 
+<script src="/static/js/phone_country.js"></script>
 <script>
-// Phone: default +971 on empty fields, allow editing
-document.querySelectorAll('input[name="phone"], input[name="phone2"]').forEach(function(el) {
+// Primary phone gets a real country-code selector (TASK 1.4), defaulting to +971.
+initPhoneCountry(document.getElementById('primaryPhone'), document.getElementById('phoneCountry'));
+
+// Phone 2: default +971 on empty, allow editing (secondary field, no selector)
+document.querySelectorAll('input[name="phone2"]').forEach(function(el) {
   if (!el.value || el.value.trim() === '') {
     el.value = '+971 ';
   }

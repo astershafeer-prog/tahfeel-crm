@@ -63,6 +63,7 @@
         <h2>Compliance Center</h2>
         <p>Document-compliance health at a glance — per client</p>
       </div>
+      <a href="/health-check/pipeline" class="cc-view" style="justify-self:auto;margin-right:8px;">🗂 Renewal Pipeline Board</a>
       <a href="/health-check/report" class="cc-view" style="justify-self:auto;">🖨 Print Report</a>
     </div>
 
@@ -105,6 +106,9 @@
       <div class="cc-chip" style="border-top-color:#1A3B8B;">
         <div class="cico" style="background:#EEF2FF;color:#1A3B8B;">📦</div><div class="lbl">Total Docs</div><div class="num" style="color:#1A3B8B;">{{ total }}</div>
       </div>
+      <div class="cc-chip" style="border-top-color:#7C3AED;" title="Internal revenue forecast — indicative estimate, staff-facing only">
+        <div class="cico" style="background:#F5F3FF;color:#7C3AED;">💰</div><div class="lbl">Renewal Pipeline (90d)</div><div class="num" style="color:#7C3AED;font-size:15px;">{% if pipeline_max %}AED {{ '{:,.0f}'.format(pipeline_min) }}–{{ '{:,.0f}'.format(pipeline_max) }}{% else %}—{% endif %}</div>
+      </div>
     </div>
 
     <div style="font-size:12px;color:#64748B;margin-bottom:9px;font-weight:600;">{{ rows|length }} client{{ 's' if rows|length != 1 else '' }}</div>
@@ -143,6 +147,17 @@
             <text x="24" y="28" text-anchor="middle" font-size="12" font-weight="800" fill="{{ scol }}">{{ r.score }}%</text>
           </svg>
           {% else %}<span style="color:#CBD5E1;font-size:13px;">—</span>{% endif %}
+          {% if r.sparkline and r.sparkline|length >= 2 %}
+          {# TASK 3.3(d): tiny score-over-time sparkline, up to 6 recent snapshots #}
+          {% set pts = r.sparkline|map(attribute='score')|select('number')|list %}
+          {% if pts|length >= 2 %}
+          {% set pmin = pts|min %}{% set pmax = pts|max %}{% set prange = (pmax - pmin) if pmax != pmin else 1 %}
+          <svg width="48" height="16" viewBox="0 0 48 16" style="margin-top:2px;" title="Score trend — last {{ pts|length }} snapshot(s)">
+            <polyline fill="none" stroke="{{ scol }}" stroke-width="1.5"
+              points="{% for p in pts %}{{ (loop.index0 * (48 / (pts|length - 1)))|round(1) }},{{ (14 - ((p - pmin) / prange * 12))|round(1) }}{% if not loop.last %} {% endif %}{% endfor %}"/>
+          </svg>
+          {% endif %}
+          {% endif %}
         </div>
         <div class="cc-c-view">
           {% if r.customer_id %}<a class="cc-view" href="/customers/{{ r.customer_id }}/health">View →</a>

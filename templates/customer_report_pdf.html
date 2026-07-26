@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Compliance Intelligence Report — {{ customer.name }}</title>
+<title>Compliance Report — {{ customer.name }}</title>
 {% macro dicon(t, color, sz=15) -%}
 {% set tl = (t or '')|lower %}
 <svg width="{{ sz }}" height="{{ sz }}" viewBox="0 0 24 24" fill="none" stroke="{{ color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;">
@@ -100,6 +100,46 @@
   <td class="card" style="width:12.5%;padding:7pt 9pt;"><div class="statlbl">EMPLOYEES</div><div class="statnum" style="color:#7C3AED;">{{ employees_count }}</div><div style="font-size:7.5pt;color:#64748B;">On record</div></td>
   <td class="card" style="width:12.5%;padding:7pt 9pt;"><div class="statlbl">TAX STATUS</div><div class="statnum" style="color:{{ '#16A34A' if (customer.vat_status or customer.corp_tax_status) else '#94A3B8' }};font-size:13pt;">{{ 'REGISTERED' if (customer.vat_status or customer.corp_tax_status) else '—' }}</div><div style="font-size:7.5pt;color:#64748B;">VAT / Corporate tax</div></td>
 </tr></table>
+
+<!-- ═══ TASK 3.2(b/c): renewal budget range + non-renewal warning ═══ -->
+<table style="margin-top:4pt;border-spacing:3pt;border-collapse:separate;"><tr>
+  <td class="card" style="width:{{ '35%' if show_renewal_warning else '100%' }};padding:8pt 11pt;">
+    <div class="hd-blue" style="margin-bottom:3pt;">ESTIMATED RENEWAL BUDGET — NEXT 90 DAYS</div>
+    <div style="font-size:15pt;font-weight:bold;color:#0B3B8C;">
+      {% if renewal_budget_max %}AED {{ '{:,.0f}'.format(renewal_budget_min) }}–{{ '{:,.0f}'.format(renewal_budget_max) }}{% else %}—{% endif %}
+    </div>
+    <div style="font-size:7.5pt;color:#94A3B8;margin-top:2pt;">Indicative estimate — confirm with Tahfeel.</div>
+  </td>
+  {% if show_renewal_warning %}
+  <td class="card" style="width:65%;padding:8pt 14pt;background:#FEF2F2;border:1pt solid #FECACA;">
+    <div style="font-size:9.5pt;color:#B91C1C;font-weight:bold;">⚠ Non-renewal attracts government fines and may affect your license status.</div>
+    <div style="font-size:9pt;color:#7F1D1D;margin-top:2pt;">Contact Tahfeel to renew on time.</div>
+  </td>
+  {% endif %}
+</tr></table>
+
+<!-- ═══ TASK 3.3(c): Since last month — auto-hidden until 2+ snapshots exist ═══ -->
+{% if trend %}
+<table style="margin-top:4pt;border-spacing:3pt;border-collapse:separate;"><tr>
+  <td class="card" style="width:100%;padding:8pt 11pt;">
+    <div class="hd-blue" style="margin-bottom:3pt;">SINCE LAST MONTH <span style="font-weight:normal;color:#94A3B8;">(vs. {{ trend.since_date.strftime('%d %b %Y') }})</span></div>
+    <table><tr>
+      <td style="width:33%;text-align:center;">
+        <div style="font-size:14pt;font-weight:bold;color:{{ '#16A34A' if (trend.score_delta or 0) >= 0 else '#EF4444' }};">{{ '+' if trend.score_delta and trend.score_delta > 0 else '' }}{{ trend.score_delta if trend.score_delta is not none else '—' }}{% if trend.score_delta is not none %}%{% endif %}</div>
+        <div style="font-size:7.5pt;color:#64748B;">Score change</div>
+      </td>
+      <td style="width:33%;text-align:center;">
+        <div style="font-size:14pt;font-weight:bold;color:#16A34A;">{{ trend.documents_renewed }}</div>
+        <div style="font-size:7.5pt;color:#64748B;">Document(s) renewed</div>
+      </td>
+      <td style="width:33%;text-align:center;">
+        <div style="font-size:14pt;font-weight:bold;color:#F59E0B;">{{ trend.newly_expiring }}</div>
+        <div style="font-size:7.5pt;color:#64748B;">Newly expiring</div>
+      </td>
+    </tr></table>
+  </td>
+</tr></table>
+{% endif %}
 
 <!-- ═══ OVERVIEW | ADVISOR | RISK ═══ -->
 <table style="margin-top:4pt;border-spacing:3pt;border-collapse:separate;"><tr>

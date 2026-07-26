@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Ready to Close</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('jobs') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <a href="/jobs" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to Tasks</a>
+
+    <div class="page-header" style="margin-bottom:10px;">
+      <h2>💰 Ready to Close <span class="page-subtitle">({{ ready|length }})</span></h2>
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #16A34A;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:24px;">
+      {% if ready %}
+      <table>
+        <thead>
+          <tr><th>Task</th><th>Client</th><th>Amount</th><th>Days Waiting</th>{% if session.role in ['admin','finance'] %}<th>Action</th>{% endif %}</tr>
+        </thead>
+        <tbody>
+          {% for j in ready %}
+          {% set bdays = business_days_since(aged_key(j), now) %}
+          <tr>
+            <td><a href="/jobs/{{ j.id }}" style="color:#1A3B8B;font-weight:600;text-decoration:none;font-size:13px;">{{ j.job_type }}</a></td>
+            <td style="font-size:13px;">{{ j.customer.name if j.customer else '—' }}</td>
+            <td style="font-size:13px;font-weight:600;color:#16A34A;">AED {{ '%.0f'|format(j.amount_received or 0) }}</td>
+            <td>
+              <span style="background:{{ '#FEF2F2' if bdays >= threshold else '#F1F5F9' }};color:{{ '#B91C1C' if bdays >= threshold else '#64748B' }};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ bdays }}d</span>
+            </td>
+            {% if session.role in ['admin','finance'] %}
+            <td>
+              <form method="POST" action="/jobs/{{ j.id }}/ready-close" style="margin:0;" onsubmit="return confirm('Close this task? Invoiced AED {{ '%.0f'|format(j.amount_invoiced or 0) }}, Received AED {{ '%.0f'|format(j.amount_received or 0) }}.');">
+                <button type="submit" class="btn-sm" style="background:#16A34A;color:white;border-color:#16A34A;">✓ Close</button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty" style="padding:40px;text-align:center;color:var(--text-muted);">No tasks are ready to close right now. 🎉</div>
+      {% endif %}
+    </div>
+
+    <div class="page-header" style="margin-bottom:10px;">
+      <h2>⏳ Done — Awaiting Payment <span class="page-subtitle">({{ awaiting_rows|length }})</span></h2>
+      {% if awaiting_rows %}<div style="font-size:13px;font-weight:700;color:#B45309;">Outstanding: AED {{ '%.0f'|format(awaiting_total) }}</div>{% endif %}
+    </div>
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B45309;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
+      {% if awaiting_rows %}
+      <table>
+        <thead>
+          <tr><th>Task</th><th>Client</th><th>Invoiced</th><th>Received</th><th>Outstanding</th><th>Days Waiting</th></tr>
+        </thead>
+        <tbody>
+          {% for j, outstanding in awaiting_rows %}
+          {% set bdays = business_days_since(aged_key(j), now) %}
+          <tr>
+            <td><a href="/jobs/{{ j.id }}" style="color:#1A3B8B;font-weight:600;text-decoration:none;font-size:13px;">{{ j.job_type }}</a></td>
+            <td style="font-size:13px;">{{ j.customer.name if j.customer else '—' }}</td>
+            <td style="font-size:13px;">AED {{ '%.0f'|format(j.amount_invoiced or 0) }}</td>
+            <td style="font-size:13px;">AED {{ '%.0f'|format(j.amount_received or 0) }}</td>
+            <td style="font-size:13px;font-weight:600;color:#B45309;">AED {{ '%.0f'|format(outstanding) }}</td>
+            <td>
+              <span style="background:{{ '#FEF2F2' if bdays >= threshold else '#F1F5F9' }};color:{{ '#B91C1C' if bdays >= threshold else '#64748B' }};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ bdays }}d</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty" style="padding:40px;text-align:center;color:var(--text-muted);">No Done tasks are awaiting payment. 🎉</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

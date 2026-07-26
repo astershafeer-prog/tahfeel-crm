@@ -10,11 +10,13 @@
   {{ theme_loader() }}
 </head>
 <body>
-    {%- from 'macros.html' import topbar, nav, welcome -%}
+    {%- from 'macros.html' import topbar, nav, welcome, needs_attention_banner, testimonial_nudge_banner -%}
   {{ topbar() }}
   {{ nav('dashboard') }}
 
   <div class="container">
+    {{ needs_attention_banner(needs_attention) }}
+    {{ testimonial_nudge_banner(testimonial_nudges) }}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}

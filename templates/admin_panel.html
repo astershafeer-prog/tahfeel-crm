@@ -581,6 +581,37 @@
           </div>
         </div>
       </div>
+
+      <!-- TASK 3.2(a): Renewal Cost Ranges — ranges only, no fine columns -->
+      <div class="card" id="renewal-costs">
+        <div class="card-header">
+          <h2>💰 Renewal Cost Ranges <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--success-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Compliance</span></h2>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11.5px;color:#94A3B8;margin-bottom:10px;line-height:1.5;">
+            Indicative AED ranges used for the client-facing "Estimated renewal budget" figure. Rows marked ⚠ are placeholder defaults — please review and correct before relying on them.
+          </div>
+          <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border-light);border-radius:6px;padding:4px;">
+            {% for rc in renewal_costs %}
+            <div style="padding:8px 6px;border-bottom:1px solid var(--border-light);">
+              <div id="rc-view-{{ rc.id }}" style="display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;">
+                <span style="font-size:13px;">{{ rc.doc_type }}{% if rc.is_default_seed %} <span title="Unreviewed default estimate" style="color:#B45309;">⚠</span>{% endif %}</span>
+                <span style="font-size:12px;color:var(--text-muted);">AED {{ '%.0f'|format(rc.renewal_cost_min_aed) }}–{{ '%.0f'|format(rc.renewal_cost_max_aed) }}</span>
+                <button onclick="rcEdit({{ rc.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
+              </div>
+              <form id="rc-form-{{ rc.id }}" method="POST" action="/admin/renewal-cost/{{ rc.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
+                <span style="font-size:12px;color:var(--text-muted);">AED</span>
+                <input type="number" name="renewal_cost_min_aed" value="{{ rc.renewal_cost_min_aed|int }}" min="0" step="50" style="width:90px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                <span style="font-size:12px;color:var(--text-muted);">–</span>
+                <input type="number" name="renewal_cost_max_aed" value="{{ rc.renewal_cost_max_aed|int }}" min="0" step="50" style="width:90px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
+                <button type="button" onclick="rcCancel({{ rc.id }})" class="btn-sm">Cancel</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
       </div></div>
     </details>
 
@@ -637,10 +668,15 @@
       <div class="acc-inner">
         <div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 0;">
           <a href="/admin/secure-documents" class="btn-sm" style="background:#059669;color:white;border-color:#059669;" onclick="return confirm('Secure all document files? Raw Cloudinary links will stop working — files will only open for logged-in staff via the CRM. Run once after deploy.')">🔐 Secure Documents</a>
+          <a href="/admin/alerts/enable-all" class="btn-sm" style="background:#B45309;color:white;border-color:#B45309;">🔔 Enable alerts for all clients</a>
           <a href="/admin/alerts/disable-all" class="btn-sm" style="background:#B91C1C;color:white;border-color:#B91C1C;" onclick="return confirm('Turn OFF report alerts for ALL customers? No customer will receive automated weekly/monthly emails until you re-enable them individually on each customer\'s health page.')">🔕 Turn OFF all alerts</a>
+          <a href="/admin/ac-opening-date-review" class="btn-sm" style="background:#B45309;color:white;border-color:#B45309;">🏷 AC Opening Date Review{% if aod_unverified_count %} <span style="background:rgba(255,255,255,.25);padding:1px 7px;border-radius:10px;font-size:11px;">{{ aod_unverified_count }}</span>{% endif %}</a>
+          <form method="POST" action="/admin/compliance-snapshot/take" style="margin:0;display:inline;" onsubmit="return confirm('Take a compliance snapshot for every client, dated today? Convention: run this at end of month.');">
+            <button type="submit" class="btn-sm" style="background:#7C3AED;color:white;border-color:#7C3AED;cursor:pointer;">📸 Take compliance snapshot</button>
+          </form>
           <a href="/admin/backup/export" class="btn-sm" style="background:#133E87;color:white;border-color:#133E87;display:inline-flex;align-items:center;gap:5px;">⬇ Download Full Backup</a>
         </div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:8px;">Secure Documents is a one-time action after deploy · Turn OFF all alerts is an emergency switch · Backup downloads a full data export.</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:8px;">Secure Documents is a one-time action after deploy · Enable/Turn OFF all alerts are bulk switches (each opens a confirmation) · Take compliance snapshot at end of month for the trend/sparkline · Backup downloads a full data export.</div>
       </div>
     </details>
   </div>
@@ -683,6 +719,8 @@
     function caCancel(id) { document.getElementById('ca-view-'+id).style.display='flex'; document.getElementById('ca-form-'+id).style.display='none'; }
     function dtEdit(id) { document.getElementById('dt-view-'+id).style.display='none'; document.getElementById('dt-form-'+id).style.display='flex'; }
     function dtCancel(id) { document.getElementById('dt-view-'+id).style.display='flex'; document.getElementById('dt-form-'+id).style.display='none'; }
+    function rcEdit(id) { document.getElementById('rc-view-'+id).style.display='none'; document.getElementById('rc-form-'+id).style.display='flex'; }
+    function rcCancel(id) { document.getElementById('rc-view-'+id).style.display='grid'; document.getElementById('rc-form-'+id).style.display='none'; }
     function paEdit(id) { document.getElementById('pa-view-'+id).style.display='none'; document.getElementById('pa-form-'+id).style.display='flex'; }
     function paCancel(id) { document.getElementById('pa-view-'+id).style.display='flex'; document.getElementById('pa-form-'+id).style.display='none'; }
   </script>

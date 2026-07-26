@@ -228,6 +228,27 @@
       <div class="kpi" style="border-top:4px solid #EF4444;"><div class="kpi-label">Lost</div><div class="kpi-val" style="color:#EF4444;">{{ lost }}</div><div class="kpi-sub">{{ ((lost/total_leads)*100)|round(1) if total_leads > 0 else 0 }}% lost rate</div></div>
       <div class="kpi" style="border-top:4px solid #F59E0B;"><div class="kpi-label">In Progress</div><div class="kpi-val">{{ total_leads - converted - lost }}</div><div class="kpi-sub">Active leads</div></div>
     </div>
+
+    <!-- TASK 2.3(b): Lead→Client conversion tracking — computed from the
+         Convert-to-Client link (converted_at), not lead status. No historical
+         back-linking: only counts conversions made through this flow. -->
+    <div class="an-card" style="margin-bottom:16px;">
+      <div class="an-card-title">🤝 Lead → Client Conversions <span style="font-weight:400;color:#94A3B8;font-size:11px;">· tracked since this feature launched</span></div>
+      <div class="grid4" style="margin-bottom:0;">
+        <div class="kpi" style="border-top:4px solid #0F2660;"><div class="kpi-label">This Month</div><div class="kpi-val">{{ conversions_this_month }}</div><div class="kpi-sub">Leads converted to clients</div></div>
+        <div class="kpi" style="border-top:4px solid #10B981;"><div class="kpi-label">All Time</div><div class="kpi-val">{{ conversions_total }}</div><div class="kpi-sub">Since tracking began</div></div>
+        <div class="kpi" style="border-top:4px solid #8B5CF6;"><div class="kpi-label">Avg Days to Convert</div><div class="kpi-val">{{ avg_days_to_convert if avg_days_to_convert is not none else '—' }}</div><div class="kpi-sub">Lead created → converted</div></div>
+        <div class="kpi" style="border-top:4px solid #F59E0B;"><div class="kpi-label">Best Source</div><div class="kpi-val" style="font-size:16px;">{{ conversion_rate_by_source[0].source if conversion_rate_by_source else '—' }}</div><div class="kpi-sub">{{ conversion_rate_by_source[0].rate if conversion_rate_by_source else 0 }}% conversion rate</div></div>
+      </div>
+      {% if conversion_rate_by_source %}
+      <div style="margin-top:14px;">
+        {% for r in conversion_rate_by_source %}
+        <div class="bar-row"><div class="bar-label">{{ r.source }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ r.rate }}%;background:#0F2660;"></div></div><div class="bar-val">{{ r.converted }}/{{ r.total }} · {{ r.rate }}%</div></div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
     <div class="grid2">
       <div class="an-card">
         <div class="an-card-title">Daily Leads Received <span style="font-weight:400;color:#94A3B8;font-size:11px;">· avg {{ lead_daily_avg }}/day</span></div>

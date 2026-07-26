@@ -71,9 +71,9 @@
             {% for d in docs %}
             <tr>
               <td style="font-weight:600;">{{ d.doc_type }}</td>
-              <td style="font-size:13px;">{{ d.expiry_date.strftime('%d %b %Y') if d.expiry_date else '—' }}</td>
+              <td style="font-size:13px;">{{ d.expiry_date.strftime('%d %b %Y') if has_valid_expiry(d.expiry_date) else '—' }}</td>
               <td>
-                {% if not d.expiry_date %}<span style="font-size:11px;color:#CBD5E1;">—</span>
+                {% if not has_valid_expiry(d.expiry_date) %}<span style="background:#F1F5F9;color:#64748B;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">Not set</span>
                 {% else %}{% set days = (d.expiry_date.date() - today).days %}
                   {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Expired {{ -days }}d ago</span>
                   {% elif days <= 30 %}<span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>

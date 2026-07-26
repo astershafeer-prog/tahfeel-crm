@@ -62,9 +62,63 @@ def now_dubai():
     return datetime.now(DUBAI_TZ).replace(tzinfo=None)
 from functools import wraps
 import os
+import re as _re_phone
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+# ── TASK 1.4: phone normalization (E.164 / WhatsApp-safe) ──────────────────────
+# Single source of truth for "clean, storable, WhatsApp-safe" phone format,
+# applied on every phone save path (leads, customers, imports). Only handles the
+# unambiguous patterns the audit found — anything else is returned unchanged so
+# a foreign number never gets a wrong country code guessed onto it. This is a
+# DIFFERENT function from whatsapp_webhook.normalize_phone(), which strips
+# everything to bare digits for the Graph API / inbound matching — this one
+# keeps a leading '+' and is what gets stored in the database.
+DEFAULT_PHONE_COUNTRY = '971'
+
+def normalize_phone_e164(raw, default_country=DEFAULT_PHONE_COUNTRY):
+    """Best-effort E.164 normalization for UAE-first data. Handles:
+        "0554342277"        -> "+971554342277"   (UAE local -> international)
+        "+971 0523950403"   -> "+971523950403"   (strip the stray leading 0)
+        "00971501234567"    -> "+971501234567"   (00 international prefix)
+        "554342277"         -> "+971554342277"   (bare UAE mobile, no leading 0)
+        "+44 7911 123456"   -> "+447911123456"   (foreign, '+' kept, just de-spaced)
+    Anything that doesn't match a known-safe pattern (too short, no recognizable
+    prefix, letters mixed in, a UAE landline, etc.) is returned UNCHANGED —
+    never guessed. Empty/None passes through unchanged.
+    """
+    if not raw:
+        return raw
+    s = str(raw).strip()
+    if not s:
+        return raw
+    has_plus = s.startswith('+')
+    digits = _re_phone.sub(r'\D', '', s)
+    if not digits:
+        return raw
+    if has_plus:
+        if digits.startswith(default_country + '0'):
+            digits = default_country + digits[len(default_country) + 1:]
+        return '+' + digits
+    if digits.startswith('00' + default_country):
+        digits = digits[2:]
+        if digits.startswith(default_country + '0'):
+            digits = default_country + digits[len(default_country) + 1:]
+        return '+' + digits
+    if digits.startswith('0') and len(digits) == 10:
+        # 05XXXXXXXX (UAE mobile) -> +9715XXXXXXXX. UAE landlines are 9 digits
+        # (0X XXX XXXX) and deliberately fall through unchanged below.
+        return '+' + default_country + digits[1:]
+    if digits.startswith(default_country) and len(digits) in (12, 13):
+        rest = digits[len(default_country):]
+        if rest.startswith('0'):
+            rest = rest[1:]
+        return '+' + default_country + rest
+    if len(digits) == 9 and digits[0] == '5':
+        # bare UAE mobile, no leading 0: 5XXXXXXXX
+        return '+' + default_country + digits
+    return raw
 
 app = Flask(__name__)
 # Trust exactly ONE proxy hop (Railway's edge) for X-Forwarded-For / -Proto.
@@ -228,6 +282,7 @@ class Lead(db.Model):
     name = db.Column(db.String(100), nullable=False)
     company = db.Column(db.String(100))
     phone = db.Column(db.String(20))
+    phone_original = db.Column(db.String(30))  # TASK 1.4: as-typed value, before normalize_phone_e164()
     email = db.Column(db.String(100))
     address = db.Column(db.String(200))
     source = db.Column(db.String(50))
@@ -249,6 +304,11 @@ class Lead(db.Model):
     sub_source = db.Column(db.String(50))         # channel within a source, e.g. Facebook / Instagram
     first_contacted_at = db.Column(db.DateTime)   # first time the lead was actually reached
     attempts = db.Column(db.Integer, default=0)   # contact-attempt counter (info only, never auto-acts)
+    # TASK 2.3: stamped only by the "Convert to Client" flow — this is what
+    # analytics conversion metrics key off. Old lead_id links made before this
+    # feature existed have no converted_at, so they're naturally excluded
+    # (no historical back-linking, per the approved scope).
+    converted_at = db.Column(db.DateTime, nullable=True)
     assignee = db.relationship('User', foreign_keys=[assigned_to])
     updates = db.relationship('LeadUpdate', backref='lead', lazy=True, order_by='LeadUpdate.created_at.desc()')
 
@@ -330,17 +390,28 @@ class Customer(db.Model):
     name = db.Column(db.String(100), nullable=False)
     company = db.Column(db.String(100))
     phone = db.Column(db.String(20))
+    phone_original = db.Column(db.String(30))  # TASK 1.4: as-typed value, before normalize_phone_e164()
     phone2 = db.Column(db.String(20))
     email = db.Column(db.String(100))
     address = db.Column(db.String(200))
     source = db.Column(db.String(50))
+    # TASK 2.3(d): a small, fixed attribution taxonomy for CLIENTS specifically —
+    # deliberately separate from `source` (which mirrors the lead-pipeline Source
+    # table and is auto-copied on lead conversion). This one applies to every
+    # client, converted-from-lead or not, so long-term attribution reporting
+    # doesn't depend on whether a lead ever existed.
+    attribution_source = db.Column(db.String(30))
     nationality = db.Column(db.String(50))
     date_of_birth = db.Column(db.Date, nullable=True)
     customer_type = db.Column(db.String(20), default='Individual')
     contact_person = db.Column(db.String(100))  # used for Company-type customers
-    alerts_enabled = db.Column(db.Boolean, default=False)  # document-expiry alerts (email/WhatsApp)
+    # TASK 3.1: ON by default for new clients (WhatsApp primary, email backup).
+    # Existing clients are untouched until the admin runs the one-time bulk
+    # "Enable alerts for all clients" action — never auto-triggered.
+    alerts_enabled = db.Column(db.Boolean, default=True)  # document-expiry alerts (email/WhatsApp)
     alert_email = db.Column(db.String(120))
     alert_whatsapp = db.Column(db.String(30))
+    first_alert_sent_at = db.Column(db.DateTime, nullable=True)  # TASK 3.1(c): one-time intro line
     # Company profile (UAE) — used for Company-type customers
     ac_code = db.Column(db.String(50))
     trade_name = db.Column(db.String(150))
@@ -357,6 +428,11 @@ class Customer(db.Model):
     whatsapp = db.Column(db.String(30))
     website = db.Column(db.String(120))
     ac_opening_date = db.Column(db.Date)
+    # TASK 1.3: AC Opening Date is often left at its today-default when staff skip
+    # editing it, so it silently equals the CRM entry date instead of the real
+    # license issuance date. That's flagged on the client profile until someone
+    # dismisses it here — permanent per-client, so it isn't re-flagged every visit.
+    ac_opening_date_confirmed = db.Column(db.Boolean, default=False)
     uae_pass_number = db.Column(db.String(50))   # UAE Pass access / account number
     uae_pass_name = db.Column(db.String(100))    # name on the UAE Pass account
     # Tax filing tracking (shown as Compliance cards; auto-roll on Filed)
@@ -368,6 +444,9 @@ class Customer(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     lead_id = db.Column(db.Integer, db.ForeignKey('lead.id'), nullable=True)
+    # TASK 2.4: suppresses the testimonial dashboard nudge for this client once
+    # dismissed — one nudge per client per 90 days, regardless of task count.
+    last_testimonial_nudge_at = db.Column(db.DateTime, nullable=True)
     rep = db.relationship('User', foreign_keys=[assigned_to])
     lead = db.relationship('Lead', foreign_keys=[lead_id])
     jobs = db.relationship('Job', backref='customer', lazy=True, order_by='Job.created_at.desc()')
@@ -401,6 +480,13 @@ class Job(db.Model):
     partner_received_date = db.Column(db.Date)
     revenue = db.Column(db.Float, default=0)  # Revenue counted when no partner OR when partner pays
     revenue_date = db.Column(db.Date)  # Date when revenue is counted (for cash-basis accounting)
+    # TASK 2.4: post-Closed, optional testimonial step. Deliberately separate
+    # from Job.status — never affects the finance-closes rule or job ladder.
+    # (Note: an older, unrelated `testimonial` column may still exist from a
+    # removed feature — not reused here, since its old values/semantics don't
+    # match this design.)
+    testimonial_status = db.Column(db.String(20), nullable=True)  # None / 'Requested' / 'Received'
+    testimonial_requested_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     assignee = db.relationship('User', foreign_keys=[assigned_to])
@@ -492,6 +578,7 @@ class CustomerCall(db.Model):
     customer    = db.relationship('Customer', foreign_keys=[customer_id])
 
 CALL_OUTCOMES = ['Connected', 'No answer', 'Busy', 'Switched off', 'Wrong number']
+CLIENT_ATTRIBUTION_SOURCES = ['Meta', 'Referral', 'Walk-in', 'TakeOff Event', 'Other']  # TASK 2.3(d)
 
 class Partner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -529,6 +616,19 @@ class DocType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
 
+class DocRenewalCost(db.Model):
+    """TASK 3.2: admin-editable renewal COST RANGE per document type — ranges
+    only, deliberately no fine-structure columns. Seeded with placeholder UAE
+    estimates (is_default_seed=True) that the owner must review before the
+    ranges are trusted in a client-facing report."""
+    __tablename__ = 'doc_renewal_cost'
+    id = db.Column(db.Integer, primary_key=True)
+    doc_type = db.Column(db.String(100), nullable=False, unique=True)
+    renewal_cost_min_aed = db.Column(db.Float, default=0)
+    renewal_cost_max_aed = db.Column(db.Float, default=0)
+    is_default_seed = db.Column(db.Boolean, default=True)  # cleared once an admin saves an edit
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
 class Document(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     doc_type = db.Column(db.String(100), nullable=False)
@@ -547,6 +647,28 @@ class Document(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     uploader = db.relationship('User', foreign_keys=[uploaded_by])
     customer = db.relationship('Customer', foreign_keys=[customer_id])
+
+# Dates before this are never real expiry dates in this system (they're NULL-ish
+# placeholders — e.g. a blank date input that got saved as epoch 1970, or a bad
+# import). Treated as "not set" everywhere: excluded from health scores, expired
+# counts, alerts, and reports; rendered as a neutral "Not set" badge, never a
+# computed "EXPIRED" date. See TASK 1.1 (audit finding: /customers/282 showed
+# "08 Sep 1970 EXPIRED").
+MIN_VALID_EXPIRY_YEAR = 2000
+
+def has_valid_expiry(dt):
+    """True if dt (a date/datetime, possibly None) is a real, usable expiry —
+    not NULL and not a pre-2000 placeholder."""
+    if not dt:
+        return False
+    d = dt.date() if hasattr(dt, 'date') else dt
+    return d.year >= MIN_VALID_EXPIRY_YEAR
+app.jinja_env.globals['has_valid_expiry'] = has_valid_expiry
+
+def valid_expiry_sort_key(dt):
+    """Sort key that pushes missing/placeholder expiry dates to the end,
+    same as `d.expiry_date or datetime.max` but placeholder-aware."""
+    return dt if has_valid_expiry(dt) else datetime.max
 
 
 class ActivityLog(db.Model):
@@ -849,7 +971,7 @@ def broadcast_filter_customers(args):
         keep = []
         for c in custs:
             docs = Document.query.filter_by(customer_id=c.id)\
-                    .filter(Document.expiry_date.isnot(None)).all()
+                    .filter(Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1)).all()
             if any(0 <= (d.expiry_date.date() - today).days <= expiry_days for d in docs):
                 keep.append(c)
         custs = keep
@@ -931,6 +1053,23 @@ class DeskNote(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     user = db.relationship('User', foreign_keys=[user_id])
     mention_user = db.relationship('User', foreign_keys=[mention_user_id])
+
+class ComplianceSnapshot(db.Model):
+    """TASK 3.3: one row per client per "Take snapshot" run — aggregate
+    counts only (no per-document detail), used for the month-over-month
+    trend and the Compliance Center sparkline."""
+    __tablename__ = 'compliance_snapshot'
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False, index=True)
+    snapshot_date = db.Column(db.Date, nullable=False, index=True)
+    score = db.Column(db.Integer, nullable=True)
+    valid_count = db.Column(db.Integer, default=0)
+    expiring_count = db.Column(db.Integer, default=0)
+    expired_count = db.Column(db.Integer, default=0)
+    renewal_budget_min = db.Column(db.Float, default=0)
+    renewal_budget_max = db.Column(db.Float, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    customer = db.relationship('Customer', foreign_keys=[customer_id])
 
 @app.context_processor
 def inject_globals():
@@ -1297,11 +1436,80 @@ def api_lead_alerts():
     latest_id = new_leads[0].id if new_leads else 0
     return jsonify({'count': count, 'unseen': unseen, 'latest_id': latest_id, 'recent': recent})
 
+def _needs_attention(role, user_id, now):
+    """TASK 2.2: role-filtered, period-independent "Needs Attention" summary
+    for the banner at the top of /dashboard. Always computed fresh (not tied
+    to whichever date-range tab the dashboard happens to be showing), so it
+    reliably surfaces real outstanding work. Returns [] when nothing to flag
+    — the banner is hidden entirely in that case."""
+    items = []
+    if role == 'admin':
+        overdue_n = Job.query.filter(Job.due_date < now, Job.status.notin_(['Closed', 'Done'])).count()
+        if overdue_n:
+            items.append({'label': f'{overdue_n} task{"s" if overdue_n != 1 else ""} overdue', 'url': '/jobs?status=Overdue'})
+        cutoff_dt = now + timedelta(days=30)
+        client_docs_n = Document.query.filter(
+            Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1),
+            Document.expiry_date <= cutoff_dt).count()
+        tahfeel_docs_n = CompanyDocument.query.filter(
+            CompanyDocument.expiry_date <= (now.date() + timedelta(days=30))).count()
+        docs_n = client_docs_n + tahfeel_docs_n
+        if docs_n:
+            items.append({
+                'label': f'{docs_n} document{"s" if docs_n != 1 else ""} expiring/expired within 30 days',
+                'url': '/documents?expiry=30', 'tahfeel_n': tahfeel_docs_n,
+            })
+        pending_jobs = Job.query.filter(Job.status.notin_(['Closed'])).all()
+        pending_aed = sum(max(0, (j.amount_invoiced or 0) - (j.amount_received or 0)) for j in pending_jobs)
+        if pending_aed:
+            items.append({'label': f'AED {pending_aed:,.0f} pending payment', 'url': '/jobs/ready-to-close'})
+    elif role == 'finance':
+        pending_jobs = Job.query.filter(Job.status.notin_(['Closed'])).all()
+        pending_aed = sum(max(0, (j.amount_invoiced or 0) - (j.amount_received or 0)) for j in pending_jobs)
+        if pending_aed:
+            items.append({'label': f'AED {pending_aed:,.0f} pending payment', 'url': '/jobs/ready-to-close'})
+        rtc_n = len([j for j in Job.query.filter_by(status='Done').all()
+                    if (j.amount_received or 0) >= (j.amount_invoiced or 0)])
+        if rtc_n:
+            items.append({'label': f'{rtc_n} task{"s" if rtc_n != 1 else ""} ready to close', 'url': '/jobs/ready-to-close'})
+    else:  # ops / staff / sales — their own overdue tasks
+        overdue_n = Job.query.filter(Job.due_date < now, Job.status.notin_(['Closed', 'Done']),
+                                     Job.assigned_to == user_id).count()
+        if overdue_n:
+            items.append({'label': f'{overdue_n} of your task{"s" if overdue_n != 1 else ""} overdue', 'url': '/jobs?status=Overdue'})
+    return items
+
+def _testimonial_nudge(user_id, now):
+    """TASK 2.4(b): one dismissible nudge per CLIENT (not per task) for the
+    task's account owner, starting 3 days after Close, only while no
+    testimonial has been requested yet. Suppressed for 90 days per client
+    after dismissal — regardless of how many tasks that client has."""
+    if not user_id:
+        return []
+    cutoff = now - timedelta(days=3)
+    candidates = Job.query.filter(
+        Job.status == 'Closed', Job.assigned_to == user_id,
+        Job.testimonial_status.is_(None),
+        Job.finance_approved_at.isnot(None), Job.finance_approved_at <= cutoff,
+    ).order_by(Job.finance_approved_at).all()
+    seen, nudges = set(), []
+    for j in candidates:
+        if not j.customer_id or j.customer_id in seen:
+            continue
+        seen.add(j.customer_id)
+        c = j.customer
+        if not c or (c.last_testimonial_nudge_at and (now - c.last_testimonial_nudge_at).days < 90):
+            continue
+        nudges.append({'job': j, 'customer': c})
+    return nudges
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     now = now_dubai()
     role = session['role']
+    needs_attention = _needs_attention(role, session.get('user_id'), now)
+    testimonial_nudges = _testimonial_nudge(session.get('user_id'), now)
 
     # ── Finance dashboard ────────────────────────────────────────────────────
     if role == 'finance':
@@ -1403,9 +1611,9 @@ def dashboard():
             total_revenue = total_partner_pending = total_monthly_target = 0
         try:
             all_docs = Document.query.all()
-            docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
-            docs_60 = len([d for d in all_docs if d.expiry_date and 30 < (d.expiry_date - now).days <= 60])
-            docs_90 = len([d for d in all_docs if d.expiry_date and 60 < (d.expiry_date - now).days <= 90])
+            docs_30 = len([d for d in all_docs if has_valid_expiry(d.expiry_date) and 0 <= (d.expiry_date - now).days <= 30])
+            docs_60 = len([d for d in all_docs if has_valid_expiry(d.expiry_date) and 30 < (d.expiry_date - now).days <= 60])
+            docs_90 = len([d for d in all_docs if has_valid_expiry(d.expiry_date) and 60 < (d.expiry_date - now).days <= 90])
             total_docs = len(all_docs)
         except:
             docs_30 = docs_60 = docs_90 = total_docs = 0
@@ -1414,13 +1622,16 @@ def dashboard():
         tasks_overdue = len([j for j in all_active_jobs if j.due_date and j.due_date < now and j.status not in ['Closed','Done']])
         tasks_processing = len([j for j in all_active_jobs if j.status == 'Processing'])
         tasks_pending_approval = len(pending_approval)
+        ready_to_close_count = len([j for j in Job.query.filter_by(status='Done').all()
+                                    if (j.amount_received or 0) >= (j.amount_invoiced or 0)])
         return render_template('dashboard_finance.html',
                                now=now, bday_counts=birthday_counts(now.date()),
-                               date_filter=date_filter,
+                               date_filter=date_filter, needs_attention=needs_attention, testimonial_nudges=testimonial_nudges,
                                docs_30=docs_30, docs_60=docs_60, docs_90=docs_90, total_docs=total_docs,
                                all_jobs=active_jobs,
                                pending_approval=pending_approval,
                                pending_close=pending_close,
+                               ready_to_close_count=ready_to_close_count,
                                tasks_active=tasks_active,
                                tasks_overdue=tasks_overdue,
                                tasks_processing=tasks_processing,
@@ -1636,9 +1847,9 @@ def dashboard():
 
         try:
             all_docs = Document.query.all()
-            docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
-            docs_60 = len([d for d in all_docs if d.expiry_date and 30 < (d.expiry_date - now).days <= 60])
-            docs_90 = len([d for d in all_docs if d.expiry_date and 60 < (d.expiry_date - now).days <= 90])
+            docs_30 = len([d for d in all_docs if has_valid_expiry(d.expiry_date) and 0 <= (d.expiry_date - now).days <= 30])
+            docs_60 = len([d for d in all_docs if has_valid_expiry(d.expiry_date) and 30 < (d.expiry_date - now).days <= 60])
+            docs_90 = len([d for d in all_docs if has_valid_expiry(d.expiry_date) and 60 < (d.expiry_date - now).days <= 90])
             total_docs = len(all_docs)
         except:
             docs_30 = docs_60 = docs_90 = total_docs = 0
@@ -1651,7 +1862,7 @@ def dashboard():
             birthdays_today = []
         bday_counts = birthday_counts(now.date())
         return render_template('dashboard_admin.html',
-                               leads=leads, today_leads=today_leads,
+                               leads=leads, today_leads=today_leads, needs_attention=needs_attention, testimonial_nudges=testimonial_nudges,
                                birthdays_today=birthdays_today, bday_counts=bday_counts,
                                wl_filter=wl_filter, wl_from=wl_from, wl_to=wl_to,
                                total=total, overdue_leads=overdue_leads,
@@ -1724,9 +1935,9 @@ def dashboard():
     ).all()
     try:
         all_docs = Document.query.all()
-        docs_30 = len([d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date - now).days <= 30])
-        docs_60 = len([d for d in all_docs if d.expiry_date and 30 < (d.expiry_date - now).days <= 60])
-        docs_90 = len([d for d in all_docs if d.expiry_date and 60 < (d.expiry_date - now).days <= 90])
+        docs_30 = len([d for d in all_docs if has_valid_expiry(d.expiry_date) and 0 <= (d.expiry_date - now).days <= 30])
+        docs_60 = len([d for d in all_docs if has_valid_expiry(d.expiry_date) and 30 < (d.expiry_date - now).days <= 60])
+        docs_90 = len([d for d in all_docs if has_valid_expiry(d.expiry_date) and 60 < (d.expiry_date - now).days <= 90])
         total_docs = len(all_docs)
     except:
         docs_30 = docs_60 = docs_90 = total_docs = 0
@@ -1737,7 +1948,7 @@ def dashboard():
     except:
         birthdays_today = []
     bday_counts = birthday_counts(now.date())
-    return render_template('dashboard_staff.html', leads=leads, overdue=overdue,
+    return render_template('dashboard_staff.html', leads=leads, overdue=overdue, needs_attention=needs_attention, testimonial_nudges=testimonial_nudges,
                            birthdays_today=birthdays_today, bday_counts=bday_counts,
                            converted=converted, lost=lost, new_leads=new_leads, initiated=initiated,
                            future=future, future_due=future_due,
@@ -1899,11 +2110,13 @@ def add_lead():
         else:
             created_dt = now_dubai()
         due_dt = datetime.strptime(due, '%Y-%m-%d') if due else created_dt + timedelta(days=1)
+        _phone_raw = request.form.get('phone')
         lead = Lead(
             name=request.form['name'],
             company=request.form.get('company'),
-            phone=request.form.get('phone'),
-            phone2=request.form.get('phone2'),
+            phone=normalize_phone_e164(_phone_raw),
+            phone_original=_phone_raw,
+            phone2=normalize_phone_e164(request.form.get('phone2')),
             email=request.form.get('email'),
             address=request.form.get('address'),
             source=request.form.get('source'),
@@ -2001,7 +2214,8 @@ def lead_detail(lead_id):
             bot_replied = WhatsAppMessage.query.filter_by(wa_id=wa_id, direction='in').first() is not None
     except Exception:
         pass
-    return render_template('lead_detail.html', lead=lead, now=now,
+    linked_customer = Customer.query.filter_by(lead_id=lead.id).first()
+    return render_template('lead_detail.html', lead=lead, now=now, linked_customer=linked_customer,
                            wa_id=wa_id, wa_has_chat=wa_has_chat, bot_replied=bot_replied)
 
 @app.route('/leads/<int:lead_id>/quality', methods=['POST'])
@@ -2100,8 +2314,8 @@ def enquiry_convert_lead(eid):
     if e.converted_lead_id:
         flash('This enquiry was already converted to a lead.')
         return redirect(url_for('lead_detail', lead_id=e.converted_lead_id))
-    lead = Lead(name=e.name or 'Enquiry', phone=e.phone, source='Enquiry',
-                service=e.service, status='New',
+    lead = Lead(name=e.name or 'Enquiry', phone=normalize_phone_e164(e.phone), phone_original=e.phone,
+                source='Enquiry', service=e.service, status='New',
                 assigned_to=e.assigned_to or session.get('user_id'),
                 remarks=e.enquiry)
     db.session.add(lead)
@@ -2229,7 +2443,8 @@ def import_leads():
                     created_dt = now_dubai()
                 lead = Lead(
                     name=str(name), company=str(company) if company else None,
-                    phone=str(phone), email=str(email) if email else None,
+                    phone=normalize_phone_e164(str(phone)), phone_original=str(phone),
+                    email=str(email) if email else None,
                     address=str(address) if address else None,
                     source=str(source) if source else None,
                     service=str(service) if service else None,
@@ -2348,8 +2563,10 @@ def edit_lead(lead_id):
     if request.method == 'POST':
         lead.name = request.form['name']
         lead.company = request.form.get('company')
-        lead.phone = request.form.get('phone')
-        lead.phone2 = request.form.get('phone2')
+        _phone_raw = request.form.get('phone')
+        lead.phone = normalize_phone_e164(_phone_raw)
+        lead.phone_original = _phone_raw
+        lead.phone2 = normalize_phone_e164(request.form.get('phone2'))
         lead.email = request.form.get('email')
         lead.address = request.form.get('address')
         lead.source = request.form.get('source')
@@ -2426,6 +2643,13 @@ def bulk_delete_leads():
         flash(f'{skipped} converted lead(s) skipped (cannot delete converted leads)', 'warning')
     return redirect(url_for('all_leads'))
 
+def _ac_opening_date_suspects():
+    """Customers whose AC Opening Date exactly matches their CRM entry date —
+    almost always means staff left the today-default (TASK 1.3) without
+    replacing it with the real license issuance date."""
+    return [c for c in Customer.query.filter(Customer.ac_opening_date.isnot(None)).all()
+            if c.created_at and c.ac_opening_date == c.created_at.date()]
+
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -2451,10 +2675,13 @@ def admin_panel():
     # Flat master list of common sub-tasks (pick from when creating a task)
     subtask_list = SubTaskTemplate.query.order_by(SubTaskTemplate.sort_order, SubTaskTemplate.id).all()
     authorities = LicensingAuthority.query.order_by(LicensingAuthority.sort_order, LicensingAuthority.name).all()
+    aod_unverified_count = len([c for c in _ac_opening_date_suspects() if not c.ac_opening_date_confirmed])
+    renewal_costs = DocRenewalCost.query.order_by(DocRenewalCost.doc_type).all()
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
                            wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi,
-                           subtask_list=subtask_list, authorities=authorities)
+                           subtask_list=subtask_list, authorities=authorities,
+                           aod_unverified_count=aod_unverified_count, renewal_costs=renewal_costs)
 
 @app.route('/admin/whatsapp-settings', methods=['POST'])
 @login_required
@@ -3125,6 +3352,28 @@ def admin_delete_service(service_id):
     flash(f'Service "{service.name}" removed')
     return redirect(url_for('admin_panel'))
 
+@app.route('/admin/renewal-cost/<int:cost_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_renewal_cost(cost_id):
+    """TASK 3.2(a): admin-editable renewal cost RANGE per doc type. Editing a
+    row clears its is_default_seed flag — it's no longer an unreviewed guess."""
+    rc = DocRenewalCost.query.get_or_404(cost_id)
+    try:
+        lo = float(request.form.get('renewal_cost_min_aed', 0) or 0)
+        hi = float(request.form.get('renewal_cost_max_aed', 0) or 0)
+    except ValueError:
+        flash('Enter valid numbers for the cost range.', 'error')
+        return redirect(url_for('admin_panel'))
+    if lo > hi:
+        lo, hi = hi, lo
+    rc.renewal_cost_min_aed = lo
+    rc.renewal_cost_max_aed = hi
+    rc.is_default_seed = False
+    db.session.commit()
+    flash(f'Renewal cost range updated for {rc.doc_type}.')
+    return redirect(url_for('admin_panel'))
+
 @app.route('/admin/source/add', methods=['POST'])
 @login_required
 @admin_required
@@ -3253,6 +3502,29 @@ def _authority_names(current=None):
         names.append(current)
     return names
 
+# TASK 4.1(b): key fields behind the completeness badge. 'Mobile' means the
+# primary contact / WhatsApp number (Customer.phone) — not the Company
+# Landline field (Customer.mobile, see TASK 4.2).
+COMPLETENESS_FIELDS = [
+    ('email', 'Email'), ('phone', 'Mobile'), ('ac_code', 'AC Code'),
+    ('ac_opening_date', 'AC Opening Date'), ('address', 'Address'),
+]
+
+def _customer_completeness(customer, has_dated_doc):
+    missing = []
+    present = 0
+    for field, label in COMPLETENESS_FIELDS:
+        if getattr(customer, field, None):
+            present += 1
+        else:
+            missing.append(label)
+    if has_dated_doc:
+        present += 1
+    else:
+        missing.append('Document with expiry date')
+    pct = round(100 * present / (len(COMPLETENESS_FIELDS) + 1))
+    return pct, missing
+
 @app.route('/customers')
 @login_required
 def customers():
@@ -3311,6 +3583,19 @@ def customers():
     except Exception as e:
         customer_list = []
         flash(f'Error loading customers: {e}')
+    # TASK 4.1(c): completeness dot, sortable — computed for the full filtered
+    # list (before pagination) so sorting is correct across pages. One batched
+    # query for "has a dated document" avoids an N+1 per customer.
+    _dated_doc_customer_ids = {d.customer_id for d in Document.query.filter(
+        Document.customer_id.isnot(None),
+        Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1)).all()}
+    for c in customer_list:
+        c.completeness_pct, c.completeness_missing = _customer_completeness(
+            c, c.id in _dated_doc_customer_ids)
+    sort = request.args.get('sort', '')
+    sort_dir = request.args.get('dir', 'asc')
+    if sort == 'completeness':
+        customer_list.sort(key=lambda c: c.completeness_pct, reverse=(sort_dir == 'desc'))
     page = int(request.args.get('page', 1))
     per_page = 25
     total = len(customer_list)
@@ -3335,7 +3620,8 @@ def customers():
                            jurisdictions=_opts(Customer.jurisdiction, ('Mainland', 'Free Zone', 'Offshore')),
                            authority_opts=_opts(Customer.licensing_authority, _authority_names()),
                            statuses=_opts(Customer.ac_status, ('Active', 'Under Formation', 'Inactive', 'Closed')),
-                           n_company=n_company, n_individual=total - n_company)
+                           n_company=n_company, n_individual=total - n_company,
+                           sort=sort, sort_dir=sort_dir)
 
 @app.route('/api/customer-phone-exists')
 @login_required
@@ -3395,11 +3681,11 @@ def add_customer():
             if not request.form.get('source'):
                 flash('Source is required', 'error')
                 users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types)
+                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types, attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
             if not request.form.get('assigned_to'):
                 flash('Primary Representative is required', 'error')
                 users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types)
+                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types, attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
 
         # Check for duplicate phone number
         phone_to_check = None
@@ -3408,31 +3694,44 @@ def add_customer():
             lead = Lead.query.get(int(lead_id))
             phone_to_check = lead.phone
         else:
-            phone_to_check = request.form.get('phone', '').strip()
+            phone_to_check = normalize_phone_e164(request.form.get('phone', '').strip())
 
         if phone_to_check and not request.form.get('allow_duplicate'):
             existing_customer = Customer.query.filter_by(phone=phone_to_check).first()
             if existing_customer:
                 flash(f'⚠️ Phone {phone_to_check} already exists for "{existing_customer.name}". Submit again to add anyway.', 'error')
                 users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types)
+                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types, attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
         
+        _attribution = request.form.get('attribution_source', '').strip() or None
+        if _attribution not in CLIENT_ATTRIBUTION_SOURCES:
+            _attribution = None
         if lead_id:
             customer = Customer(
                 name=lead.name, company=lead.company, phone=lead.phone,
+                phone_original=getattr(lead, 'phone_original', None),
                 phone2=getattr(lead, 'phone2', None),
                 email=lead.email, address=lead.address, source=lead.source,
+                attribution_source=_attribution,
                 notes=request.form.get('notes'), lead_id=int(lead_id)
             )
+            # TASK 2.3: this IS the conversion moment — stamp it here, not
+            # earlier, so an abandoned form never leaves a lead falsely marked
+            # Converted with no linked client.
+            lead.status = 'Converted'
+            lead.converted_at = now_dubai()
         else:
+            _phone_raw = request.form.get('phone', '').strip()
             customer = Customer(
                 name=request.form.get('name', '').strip(),
                 company=request.form.get('company', '').strip() or None,
-                phone=request.form.get('phone', '').strip(),
-                phone2=request.form.get('phone2', '').strip() or None,
+                phone=normalize_phone_e164(_phone_raw),
+                phone_original=_phone_raw or None,
+                phone2=normalize_phone_e164(request.form.get('phone2', '').strip()) or None,
                 email=request.form.get('email', '').strip() or None,
                 address=request.form.get('address', '').strip() or None,
                 source=request.form.get('source', '').strip() or None,
+                attribution_source=_attribution,
                 nationality=request.form.get('nationality', '').strip() or None,
                 customer_type=request.form.get('customer_type', 'Individual'),
                 contact_person=request.form.get('contact_person', '').strip() or None,
@@ -3445,7 +3744,10 @@ def add_customer():
 
         # Company profile fields (UAE) — applied for any customer; blank for individuals
         for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website','uae_pass_number','uae_pass_name']:
-            setattr(customer, _f, request.form.get(_f, '').strip() or None)
+            _val = request.form.get(_f, '').strip() or None
+            if _f in ('mobile', 'whatsapp') and _val:
+                _val = normalize_phone_e164(_val)
+            setattr(customer, _f, _val)
         _aod = request.form.get('ac_opening_date', '').strip()
         customer.ac_opening_date = datetime.strptime(_aod, '%Y-%m-%d').date() if _aod else None
         _save_tax_fields(customer)
@@ -3492,7 +3794,7 @@ def add_customer():
     if ctype not in ('Individual', 'Company'):
         return render_template('add_customer_choose.html', converted_leads=converted_leads)
     return render_template(_customer_type_template(ctype), converted_leads=converted_leads, sources=sources, users=users, doc_types=doc_types,
-                           authorities=_authority_names())
+                           authorities=_authority_names(), attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
 
 @app.route('/customers/<int:customer_id>')
 @login_required
@@ -3511,6 +3813,10 @@ def customer_detail(customer_id):
     # "friendly check-in" isn't made to someone we spoke to yesterday about a task.
     last_job = Job.query.filter_by(customer_id=customer_id)\
                 .order_by(Job.created_at.desc()).first()
+    # TASK 4.1(b): completeness badge
+    has_dated_doc = any(has_valid_expiry(d.expiry_date) for d in
+                        Document.query.filter_by(customer_id=customer_id).all())
+    completeness_pct, completeness_missing = _customer_completeness(customer, has_dated_doc)
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
                            documents=docs, employees=employees, owners=owners, now=now, today=now.date(),
                            total_invoiced=total_invoiced, total_received=total_received,
@@ -3518,6 +3824,7 @@ def customer_detail(customer_id):
                            calls=calls, call_outcomes=CALL_OUTCOMES,
                            called_this_month=customer_id in called_this_month_ids(now),
                            last_job=last_job,
+                           completeness_pct=completeness_pct, completeness_missing=completeness_missing,
                            services=[s.name for s in Service.query.order_by(Service.name).all()])
 
 
@@ -3528,7 +3835,7 @@ def customer_health(customer_id):
     now = now_dubai()
     today = now.date()
     all_docs = Document.query.filter_by(customer_id=customer_id).all()
-    docs = [d for d in all_docs if d.expiry_date]
+    docs = [d for d in all_docs if has_valid_expiry(d.expiry_date)]
     docs.sort(key=lambda d: d.expiry_date)
     def dleft(d):
         return (d.expiry_date.date() - today).days
@@ -3537,6 +3844,9 @@ def customer_health(customer_id):
     valid = [d for d in docs if dleft(d) > 90]
     total = len(all_docs)
     scored = len(docs)
+    # Documents with no real expiry date (NULL or a pre-2000 placeholder) are
+    # excluded from the score entirely — score is computed from dated docs only.
+    missing_expiry_count = total - scored
     score = round(100 * (len(valid) + 0.5 * len(expiring)) / scored) if scored else None
     if score is None:
         band = 'No data'
@@ -3548,11 +3858,11 @@ def customer_health(customer_id):
         band = 'Average'
     else:
         band = 'Poor'
-    company_docs = sorted([d for d in all_docs if not d.employee_id], key=lambda d: (d.expiry_date or datetime.max))
+    company_docs = sorted([d for d in all_docs if not d.employee_id], key=lambda d: valid_expiry_sort_key(d.expiry_date))
     employees = Employee.query.filter_by(customer_id=customer_id).order_by(Employee.name).all()
     owners_count = Owner.query.filter_by(customer_id=customer_id).count()  # partners / UBO
     # Employee document summary (across all employees of this company)
-    emp_docs = [d for d in all_docs if d.employee_id and d.expiry_date]
+    emp_docs = [d for d in all_docs if d.employee_id and has_valid_expiry(d.expiry_date)]
     emp_valid = len([d for d in emp_docs if dleft(d) > 90])
     emp_expiring = len([d for d in emp_docs if 0 <= dleft(d) <= 90])
     emp_expired = len([d for d in emp_docs if dleft(d) < 0])
@@ -3563,12 +3873,32 @@ def customer_health(customer_id):
             renewals_30 += 1
     wa_number = (customer.whatsapp or customer.mobile or customer.phone or '').replace(' ', '').replace('+', '')
     from_email = os.environ.get('SMTP_FROM') or os.environ.get('SMTP_USER') or 'info@tahfeel.ae'
+    # TASK 3.2(b/c): renewal budget range for docs due within 90 days
+    renewal_budget_min, renewal_budget_max = _renewal_budget_range(
+        [d.doc_type for d in docs if dleft(d) <= 90])
+    show_renewal_warning = bool(expired or [d for d in expiring if dleft(d) <= 30])
+    # TASK 3.3(c/d): trend vs. the two most recent snapshots + sparkline data
+    _snaps_desc = ComplianceSnapshot.query.filter_by(customer_id=customer_id) \
+        .order_by(ComplianceSnapshot.snapshot_date.desc()).limit(6).all()
+    trend = None
+    if len(_snaps_desc) >= 2:
+        _latest, _prev = _snaps_desc[0], _snaps_desc[1]
+        trend = {
+            'since_date': _prev.snapshot_date,
+            'score_delta': (_latest.score - _prev.score) if _latest.score is not None and _prev.score is not None else None,
+            'documents_renewed': max(0, (_prev.expired_count or 0) - (_latest.expired_count or 0)),
+            'newly_expiring': max(0, (_latest.expiring_count or 0) - (_prev.expiring_count or 0)),
+        }
+    sparkline = list(reversed(_snaps_desc))  # oldest -> newest for left-to-right rendering
     return render_template('customer_health.html', customer=customer, now=now, today=today,
                            total=total, valid=valid, expiring=expiring, expired=expired,
+                           missing_expiry_count=missing_expiry_count,
                            score=score, band=band, company_docs=company_docs, employees=employees,
                            emp_docs_total=len(emp_docs), emp_valid=emp_valid, emp_expiring=emp_expiring,
                            emp_expired=emp_expired, owners_count=owners_count, renewals_30=renewals_30,
-                           wa_number=wa_number, from_email=from_email)
+                           wa_number=wa_number, from_email=from_email,
+                           renewal_budget_min=renewal_budget_min, renewal_budget_max=renewal_budget_max,
+                           show_renewal_warning=show_renewal_warning, trend=trend, sparkline=sparkline)
 
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -3583,24 +3913,32 @@ def edit_customer(customer_id):
         customer.name = request.form.get('name', '').strip() or customer.name
         if 'company' in request.form:
             customer.company = request.form.get('company', '').strip()
-        customer.phone = request.form.get('phone', '').strip()
-        customer.phone2 = request.form.get('phone2', '').strip() or None
+        _phone_raw = request.form.get('phone', '').strip()
+        customer.phone = normalize_phone_e164(_phone_raw)
+        if _phone_raw:
+            customer.phone_original = _phone_raw
+        customer.phone2 = normalize_phone_e164(request.form.get('phone2', '').strip()) or None
         customer.email = request.form.get('email', '').strip()
         customer.address = request.form.get('address', '').strip()
         customer.source = request.form.get('source', '').strip()
+        _attribution = request.form.get('attribution_source', '').strip() or None
+        customer.attribution_source = _attribution if _attribution in CLIENT_ATTRIBUTION_SOURCES else None
         customer.nationality = request.form.get('nationality', '').strip() or None
         dob_str = request.form.get('date_of_birth', '').strip()
         customer.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
         customer.customer_type = request.form.get('customer_type', 'Individual')
         customer.contact_person = request.form.get('contact_person', '').strip() or None
         customer.alert_email = request.form.get('alert_email', '').strip() or None
-        customer.alert_whatsapp = request.form.get('alert_whatsapp', '').strip() or None
+        customer.alert_whatsapp = normalize_phone_e164(request.form.get('alert_whatsapp', '').strip()) or None
         customer.alerts_enabled = bool(request.form.get('alerts_enabled'))
         # Company profile fields (UAE) — only update fields actually present in the
         # submitted form, so trimmed/removed fields keep their existing values (no wipe).
         for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website','uae_pass_number','uae_pass_name']:
             if _f in request.form:
-                setattr(customer, _f, request.form.get(_f, '').strip() or None)
+                _val = request.form.get(_f, '').strip() or None
+                if _f in ('mobile', 'whatsapp') and _val:
+                    _val = normalize_phone_e164(_val)
+                setattr(customer, _f, _val)
         _aod = request.form.get('ac_opening_date', '').strip()
         customer.ac_opening_date = datetime.strptime(_aod, '%Y-%m-%d').date() if _aod else None
         _save_tax_fields(customer)
@@ -3651,7 +3989,7 @@ def edit_customer(customer_id):
     existing_docs = Document.query.filter_by(customer_id=customer_id).order_by(Document.expiry_date).all()
     now = now_dubai()
     return render_template('edit_customer.html', customer=customer, sources=sources, users=users, doc_types=doc_types, existing_docs=existing_docs, now=now,
-                           authorities=_authority_names(customer.licensing_authority))
+                           authorities=_authority_names(customer.licensing_authority), attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
 
 @app.route('/customers/<int:customer_id>/toggle-alerts', methods=['POST'])
 @login_required
@@ -3664,6 +4002,52 @@ def toggle_customer_alerts(customer_id):
         return redirect(url_for('customer_health', customer_id=customer_id))
     return redirect(url_for('customer_detail', customer_id=customer_id))
 
+@app.route('/customers/<int:customer_id>/confirm-ac-opening-date', methods=['POST'])
+@login_required
+def confirm_ac_opening_date(customer_id):
+    """TASK 1.3: dismiss the "AC Opening Date matches CRM entry date" suspect
+    flag permanently for this client — staff have checked it's correct."""
+    c = Customer.query.get_or_404(customer_id)
+    c.ac_opening_date_confirmed = True
+    db.session.commit()
+    flash(f'AC Opening Date confirmed correct for {c.name}.')
+    return redirect(url_for('customer_detail', customer_id=customer_id))
+
+@app.route('/admin/compliance-snapshot/take', methods=['POST'])
+@login_required
+@admin_required
+def take_compliance_snapshot():
+    """TASK 3.3(b): one-click monthly snapshot for every client. Idempotent
+    per (customer, date) — re-running the same day updates instead of
+    duplicating. Convention: run at end of month; the button is the required
+    baseline (no scheduler wired up — see summary)."""
+    today = now_dubai().date()
+    n = 0
+    for c in Customer.query.all():
+        score, valid_n, expiring_n, expired_n, bmin, bmax = _compute_client_snapshot_metrics(c.id, today)
+        existing = ComplianceSnapshot.query.filter_by(customer_id=c.id, snapshot_date=today).first()
+        row = existing or ComplianceSnapshot(customer_id=c.id, snapshot_date=today)
+        row.score, row.valid_count, row.expiring_count, row.expired_count = score, valid_n, expiring_n, expired_n
+        row.renewal_budget_min, row.renewal_budget_max = bmin, bmax
+        if not existing:
+            db.session.add(row)
+        n += 1
+    db.session.commit()
+    flash(f'📸 Compliance snapshot taken for {n} client(s) — {today.strftime("%d %b %Y")}.')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/ac-opening-date-review')
+@login_required
+@admin_required
+def ac_opening_date_review():
+    """TASK 1.3(c): tracked cleanup list of every client whose AC Opening Date
+    still matches their CRM entry date, so the backlog can be worked down."""
+    suspects = sorted(_ac_opening_date_suspects(), key=lambda c: c.ac_opening_date_confirmed)
+    total = len(suspects)
+    unverified = len([c for c in suspects if not c.ac_opening_date_confirmed])
+    return render_template('ac_opening_date_review.html', suspects=suspects,
+                           total=total, unverified=unverified)
+
 @app.route('/admin/alerts/disable-all', methods=['POST'])
 @login_required
 @admin_required
@@ -3674,6 +4058,27 @@ def disable_all_alerts():
     n = Customer.query.filter_by(alerts_enabled=True).update({'alerts_enabled': False})
     db.session.commit()
     flash(f'🔕 Report alerts turned OFF for {n} customer(s). No automated emails will send until you re-enable them individually.')
+    return redirect(url_for('admin_panel'))
+
+# ── TASK 3.1(b): bulk-enable alerts for existing clients. Built now, but NOT
+# auto-triggered by anything — a human must open the confirmation screen and
+# press Confirm. (Per the approved brief: press this only after Phase 1's
+# data-cleanup scripts have been run and verified on production.) ──
+@app.route('/admin/alerts/enable-all')
+@login_required
+@admin_required
+def enable_all_alerts_confirm():
+    count = Customer.query.filter_by(alerts_enabled=False).count()
+    total = Customer.query.count()
+    return render_template('enable_all_alerts_confirm.html', count=count, total=total)
+
+@app.route('/admin/alerts/enable-all', methods=['POST'])
+@login_required
+@admin_required
+def enable_all_alerts():
+    n = Customer.query.filter_by(alerts_enabled=False).update({'alerts_enabled': True})
+    db.session.commit()
+    flash(f'🔔 Compliance alerts turned ON for {n} customer(s). WhatsApp is primary, email is backup.')
     return redirect(url_for('admin_panel'))
 
 @app.route('/customers/<int:customer_id>/delete', methods=['POST'])
@@ -3845,7 +4250,8 @@ def import_customers():
             nationality = str(row[7]).strip() if len(row) > 7 and row[7] else ''
             ctype = str(row[8]).strip() if len(row) > 8 and row[8] else 'Individual'
             notes = str(row[9]).strip() if len(row) > 9 and row[9] else ''
-            c = Customer(name=name, phone=phone, company=company, phone2=phone2 or None,
+            c = Customer(name=name, phone=normalize_phone_e164(phone), phone_original=phone or None,
+                        company=company, phone2=normalize_phone_e164(phone2) or None,
                         email=email, address=address, source=source,
                         nationality=nationality or None, customer_type=ctype, notes=notes)
             db.session.add(c)
@@ -3876,6 +4282,23 @@ def job_stage_floor(job):
     return 0
 JOB_STATUSES_FINANCE = ['Closed']  # Finance-only status
 JOB_STATUSES_ALL = ['Pending Finance Approval'] + JOB_STATUSES + ['Pending Finance Close', 'Closed']
+
+def business_days_since(start_dt, now_dt):
+    """Weekdays (Mon-Fri — UAE's official business week) strictly elapsed
+    between start_dt and now_dt. Used for the "Done Xd" aging chip (TASK 2.1)."""
+    if not start_dt or not now_dt:
+        return 0
+    d, end = start_dt.date() if hasattr(start_dt, 'date') else start_dt, \
+              now_dt.date() if hasattr(now_dt, 'date') else now_dt
+    if end <= d:
+        return 0
+    count = 0
+    while d < end:
+        d += timedelta(days=1)
+        if d.weekday() < 5:
+            count += 1
+    return count
+app.jinja_env.globals['business_days_since'] = business_days_since
 
 @app.route('/jobs')
 @login_required
@@ -4249,12 +4672,14 @@ def job_detail(job_id):
     if role != 'admin':
         floor = job_stage_floor(job)
         locked_stages = [s for s, r in JOB_STAGE_RANK.items() if r < floor]
+    _testi_tpl = MessageTemplate.query.filter_by(meta_name='testimonial_request_v1').first()
     return render_template('job_detail.html', job=job, now=now,
                            statuses=JOB_STATUSES, users=users, locked_stages=locked_stages,
                            service_types=service_types, timedelta=timedelta,
                            sibling_jobs=sibling_jobs, partners=partners,
                            wa_templates=wa_send_context(job=job), quick_replies=quick_replies,
-                           subtask_list_names=subtask_list_names)
+                           subtask_list_names=subtask_list_names,
+                           testimonial_tpl_id=(_testi_tpl.id if _testi_tpl else None))
 
 @app.route('/subtasks/<int:sub_id>/toggle', methods=['POST'])
 @login_required
@@ -4487,6 +4912,59 @@ def update_payment(job_id):
     flash('Payment updated.')
     return redirect(request.referrer or url_for('jobs'))
 
+# ── TASK 2.1: Ready to Close finance queue ──────────────────────────────────
+DONE_AGING_THRESHOLD_DAYS = 5  # business days before the "Done Xd" chip goes amber
+
+@app.route('/jobs/ready-to-close')
+@login_required
+def ready_to_close():
+    """Two-section queue for Done tasks: fully paid (ready for a one-click
+    Close, finance-only) and awaiting payment (informational, all staff can
+    view). Viewable by everyone; only finance can actually close from here."""
+    now = now_dubai()
+    done_jobs = Job.query.filter_by(status='Done').all()
+
+    def aged_key(j):
+        return j.completed_at or j.created_at or now
+
+    ready = sorted(
+        [j for j in done_jobs if (j.amount_received or 0) >= (j.amount_invoiced or 0)],
+        key=aged_key)  # oldest first
+    awaiting = sorted(
+        [j for j in done_jobs if (j.amount_received or 0) < (j.amount_invoiced or 0)],
+        key=aged_key)
+    awaiting_rows = [(j, (j.amount_invoiced or 0) - (j.amount_received or 0)) for j in awaiting]
+    awaiting_total = sum(o for _, o in awaiting_rows)
+
+    return render_template('ready_to_close.html', ready=ready, awaiting_rows=awaiting_rows,
+                           awaiting_total=awaiting_total, now=now, aged_key=aged_key,
+                           threshold=DONE_AGING_THRESHOLD_DAYS)
+
+@app.route('/jobs/<int:job_id>/ready-close', methods=['POST'])
+@login_required
+@finance_required
+def ready_close_job(job_id):
+    """One-click close from the Ready to Close queue — no partner-commission
+    prompt (a Done task has never touched that field, so it's still at its
+    False default; this is always the "regular task" close path). One job at
+    a time only — no bulk close, by design (TASK 2.1c)."""
+    job = Job.query.get_or_404(job_id)
+    if job.status != 'Done' or (job.amount_received or 0) < (job.amount_invoiced or 0):
+        flash('This task is not in the Ready to Close queue (must be Done and fully paid).', 'error')
+        return redirect(url_for('ready_to_close'))
+    job.revenue = job.amount_received or 0
+    job.revenue_date = now_dubai().date()
+    job.partner_commission_expected = False
+    job.status = 'Closed'
+    job.finance_approved_by = session['user_id']
+    job.finance_approved_at = now_dubai()
+    remark = (f'Task CLOSED by Finance from Ready to Close queue. '
+             f'Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f} '
+             f'/ Revenue: AED {job.revenue:,.0f}')
+    db.session.add(JobUpdate(job_id=job.id, status='Closed', remark=remark, staff_name=session['user_name']))
+    db.session.commit()
+    flash(f'✓ Closed: {job.job_type} — {job.customer.name if job.customer else ""}')
+    return redirect(url_for('ready_to_close'))
 
 @app.route('/jobs/<int:job_id>/close', methods=['POST'])
 @login_required
@@ -4613,6 +5091,45 @@ def close_job(job_id):
     
     flash('Task closed successfully.')
     return redirect(url_for('dashboard'))
+
+# ── TASK 2.4: post-Closed testimonial step (optional, never touches job status) ──
+@app.route('/jobs/<int:job_id>/request-testimonial', methods=['POST'])
+@login_required
+def request_testimonial(job_id):
+    job = Job.query.get_or_404(job_id)
+    if job.status != 'Closed':
+        if request.headers.get('X-Requested-With'):
+            return jsonify({'error': 'Task is not Closed yet'}), 400
+        flash('Testimonial can only be requested after the task is Closed.', 'error')
+        return redirect(url_for('job_detail', job_id=job_id))
+    job.testimonial_status = 'Requested'
+    job.testimonial_requested_at = now_dubai()
+    db.session.add(JobUpdate(job_id=job.id, status=job.status,
+                             remark='Testimonial requested.', staff_name=session['user_name']))
+    db.session.commit()
+    if request.headers.get('X-Requested-With'):
+        return jsonify({'ok': True})
+    flash('Testimonial requested.')
+    return redirect(url_for('job_detail', job_id=job_id))
+
+@app.route('/jobs/<int:job_id>/testimonial-received', methods=['POST'])
+@login_required
+def testimonial_received(job_id):
+    job = Job.query.get_or_404(job_id)
+    job.testimonial_status = 'Received'
+    db.session.add(JobUpdate(job_id=job.id, status=job.status,
+                             remark='Testimonial received.', staff_name=session['user_name']))
+    db.session.commit()
+    flash('🎉 Testimonial marked received.')
+    return redirect(url_for('job_detail', job_id=job_id))
+
+@app.route('/customers/<int:customer_id>/dismiss-testimonial-nudge', methods=['POST'])
+@login_required
+def dismiss_testimonial_nudge(customer_id):
+    c = Customer.query.get_or_404(customer_id)
+    c.last_testimonial_nudge_at = now_dubai()
+    db.session.commit()
+    return redirect(request.referrer or url_for('dashboard'))
 
 @app.route('/jobs/<int:job_id>/edit_finance', methods=['POST'])
 @login_required
@@ -5078,7 +5595,7 @@ def companies():
                         search in (c.contact_person or '').lower() or
                         search in (c.trade_license_no or '').lower()]
     def soonest(c):
-        days = [(d.expiry_date.date() - now.date()).days for d in c.documents if d.expiry_date]
+        days = [(d.expiry_date.date() - now.date()).days for d in c.documents if has_valid_expiry(d.expiry_date)]
         return min(days) if days else None
     rows = [{'c': c, 'doc_count': len(c.documents), 'soonest': soonest(c)} for c in company_list]
     customers = Customer.query.order_by(Customer.name).all()
@@ -5113,7 +5630,7 @@ def add_company():
 def company_detail(company_id):
     now = now_dubai()
     company = Company.query.get_or_404(company_id)
-    docs = sorted(company.documents, key=lambda d: (d.expiry_date or datetime.max))
+    docs = sorted(company.documents, key=lambda d: valid_expiry_sort_key(d.expiry_date))
     doc_types = DocType.query.order_by(DocType.name).all()
     customers = Customer.query.order_by(Customer.name).all()
     return render_template('company_detail.html', company=company, docs=docs,
@@ -5223,7 +5740,7 @@ def add_employee(customer_id):
 def employee_detail(employee_id):
     emp = Employee.query.get_or_404(employee_id)
     now = now_dubai()
-    docs = sorted(list(emp.documents), key=lambda d: (d.expiry_date or datetime.max))
+    docs = sorted(list(emp.documents), key=lambda d: valid_expiry_sort_key(d.expiry_date))
     doc_types = DocType.query.order_by(DocType.name).all()
     return render_template('employee_detail.html', emp=emp, docs=docs, doc_types=doc_types,
                            now=now, today=now.date())
@@ -5606,14 +6123,14 @@ def _expiring_items(customer_id, within_days=30):
     today = now_dubai().date()
     items = []
     for d in Document.query.filter_by(customer_id=customer_id).all():
-        if d.expiry_date:
+        if has_valid_expiry(d.expiry_date):
             days = (d.expiry_date.date() - today).days
             if days <= within_days:
                 items.append((d, days))
     items.sort(key=lambda x: x[1])
     return items
 
-def _doc_table_html(customer, items, intro):
+def _doc_table_html(customer, items, intro, is_first_alert=False):
     rows = ''
     for d, days in items:
         status = f'Expired {-days}d ago' if days < 0 else f'{days} days left'
@@ -5622,8 +6139,14 @@ def _doc_table_html(customer, items, intro):
                  f'<td style="padding:6px 10px;border:1px solid #e5e7eb;">{d.owner_name or customer.name}</td>'
                  f'<td style="padding:6px 10px;border:1px solid #e5e7eb;">{d.expiry_date.strftime("%d %b %Y")}</td>'
                  f'<td style="padding:6px 10px;border:1px solid #e5e7eb;color:{color};font-weight:bold;">{status}</td></tr>')
+    # TASK 3.1(c): one-line intro on the very first automated alert a client
+    # ever receives — never repeated after that.
+    intro_line = (f'<p style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;'
+                  f'padding:10px 14px;color:#1E3A8A;">Tahfeel now monitors your document compliance '
+                  f'— you\'ll receive renewal reminders from us.</p>') if is_first_alert else ''
     return (f'<div style="font-family:Arial,sans-serif;color:#1a2333;">'
-            f'<h2 style="color:#1A3B8B;">Tahfeel Business Health Check</h2>'
+            f'<h2 style="color:#1A3B8B;">Tahfeel Compliance Alert</h2>'
+            f'{intro_line}'
             f'<p><strong>{customer.name}</strong> — {intro}</p>'
             f'<table style="border-collapse:collapse;font-size:14px;"><tr style="background:#1A3B8B;color:#fff;">'
             f'<th style="padding:6px 10px;">Document</th><th style="padding:6px 10px;">Owner</th>'
@@ -5643,12 +6166,16 @@ def cron_expiry_alerts():
         items = _expiring_items(c.id, 30)
         if not items:
             continue
+        is_first = c.first_alert_sent_at is None
         ok, msg = send_email([c.alert_email or c.email, admin_email],
                              f'Document Expiry Alert — {c.name}',
-                             _doc_table_html(c, items, f'has {len(items)} document(s) expiring within 30 days or already expired:'))
+                             _doc_table_html(c, items, f'has {len(items)} document(s) expiring within 30 days or already expired:', is_first_alert=is_first))
         if ok:
             alerted += 1
+            if is_first:
+                c.first_alert_sent_at = now_dubai()
         results.append(f'{c.name}: {len(items)} doc(s) -> {msg}')
+    db.session.commit()
     _mark_run('expiry_email', f'{alerted} customer(s) emailed')
     return jsonify({'companies_alerted': alerted, 'details': results})
 
@@ -5675,7 +6202,7 @@ def email_health(customer_id):
 def health_check():
     now = now_dubai()
     today = now.date()
-    docs = Document.query.filter(Document.expiry_date != None).all()
+    docs = Document.query.filter(Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1)).all()
 
     def days_left(d):
         return (d.expiry_date.date() - today).days
@@ -5702,6 +6229,14 @@ def health_check():
         groups.setdefault(key, []).append(d)
 
     rows = []
+    # TASK 3.3(d): sparkline data, batched in one query to avoid N+1 across rows
+    _snap_rows = ComplianceSnapshot.query.filter(
+        ComplianceSnapshot.customer_id.in_(list(customers_by_id.keys())) if customers_by_id else False
+    ).order_by(ComplianceSnapshot.snapshot_date).all()
+    snaps_by_customer = {}
+    for s in _snap_rows:
+        snaps_by_customer.setdefault(s.customer_id, []).append(s)
+
     for key, dl in groups.items():
         dl_sorted = sorted(dl, key=lambda d: d.expiry_date)
         worst = min(days_left(d) for d in dl)
@@ -5722,9 +6257,10 @@ def health_check():
             owner_type = 'Staff'
             cid = None
             ac_code = None
+        sparkline = snaps_by_customer.get(cid, [])[-6:] if cid else []
         rows.append({'owner_name': owner_name, 'owner_type': owner_type, 'customer_id': cid,
                      'ac_code': ac_code, 'docs': dl_sorted, 'count': len(dl), 'worst': worst,
-                     'score': score, 'band': band})
+                     'score': score, 'band': band, 'sparkline': sparkline})
     rows.sort(key=lambda r: r['worst'])  # most urgent first
 
     status_filter = request.args.get('status', '')
@@ -5745,11 +6281,71 @@ def health_check():
     elif status_filter == 'green':
         rows = [r for r in rows if r['worst'] > 60]
 
+    # TASK 3.2(d): org-wide renewal pipeline range — client docs only (not
+    # staff), due within 90 days. Internal revenue-forecast view, staff-facing
+    # only (this whole page is behind login).
+    pipeline_min, pipeline_max = _renewal_budget_range(
+        [d.doc_type for d in docs if d.customer_id and 0 <= days_left(d) <= 90])
+
     return render_template('health_check.html', rows=rows, now=now, today=today,
                            n_expired=n_expired, n_red=n_red, n_amber=n_amber, n_green=n_green,
                            staff_expired=staff_expired, staff_red=staff_red, staff_amber=staff_amber,
                            total=len(docs), status_filter=status_filter, type_filter=type_filter,
-                           search=search)
+                           search=search, pipeline_min=pipeline_min, pipeline_max=pipeline_max)
+
+# ── TASK 4.3: renewal pipeline board (Kanban view, Compliance Center) ──────────
+@app.route('/health-check/pipeline')
+@login_required
+def renewal_pipeline_board():
+    """Board columns: Expired | ≤30 | 31-60 | 61-90 | 90+. Each CLIENT appears
+    once, in the column of their single most urgent document. Account-manager
+    filter is convenience-only — every staff member can see every client
+    regardless of assignment. No cost/budget figures on cards (TASK 4.3c) —
+    those live only in the client-facing report (TASK 3.2)."""
+    now = now_dubai()
+    today = now.date()
+    docs = Document.query.filter(
+        Document.customer_id.isnot(None),
+        Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1)
+    ).all()
+    customers_by_id = {c.id: c for c in Customer.query.all()}
+
+    def dl(d):
+        return (d.expiry_date.date() - today).days
+
+    most_urgent = {}
+    for d in docs:
+        cur = most_urgent.get(d.customer_id)
+        if cur is None or dl(d) < dl(cur):
+            most_urgent[d.customer_id] = d
+
+    manager_filter = request.args.get('manager', '')
+    columns = {'expired': [], 'd30': [], 'd60': [], 'd90': [], 'd90plus': []}
+    for cid, d in most_urgent.items():
+        c = customers_by_id.get(cid)
+        if not c:
+            continue
+        manager_name = c.rep.name if c.rep else 'Unassigned'
+        if manager_filter and manager_name != manager_filter:
+            continue
+        days = dl(d)
+        card = {'customer': c, 'doc': d, 'days': days, 'manager': manager_name}
+        if days < 0:
+            columns['expired'].append(card)
+        elif days <= 30:
+            columns['d30'].append(card)
+        elif days <= 60:
+            columns['d60'].append(card)
+        elif days <= 90:
+            columns['d90'].append(card)
+        else:
+            columns['d90plus'].append(card)
+    for col in columns.values():
+        col.sort(key=lambda x: x['days'])
+
+    managers = sorted({c.rep.name for c in customers_by_id.values() if c.rep}) + ['Unassigned']
+    return render_template('renewal_pipeline_board.html', columns=columns, managers=managers,
+                           manager_filter=manager_filter, now=now)
 
 # ─────────────── Compliance report (printable, A4 landscape) ───────────────
 DOC_CATEGORIES = [
@@ -5794,11 +6390,37 @@ def _donut_segments(band_counts, order, colors, circumference):
         acc += frac
     return segs
 
+def _compute_client_snapshot_metrics(customer_id, today):
+    """TASK 3.3: same score/valid/expiring/expired/budget logic as the client
+    report, factored out so the admin snapshot job and the report agree."""
+    docs = [d for d in Document.query.filter_by(customer_id=customer_id).all() if has_valid_expiry(d.expiry_date)]
+    def dl(d):
+        return (d.expiry_date.date() - today).days
+    n_valid = len([d for d in docs if dl(d) > 90])
+    n_expiring = len([d for d in docs if 0 <= dl(d) <= 90])
+    n_expired = len([d for d in docs if dl(d) < 0])
+    total = len(docs)
+    score = round(100 * (n_valid + 0.5 * n_expiring) / total) if total else None
+    budget_min, budget_max = _renewal_budget_range([d.doc_type for d in docs if dl(d) <= 90])
+    return score, n_valid, n_expiring, n_expired, budget_min, budget_max
+
+def _renewal_budget_range(doc_types):
+    """TASK 3.2(b): sum indicative renewal cost RANGES (AED) for a list of
+    doc_type strings. Unknown/unpriced types contribute 0. No fine math here
+    or anywhere else in this feature — ranges only."""
+    if not doc_types:
+        return (0, 0)
+    costs = {c.doc_type: (c.renewal_cost_min_aed or 0, c.renewal_cost_max_aed or 0)
+             for c in DocRenewalCost.query.all()}
+    lo = sum(costs.get(dt, (0, 0))[0] for dt in doc_types)
+    hi = sum(costs.get(dt, (0, 0))[1] for dt in doc_types)
+    return (lo, hi)
+
 def _customer_report_data(customer_id):
     """Everything the customer-facing report needs — THEIR documents only."""
     customer = Customer.query.get_or_404(customer_id)
     today = now_dubai().date()
-    docs = [d for d in Document.query.filter_by(customer_id=customer_id).all() if d.expiry_date]
+    docs = [d for d in Document.query.filter_by(customer_id=customer_id).all() if has_valid_expiry(d.expiry_date)]
     docs.sort(key=lambda d: d.expiry_date)
 
     def dl(d):
@@ -5837,6 +6459,24 @@ def _customer_report_data(customer_id):
     import calendar as _cal
     n_exp30 = len([d for d in docs if 0 <= dl(d) <= 30])
     n_exp90 = len([d for d in docs if 0 <= dl(d) <= 90])
+    # TASK 3.2(b/c): renewal budget range for docs due within 90 days, and
+    # whether the red non-renewal warning box should show (expired or ≤30d).
+    renewal_budget_min, renewal_budget_max = _renewal_budget_range(
+        [d.doc_type for d in docs if dl(d) <= 90])
+    show_renewal_warning = bool(n_expired or n_exp30)
+    # TASK 3.3(c): "Since last month" — compares the two most recent
+    # snapshots (not live-vs-snapshot), so it's auto-hidden until 2+ exist.
+    _snaps = ComplianceSnapshot.query.filter_by(customer_id=customer_id) \
+        .order_by(ComplianceSnapshot.snapshot_date.desc()).limit(2).all()
+    trend = None
+    if len(_snaps) >= 2:
+        _latest, _prev = _snaps[0], _snaps[1]
+        trend = {
+            'since_date': _prev.snapshot_date,
+            'score_delta': (_latest.score - _prev.score) if _latest.score is not None and _prev.score is not None else None,
+            'documents_renewed': max(0, (_prev.expired_count or 0) - (_latest.expired_count or 0)),
+            'newly_expiring': max(0, (_latest.expiring_count or 0) - (_prev.expiring_count or 0)),
+        }
     # Estimated non-compliance risk — simple derived index from document status mix
     risk_pct = min(95, n_expired * 15 + n_exp30 * 8 + max(0, n_exp90 - n_exp30) * 3)
     risk_label = 'VERY LOW' if risk_pct < 10 else 'LOW' if risk_pct < 25 else 'MEDIUM' if risk_pct < 50 else 'HIGH'
@@ -5963,6 +6603,8 @@ def _customer_report_data(customer_id):
         'categories': _doc_categories(docs, dl), 'action_items': action_items,
         'timeline': timeline, 'month_label': now_dubai().strftime('%B %Y'),
         'n_exp30': n_exp30, 'n_exp90': n_exp90, 'risk_pct': risk_pct,
+        'renewal_budget_min': renewal_budget_min, 'renewal_budget_max': renewal_budget_max,
+        'show_renewal_warning': show_renewal_warning, 'trend': trend,
         'risk_label': risk_label, 'risk_color': risk_color, 'doc_cards': doc_cards,
         'insights': insights, 'buckets': buckets, 'attention': attention,
         'employees_count': len(employees), 'emp_rows': emp_rows, 'owners_count': owners_count,
@@ -6232,7 +6874,7 @@ def cron_expiry_wa():
     today = now_dubai().date()
     MILESTONES = (7, 3)
     sent, skipped, details = 0, 0, []
-    docs = Document.query.filter(Document.expiry_date.isnot(None),
+    docs = Document.query.filter(Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1),
                                  Document.customer_id.isnot(None)).all()
     for d in docs:
         days = (d.expiry_date.date() - today).days
@@ -6296,7 +6938,7 @@ def compliance_report():
     import calendar
     now = now_dubai()
     today = now.date()
-    docs = Document.query.filter(Document.expiry_date != None).all()
+    docs = Document.query.filter(Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1)).all()
 
     def dl(d):
         return (d.expiry_date.date() - today).days
@@ -6423,7 +7065,7 @@ def documents():
     doc_type_filter = args.get('doc_type', '')
 
     try:
-        all_docs = Document.query.filter(Document.expiry_date.isnot(None)).order_by(Document.expiry_date).all()
+        all_docs = Document.query.filter(Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1)).order_by(Document.expiry_date).all()
     except Exception:
         # Run missing column migrations inline
         try:
@@ -6505,7 +7147,7 @@ def document_whatsapp_remind(doc_id):
         return redirect(back)
     first = ((cust.contact_person or cust.name or 'there').split() or ['there'])[0]
     item = doc.doc_type or 'document'
-    due = doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else ''
+    due = doc.expiry_date.strftime('%d %b %Y') if has_valid_expiry(doc.expiry_date) else ''
     params = [first, item, due]
     wam = send_template(to, tpl.meta_name, params=params, lang=tpl.lang or 'en')
     body = tpl.body_preview
@@ -6537,14 +7179,14 @@ def export_documents():
     docs = Document.query.order_by(Document.expiry_date).all()
     now = now_dubai()
     for d in docs:
-        days = (d.expiry_date - now).days if d.expiry_date else ''
+        days = (d.expiry_date - now).days if has_valid_expiry(d.expiry_date) else ''
         ws.append([
             d.customer.name if d.customer else '',
             d.customer.company if d.customer and d.customer.company else '',
             d.doc_type or '',
             d.belongs_to or '',
             d.owner_name or '',
-            d.expiry_date.strftime('%d/%m/%Y') if d.expiry_date else '',
+            d.expiry_date.strftime('%d/%m/%Y') if has_valid_expiry(d.expiry_date) else 'Not set',
             days,
             d.notes or '',
             d.added_by or '',
@@ -6917,6 +7559,20 @@ def init_db():
             'CREATE INDEX IF NOT EXISTS idx_partial_revenue_revenue_date ON partial_revenue (revenue_date)',
             'CREATE INDEX IF NOT EXISTS idx_wam_created_at ON whats_app_message (created_at)',
             'CREATE INDEX IF NOT EXISTS idx_login_attempt_ip_created ON login_attempt (ip, created_at)',
+            # TASK 1.3 — AC Opening Date suspect-flag dismissal (per-client, permanent)
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS ac_opening_date_confirmed BOOLEAN DEFAULT FALSE',
+            # TASK 1.4 — phone normalization: preserve the as-typed value
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS phone_original VARCHAR(30)',
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS phone_original VARCHAR(30)',
+            # TASK 2.3 — lead-to-client conversion tracking
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS converted_at TIMESTAMP',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS attribution_source VARCHAR(30)',
+            # TASK 2.4 — post-Closed testimonial step
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS testimonial_status VARCHAR(20)',
+            'ALTER TABLE job ADD COLUMN IF NOT EXISTS testimonial_requested_at TIMESTAMP',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS last_testimonial_nudge_at TIMESTAMP',
+            # TASK 3.1 — expiry alerts on by default; one-time intro line
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS first_alert_sent_at TIMESTAMP',
         ]
         for sql in migrations:
             try:
@@ -7100,6 +7756,23 @@ def init_db():
                 _st.body_preview = _status_body
                 db.session.commit()
                 print('Updated status-update template preview')
+            # TASK 2.4: testimonial-request template. NOTE: no such template
+            # existed anywhere in the codebase before this — the approved brief
+            # assumed one was "already available." Seeded inactive like every
+            # other starter template; needs the matching template created +
+            # approved in Meta Business Manager before an admin can activate it.
+            _testi_body = ('Dear {{1}},\n\nThank you for choosing Tahfeel Business Services for your '
+                           '{{2}}! We hope you had a great experience with our team.\n\nWould you mind '
+                           'sharing a quick review or testimonial? It would mean a lot to us and helps '
+                           'other businesses find us.\n\nThank you,\nTahfeel Business Setup Services')
+            _testi = MessageTemplate.query.filter_by(meta_name='testimonial_request_v1').first()
+            if not _testi:
+                db.session.add(MessageTemplate(
+                    label='Testimonial request', meta_name='testimonial_request_v1',
+                    category='Utility', var_fields='first_name,job_type',
+                    body_preview=_testi_body, active=False))
+                db.session.commit()
+                print('Seeded testimonial-request template (inactive)')
             if ServiceType.query.count() == 0:
                 for jt in ['Trade License', 'Family Visa', 'PRO Services', 'Healthcare License', 'Umrah Package', 'Other']:
                     db.session.add(ServiceType(name=jt))
@@ -7119,6 +7792,22 @@ def init_db():
             for dt in ['Establishment Card', 'Labor Card', 'ILOE Insurance', 'Other']:
                 if not DocType.query.filter_by(name=dt).first():
                     db.session.add(DocType(name=dt))
+            db.session.commit()
+            # TASK 3.2: seed placeholder renewal-cost RANGES (AED) — rough
+            # indicative estimates, NOT verified pricing. is_default_seed=True
+            # until an admin reviews/edits each row in the admin panel.
+            _renewal_defaults = [
+                ('Trade License', 8000, 15000), ('Emirates ID', 300, 1200),
+                ('Passport', 300, 800), ('Visa', 2500, 5000),
+                ('Medical Certificate', 300, 700), ('Insurance', 500, 3000),
+                ('Contract', 0, 0), ('NOC', 200, 1000), ('Ejari', 200, 500),
+                ('Establishment Card', 1000, 2500), ('Labor Card', 500, 1500),
+                ('ILOE Insurance', 100, 400), ('Other', 0, 0),
+            ]
+            for dt, lo, hi in _renewal_defaults:
+                if not DocRenewalCost.query.filter_by(doc_type=dt).first():
+                    db.session.add(DocRenewalCost(doc_type=dt, renewal_cost_min_aed=lo,
+                                                  renewal_cost_max_aed=hi, is_default_seed=True))
             db.session.commit()
             # Backfill: link legacy Staff/Management docs (free-text owner) to person records
             try:
@@ -7544,6 +8233,25 @@ def analytics():
     campaign_counts = Counter(l.campaign for l in all_leads if l.campaign)
     top_campaigns = campaign_counts.most_common()
 
+    # ── TASK 2.3(b): Lead→Client conversion tracking, computed from the
+    # converted_at stamp (set only by the "Convert to Client" flow) — NOT the
+    # `won_s` status match above, and NOT tied to the page's period selector.
+    # No historical back-linking: leads converted before this feature existed
+    # have no converted_at and are simply absent from these numbers.
+    converted_leads_all = Lead.query.filter(Lead.converted_at.isnot(None)).all()
+    conversions_this_month = len([l for l in converted_leads_all
+                                  if l.converted_at.year == now.year and l.converted_at.month == now.month])
+    all_leads_ever_by_source = Counter(l.source for l in Lead.query.all() if l.source)
+    converted_by_source = Counter(l.source for l in converted_leads_all if l.source)
+    conversion_rate_by_source = sorted([
+        {'source': src, 'converted': converted_by_source.get(src, 0), 'total': total,
+         'rate': round(100 * converted_by_source.get(src, 0) / total, 1) if total else 0}
+        for src, total in all_leads_ever_by_source.items()
+    ], key=lambda r: -r['rate'])
+    _convert_days = [(l.converted_at - l.created_at).days for l in converted_leads_all if l.created_at]
+    avg_days_to_convert = round(sum(_convert_days) / len(_convert_days), 1) if _convert_days else None
+    conversions_total = len(converted_leads_all)
+
     # ── Monthly revenue trend (last 6 months)
     monthly_revenue = []
     for i in range(5, -1, -1):
@@ -7648,10 +8356,10 @@ def analytics():
     from datetime import timedelta as _td
     all_docs = Document.query.all()
     total_docs = len(all_docs)
-    expired_docs = [d for d in all_docs if d.expiry_date and d.expiry_date.date() < today]
-    expiring_30 = [d for d in all_docs if d.expiry_date and 0 <= (d.expiry_date.date() - today).days <= 30]
-    expiring_60 = [d for d in all_docs if d.expiry_date and 31 <= (d.expiry_date.date() - today).days <= 60]
-    expiring_90 = [d for d in all_docs if d.expiry_date and 61 <= (d.expiry_date.date() - today).days <= 90]
+    expired_docs = [d for d in all_docs if has_valid_expiry(d.expiry_date) and d.expiry_date.date() < today]
+    expiring_30 = [d for d in all_docs if has_valid_expiry(d.expiry_date) and 0 <= (d.expiry_date.date() - today).days <= 30]
+    expiring_60 = [d for d in all_docs if has_valid_expiry(d.expiry_date) and 31 <= (d.expiry_date.date() - today).days <= 60]
+    expiring_90 = [d for d in all_docs if has_valid_expiry(d.expiry_date) and 61 <= (d.expiry_date.date() - today).days <= 90]
     doc_type_counts = Counter(d.doc_type for d in all_docs if d.doc_type)
     top_doc_types = doc_type_counts.most_common(6)
 
@@ -7724,7 +8432,7 @@ def analytics():
                                db.session.query(Job.customer_id).filter(Job.status.notin_(finished)).all())
         # ── Scan inputs: documents, tax, call coverage, data gaps ──
         docs_by_cust = {}
-        for d in Document.query.filter(Document.expiry_date.isnot(None)).all():
+        for d in Document.query.filter(Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1)).all():
             if d.customer_id:
                 docs_by_cust.setdefault(d.customer_id, []).append(d)
         connected_ids = called_this_month_ids(now)
@@ -7866,6 +8574,8 @@ def analytics():
         pipeline=pipeline, top_services=top_services, top_sources=top_sources,
         top_campaigns=top_campaigns, monthly_revenue=monthly_revenue,
         staff_stats=staff_stats,
+        conversions_this_month=conversions_this_month, conversions_total=conversions_total,
+        conversion_rate_by_source=conversion_rate_by_source, avg_days_to_convert=avg_days_to_convert,
         max_service=max_service, max_source=max_source,
         max_pipeline=max_pipeline, max_rev=max_rev,
         users_map=users_map,
@@ -8372,7 +9082,7 @@ def whatsapp_broadcast_export():
         ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
     today = now_dubai().date()
     for c in custs:
-        docs = Document.query.filter_by(customer_id=c.id).filter(Document.expiry_date.isnot(None)).all()
+        docs = Document.query.filter_by(customer_id=c.id).filter(Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1)).all()
         next_exp = min([d.expiry_date.date() for d in docs], default=None)
         ws.append([c.name or '', c.company or '', (c.rep.name if c.rep else ''),
                    c.business_activity or '', c.customer_type or '',
@@ -8834,7 +9544,8 @@ def whatsapp_convert(wa_id):
         assigned = get_next_sales_staff(db, User, Lead)
         rep_id = assigned.id if assigned else None
     lead = Lead(
-        name=name.title(), phone=wa_id, source='WhatsApp - AI Bot', sub_source='WhatsApp Bot',
+        name=name.title(), phone=normalize_phone_e164(wa_id), phone_original=wa_id,
+        source='WhatsApp - AI Bot', sub_source='WhatsApp Bot',
         lead_type='New', status='New', representative=session.get('user_name'),
         assigned_to=rep_id,
         created_at=now_dubai(), due_date=now_dubai() + timedelta(days=1),

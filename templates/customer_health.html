@@ -87,7 +87,7 @@
     {%- if 'trade' in t %}📜{% elif 'visa' in t %}🛂{% elif 'emirates' in t or 'eid' in t %}🆔{% elif 'passport' in t %}📘{% elif 'vat' in t or 'trn' in t %}🧾{% elif 'ejari' in t or 'tenancy' in t or 'lease' in t %}🏠{% elif 'labour' in t or 'mohre' in t or 'work permit' in t %}🪪{% elif 'insurance' in t %}🩺{% elif 'establishment' in t or 'immigration' in t %}🏛️{% elif 'license' in t %}📜{% elif 'contract' in t %}📑{% else %}📄{% endif -%}
   {%- endmacro -%}
   {%- macro pill(d, today) -%}
-    {%- if not d.expiry_date -%}<span class="pill" style="background:#F1F5F9;color:#64748B;">No expiry</span>
+    {%- if not has_valid_expiry(d.expiry_date) -%}<span class="pill" style="background:#F1F5F9;color:#64748B;">Not set</span>
     {%- else -%}{%- set days=(d.expiry_date.date()-today).days -%}
       {%- if days<0 %}<span class="pill" style="background:#FEF2F2;color:#B91C1C;">Expired {{ -days }}d ago</span>
       {%- elif days<=30 %}<span class="pill" style="background:#FEF2F2;color:#DC2626;">{{ days }}d left</span>
@@ -96,10 +96,10 @@
     {%- endif -%}
   {%- endmacro -%}
   {%- macro edgecol(d, today) -%}
-    {%- if not d.expiry_date -%}#94A3B8{%- else -%}{%- set days=(d.expiry_date.date()-today).days -%}{%- if days<0 %}#B91C1C{% elif days<=30 %}#DC2626{% elif days<=90 %}#B45309{% else %}#059669{% endif -%}{%- endif -%}
+    {%- if not has_valid_expiry(d.expiry_date) -%}#94A3B8{%- else -%}{%- set days=(d.expiry_date.date()-today).days -%}{%- if days<0 %}#B91C1C{% elif days<=30 %}#DC2626{% elif days<=90 %}#B45309{% else %}#059669{% endif -%}{%- endif -%}
   {%- endmacro -%}
   {%- macro edgebg(d, today) -%}
-    {%- if not d.expiry_date -%}#F1F5F9{%- else -%}{%- set days=(d.expiry_date.date()-today).days -%}{%- if days<0 %}#FEF2F2{% elif days<=30 %}#FEF2F2{% elif days<=90 %}#FFFBEB{% else %}#ECFDF5{% endif -%}{%- endif -%}
+    {%- if not has_valid_expiry(d.expiry_date) -%}#F1F5F9{%- else -%}{%- set days=(d.expiry_date.date()-today).days -%}{%- if days<0 %}#FEF2F2{% elif days<=30 %}#FEF2F2{% elif days<=90 %}#FFFBEB{% else %}#ECFDF5{% endif -%}{%- endif -%}
   {%- endmacro -%}
 
   <div class="container">
@@ -181,6 +181,35 @@
       </div>
     </div>
 
+    <!-- TASK 3.2(b/c): renewal budget range + non-renewal warning -->
+    <div class="two">
+      <div class="hc-card" style="padding:14px 18px;">
+        <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.3px;">Estimated Renewal Budget — Next 90 Days</div>
+        <div style="font-size:22px;font-weight:800;color:#0F2660;margin-top:4px;">
+          {% if renewal_budget_max %}AED {{ '{:,.0f}'.format(renewal_budget_min) }}–{{ '{:,.0f}'.format(renewal_budget_max) }}{% else %}—{% endif %}
+        </div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:2px;">Indicative estimate — confirm with Tahfeel.</div>
+      </div>
+      {% if show_renewal_warning %}
+      <div class="hc-card" style="padding:14px 18px;background:#FEF2F2;border:1px solid #FECACA;">
+        <div style="font-size:13px;font-weight:700;color:#B91C1C;">⚠ Non-renewal attracts government fines and may affect your license status.</div>
+        <div style="font-size:12px;color:#7F1D1D;margin-top:3px;">Contact Tahfeel to renew on time.</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- TASK 3.3(c): Since last month — auto-hidden until 2+ snapshots exist -->
+    {% if trend %}
+    <div class="hc-card" style="padding:14px 18px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;">Since Last Month <span style="font-weight:400;text-transform:none;color:#94A3B8;">(vs. {{ trend.since_date.strftime('%d %b %Y') }})</span></div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;">
+        <div><span style="font-size:20px;font-weight:800;color:{{ '#16A34A' if (trend.score_delta or 0) >= 0 else '#EF4444' }};">{{ '+' if trend.score_delta and trend.score_delta > 0 else '' }}{{ trend.score_delta if trend.score_delta is not none else '—' }}{% if trend.score_delta is not none %}%{% endif %}</span> <span style="font-size:11px;color:#64748B;">score change</span></div>
+        <div><span style="font-size:20px;font-weight:800;color:#16A34A;">{{ trend.documents_renewed }}</span> <span style="font-size:11px;color:#64748B;">renewed</span></div>
+        <div><span style="font-size:20px;font-weight:800;color:#F59E0B;">{{ trend.newly_expiring }}</span> <span style="font-size:11px;color:#64748B;">newly expiring</span></div>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Details + Summary -->
     <div class="two">
       <div class="hc-card">
@@ -214,6 +243,10 @@
         {% else %}
         <div style="padding:10px 18px 16px;color:#059669;font-size:13px;">✓ Everything is up to date.</div>
         {% endif %}
+        {% if missing_expiry_count %}
+        <div class="row" style="border-top:1px dashed #E2E8F0;"><span class="k" style="color:#94A3B8;">📋 Missing expiry dates</span><span class="v" style="color:#94A3B8;">{{ missing_expiry_count }} document{{ 's' if missing_expiry_count != 1 else '' }}</span></div>
+        <div style="padding:2px 18px 10px;color:#94A3B8;font-size:11px;">Not counted in the score above — add an expiry date to include {{ 'them' if missing_expiry_count != 1 else 'it' }}.</div>
+        {% endif %}
       </div>
     </div>
 
@@ -232,7 +265,7 @@
             <div class="dico" style="background:{{ edgebg(d, today) }};color:{{ edgecol(d, today) }};">{{ dicon(d.doc_type) }}</div>
             <div class="dt">{{ d.doc_type }}</div>
             {% if d.owner_name and d.owner_name != customer.name %}<div class="ow">{{ d.owner_name }}</div>{% endif %}
-            {% if d.expiry_date %}<div class="ex">📅 {{ d.expiry_date.strftime('%d %b %Y') }}</div>{% endif %}
+            {% if has_valid_expiry(d.expiry_date) %}<div class="ex">📅 {{ d.expiry_date.strftime('%d %b %Y') }}</div>{% endif %}
             {{ pill(d, today) }}
           </div>
           {% endfor %}

@@ -161,6 +161,25 @@
     <div style="background:var(--primary);color:white;border-radius:var(--radius-md);padding:12px 18px;margin-bottom:12px;font-size:13px;font-weight:600;">
       ✓ This task is CLOSED — no further updates. Closed on {{ job.completed_at.strftime('%d %b %Y') if job.completed_at else '' }}.
     </div>
+
+    <!-- TASK 2.4: post-Closed testimonial step — optional, never affects job status -->
+    <div style="background:white;border:1px solid var(--border-light);border-radius:var(--radius-md);padding:12px 18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div style="font-size:13px;color:var(--text-secondary);">
+        ⭐ Testimonial:
+        {% if job.testimonial_status == 'Received' %}<span style="color:#16A34A;font-weight:700;">Received 🎉</span>
+        {% elif job.testimonial_status == 'Requested' %}<span id="testiStatusLabel" style="color:#B45309;font-weight:700;">Requested{% if job.testimonial_requested_at %} on {{ job.testimonial_requested_at.strftime('%d %b %Y') }}{% endif %}</span>
+        {% else %}<span id="testiStatusLabel" style="color:var(--text-muted);">Not requested yet</span>{% endif %}
+      </div>
+      <div style="display:flex;gap:8px;" id="testiActions">
+        {% if job.testimonial_status == 'Received' %}
+        {% elif job.testimonial_status == 'Requested' %}
+        <form method="POST" action="/jobs/{{ job.id }}/testimonial-received" style="margin:0;"><button type="submit" class="btn-sm" style="background:#16A34A;color:white;border-color:#16A34A;">✓ Mark Received</button></form>
+        {% if wa_templates and testimonial_tpl_id %}<button type="button" onclick="openWaSend({{ testimonial_tpl_id }})" class="btn-sm" style="background:#25D366;color:white;border-color:#25D366;">📨 Resend request</button>{% endif %}
+        {% else %}
+        <button type="button" onclick="requestTestimonial({{ job.id }}, {{ testimonial_tpl_id or 'null' }})" class="btn-sm" style="background:#0F2660;color:white;border-color:#0F2660;">🤝 Request testimonial</button>
+        {% endif %}
+      </div>
+    </div>
     {% endif %}
 
     <!-- Awaiting finance banner -->
@@ -790,6 +809,23 @@ Dubai, UAE`;
   document.getElementById('tlPopup').addEventListener('click', function(e) {
     if (e.target === this) closePopup();
   });
+  </script>
+  <script>
+  // TASK 2.4: mark testimonial Requested in the background, then open the
+  // existing WhatsApp template modal pre-selected to the testimonial
+  // template — no page reload, so the modal stays open for editing/sending.
+  function requestTestimonial(jobId, tplId) {
+    fetch('/jobs/' + jobId + '/request-testimonial', {method: 'POST', headers: {'X-Requested-With': 'fetch'}})
+      .then(function(r){ return r.ok; })
+      .then(function(ok){
+        if (ok) {
+          var lbl = document.getElementById('testiStatusLabel');
+          if (lbl) { lbl.textContent = 'Requested'; lbl.style.color = '#B45309'; }
+        }
+      })
+      .catch(function(){});
+    if (tplId) openWaSend(tplId);
+  }
   </script>
   {% include '_wa_send_modal.html' %}
 </body>

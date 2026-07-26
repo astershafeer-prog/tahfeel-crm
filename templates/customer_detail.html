@@ -8,7 +8,7 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-  {%- from 'macros.html' import topbar, nav -%}
+  {%- from 'macros.html' import topbar, nav, not_provided -%}
   {{ topbar() }}
   {{ nav('customers') }}
   <div class="container" style="max-width:960px;">
@@ -23,7 +23,13 @@
       <div class="card-body">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
           <div>
-            <div style="font-size:20px;font-weight:700;color:var(--text-primary);letter-spacing:-.3px;">{{ customer.name }}</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:20px;font-weight:700;color:var(--text-primary);letter-spacing:-.3px;">{{ customer.name }}</div>
+              {% set cc = '#16A34A' if completeness_pct >= 80 else ('#B45309' if completeness_pct >= 50 else '#DC2626') %}
+              <span title="{{ completeness_pct }}% complete{% if completeness_missing %} — missing: {{ completeness_missing|join(', ') }}{% endif %}" style="display:inline-flex;align-items:center;gap:4px;background:{{ cc }}1A;color:{{ cc }};font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;cursor:help;">
+                <span style="width:7px;height:7px;border-radius:50%;background:{{ cc }};display:inline-block;"></span>{{ completeness_pct }}%
+              </span>
+            </div>
             {% if customer.company %}<div style="font-size:13px;color:var(--text-muted);margin-top:2px;">{{ customer.company }}</div>{% endif %}
           </div>
 <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -64,15 +70,15 @@
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Email</div>
-            <div style="font-size:13px;">{{ customer.email or '—' }}</div>
+            <div style="font-size:13px;">{{ customer.email or not_provided() }}</div>
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Source</div>
-            <div style="font-size:13px;">{{ customer.source or '—' }}</div>
+            <div style="font-size:13px;">{{ customer.source or not_provided() }}</div>
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Address</div>
-            <div style="font-size:13px;">{{ customer.address or '—' }}</div>
+            <div style="font-size:13px;">{{ customer.address or not_provided() }}</div>
           </div>
           <div>
           </div>
@@ -87,7 +93,7 @@
           {% if customer.customer_type == 'Company' or customer.contact_person %}
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Contact Person</div>
-            <div style="font-size:13px;">{{ customer.contact_person or '—' }}</div>
+            <div style="font-size:13px;">{{ customer.contact_person or not_provided() }}</div>
           </div>
           {% endif %}
           <div>
@@ -96,7 +102,7 @@
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Primary Rep</div>
-            <div style="font-size:13px;">{{ customer.rep.name if customer.rep else '—' }}</div>
+            <div style="font-size:13px;">{{ customer.rep.name if customer.rep else not_provided() }}</div>
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Customer Since</div>
@@ -105,7 +111,16 @@
           {% if customer.lead_id %}
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Original Lead</div>
-            <a href="/leads/{{ customer.lead_id }}" style="font-size:13px;color:var(--primary);">View Lead →</a>
+            <div style="font-size:13px;">
+              <a href="/leads/{{ customer.lead_id }}" style="color:var(--primary);">View Lead →</a>
+              {% if customer.lead %}
+                {% set _l = customer.lead %}
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                  Converted from lead{% if _l.source %} · {{ _l.source }}{% endif %}
+                  {% if _l.converted_at and _l.created_at %} · {{ (_l.converted_at - _l.created_at).days }} day{{ 's' if (_l.converted_at - _l.created_at).days != 1 else '' }} in pipeline{% endif %}
+                </div>
+              {% endif %}
+            </div>
           </div>
           {% endif %}
         </div>
@@ -128,12 +143,11 @@
           {% set fields = [
             ('AC Code', customer.ac_code), ('Trade Name', customer.trade_name),
             ('AC Status', customer.ac_status),
-            ('AC Opening Date', customer.ac_opening_date.strftime('%d %b %Y') if customer.ac_opening_date else None),
             ('Legal Form', customer.legal_form), ('Jurisdiction', customer.jurisdiction),
             ('Licensing Authority', customer.licensing_authority),
             ('Emirate', customer.emirate), ('Country', customer.country_incorp),
             ('Business Activity', customer.business_activity), ('P.O. Box', customer.po_box),
-            ('Mobile', customer.mobile), ('WhatsApp', customer.whatsapp), ('Website', customer.website)
+            ('Company Landline', customer.mobile), ('WhatsApp', customer.whatsapp), ('Website', customer.website)
           ] %}
           {# 'Free Zone Name' is retired (it duplicated Licensing Authority and was never
              on the Add form). Only shown when an old record still holds a value. #}
@@ -141,21 +155,34 @@
           {% for label, val in fields %}
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">{{ label }}</div>
-            <div style="font-size:13px;">{{ val or '—' }}</div>
+            <div style="font-size:13px;">{{ val or not_provided() }}</div>
           </div>
           {% endfor %}
+          {% set aod_suspect = customer.ac_opening_date and customer.created_at and customer.ac_opening_date == customer.created_at.date() and not customer.ac_opening_date_confirmed %}
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">AC Opening Date</div>
+            <div style="font-size:13px;">{{ customer.ac_opening_date.strftime('%d %b %Y') if customer.ac_opening_date else not_provided() }}</div>
+            {% if aod_suspect %}
+            <div style="margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span style="background:#FFFBEB;color:#B45309;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">⚠ Matches CRM entry date — verify</span>
+              <form method="POST" action="/customers/{{ customer.id }}/confirm-ac-opening-date" style="margin:0;">
+                <button type="submit" style="background:none;border:none;color:#0F2660;font-size:10px;font-weight:600;text-decoration:underline;cursor:pointer;padding:0;">Confirmed correct</button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">UAE Pass Access No.</div>
             <div style="font-size:13px;">
               {% if customer.uae_pass_number %}
                 {{ customer.uae_pass_number }}
                 <a href="https://wa.me/{{ customer.uae_pass_number|replace(' ','')|replace('+','') }}?text=Dear%20{{ customer.name.split()[0]|replace(' ','%20') }}%2C%0A%0A" target="_blank" style="background:#25D366;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;">WhatsApp</a>
-              {% else %}—{% endif %}
+              {% else %}{{ not_provided() }}{% endif %}
             </div>
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">UAE Pass Name</div>
-            <div style="font-size:13px;">{{ customer.uae_pass_name or '—' }}</div>
+            <div style="font-size:13px;">{{ customer.uae_pass_name or not_provided() }}</div>
           </div>
         </div>
       </div>
@@ -208,7 +235,7 @@
         <tbody>
           {% for e in employees %}
           {% set exp = [] %}
-          {% for d in e.documents if d.expiry_date %}{% set _ = exp.append((d.expiry_date.date() - today).days) %}{% endfor %}
+          {% for d in e.documents if has_valid_expiry(d.expiry_date) %}{% set _ = exp.append((d.expiry_date.date() - today).days) %}{% endfor %}
           <tr>
             <td><strong>{{ e.name }}</strong></td>
             <td>{{ e.designation or '—' }}</td>
@@ -324,17 +351,18 @@
         </thead>
         <tbody>
           {% for doc in documents %}
-          {% set days = ((doc.expiry_date - now).days) if doc.expiry_date else 999 %}
-          <tr {% if doc.expiry_date and doc.expiry_date < now %}style="background:#fff0f0;"{% elif doc.expiry_date and days <= 30 %}style="background:#fff8f8;"{% endif %}>
+          {% set has_exp = has_valid_expiry(doc.expiry_date) %}
+          {% set days = ((doc.expiry_date - now).days) if has_exp else 999 %}
+          <tr {% if has_exp and doc.expiry_date < now %}style="background:#fff0f0;"{% elif has_exp and days <= 30 %}style="background:#fff8f8;"{% endif %}>
             <td><strong>{{ doc.doc_type }}</strong></td>
             <td>{{ doc.owner_name }}</td>
             <td><span class="badge b-{{ doc.belongs_to|lower }}">{{ doc.belongs_to }}</span></td>
             <td>
-              {% if doc.expiry_date %}
+              {% if has_exp %}
                 {{ doc.expiry_date.strftime('%d %b %Y') }}
                 {% if doc.expiry_date < now %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> EXPIRED</span>
                 {% elif days <= 30 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> ⚠ {{ days }}d</span>{% endif %}
-              {% else %}—{% endif %}
+              {% else %}<span style="background:#F1F5F9;color:#64748B;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;">Not set</span>{% endif %}
             </td>
             <td>
               {% if doc.file_url %}
@@ -397,7 +425,11 @@
           <div class="form-group"><label>Nationality</label><input type="text" name="nationality"></div>
           <div class="form-group"><label>Passport No.</label><input type="text" name="passport_no"></div>
           <div class="form-group"><label>Passport Expiry</label><input type="date" name="passport_expiry"></div>
-          <div class="form-group"><label>Emirates ID No.</label><input type="text" name="eid_no"></div>
+          <div class="form-group">
+            <label>Emirates ID No.</label>
+            <input type="text" name="eid_no" id="addEidNo" placeholder="784-XXXX-XXXXXXX-X" maxlength="18">
+            <div id="addEidWarning" style="display:none;font-size:11px;color:#B45309;margin-top:3px;">⚠ Doesn't look like a valid Emirates ID (15 digits starting 784) — you can still save it.</div>
+          </div>
           <div class="form-group"><label>Emirates ID Expiry</label><input type="date" name="eid_expiry"></div>
           <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Used for the automatic birthday WhatsApp</div></div>
           <div class="form-group"><label>Mobile / WhatsApp</label><input type="text" name="mobile" placeholder="+971 5X XXX XXXX"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Birthday wish is sent to this number</div></div>
@@ -422,7 +454,11 @@
           <div class="form-group"><label>Nationality</label><input type="text" name="nationality" id="oeNat"></div>
           <div class="form-group"><label>Passport No.</label><input type="text" name="passport_no" id="oePno"></div>
           <div class="form-group"><label>Passport Expiry</label><input type="date" name="passport_expiry" id="oePexp"></div>
-          <div class="form-group"><label>Emirates ID No.</label><input type="text" name="eid_no" id="oeEno"></div>
+          <div class="form-group">
+            <label>Emirates ID No.</label>
+            <input type="text" name="eid_no" id="oeEno" placeholder="784-XXXX-XXXXXXX-X" maxlength="18">
+            <div id="oeEidWarning" style="display:none;font-size:11px;color:#B45309;margin-top:3px;">⚠ Doesn't look like a valid Emirates ID (15 digits starting 784) — you can still save it.</div>
+          </div>
           <div class="form-group"><label>Emirates ID Expiry</label><input type="date" name="eid_expiry" id="oeEexp"></div>
           <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth" id="oeDob"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Used for the automatic birthday WhatsApp</div></div>
           <div class="form-group"><label>Mobile / WhatsApp</label><input type="text" name="mobile" id="oeMobile" placeholder="+971 5X XXX XXXX"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Birthday wish is sent to this number</div></div>
@@ -449,6 +485,7 @@
       document.getElementById('oePno').value = btn.getAttribute('data-pno') || '';
       document.getElementById('oePexp').value = btn.getAttribute('data-pexp') || '';
       document.getElementById('oeEno').value = btn.getAttribute('data-eno') || '';
+      document.getElementById('oeEno').dispatchEvent(new Event('input'));
       document.getElementById('oeEexp').value = btn.getAttribute('data-eexp') || '';
       document.getElementById('oeDob').value = btn.getAttribute('data-dob') || '';
       document.getElementById('oeMobile').value = btn.getAttribute('data-mobile') || '';
@@ -459,6 +496,11 @@
       var m=document.getElementById(id);
       if(m) m.addEventListener('click', function(e){ if(e.target===this) m.classList.remove('active'); });
     });
+  </script>
+  <script src="/static/js/eid_mask.js"></script>
+  <script>
+    initEidMask(document.getElementById('addEidNo'), document.getElementById('addEidWarning'));
+    initEidMask(document.getElementById('oeEno'), document.getElementById('oeEidWarning'));
   </script>
   {% include '_wa_send_modal.html' %}
 </body>

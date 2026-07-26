@@ -730,10 +730,12 @@ def export_document_report():
         flash("Access denied.", "danger")
         return redirect(url_for('dashboard'))
     db, Lead, LeadUpdate, Customer, Job, JobUpdate, User, Document = _get_models()
+    import app as _a
     df_d, dt_d, df, dt = _dates(request)
 
     docs = (db.session.query(Document)
-            .filter(Document.expiry_date >= df_d, Document.expiry_date <= dt_d)
+            .filter(Document.expiry_date >= max(df_d, datetime(_a.MIN_VALID_EXPIRY_YEAR, 1, 1)),
+                    Document.expiry_date <= dt_d)
             .order_by(Document.expiry_date.asc()).all())
 
     wb = openpyxl.Workbook()
@@ -750,7 +752,7 @@ def export_document_report():
     for i, doc in enumerate(docs, 1):
         days_rem = ''
         status = ''
-        if doc.expiry_date:
+        if _a.has_valid_expiry(doc.expiry_date):
             exp = doc.expiry_date.date() if hasattr(doc.expiry_date, 'date') else doc.expiry_date
             delta = (exp - today).days
             days_rem = delta
@@ -763,7 +765,7 @@ def export_document_report():
             i, doc.owner_name or '', doc.belongs_to or '',
             cust.company if cust else '', cust.phone if cust else '',
             doc.doc_type or '',
-            doc.expiry_date.strftime('%d/%m/%Y') if doc.expiry_date else '',
+            doc.expiry_date.strftime('%d/%m/%Y') if _a.has_valid_expiry(doc.expiry_date) else 'Not set',
             days_rem, status, doc.notes or '', doc.added_by or '',
         ])
 

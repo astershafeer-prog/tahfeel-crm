@@ -23,6 +23,7 @@
         <a href="/jobs?all=0" style="text-decoration:none;font-size:12px;font-weight:600;padding:6px 13px;border-radius:20px;{% if mine_only %}background:#1A3B8B;color:#fff;{% else %}background:#fff;color:#475569;border:1px solid #e2e8f0;{% endif %}">My Tasks</a>
         <a href="/jobs?all=1" style="text-decoration:none;font-size:12px;font-weight:600;padding:6px 13px;border-radius:20px;{% if not mine_only %}background:#1A3B8B;color:#fff;{% else %}background:#fff;color:#475569;border:1px solid #e2e8f0;{% endif %}">All Tasks</a>
         {% endif %}
+        <a href="/jobs/ready-to-close" class="btn-sm" style="background:#ECFDF5;border-color:#16A34A;color:#16A34A;">💰 Ready to Close</a>
         {% if session.role in ['admin', 'operations'] %}
         <button id="bulkDeleteBtn" class="btn-bulk-delete" style="display:none;" onclick="confirmBulkDelete()">🗑 Delete (<span id="selectedCount">0</span>)</button>
         {% endif %}
@@ -79,7 +80,6 @@
               <option value="">All Statuses</option>
               <option value="Pending Finance Approval" {% if status_filter=="Pending Finance Approval" %}selected{% endif %}>Pending Finance Approval</option>
               <option value="Pending Finance Close" {% if status_filter=="Pending Finance Close" %}selected{% endif %}>Pending Finance Close</option>
-              <option value="Closed" {% if status_filter=="Closed" %}selected{% endif %}>Closed</option>
               {% for s in statuses %}
               <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ job_status_label(s) }}</option>
               {% endfor %}
@@ -158,6 +158,10 @@
           📅 {{ job.due_date.strftime('%d %b %Y') if job.due_date else '—' }}
         </div>
         <span class="badge status-badge" style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;display:inline-block;padding:3px 10px;border-radius:20px;font-weight:600;">{{ job_status_label(job.status) }}</span>
+        {% if job.status == 'Done' %}
+          {% set bdays = business_days_since(job.completed_at or job.created_at, now) %}
+          {% if bdays >= 5 %}<span style="background:#FFFBEB;color:#B45309;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:4px;white-space:nowrap;" title="Business days since marked Done">Done {{ bdays }}d</span>{% endif %}
+        {% endif %}
         <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
           {% if job.updates %}{% set latest = job.updates[0] %}{% if latest.status_note %}<span style="background:#EEF2FF;color:#3730A3;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">{{ latest.status_note }}</span>{% else %}<span style="color:#CBD5E1;font-size:11px;">—</span>{% endif %}{% else %}<span style="color:#CBD5E1;font-size:11px;">—</span>{% endif %}
         </div>

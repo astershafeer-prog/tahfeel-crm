@@ -78,7 +78,7 @@ def parse_lead_fields(field_data):
 
 def save_lead_to_crm(lead_data, raw_meta):
     """Create Lead record in CRM from parsed Meta data."""
-    from app import db, Lead, User, LeadUpdate
+    from app import db, Lead, User, LeadUpdate, normalize_phone_e164
 
     fields = parse_lead_fields(raw_meta.get('field_data', []))
 
@@ -107,7 +107,8 @@ def save_lead_to_crm(lead_data, raw_meta):
 
     lead = Lead(
         name         = name.title(),
-        phone        = phone,
+        phone        = normalize_phone_e164(phone),
+        phone_original = phone or None,
         email        = email,
         service      = service,
         address      = city,
