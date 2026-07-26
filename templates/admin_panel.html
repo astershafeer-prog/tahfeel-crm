@@ -484,6 +484,7 @@
                 <div>
                   <span style="font-size:13px;">{{ jt.name }}</span>
                   <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">{{ jt.default_days or 1 }}d</span>
+                  {% if jt.customer_price_min or jt.customer_price_max %}<span style="font-size:11px;color:#7C3AED;margin-left:8px;">AED {{ '%.0f'|format(jt.customer_price_min or 0) }}–{{ '%.0f'|format(jt.customer_price_max or 0) }}</span>{% endif %}
                 </div>
                 <div style="display:flex;gap:5px;">
                   <button onclick="jtEdit({{ jt.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
@@ -492,7 +493,11 @@
               </div>
               <form id="jt-form-{{ jt.id }}" method="POST" action="/admin/jobtype/{{ jt.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;flex-wrap:wrap;">
                 <input type="text" name="name" value="{{ jt.name }}" required style="flex:2;min-width:120px;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-                <input type="number" name="default_days" value="{{ jt.default_days or 1 }}" min="1" max="365" style="width:70px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                <input type="number" name="default_days" value="{{ jt.default_days or 1 }}" min="1" max="365" style="width:70px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);" title="Default days">
+                <span style="font-size:11px;color:var(--text-muted);">AED</span>
+                <input type="number" name="customer_price_min" value="{{ jt.customer_price_min|int if jt.customer_price_min else '' }}" min="0" step="50" placeholder="Min" style="width:80px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);" title="Customer price — min">
+                <span style="font-size:12px;color:var(--text-muted);">–</span>
+                <input type="number" name="customer_price_max" value="{{ jt.customer_price_max|int if jt.customer_price_max else '' }}" min="0" step="50" placeholder="Max" style="width:80px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);" title="Customer price — max">
                 <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
                 <button type="button" onclick="jtCancel({{ jt.id }})" class="btn-sm">Cancel</button>
               </form>

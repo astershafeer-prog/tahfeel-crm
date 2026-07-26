@@ -384,6 +384,11 @@ class ServiceType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     default_days = db.Column(db.Integer, default=1)
+    # Customer-facing price RANGE for this service (AED). Reference/benchmark
+    # only — does not feed the job close flow, revenue booking, or any report.
+    # No cost-price field here on purpose: cost stays out of the CRM for now.
+    customer_price_min = db.Column(db.Float, nullable=True)
+    customer_price_max = db.Column(db.Float, nullable=True)
 
 class Customer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -5532,6 +5537,19 @@ def admin_edit_jobtype(item_id):
         item.default_days = int(request.form.get('default_days', 1))
     except:
         pass
+    # Customer price range — reference only, no cost field (see app.py ServiceType comment)
+    try:
+        lo = request.form.get('customer_price_min', '').strip()
+        hi = request.form.get('customer_price_max', '').strip()
+        lo = float(lo) if lo else None
+        hi = float(hi) if hi else None
+        if lo is not None and hi is not None and lo > hi:
+            lo, hi = hi, lo
+        item.customer_price_min = lo
+        item.customer_price_max = hi
+    except ValueError:
+        flash('Enter valid numbers for the customer price range.', 'error')
+        return redirect(url_for('admin_panel') + '#service-types')
     db.session.commit()
     flash('Service type updated')
     return redirect(url_for('admin_panel') + '#service-types')
@@ -7573,6 +7591,10 @@ def init_db():
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS last_testimonial_nudge_at TIMESTAMP',
             # TASK 3.1 — expiry alerts on by default; one-time intro line
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS first_alert_sent_at TIMESTAMP',
+            # Customer price range per service type (admin reference only —
+            # no cost field, does not touch revenue booking or job close flow)
+            'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS customer_price_min FLOAT',
+            'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS customer_price_max FLOAT',
         ]
         for sql in migrations:
             try:
