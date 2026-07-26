@@ -622,13 +622,20 @@ class DocType(db.Model):
     name = db.Column(db.String(100), nullable=False, unique=True)
 
 class DocRenewalCost(db.Model):
-    """TASK 3.2: admin-editable renewal COST RANGE per document type — ranges
-    only, deliberately no fine-structure columns. Seeded with placeholder UAE
-    estimates (is_default_seed=True) that the owner must review before the
-    ranges are trusted in a client-facing report."""
+    """Admin-editable service price list — one row per (doc_type, jurisdiction).
+    jurisdiction is None/'Any' for services that don't vary by license type
+    (Emirates ID, Passport…), or 'Mainland'/'Free Zone' for ones that do
+    (Trade License renewal is ~15,000 Mainland vs ~6,000 Free Zone — a single
+    flat range across both was misleading, hence the split).
+    cost_price is stored for a future revenue/margin feature — NOT used by
+    any calculation yet (compliance report uses retail range only, per the
+    owner's explicit "cost stays out of the CRM for now" direction).
+    Seeded rows start as placeholders (is_default_seed=True) until reviewed."""
     __tablename__ = 'doc_renewal_cost'
     id = db.Column(db.Integer, primary_key=True)
-    doc_type = db.Column(db.String(100), nullable=False, unique=True)
+    doc_type = db.Column(db.String(100), nullable=False)
+    jurisdiction = db.Column(db.String(20), nullable=True)  # None/'Any', 'Mainland', 'Free Zone'
+    cost_price = db.Column(db.Float, nullable=True)
     renewal_cost_min_aed = db.Column(db.Float, default=0)
     renewal_cost_max_aed = db.Column(db.Float, default=0)
     is_default_seed = db.Column(db.Boolean, default=True)  # cleared once an admin saves an edit
@@ -2681,12 +2688,13 @@ def admin_panel():
     subtask_list = SubTaskTemplate.query.order_by(SubTaskTemplate.sort_order, SubTaskTemplate.id).all()
     authorities = LicensingAuthority.query.order_by(LicensingAuthority.sort_order, LicensingAuthority.name).all()
     aod_unverified_count = len([c for c in _ac_opening_date_suspects() if not c.ac_opening_date_confirmed])
-    renewal_costs = DocRenewalCost.query.order_by(DocRenewalCost.doc_type).all()
+    renewal_costs = DocRenewalCost.query.order_by(DocRenewalCost.doc_type, DocRenewalCost.jurisdiction).all()
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
                            wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi,
                            subtask_list=subtask_list, authorities=authorities,
-                           aod_unverified_count=aod_unverified_count, renewal_costs=renewal_costs)
+                           aod_unverified_count=aod_unverified_count, renewal_costs=renewal_costs,
+                           price_jurisdictions=JURISDICTIONS_PRICE_LIST)
 
 @app.route('/admin/whatsapp-settings', methods=['POST'])
 @login_required
@@ -3357,27 +3365,72 @@ def admin_delete_service(service_id):
     flash(f'Service "{service.name}" removed')
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/renewal-cost/<int:cost_id>/edit', methods=['POST'])
+JURISDICTIONS_PRICE_LIST = ['Mainland', 'Free Zone']  # None/'' = "Any" (doesn't vary by jurisdiction)
+_PRICE_LIST_ANCHOR = "#service-prices"  # redirect anchor back into Admin Panel
+
+@app.route('/admin/service-prices/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_renewal_cost():
+    name = request.form.get('doc_type', '').strip()
+    juris = request.form.get('jurisdiction', '').strip() or None
+    if not name:
+        flash('Name is required.', 'error')
+        return redirect(url_for('admin_panel') + _PRICE_LIST_ANCHOR)
+    if DocRenewalCost.query.filter_by(doc_type=name, jurisdiction=juris).first():
+        flash(f'{name} ({juris or "Any"}) already exists — edit the existing row instead.', 'error')
+        return redirect(url_for('admin_panel') + _PRICE_LIST_ANCHOR)
+    try:
+        cost = request.form.get('cost_price', '').strip()
+        lo = float(request.form.get('renewal_cost_min_aed', 0) or 0)
+        hi = float(request.form.get('renewal_cost_max_aed', 0) or 0)
+        cost = float(cost) if cost else None
+    except ValueError:
+        flash('Enter valid numbers.', 'error')
+        return redirect(url_for('admin_panel') + _PRICE_LIST_ANCHOR)
+    if lo > hi:
+        lo, hi = hi, lo
+    db.session.add(DocRenewalCost(doc_type=name, jurisdiction=juris, cost_price=cost,
+                                  renewal_cost_min_aed=lo, renewal_cost_max_aed=hi, is_default_seed=False))
+    db.session.commit()
+    flash(f'{name} ({juris or "Any"}) added.')
+    return redirect(url_for('admin_panel') + _PRICE_LIST_ANCHOR)
+
+@app.route('/admin/service-prices/<int:cost_id>/edit', methods=['POST'])
 @login_required
 @admin_required
 def admin_edit_renewal_cost(cost_id):
-    """TASK 3.2(a): admin-editable renewal cost RANGE per doc type. Editing a
-    row clears its is_default_seed flag — it's no longer an unreviewed guess."""
+    """Editing a row clears its is_default_seed flag — it's no longer an
+    unreviewed guess."""
     rc = DocRenewalCost.query.get_or_404(cost_id)
     try:
+        cost = request.form.get('cost_price', '').strip()
         lo = float(request.form.get('renewal_cost_min_aed', 0) or 0)
         hi = float(request.form.get('renewal_cost_max_aed', 0) or 0)
+        cost = float(cost) if cost else None
     except ValueError:
-        flash('Enter valid numbers for the cost range.', 'error')
-        return redirect(url_for('admin_panel'))
+        flash('Enter valid numbers.', 'error')
+        return redirect(url_for('admin_panel') + _PRICE_LIST_ANCHOR)
     if lo > hi:
         lo, hi = hi, lo
+    rc.cost_price = cost
     rc.renewal_cost_min_aed = lo
     rc.renewal_cost_max_aed = hi
     rc.is_default_seed = False
     db.session.commit()
-    flash(f'Renewal cost range updated for {rc.doc_type}.')
-    return redirect(url_for('admin_panel'))
+    flash(f'Updated {rc.doc_type} ({rc.jurisdiction or "Any"}).')
+    return redirect(url_for('admin_panel') + _PRICE_LIST_ANCHOR)
+
+@app.route('/admin/service-prices/<int:cost_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_renewal_cost(cost_id):
+    rc = DocRenewalCost.query.get_or_404(cost_id)
+    label = f'{rc.doc_type} ({rc.jurisdiction or "Any"})'
+    db.session.delete(rc)
+    db.session.commit()
+    flash(f'{label} removed.')
+    return redirect(url_for('admin_panel') + _PRICE_LIST_ANCHOR)
 
 @app.route('/admin/source/add', methods=['POST'])
 @login_required
@@ -3880,7 +3933,7 @@ def customer_health(customer_id):
     from_email = os.environ.get('SMTP_FROM') or os.environ.get('SMTP_USER') or 'info@tahfeel.ae'
     # TASK 3.2(b/c): renewal budget range for docs due within 90 days
     renewal_budget_min, renewal_budget_max = _renewal_budget_range(
-        [d.doc_type for d in docs if dleft(d) <= 90])
+        [d.doc_type for d in docs if dleft(d) <= 90], jurisdiction=customer.jurisdiction)
     show_renewal_warning = bool(expired or [d for d in expiring if dleft(d) <= 30])
     # TASK 3.3(c/d): trend vs. the two most recent snapshots + sparkline data
     _snaps_desc = ComplianceSnapshot.query.filter_by(customer_id=customer_id) \
@@ -5582,6 +5635,10 @@ def admin_add_jobtype():
             new_jt = ServiceType(name=name)
             new_jt.default_days = days
             db.session.add(new_jt)
+            # Keep the Service Price List catalog in sync — every service task
+            # gets a price row (blank/zero until an admin fills it in).
+            if not DocRenewalCost.query.filter_by(doc_type=name).first():
+                db.session.add(DocRenewalCost(doc_type=name, jurisdiction=None, is_default_seed=True))
             db.session.commit()
             flash(f'Service type "{name}" added')
         else:
@@ -6300,10 +6357,19 @@ def health_check():
         rows = [r for r in rows if r['worst'] > 60]
 
     # TASK 3.2(d): org-wide renewal pipeline range — client docs only (not
-    # staff), due within 90 days. Internal revenue-forecast view, staff-facing
-    # only (this whole page is behind login).
-    pipeline_min, pipeline_max = _renewal_budget_range(
-        [d.doc_type for d in docs if d.customer_id and 0 <= days_left(d) <= 90])
+    # staff), due within 90 days. Grouped per customer so each one's own
+    # jurisdiction (Mainland/Free Zone) picks the right price row, then
+    # summed. Internal revenue-forecast view, staff-facing only.
+    _pipeline_docs_by_customer = {}
+    for d in docs:
+        if d.customer_id and 0 <= days_left(d) <= 90:
+            _pipeline_docs_by_customer.setdefault(d.customer_id, []).append(d.doc_type)
+    pipeline_min = pipeline_max = 0
+    for _cid, _dts in _pipeline_docs_by_customer.items():
+        _c = customers_by_id.get(_cid)
+        _lo, _hi = _renewal_budget_range(_dts, jurisdiction=_c.jurisdiction if _c else None)
+        pipeline_min += _lo
+        pipeline_max += _hi
 
     return render_template('health_check.html', rows=rows, now=now, today=today,
                            n_expired=n_expired, n_red=n_red, n_amber=n_amber, n_green=n_green,
@@ -6411,6 +6477,7 @@ def _donut_segments(band_counts, order, colors, circumference):
 def _compute_client_snapshot_metrics(customer_id, today):
     """TASK 3.3: same score/valid/expiring/expired/budget logic as the client
     report, factored out so the admin snapshot job and the report agree."""
+    customer = Customer.query.get(customer_id)
     docs = [d for d in Document.query.filter_by(customer_id=customer_id).all() if has_valid_expiry(d.expiry_date)]
     def dl(d):
         return (d.expiry_date.date() - today).days
@@ -6419,19 +6486,28 @@ def _compute_client_snapshot_metrics(customer_id, today):
     n_expired = len([d for d in docs if dl(d) < 0])
     total = len(docs)
     score = round(100 * (n_valid + 0.5 * n_expiring) / total) if total else None
-    budget_min, budget_max = _renewal_budget_range([d.doc_type for d in docs if dl(d) <= 90])
+    budget_min, budget_max = _renewal_budget_range(
+        [d.doc_type for d in docs if dl(d) <= 90],
+        jurisdiction=customer.jurisdiction if customer else None)
     return score, n_valid, n_expiring, n_expired, budget_min, budget_max
 
-def _renewal_budget_range(doc_types):
-    """TASK 3.2(b): sum indicative renewal cost RANGES (AED) for a list of
-    doc_type strings. Unknown/unpriced types contribute 0. No fine math here
-    or anywhere else in this feature — ranges only."""
+def _renewal_budget_range(doc_types, jurisdiction=None):
+    """TASK 3.2(b): sum indicative renewal cost RANGES (AED, retail only —
+    cost price is never used here) for a list of doc_type strings. Looks up
+    a jurisdiction-specific row first (Mainland/Free Zone), falling back to
+    the generic "Any" row (jurisdiction=NULL) for services that don't split
+    by license type. Unknown/unpriced types contribute 0."""
     if not doc_types:
         return (0, 0)
-    costs = {c.doc_type: (c.renewal_cost_min_aed or 0, c.renewal_cost_max_aed or 0)
-             for c in DocRenewalCost.query.all()}
-    lo = sum(costs.get(dt, (0, 0))[0] for dt in doc_types)
-    hi = sum(costs.get(dt, (0, 0))[1] for dt in doc_types)
+    rows = DocRenewalCost.query.all()
+    specific = {(c.doc_type, c.jurisdiction): (c.renewal_cost_min_aed or 0, c.renewal_cost_max_aed or 0) for c in rows}
+    generic = {c.doc_type: (c.renewal_cost_min_aed or 0, c.renewal_cost_max_aed or 0) for c in rows if c.jurisdiction is None}
+    def lookup(dt):
+        if jurisdiction and (dt, jurisdiction) in specific:
+            return specific[(dt, jurisdiction)]
+        return generic.get(dt, (0, 0))
+    lo = sum(lookup(dt)[0] for dt in doc_types)
+    hi = sum(lookup(dt)[1] for dt in doc_types)
     return (lo, hi)
 
 def _customer_report_data(customer_id):
@@ -6480,7 +6556,7 @@ def _customer_report_data(customer_id):
     # TASK 3.2(b/c): renewal budget range for docs due within 90 days, and
     # whether the red non-renewal warning box should show (expired or ≤30d).
     renewal_budget_min, renewal_budget_max = _renewal_budget_range(
-        [d.doc_type for d in docs if dl(d) <= 90])
+        [d.doc_type for d in docs if dl(d) <= 90], jurisdiction=customer.jurisdiction)
     show_renewal_warning = bool(n_expired or n_exp30)
     # TASK 3.3(c): "Since last month" — compares the two most recent
     # snapshots (not live-vs-snapshot), so it's auto-hidden until 2+ exist.
@@ -7595,6 +7671,12 @@ def init_db():
             # no cost field, does not touch revenue booking or job close flow)
             'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS customer_price_min FLOAT',
             'ALTER TABLE job_type ADD COLUMN IF NOT EXISTS customer_price_max FLOAT',
+            # Renewal cost ranges -> full jurisdiction-aware service price list.
+            # Drop the old one-row-per-doc_type constraint so Mainland/Free
+            # Zone can each have their own row for the same doc_type.
+            'ALTER TABLE doc_renewal_cost DROP CONSTRAINT IF EXISTS doc_renewal_cost_doc_type_key',
+            'ALTER TABLE doc_renewal_cost ADD COLUMN IF NOT EXISTS jurisdiction VARCHAR(20)',
+            'ALTER TABLE doc_renewal_cost ADD COLUMN IF NOT EXISTS cost_price FLOAT',
         ]
         for sql in migrations:
             try:
@@ -7815,21 +7897,45 @@ def init_db():
                 if not DocType.query.filter_by(name=dt).first():
                     db.session.add(DocType(name=dt))
             db.session.commit()
-            # TASK 3.2: seed placeholder renewal-cost RANGES (AED) — rough
-            # indicative estimates, NOT verified pricing. is_default_seed=True
-            # until an admin reviews/edits each row in the admin panel.
+            # Service/renewal price list (AED) — rough indicative estimates,
+            # NOT verified pricing. is_default_seed=True until an admin
+            # reviews/edits each row in the admin panel. jurisdiction=None
+            # means "Any" (doesn't vary by Mainland/Free Zone); Trade License
+            # and Establishment Card get split rows since those genuinely
+            # differ a lot by license type (per the owner: Mainland trade
+            # license renewal ~15,000 vs Free Zone ~6,000).
             _renewal_defaults = [
-                ('Trade License', 8000, 15000), ('Emirates ID', 300, 1200),
-                ('Passport', 300, 800), ('Visa', 2500, 5000),
-                ('Medical Certificate', 300, 700), ('Insurance', 500, 3000),
-                ('Contract', 0, 0), ('NOC', 200, 1000), ('Ejari', 200, 500),
-                ('Establishment Card', 1000, 2500), ('Labor Card', 500, 1500),
-                ('ILOE Insurance', 100, 400), ('Other', 0, 0),
+                ('Trade License', 'Mainland', 15000, 15000), ('Trade License', 'Free Zone', 6000, 6000),
+                ('Emirates ID', None, 300, 1200),
+                ('Passport', None, 300, 800), ('Visa', None, 2500, 5000),
+                ('Medical Certificate', None, 300, 700), ('Insurance', None, 500, 3000),
+                ('Contract', None, 0, 0), ('NOC', None, 200, 1000), ('Ejari', None, 200, 500),
+                ('Establishment Card', 'Mainland', 2000, 2500), ('Establishment Card', 'Free Zone', 1000, 1500),
+                ('Labor Card', None, 500, 1500),
+                ('ILOE Insurance', None, 100, 400), ('Other', None, 0, 0),
             ]
-            for dt, lo, hi in _renewal_defaults:
-                if not DocRenewalCost.query.filter_by(doc_type=dt).first():
-                    db.session.add(DocRenewalCost(doc_type=dt, renewal_cost_min_aed=lo,
+            for dt, juris, lo, hi in _renewal_defaults:
+                if not DocRenewalCost.query.filter_by(doc_type=dt, jurisdiction=juris).first():
+                    db.session.add(DocRenewalCost(doc_type=dt, jurisdiction=juris, renewal_cost_min_aed=lo,
                                                   renewal_cost_max_aed=hi, is_default_seed=True))
+            db.session.commit()
+            # One-time migration: the old flat "Trade License" / "Establishment
+            # Card" row (jurisdiction NULL, pre-split) is now superseded by the
+            # Mainland/Free Zone rows above — remove it if it's still just the
+            # untouched original default (never edited by an admin).
+            for dt in ('Trade License', 'Establishment Card'):
+                _old = DocRenewalCost.query.filter_by(doc_type=dt, jurisdiction=None, is_default_seed=True).first()
+                if _old and DocRenewalCost.query.filter_by(doc_type=dt).filter(DocRenewalCost.jurisdiction.isnot(None)).count() >= 2:
+                    db.session.delete(_old)
+            db.session.commit()
+            # Bring every existing Service Type into the same price-list
+            # catalog (blank/zero until an admin fills it in) — one place to
+            # price everything Tahfeel sells, not just document-expiry types.
+            # Skip names that already have ANY row (e.g. Trade License already
+            # has its Mainland/Free Zone split — don't add a redundant "Any").
+            for _st in ServiceType.query.all():
+                if not DocRenewalCost.query.filter_by(doc_type=_st.name).first():
+                    db.session.add(DocRenewalCost(doc_type=_st.name, jurisdiction=None, is_default_seed=True))
             db.session.commit()
             # Backfill: link legacy Staff/Management docs (free-text owner) to person records
             try:

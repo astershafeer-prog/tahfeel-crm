@@ -587,37 +587,86 @@
         </div>
       </div>
 
-      <!-- TASK 3.2(a): Renewal Cost Ranges — ranges only, no fine columns -->
-      <div class="card" id="renewal-costs">
+      </div></div>
+
+      <!-- Service Price List — full width, not squeezed into the card grid above -->
+      <div class="card" id="service-prices" style="margin:0 16px 16px;">
         <div class="card-header">
-          <h2>💰 Renewal Cost Ranges <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--success-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Compliance</span></h2>
+          <h2>💰 Service Price List <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--success-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Compliance</span></h2>
         </div>
         <div class="card-body">
-          <div style="font-size:11.5px;color:#94A3B8;margin-bottom:10px;line-height:1.5;">
-            Indicative AED ranges used for the client-facing "Estimated renewal budget" figure. Rows marked ⚠ are placeholder defaults — please review and correct before relying on them.
+          <div style="font-size:11.5px;color:#94A3B8;margin-bottom:12px;line-height:1.5;">
+Every service task is priced here — Cost Price stays internal (never shown in the CRM outside this table; real accounting lives in Tally). Retail Price drives the client-facing "Estimated renewal budget" figure <strong>only for names that match an actual document type</strong> (Trade License, Emirates ID, Visa…), matched by the client's jurisdiction (Mainland/Free Zone) and falling back to "Any". Other service tasks (e.g. Document Attestation, Ejari Services) are priced here for future revenue tracking but don't yet feed any calculation. Rows marked ⚠ are placeholder defaults — please review before relying on them.
           </div>
-          <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border-light);border-radius:6px;padding:4px;">
-            {% for rc in renewal_costs %}
-            <div style="padding:8px 6px;border-bottom:1px solid var(--border-light);">
-              <div id="rc-view-{{ rc.id }}" style="display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;">
-                <span style="font-size:13px;">{{ rc.doc_type }}{% if rc.is_default_seed %} <span title="Unreviewed default estimate" style="color:#B45309;">⚠</span>{% endif %}</span>
-                <span style="font-size:12px;color:var(--text-muted);">AED {{ '%.0f'|format(rc.renewal_cost_min_aed) }}–{{ '%.0f'|format(rc.renewal_cost_max_aed) }}</span>
-                <button onclick="rcEdit({{ rc.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-              </div>
-              <form id="rc-form-{{ rc.id }}" method="POST" action="/admin/renewal-cost/{{ rc.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
-                <span style="font-size:12px;color:var(--text-muted);">AED</span>
-                <input type="number" name="renewal_cost_min_aed" value="{{ rc.renewal_cost_min_aed|int }}" min="0" step="50" style="width:90px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-                <span style="font-size:12px;color:var(--text-muted);">–</span>
-                <input type="number" name="renewal_cost_max_aed" value="{{ rc.renewal_cost_max_aed|int }}" min="0" step="50" style="width:90px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
-                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
-                <button type="button" onclick="rcCancel({{ rc.id }})" class="btn-sm">Cancel</button>
-              </form>
+          <form method="POST" action="/admin/service-prices/add" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border-light);">
+            <div class="form-group" style="margin:0;flex:1.4;min-width:160px;">
+              <label style="font-size:10px;">Name</label>
+              <input type="text" name="doc_type" required placeholder="e.g. Trade License">
             </div>
-            {% endfor %}
+            <div class="form-group" style="margin:0;width:130px;">
+              <label style="font-size:10px;">Jurisdiction</label>
+              <select name="jurisdiction">
+                <option value="">Any</option>
+                {% for j in price_jurisdictions %}<option value="{{ j }}">{{ j }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;width:110px;">
+              <label style="font-size:10px;">Cost Price</label>
+              <input type="number" name="cost_price" min="0" step="50" placeholder="AED">
+            </div>
+            <div class="form-group" style="margin:0;width:110px;">
+              <label style="font-size:10px;">Retail Min</label>
+              <input type="number" name="renewal_cost_min_aed" min="0" step="50" placeholder="AED">
+            </div>
+            <div class="form-group" style="margin:0;width:110px;">
+              <label style="font-size:10px;">Retail Max</label>
+              <input type="number" name="renewal_cost_max_aed" min="0" step="50" placeholder="AED">
+            </div>
+            <button type="submit" class="btn-primary" style="white-space:nowrap;">+ Add</button>
+          </form>
+          <input type="text" oninput="rcFilter(this)" placeholder="Filter service prices..." style="width:100%;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;box-sizing:border-box;">
+          <div style="max-height:480px;overflow-y:auto;overflow-x:auto;border:1px solid var(--border-light);border-radius:6px;">
+            <table style="width:100%;">
+              <thead>
+                <tr>
+                  <th>Name</th><th>Jurisdiction</th><th>Cost Price</th><th>Retail Price</th><th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for rc in renewal_costs %}
+                <tr id="rc-view-{{ rc.id }}">
+                  <td style="font-size:13px;">{{ rc.doc_type }}{% if rc.is_default_seed %} <span title="Unreviewed default estimate" style="color:#B45309;">⚠</span>{% endif %}</td>
+                  <td style="font-size:12px;color:var(--text-muted);">{{ rc.jurisdiction or 'Any' }}</td>
+                  <td style="font-size:12px;color:var(--text-muted);">{% if rc.cost_price %}AED {{ '%.0f'|format(rc.cost_price) }}{% else %}—{% endif %}</td>
+                  <td style="font-size:12px;">AED {{ '%.0f'|format(rc.renewal_cost_min_aed) }}–{{ '%.0f'|format(rc.renewal_cost_max_aed) }}</td>
+                  <td style="text-align:right;">
+                    <button onclick="rcEdit({{ rc.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
+                    {% set rc_juris = rc.jurisdiction or 'Any' %}
+                    <a href="/admin/service-prices/{{ rc.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ rc.doc_type }} ({{ rc_juris }})?')" title="Remove">🗑</a>
+                  </td>
+                </tr>
+                <tr id="rc-form-row-{{ rc.id }}" style="display:none;">
+                  <td colspan="5">
+                    <form id="rc-form-{{ rc.id }}" method="POST" action="/admin/service-prices/{{ rc.id }}/edit" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;">
+                      <span style="font-size:12px;color:var(--text-muted);">Cost</span>
+                      <input type="number" name="cost_price" value="{{ rc.cost_price|int if rc.cost_price else '' }}" min="0" step="50" placeholder="AED" style="width:100px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                      <span style="font-size:12px;color:var(--text-muted);">Retail</span>
+                      <input type="number" name="renewal_cost_min_aed" value="{{ rc.renewal_cost_min_aed|int }}" min="0" step="50" style="width:90px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                      <span style="font-size:12px;color:var(--text-muted);">–</span>
+                      <input type="number" name="renewal_cost_max_aed" value="{{ rc.renewal_cost_max_aed|int }}" min="0" step="50" style="width:90px;padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                      <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
+                      <button type="button" onclick="rcCancel({{ rc.id }})" class="btn-sm">Cancel</button>
+                    </form>
+                  </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="empty">No service prices yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-      </div></div>
     </details>
 
     <!-- Finance -->
@@ -724,8 +773,14 @@
     function caCancel(id) { document.getElementById('ca-view-'+id).style.display='flex'; document.getElementById('ca-form-'+id).style.display='none'; }
     function dtEdit(id) { document.getElementById('dt-view-'+id).style.display='none'; document.getElementById('dt-form-'+id).style.display='flex'; }
     function dtCancel(id) { document.getElementById('dt-view-'+id).style.display='flex'; document.getElementById('dt-form-'+id).style.display='none'; }
-    function rcEdit(id) { document.getElementById('rc-view-'+id).style.display='none'; document.getElementById('rc-form-'+id).style.display='flex'; }
-    function rcCancel(id) { document.getElementById('rc-view-'+id).style.display='grid'; document.getElementById('rc-form-'+id).style.display='none'; }
+    function rcEdit(id) { document.getElementById('rc-view-'+id).style.display='none'; document.getElementById('rc-form-row-'+id).style.display=''; }
+    function rcCancel(id) { document.getElementById('rc-view-'+id).style.display=''; document.getElementById('rc-form-row-'+id).style.display='none'; }
+    function rcFilter(input) {
+      const q = input.value.toLowerCase();
+      document.querySelectorAll('tr[id^="rc-view-"]').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    }
     function paEdit(id) { document.getElementById('pa-view-'+id).style.display='none'; document.getElementById('pa-form-'+id).style.display='flex'; }
     function paCancel(id) { document.getElementById('pa-view-'+id).style.display='flex'; document.getElementById('pa-form-'+id).style.display='none'; }
   </script>
