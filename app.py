@@ -5403,9 +5403,17 @@ ACTIVITY_DEFAULTS = [
 ]
 
 def get_activities():
+    """Active activity types as (field_key, label, weekly_target).
+
+    weekly_target is coerced to a number here because a NULL one used to take the
+    whole Daily Log page down: the summary maths does `target * weeks`, which
+    raises TypeError on None, and the target was also interpolated straight into
+    an inline onclick, emitting bare `None` and killing the edit button. Callers
+    can rely on getting a number.
+    """
     try:
         types = ActivityType.query.filter_by(active=True).order_by(ActivityType.sort_order, ActivityType.id).all()
-        return [(t.field_key, t.label, t.weekly_target) for t in types]
+        return [(t.field_key, t.label, t.weekly_target or 0) for t in types]
     except:
         return ACTIVITY_DEFAULTS
 
