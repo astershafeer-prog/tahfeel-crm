@@ -44,7 +44,9 @@
             </form>
             <a href="/customers/{{ customer.id }}/edit" class="ib" title="Edit">✏</a>
             {% if session.role == 'admin' %}
-            <a href="/customers/{{ customer.id }}/delete" class="ib ib-del" onclick="return confirm('Delete {{ customer.name }}? This cannot be undone.')" title="Delete">🗑</a>
+            <form method="POST" action="/customers/{{ customer.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete {{ customer.name }}? This cannot be undone.')">
+              <button type="submit" class="ib ib-del" title="Delete">🗑</button>
+            </form>
             {% endif %}
           </div>
         </div>

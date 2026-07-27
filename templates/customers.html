@@ -176,7 +176,7 @@
                 <a href="/customers/{{ c.id }}" class="ib" title="View">👁</a>
                 <a href="/customers/{{ c.id }}/edit" class="ib" title="Edit">✏</a>
                 <a href="/documents?customer_id={{ c.id }}" class="ib" title="Documents">📄</a>
-                {% if session.role == 'admin' %}<a href="/customers/{{ c.id }}/delete" class="ib ib-del" onclick="return confirm('Delete {{ c.name }}?')" title="Delete">🗑</a>{% endif %}
+                {% if session.role == 'admin' %}<form method="POST" action="/customers/{{ c.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete {{ c.name }}?')"><button type="submit" class="ib ib-del" title="Delete">🗑</button></form>{% endif %}
                 {% if c.phone %}
 <a href="https://wa.me/{{ c.phone|replace(' ','')|replace('+','') }}?text=Dear%20{{ c.name.split()[0]|replace(' ','%20') }}%2C%0A%0A" target="_blank" class="ib" title="WhatsApp" style="background:#25D366;color:white;">💬</a>
 {% endif %}
