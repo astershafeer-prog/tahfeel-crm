@@ -265,6 +265,19 @@ def not_found(error):
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
+@app.errorhandler(405)
+def method_not_allowed(error):
+    # Delete/edit/close-style actions only accept POST, on purpose — the CSRF
+    # token that guards them only travels with a form submit, never with a plain
+    # link. Visiting one of those addresses directly (typed, pasted, bookmarked,
+    # or opened in a new tab) sends a GET instead, which Flask correctly refuses.
+    # That refusal is the safety working as intended; it just used to show as a
+    # bare, unstyled "Method Not Allowed" page instead of returning somewhere useful.
+    if 'user_id' in session:
+        flash('That action can only be triggered from its button in the CRM, not by opening the link directly.')
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
