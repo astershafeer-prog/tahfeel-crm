@@ -214,45 +214,97 @@ loadTheme();
   <a href="/admin/backup/export" style="background:#FAEEDA;color:#633806;padding:4px 14px;border-radius:20px;font-weight:700;font-size:11px;text-decoration:none;white-space:nowrap;margin-left:16px;">⬇ Download Backup</a>
 </div>
 {% endif %}
+{#
+  The nav had grown to 17 top-level links, one per feature added over time, and
+  ran out of room — on a normal laptop width it was overflow-scrolling, which is
+  why finding a page meant hunting sideways. Related pages are grouped into a
+  few dropdowns below; nothing lost a link, a route, or its role gating, they
+  just don't all have to be visible at once. Dashboard, Work Planner, Clients
+  and WhatsApp stay as direct links — the first three are the main daily
+  destinations, and WhatsApp carries a live unread badge that needs to stay
+  visible rather than hidden inside a menu.
+#}
+{% set _sales_active = active in ['leads', 'add_lead', 'enquiries', 'call_log'] %}
+{% set _docs_active = active in ['documents', 'health-check', 'invoice', 'tahfeel_doc'] %}
+{% set _insights_active = active in ['activity', 'reports', 'analytics', 'partner-commissions'] %}
 <div class="nav" style="background:#0F2660;">
   <a href="/dashboard" {% if active=='dashboard' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">⊞ Dashboard</a>
   {% if session.role in ['admin', 'sales', 'staff', 'operations'] %}
   <a href="/planner" {% if active=='planner' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧠 Work Planner</a>
   {% endif %}
-  {% if session.role != 'finance' %}
-  <a href="/leads" {% if active=='leads' or active=='add_lead' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">◉ Leads</a>
+
+  {% if session.role != 'finance' or session.role in ['admin', 'finance', 'operations'] %}
+  <div class="navgrp {% if _sales_active %}active{% endif %}">
+    <button type="button" class="navgrp-btn" onclick="tahfeelNavToggle(this)">◉ Sales <span class="navgrp-caret">▾</span></button>
+    <div class="navgrp-menu">
+      {% if session.role != 'finance' %}
+      <a href="/leads" {% if active=='leads' or active=='add_lead' %}class="active"{% endif %}>◉ Leads</a>
+      {% endif %}
+      <a href="/enquiries" {% if active=='enquiries' %}class="active"{% endif %}>❓ Enquiries</a>
+      {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
+      <a href="/call-log" {% if active=='call_log' %}class="active"{% endif %}>📞 Call Log</a>
+      {% endif %}
+    </div>
+  </div>
   {% endif %}
-  <a href="/enquiries" {% if active=='enquiries' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">❓ Enquiries</a>
+
   <a href="/jobs" {% if active=='jobs' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">✓ Tasks</a>
   <a href="/customers" {% if active=='customers' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">👥 Clients</a>
-  {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
-  <a href="/call-log" {% if active=='call_log' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📞 Call Log</a>
-  {% endif %}
   <a href="/whatsapp" {% if active=='whatsapp' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">💬 WhatsApp{% set _wau = wa_unread_count() %}{% if _wau %}<span style="background:#25D366;color:white;font-size:10px;font-weight:700;border-radius:20px;padding:1px 7px;min-width:16px;text-align:center;">{{ _wau }}</span>{% endif %}</a>
-  <a href="/documents" {% if active=='documents' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Documents</a>
-  <a href="/health-check" {% if active=='health-check' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🛡 Compliance</a>
-  {% if session.role in ['admin', 'sales'] %}
-  <a href="/activity" {% if active=='activity' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📋 Daily Log</a>
-  {% endif %}
-  <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧾 Doc Generator</a>
+
+  <div class="navgrp {% if _docs_active %}active{% endif %}">
+    <button type="button" class="navgrp-btn" onclick="tahfeelNavToggle(this)">📄 Documents <span class="navgrp-caret">▾</span></button>
+    <div class="navgrp-menu">
+      <a href="/documents" {% if active=='documents' %}class="active"{% endif %}>📄 Documents</a>
+      <a href="/health-check" {% if active=='health-check' %}class="active"{% endif %}>🛡 Compliance</a>
+      <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %}>🧾 Doc Generator</a>
+      {% if session.role == 'admin' or session.get('user_email') == 'saadatahfeel@gmail.com' %}
+      <a href="/tahfeel-doc" {% if active=='tahfeel_doc' %}class="active"{% endif %}>📄 Tahfeel Doc</a>
+      {% endif %}
+    </div>
+  </div>
+
   {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
-  <a href="/reports" {% if active=='reports' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📊 Reports</a>
+  <div class="navgrp {% if _insights_active %}active{% endif %}">
+    <button type="button" class="navgrp-btn" onclick="tahfeelNavToggle(this)">📊 Insights <span class="navgrp-caret">▾</span></button>
+    <div class="navgrp-menu">
+      {% if session.role in ['admin', 'sales'] %}
+      <a href="/activity" {% if active=='activity' %}class="active"{% endif %}>📋 Daily Log</a>
+      {% endif %}
+      <a href="/reports" {% if active=='reports' %}class="active"{% endif %}>📊 Reports</a>
+      <a href="/analytics" {% if active=='analytics' %}class="active"{% endif %}>📈 Analytics</a>
+      {% if session.role in ['admin', 'finance'] %}
+      <a href="/partner-commissions" {% if active=='partner-commissions' %}class="active"{% endif %}>💰 Commissions</a>
+      {% endif %}
+    </div>
+  </div>
   {% endif %}
-  {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
-  <a href="/analytics" {% if active=='analytics' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📈 Analytics</a>
-  {% endif %}
-  {% if session.role in ['admin', 'finance'] %}
-  <a href="/partner-commissions" {% if active=='partner-commissions' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">💰 Commissions</a>
-  {% endif %}
-  {% if session.role == 'admin' or session.get('user_email') == 'saadatahfeel@gmail.com' %}
-  <a href="/tahfeel-doc" {% if active=='tahfeel_doc' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">📄 Tahfeel Doc</a>
-  {% endif %}
+
   <div style="flex:1;"></div>
   {% if session.role == 'admin' %}
   <a href="/admin" class="admin-link {% if active=='admin' %}active{% endif %}" style="display:flex;align-items:center;gap:5px;">⚙ Admin</a>
   {% endif %}
   <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;">{{ session.user_name[:2].upper() if session.user_name else 'U' }}</div>
 </div>
+<script>
+  // Nav dropdowns: one open at a time, closes on an outside click or Escape.
+  function tahfeelNavToggle(btn) {
+    var grp = btn.closest('.navgrp');
+    var wasOpen = grp.classList.contains('open');
+    document.querySelectorAll('.navgrp.open').forEach(function (g) { g.classList.remove('open'); });
+    if (!wasOpen) grp.classList.add('open');
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.navgrp')) {
+      document.querySelectorAll('.navgrp.open').forEach(function (g) { g.classList.remove('open'); });
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.navgrp.open').forEach(function (g) { g.classList.remove('open'); });
+    }
+  });
+</script>
 <script>
   // Global WhatsApp new-message alert (sound + browser notification), works on every page —
   // not just the /whatsapp inbox. Reuses the same localStorage flags the inbox bell sets.

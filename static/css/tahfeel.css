@@ -1629,3 +1629,69 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text);
 }
 
+
+/* ── Nav groups (dropdowns) ─────────────────────────────────
+   The nav had grown to 17 top-level links and ran out of room. Related pages are
+   now collapsed into a few grouped menus, so the bar stays readable and there is
+   space to add pages later without it overflowing again. */
+.navgrp { position: relative; display: inline-flex; }
+.navgrp > .navgrp-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  color: #FFFFFF !important;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+.navgrp > .navgrp-btn:hover { background: rgba(255,255,255,0.15); }
+.navgrp.active > .navgrp-btn,
+.navgrp.open > .navgrp-btn { background: rgba(255,255,255,0.2); font-weight: 600; }
+.navgrp-caret { font-size: 9px; opacity: .75; margin-left: 1px; }
+
+.navgrp-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 200;
+  min-width: 200px;
+  background: var(--primary-dark);
+  border-top: 2px solid var(--accent);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 4px 0;
+}
+.navgrp.open .navgrp-menu { display: block; }
+.navgrp-menu a {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px !important;
+  border-radius: 0 !important;
+  font-size: 13px;
+  white-space: nowrap;
+  border-bottom: none !important;
+}
+.navgrp-menu a:hover { background: rgba(255,255,255,0.12); }
+.navgrp-menu a.active {
+  background: rgba(232,184,75,0.18);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* A dropdown cannot escape a horizontally scrolling parent, so on small screens
+   let the bar wrap onto a second line instead of scrolling. With grouped menus
+   there are few enough items for that to look intentional. */
+@media (max-width: 768px) {
+  .nav { overflow-x: visible; flex-wrap: wrap; }
+  .navgrp > .navgrp-btn { padding: 10px 10px; font-size: 12px; }
+  .navgrp-menu { min-width: 180px; }
+}

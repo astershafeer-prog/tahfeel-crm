@@ -265,6 +265,19 @@ def not_found(error):
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
+@app.errorhandler(405)
+def method_not_allowed(error):
+    # Delete/edit/close-style actions only accept POST, on purpose — the CSRF
+    # token that guards them only travels with a form submit, never with a plain
+    # link. Visiting one of those addresses directly (typed, pasted, bookmarked,
+    # or opened in a new tab) sends a GET instead, which Flask correctly refuses.
+    # That refusal is the safety working as intended; it just used to show as a
+    # bare, unstyled "Method Not Allowed" page instead of returning somewhere useful.
+    if 'user_id' in session:
+        flash('That action can only be triggered from its button in the CRM, not by opening the link directly.')
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -1252,6 +1265,22 @@ class WorkPlanItem(db.Model):
     @property
     def has_amount(self):
         return bool((self.amount_max or 0) > 0 or (self.amount_min or 0) > 0)
+
+class WorkPlanBrief(db.Model):
+    """The opening narrative for one rep's week.
+
+    This lived in AppSetting at first, whose value column is 300 characters — long
+    enough to look fine in testing and short enough to cut a real brief off
+    mid-sentence in production. It gets its own Text column here so the wording is
+    never truncated."""
+    __tablename__ = 'work_plan_brief'
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    week_start = db.Column(db.Date, nullable=False, index=True)
+    text       = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=now_dubai)
+    __table_args__ = (db.UniqueConstraint('user_id', 'week_start',
+                                          name='uq_work_plan_brief_user_week'),)
 
 @app.context_processor
 def inject_globals():
@@ -10123,8 +10152,11 @@ def generate_plan_recommendations(user, week_start, force=False):
             written += 1
     brief = (data.get('brief') or '').strip()
     if brief:
-        # AppSetting.value is 300 chars; the brief is prose, so give it its own room.
-        set_setting(f'planbrief:{user.id}:{week_start.isoformat()}', brief[:300])
+        row = WorkPlanBrief.query.filter_by(user_id=user.id, week_start=week_start).first()
+        if not row:
+            row = WorkPlanBrief(user_id=user.id, week_start=week_start)
+            db.session.add(row)
+        row.text = brief
     db.session.commit()
     print(f'[PLANNER] wrote {written} recommendations for {user.name} '
           f'({resp.usage.input_tokens} in / {resp.usage.output_tokens} out, '
@@ -10132,6 +10164,14 @@ def generate_plan_recommendations(user, week_start, force=False):
     return written
 
 def plan_brief_for(user_id, week_start):
+    try:
+        row = WorkPlanBrief.query.filter_by(user_id=user_id, week_start=week_start).first()
+        if row and (row.text or '').strip():
+            return row.text.strip()
+    except Exception:
+        pass
+    # Briefs written before the dedicated table existed are still in AppSetting
+    # (truncated at 300 chars) — keep showing them rather than blanking the banner.
     return get_setting(f'planbrief:{user_id}:{week_start.isoformat()}')
 
 

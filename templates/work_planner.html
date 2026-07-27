@@ -24,9 +24,12 @@
   .wp-brief-icon { width:33px; height:33px; border-radius:9px; background:rgba(232,184,75,.2);
                    border:1px solid rgba(232,184,75,.45); display:grid; place-items:center;
                    font-size:16px; flex:0 0 auto; }
-  .wp-brief h2 { font-size:13.5px; font-weight:600; margin-bottom:4px; color:var(--accent); }
-  .wp-brief p { font-size:13px; line-height:1.6; color:rgba(255,255,255,.93); }
-  .wp-brief .meta { font-size:10.5px; color:rgba(255,255,255,.5); margin-top:8px;
+  /* Contrast on the navy banner: the gold heading and the 50%-opacity footnote
+     were both hard to read against the gradient. Lightened deliberately. */
+  .wp-brief h2 { font-size:13.5px; font-weight:700; margin-bottom:5px; color:#F7DC9C;
+                 letter-spacing:.2px; }
+  .wp-brief p { font-size:13px; line-height:1.62; color:#FFFFFF; }
+  .wp-brief .meta { font-size:10.5px; color:rgba(255,255,255,.78); margin-top:8px;
                     font-family:var(--font-mono); }
 
   .wp-strips { display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:15px; }
@@ -95,7 +98,7 @@
               padding:2px 6px; border-radius:20px; background:#EFF2F6;
               color:var(--text-secondary); border:1px solid var(--border); }
   .wp-carry.stale { background:var(--danger-bg); color:var(--danger); border-color:#F0C4C4; }
-  .wp-src { font-size:9.5px; color:var(--text-muted); margin-top:5px; font-style:italic; }
+  .wp-src { font-size:10.5px; color:var(--text-secondary); margin-top:5px; font-style:italic; }
 
   .wp-det { list-style:none; font-size:11.5px; color:var(--text-secondary); display:flex;
             flex-direction:column; gap:3px; margin:0; padding:0; }
