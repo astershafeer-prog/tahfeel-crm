@@ -197,14 +197,18 @@
                 <div style="display:flex;gap:6px;">
                   <button class="btn-sm" onclick="toggleEdit({{ user.id }})">Edit</button>
                   {% if user.id != session.user_id %}
-                  <a href="/admin/staff/{{ user.id }}/toggle" class="btn-sm" style="border-color:{{ 'var(--danger)' if user.active else 'var(--success)' }};color:{{ 'var(--danger)' if user.active else 'var(--success)' }};">
-                    {{ 'Deactivate' if user.active else 'Activate' }}
-                  </a>
+                  <form method="POST" action="/admin/staff/{{ user.id }}/toggle" style="display:inline;">
+                    <button type="submit" class="btn-sm" style="border-color:{{ 'var(--danger)' if user.active else 'var(--success)' }};color:{{ 'var(--danger)' if user.active else 'var(--success)' }};">
+                      {{ 'Deactivate' if user.active else 'Activate' }}
+                    </button>
+                  </form>
                   {% endif %}
                   {% if user.role == 'sales' %}
-                  <a href="/admin/staff/{{ user.id }}/toggle-leave" class="btn-sm" style="border-color:{{ '#16A34A' if user.on_leave else '#F59E0B' }};color:{{ '#16A34A' if user.on_leave else '#B45309' }};" title="{{ 'Bring back into lead round-robin' if user.on_leave else 'Skip in lead round-robin while away' }}">
-                    {{ '✓ Back' if user.on_leave else '🏖 On leave' }}
-                  </a>
+                  <form method="POST" action="/admin/staff/{{ user.id }}/toggle-leave" style="display:inline;">
+                    <button type="submit" class="btn-sm" style="border-color:{{ '#16A34A' if user.on_leave else '#F59E0B' }};color:{{ '#16A34A' if user.on_leave else '#B45309' }};" title="{{ 'Bring back into lead round-robin' if user.on_leave else 'Skip in lead round-robin while away' }}">
+                      {{ '✓ Back' if user.on_leave else '🏖 On leave' }}
+                    </button>
+                  </form>
                   {% endif %}
                 </div>
                 {% endif %}
@@ -309,7 +313,9 @@
                 <span style="font-size:13px;">{{ service.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="svEdit({{ service.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/service/{{ service.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ service.name }}?')" title="Remove">🗑</a>
+                  <form method="POST" action="/admin/service/{{ service.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ service.name }}?')">
+                    <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
+                  </form>
                 </div>
               </div>
               <form id="sv-form-{{ service.id }}" method="POST" action="/admin/service/{{ service.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
@@ -350,7 +356,9 @@
                 <span style="font-size:13px;">{{ source.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="soEdit({{ source.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/source/{{ source.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ source.name }}?')" title="Remove">🗑</a>
+                  <form method="POST" action="/admin/source/{{ source.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ source.name }}?')">
+                    <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
+                  </form>
                 </div>
               </div>
               <form id="so-form-{{ source.id }}" method="POST" action="/admin/source/{{ source.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
@@ -433,7 +441,9 @@
                 <span style="font-size:13px;">{{ campaign.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="caEdit({{ campaign.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/campaign/{{ campaign.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ campaign.name }}?')" title="Remove">🗑</a>
+                  <form method="POST" action="/admin/campaign/{{ campaign.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ campaign.name }}?')">
+                    <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
+                  </form>
                 </div>
               </div>
               <form id="ca-form-{{ campaign.id }}" method="POST" action="/admin/campaign/{{ campaign.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
@@ -488,7 +498,9 @@
                 </div>
                 <div style="display:flex;gap:5px;">
                   <button onclick="jtEdit({{ jt.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/jobtype/{{ jt.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ jt.name }}?')" title="Remove">🗑</a>
+                  <form method="POST" action="/admin/jobtype/{{ jt.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ jt.name }}?')">
+                    <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
+                  </form>
                 </div>
               </div>
               <form id="jt-form-{{ jt.id }}" method="POST" action="/admin/jobtype/{{ jt.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -570,7 +582,9 @@
                 <span style="font-size:13px;">{{ dt.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="dtEdit({{ dt.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/doctype/{{ dt.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ dt.name }}?')" title="Remove">🗑</a>
+                  <form method="POST" action="/admin/doctype/{{ dt.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ dt.name }}?')">
+                    <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
+                  </form>
                 </div>
               </div>
               <form id="dt-form-{{ dt.id }}" method="POST" action="/admin/doctype/{{ dt.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">
@@ -642,7 +656,9 @@ Every service task is priced here — Cost Price stays internal (never shown in 
                   <td style="text-align:right;">
                     <button onclick="rcEdit({{ rc.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
                     {% set rc_juris = rc.jurisdiction or 'Any' %}
-                    <a href="/admin/service-prices/{{ rc.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ rc.doc_type }} ({{ rc_juris }})?')" title="Remove">🗑</a>
+                    <form method="POST" action="/admin/service-prices/{{ rc.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ rc.doc_type }} ({{ rc_juris }})?')">
+                      <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
+                    </form>
                   </td>
                 </tr>
                 <tr id="rc-form-row-{{ rc.id }}" style="display:none;">
@@ -698,7 +714,9 @@ Every service task is priced here — Cost Price stays internal (never shown in 
                 <span style="font-size:13px;">{{ partner.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="paEdit({{ partner.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <a href="/admin/partner/{{ partner.id }}/delete" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;text-decoration:none;" onclick="return confirm('Remove {{ partner.name }}?')" title="Remove">🗑</a>
+                  <form method="POST" action="/admin/partner/{{ partner.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ partner.name }}?')">
+                    <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
+                  </form>
                 </div>
               </div>
               <form id="pa-form-{{ partner.id }}" method="POST" action="/admin/partner/{{ partner.id }}/edit" style="display:none;margin-top:8px;gap:8px;align-items:center;">

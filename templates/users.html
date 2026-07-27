@@ -103,12 +103,15 @@
               </td>
               <td>
                 {% if user.role != 'admin' %}
-                  <a href="/users/{{ user.id }}/toggle" class="btn-sm">{{ 'Deactivate' if user.active else 'Activate' }}</a>
+                  <form method="POST" action="/users/{{ user.id }}/toggle" style="display:inline;">
+                    <button type="submit" class="btn-sm">{{ 'Deactivate' if user.active else 'Activate' }}</button>
+                  </form>
                   {% if user.role == 'sales' %}
-                    <a href="/admin/staff/{{ user.id }}/toggle-leave"
-                       class="btn-sm" style="background:{{ '#f59e0b' if not user.on_leave else '#10b981' }};color:white;margin-left:4px;">
-                      {{ 'Mark On Leave' if not user.on_leave else 'Back from Leave' }}
-                    </a>
+                    <form method="POST" action="/admin/staff/{{ user.id }}/toggle-leave" style="display:inline;">
+                      <button type="submit" class="btn-sm" style="background:{{ '#f59e0b' if not user.on_leave else '#10b981' }};color:white;margin-left:4px;">
+                        {{ 'Mark On Leave' if not user.on_leave else 'Back from Leave' }}
+                      </button>
+                    </form>
                   {% endif %}
                 {% else %}
                   <span class="protected">Protected</span>
