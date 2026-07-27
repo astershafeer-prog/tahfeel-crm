@@ -10027,6 +10027,57 @@ def plan_brief_for(user_id, week_start):
     return get_setting(f'planbrief:{user_id}:{week_start.isoformat()}')
 
 
+def start_plan_ai_background(user, week_start, force=False):
+    """Run the AI steps off the request thread.
+
+    A page load must never wait on the API. This model thinks before it answers
+    and we ask it for ~30 recommendations, so a call can take a minute or more —
+    far longer than the server allows a web request to live. Blocking the route
+    on it meant a rep's first visit timed out even though the plan itself had
+    already been computed and saved. The page renders from the deterministic
+    text immediately; the wording is filled in a moment later.
+
+    A short-lived lock in AppSetting stops two page loads (or two workers) paying
+    for the same work twice."""
+    if not os.environ.get('ANTHROPIC_API_KEY'):
+        return False
+    if not (automation_on('auto_planner_ai') or automation_on('auto_planner_research')):
+        return False
+
+    lock_key = f'planailock:{user.id}:{week_start.isoformat()}'
+    running = get_setting(lock_key)
+    if running and not force:
+        try:
+            started = datetime.strptime(running, '%Y-%m-%d %H:%M:%S')
+            if (now_dubai() - started).total_seconds() < 900:
+                return False    # already in flight, or finished in the last 15 min
+        except Exception:
+            pass
+    set_setting(lock_key, now_dubai().strftime('%Y-%m-%d %H:%M:%S'))
+
+    uid, week = user.id, week_start
+
+    def _run():
+        with app.app_context():
+            u = User.query.get(uid)
+            if not u:
+                return
+            try:
+                generate_plan_recommendations(u, week, force=force)
+            except Exception as e:
+                db.session.rollback()
+                print(f'[PLANNER] background recommendations failed for user {uid}: {e}')
+            try:
+                generate_plan_market_research(u, week)
+            except Exception as e:
+                db.session.rollback()
+                print(f'[PLANNER] background research failed for user {uid}: {e}')
+
+    import threading
+    threading.Thread(target=_run, name=f'planner-ai-{uid}', daemon=True).start()
+    return True
+
+
 # ── Market & regulatory research (live web search, citations shown) ───────────
 
 PLANNER_RESEARCH_PROMPT = """You are researching UAE business-setup and compliance news for a \
@@ -10182,23 +10233,23 @@ def work_planner():
         except Exception as e:
             db.session.rollback()
             print(f'[PLANNER] generate failed for user {user.id}: {e}')
-            flash('Could not build the plan just now — please try Regenerate.')
-        # The rows are already complete and readable without this; if the AI step
-        # fails we keep the deterministic text rather than blocking the page.
-        for step in (generate_plan_recommendations, generate_plan_market_research):
-            try:
-                step(user, week_start)
-            except Exception as e:
-                db.session.rollback()
-                print(f'[PLANNER] {step.__name__} failed for user {user.id}: {e}')
+            flash('Could not build the plan just now — please try Refresh facts.')
+        # Hand the API work to a background thread: the rows above are already
+        # complete and readable, so there is nothing to wait for.
+        start_plan_ai_background(user, week_start)
 
     data = plan_page_context(user, week_start)
+    # Tell the rep plainly that wording is still arriving, rather than leaving
+    # them to wonder why the advice looks plainer than usual.
+    awaiting_ai = bool(data['items']) and any(
+        not (i.ai_recommendation or '').strip() for i in data['items'])
     return render_template('work_planner.html',
         now=now_dubai(), week_start=week_start, week_end=week_start + timedelta(days=6),
         plan_user=user, viewing_other=viewing_other,
         reps=(plan_eligible_users() if session.get('role') == 'admin' else []),
         section_labels=PLAN_SECTION_LABELS, statuses=PLAN_STATUSES,
         ai_brief=plan_brief_for(user.id, week_start),
+        awaiting_ai=awaiting_ai,
         **data)
 
 @app.route('/planner/regenerate', methods=['POST'])
@@ -10216,9 +10267,11 @@ def work_planner_regenerate():
     rewrite = request.form.get('rewrite') == '1'
     try:
         created, updated, _ = generate_weekly_plan(user, week_start)
-        wrote = generate_plan_recommendations(user, week_start, force=rewrite)
-        flash(f'Plan refreshed — {created} new, {updated} updated'
-              + (f', {wrote} recommendations rewritten.' if wrote else '.'))
+        msg = f'Plan refreshed — {created} new, {updated} updated.'
+        # Same reason as the page route: never make the browser wait on the API.
+        if start_plan_ai_background(user, week_start, force=rewrite):
+            msg += ' The AI is rewriting the advice now — reload in a minute to see it.'
+        flash(msg)
     except Exception as e:
         db.session.rollback()
         flash(f'Could not refresh the plan: {e}')
@@ -10268,15 +10321,13 @@ def cron_generate_weekly_plan():
             row['error'] = str(e)
             results.append(row)
             continue
-        # AI steps are best-effort: a failure here leaves a complete, readable plan
-        # built from the deterministic text, so never fail the whole run for it.
-        for key, step in (('ai', generate_plan_recommendations),
-                          ('research', generate_plan_market_research)):
-            try:
-                row[key] = step(u, week_start)
-            except Exception as e:
-                db.session.rollback()
-                row[f'{key}_error'] = str(e)
+        # Hand the API work to background threads. Doing it inline would make this
+        # one HTTP request last minutes across several reps — long enough for the
+        # server to kill it half way and leave the later reps with no wording.
+        try:
+            row['ai_queued'] = start_plan_ai_background(u, week_start)
+        except Exception as e:
+            row['ai_error'] = str(e)
         results.append(row)
     _mark_run('weekly_planner', f'{len(results)} reps, {total_new} new items')
     return jsonify({'week_start': week_start.isoformat(), 'reps': results})

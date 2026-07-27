@@ -1,0 +1,24 @@
+name: Monday AI Work Planner
+
+on:
+  schedule:
+    # 06:00 Dubai (UTC+4) every Monday = 02:00 UTC. Early enough that the plan is
+    # already waiting when the first rep logs in.
+    - cron: '0 2 * * 1'
+  workflow_dispatch: {}    # allows a manual run from the Actions tab
+
+jobs:
+  weekly-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build this week's action plan for every sales rep
+        run: |
+          echo "Calling generate-weekly-plan endpoint..."
+          curl -fsS --max-time 300 \
+            "https://tahfeelcrm.online/cron/generate-weekly-plan?key=${{ secrets.CRON_KEY }}" \
+            -o response.json \
+            || { echo "Request failed"; exit 1; }
+          echo "Response:"; cat response.json
+          # The response lists each rep with how many plan rows were created and
+          # updated. The AI wording is written by background threads a minute or
+          # two later, so "ai_queued": true here means it was started, not finished.
