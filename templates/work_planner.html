@@ -172,6 +172,75 @@
     .wp-head { flex-direction:column; align-items:stretch; }
     .wp-wrap { padding:16px 12px 40px; }
   }
+
+  /* ── Print ──────────────────────────────────────────────────────────────
+     Reps take this into meetings and tick items off on paper, so the printed
+     copy has to be the plan itself — not a screenshot of an app. Navigation,
+     buttons and the dropdowns come off; the status prints as plain text with a
+     tick box beside it. Landscape because the table is wide. */
+  .wp-print-head { display:none; }
+  .wp-print-status { display:none; }
+  .wp-tick { display:none; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+
+    .topbar, .nav, .wp-actions, .wp-legend, .wp-brief .brief-icon,
+    .wp-foot, .flash, form { display: none !important; }
+
+    body { background:#fff !important; font-size:9.5pt; }
+    .wp-wrap { max-width:none; padding:0; }
+
+    /* printed page needs its own heading — the topbar is gone */
+    .wp-print-head { display:block; border-bottom:2px solid #1A3B8B; padding-bottom:6px;
+                     margin-bottom:10px; }
+    .wp-print-head .t { font-size:15pt; font-weight:700; color:#1A3B8B; }
+    .wp-print-head .s { font-size:9pt; color:#444; margin-top:2px; }
+
+    .wp-head h1, .wp-head .sub { display:none; }
+
+    /* flatten the dark banner so it doesn't eat a page of toner */
+    .wp-brief { background:#fff !important; color:#000 !important; box-shadow:none;
+                border:1px solid #999; border-radius:4px; padding:8px 10px;
+                margin-bottom:8px; }
+    .wp-brief h2 { color:#1A3B8B !important; font-size:9pt; }
+    .wp-brief p { color:#000 !important; font-size:9pt; }
+    .wp-brief .meta { color:#666 !important; font-size:7.5pt; }
+
+    .wp-strips { grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+    .wp-strip { padding:6px 9px; font-size:8.5pt; }
+    .wp-kpis { grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:8px; }
+    .wp-kpi { padding:5px 7px; box-shadow:none; }
+    .wp-kpi .val { font-size:12pt; }
+    .wp-kpi .hint { font-size:7pt; }
+
+    .wp-tbl { box-shadow:none; border-radius:0; border:1px solid #999; }
+    .wp-scroll { overflow:visible !important; }
+    table { min-width:0 !important; width:100% !important; }
+    thead { display:table-header-group; }        /* repeat headers on each page */
+    thead th { font-size:7.5pt; padding:5px 6px; }
+    tbody td { font-size:8.5pt; padding:5px 6px; }
+    td.ai { background:#fff !important; }
+    tr, tr.wp-sec { page-break-inside:avoid; }
+    tr.wp-sec td { background:#EEE !important; color:#000 !important; }
+
+    .wp-det { font-size:8pt; }
+    .wp-days { border:1px solid #999; background:#fff !important; color:#000 !important; }
+    .wp-chip, .wp-carry { border:1px solid #999; background:#fff !important; color:#000 !important; }
+
+    /* status: dropdown out, readable text plus a box to tick in */
+    .wp-print-status { display:inline; font-size:8.5pt; font-weight:600; }
+    .wp-tick { display:inline-block; width:9pt; height:9pt; border:1px solid #333;
+               margin-right:5px; vertical-align:-1px; }
+
+    .wp-card { box-shadow:none; border:1px solid #999; page-break-inside:avoid;
+               margin-top:8px; padding:8px 10px; }
+    .sc { background:#fff !important; }
+    .wp-note { page-break-inside:avoid; font-size:8pt; padding:6px 9px; }
+
+    a { color:#000 !important; text-decoration:none; }
+    a[href^="http"]::after { content:" (" attr(href) ")"; font-size:7pt; color:#555; }
+  }
 </style>
 </head>
 <body>
@@ -183,6 +252,19 @@
   {% with messages = get_flashed_messages() %}
     {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
   {% endwith %}
+
+  <div class="wp-print-head">
+    <div class="t">
+      Weekly Action Plan — {{ plan_user.name }}
+    </div>
+    <div class="s">
+      Tahfeel Business Setup Services &nbsp;·&nbsp;
+      {{ week_start.strftime('%d %b') }} – {{ week_end.strftime('%d %b %Y') }}
+      &nbsp;·&nbsp; {{ total_count }} task{{ '' if total_count == 1 else 's' }}
+      {%- if amt_max %} · opportunity AED {{ '{:,.0f}'.format(amt_min) }}–{{ '{:,.0f}'.format(amt_max) }}{% endif %}
+      &nbsp;·&nbsp; printed {{ now.strftime('%d %b %Y %H:%M') }}
+    </div>
+  </div>
 
   <div class="wp-head">
     <div>
@@ -216,6 +298,8 @@
         <input type="hidden" name="rewrite" value="1">
         <button type="submit" class="btn-sm" title="Ask the AI to rewrite every recommendation">✎ Rewrite advice</button>
       </form>
+      <button type="button" class="btn-sm" onclick="window.print()"
+              title="Print or save as PDF">🖨 Print</button>
     </div>
   </div>
 
@@ -398,6 +482,8 @@
                   {% endfor %}
                 </select>
               </form>
+              {# On paper the dropdown is useless — print the status as text with a box to tick. #}
+              <span class="wp-tick"></span><span class="wp-print-status">{{ item.status or 'Pending' }}</span>
             </td>
           </tr>
           {% endfor %}

@@ -10321,15 +10321,13 @@ def cron_generate_weekly_plan():
             row['error'] = str(e)
             results.append(row)
             continue
-        # AI steps are best-effort: a failure here leaves a complete, readable plan
-        # built from the deterministic text, so never fail the whole run for it.
-        for key, step in (('ai', generate_plan_recommendations),
-                          ('research', generate_plan_market_research)):
-            try:
-                row[key] = step(u, week_start)
-            except Exception as e:
-                db.session.rollback()
-                row[f'{key}_error'] = str(e)
+        # Hand the API work to background threads. Doing it inline would make this
+        # one HTTP request last minutes across several reps — long enough for the
+        # server to kill it half way and leave the later reps with no wording.
+        try:
+            row['ai_queued'] = start_plan_ai_background(u, week_start)
+        except Exception as e:
+            row['ai_error'] = str(e)
         results.append(row)
     _mark_run('weekly_planner', f'{len(results)} reps, {total_new} new items')
     return jsonify({'week_start': week_start.isoformat(), 'reps': results})
