@@ -309,6 +309,14 @@
     </div>
   </div>
 
+  {% if awaiting_ai %}
+  <div class="wp-note" style="background:var(--info-bg);border-color:#CBDDF8;border-left-color:var(--info);color:#12408F;">
+    <b>The plan below is complete and correct</b> — it is built entirely from your CRM data.
+    The AI is still writing the wording for some rows in the background; reload this page in a
+    minute to see it. Nothing is missing in the meantime, the advice is just plainer.
+  </div>
+  {% endif %}
+
   <div class="wp-legend">
     <span><span class="wp-dot d-db"></span>Facts from your CRM — computed, never written by AI</span>
     <span><span class="wp-dot d-ai"></span>AI-written recommendation</span>
