@@ -9219,73 +9219,6 @@ def _rule_dormant(ctx):
                   'is going and whether headcount changed, and log the outcome either way.'),
     )]
 
-def _rule_missing_ejari(ctx):
-    have = set()
-    for d in ctx.documents:
-        key, _, _ = ctx.doc_family(d.doc_type)
-        if key == 'ejari':
-            have.add(d.customer_id)
-    rows = [c for c in ctx.customers
-            if c.id not in have
-            and (c.ac_status or 'Active') == 'Active'
-            and (c.customer_type or '') == 'Company']
-    if not rows:
-        return []
-    details = [_plan_detail(ctx.cust_name(c), 'no Ejari on file', tone='warn') for c in rows]
-    return [_plan_candidate(
-        'retain', 'missing_ejari', 'Gap',
-        f'{len(rows)} active compan{"ies" if len(rows) > 1 else "y"} with no Ejari on file',
-        details, 'Documents · no Ejari record',
-        amount_label='Service opportunity',
-        fallback=('A missing Ejari blocks visa processing later, so this is a real problem to '
-                  'solve rather than a cross-sell. Check whether they simply never sent it to us '
-                  'or genuinely do not have one — the second case is work for you.'),
-    )]
-
-def _rule_headcount_growth(ctx):
-    cutoff = ctx.now - timedelta(days=90)
-    grew = {}
-    for e in ctx.employees:
-        if e.created_at and e.created_at >= cutoff:
-            grew[e.customer_id] = grew.get(e.customer_id, 0) + 1
-    rows = sorted(grew.items(), key=lambda kv: -kv[1])
-    if not rows:
-        return []
-    details = [_plan_detail(ctx.cust_name(ctx.customer_by_id.get(cid)),
-                            f'{n} staff added', tone='ok') for cid, n in rows]
-    return [_plan_candidate(
-        'retain', 'headcount_growth', 'Growth',
-        f'{len(rows)} client{"s" if len(rows) > 1 else ""} added staff recently',
-        details, 'Employee records · last 90d',
-        amount_label='Visa pipeline',
-        fallback=('A client who is hiring will need visas and labour cards shortly. Getting ahead '
-                  'of that is far easier than reacting to an expiry, and it is a natural reason '
-                  'to call without pitching.'),
-    )]
-
-def _rule_multi_entity_owners(ctx):
-    by_name = {}
-    for o in ctx.owners:
-        nm = (o.name or '').strip().lower()
-        if nm:
-            by_name.setdefault(nm, set()).add(o.customer_id)
-    rows = [(nm, cids) for nm, cids in by_name.items() if len(cids) > 1]
-    if not rows:
-        return []
-    details = []
-    for nm, cids in rows:
-        names = ', '.join(sorted(ctx.cust_name(ctx.customer_by_id.get(c)) for c in cids))
-        details.append(_plan_detail(nm.title(), f'{len(cids)} entities · {names}', tone='ok'))
-    return [_plan_candidate(
-        'retain', 'multi_entity_owners', 'Multi-entity',
-        f'{len(rows)} owner{"s" if len(rows) > 1 else ""} holding more than one company',
-        details, 'Owner records across clients',
-        amount_label='Expansion',
-        fallback=('An owner who already runs two entities is the most likely person to open a '
-                  'third. Ask what is next rather than pitching a service — branch registration, '
-                  'an activity addition or a second licence usually surfaces on its own.'),
-    )]
-
 def _rule_retainer_candidates(ctx):
     horizon = 180
     fams = {}
@@ -9590,12 +9523,12 @@ def _rule_winback(ctx):
 
 # Activity fields that make sense as a weekly prospecting/content suggestion,
 # with the wording the plan uses. Targets come from ActivityType.weekly_target.
+# NOTE: linkedin_writing, posts_social and videos_instagram are deliberately absent —
+# they now have standing weekly rows of their own (see _rule_weekly_content), so
+# listing them here as well would put the same task on the plan twice.
 PLAN_ACTIVITY_IDEAS = {
-    'linkedin_writing':     ('LinkedIn', 'LinkedIn article'),
     'dm_instagram':         ('DMs', 'Instagram DMs'),
     'dm_linkedin':          ('DMs', 'LinkedIn DMs'),
-    'videos_instagram':     ('Video', 'Reel / short video'),
-    'posts_social':         ('Content', 'Social posts'),
     'calls_cold':           ('Cold', 'Cold calls'),
     'whatsapp_prospecting': ('Outreach', 'WhatsApp prospecting'),
     'google_reviews':       ('Reviews', 'Google reviews collected'),
@@ -9642,6 +9575,102 @@ def _rule_activity_gaps(ctx, progress=None):
         ))
     return out
 
+# Standing weekly content commitments. Unlike the activity-gap rows these appear
+# EVERY week whether or not the rep is behind, because they are a fixed part of
+# the job rather than a shortfall to catch up on. Topics rotate by week number so
+# the plan doesn't suggest the same thing every Monday; the AI rewrites them into
+# proper copy, and these deterministic ideas are the fallback.
+PLAN_CONTENT_TOPICS = {
+    'linkedin': [
+        ('Three renewal deadlines UAE owners miss every year',
+         'Open with the corporate-tax late-registration penalty, then trade licence, establishment '
+         'card and Ejari as the three that quietly lapse. Close by inviting owners to check their '
+         'own expiry dates.'),
+        ('What actually happens when a trade licence expires',
+         'Walk through it in order: grace period, fines accruing, licence blocked, visas frozen. '
+         'Owners rarely know the sequence until it is happening to them.'),
+        ('Mainland or free zone — the questions to ask before deciding',
+         'Cover ownership, visa quota, office requirements and where clients actually are. Avoid '
+         'recommending one over the other; the useful answer depends on the business.'),
+        ('Corporate tax: what a small UAE company actually has to do',
+         'Registration, record keeping, the filing deadline, and what happens if it is missed. '
+         'Plain language, no jargon.'),
+        ('The paperwork nobody warns you about when hiring your first employee',
+         'Visa, labour card, medical, Emirates ID, insurance — the real sequence and rough timeline.'),
+        ('Five signs your company documents are out of order',
+         'A short self-check list an owner can run in ten minutes.'),
+    ],
+    'instagram_post': [
+        ('Carousel: licence renewal timeline',
+         'One slide per stage — 60 days out, 30 days, 14 days, expiry. Shows owners when to start '
+         'rather than telling them to panic.'),
+        ('Myth vs fact: free zone company ownership',
+         'Two-panel format. Pick the misconception you hear most on calls this week.'),
+        ('Cost breakdown: what a trade licence fee actually covers',
+         'Owners assume the whole figure is profit. Showing the government portion builds trust.'),
+        ('Checklist: documents every UAE company must keep current',
+         'Simple ticked-list graphic, saveable and shareable — the kind of post people bookmark.'),
+        ('Client win, anonymised',
+         'A problem you solved this month, with no client name. Concrete beats promotional.'),
+        ('Before and after: a compliance clean-up',
+         'Documents expired versus all current. Visual, no words needed.'),
+    ],
+    'instagram_video': [
+        ('What happens if your trade licence expires? (30 seconds)',
+         'Three quick cuts — grace period, fines start, visas frozen. End with "check your expiry '
+         'date today." Film it at your desk on your phone, no editing needed.'),
+        ('One question I get every week (30 seconds)',
+         'Pick the question you actually answered most this week and answer it straight to camera. '
+         'Authenticity outperforms production value here.'),
+        ('How long does a company setup really take? (45 seconds)',
+         'Walk through the realistic timeline rather than the best case. Managing expectations wins '
+         'trust and reduces chasing later.'),
+        ('Three documents owners forget to renew (30 seconds)',
+         'Establishment card, Ejari, labour card. Fast, one per cut.'),
+        ('Do you need an office to get a licence? (30 seconds)',
+         'Answer the flexi-desk question plainly — it is one of the most searched.'),
+        ('A day in the job (45 seconds)',
+         'Government counters, document runs, client calls. Humanises the firm and travels further '
+         'than a sales post.'),
+    ],
+}
+
+# field_key on ActivityLog -> (chip, wording, topic bank, default weekly target)
+PLAN_CONTENT_TASKS = [
+    ('linkedin_writing',  'LinkedIn', 'LinkedIn article',  'linkedin',         1),
+    ('posts_social',      'Content',  'Instagram post',    'instagram_post',   1),
+    ('videos_instagram',  'Video',    'Instagram reel',    'instagram_video',  1),
+]
+
+def _rule_weekly_content(ctx):
+    """One row each for the LinkedIn article, Instagram post and Instagram reel —
+    every week, by owner decision, regardless of whether the rep is behind."""
+    week = plan_week_start(ctx.now)
+    rotation = week.toordinal() // 7
+    progress = {p['key']: p for p in _plan_activity_progress(ctx)}
+    out = []
+    for i, (field_key, chip, nice, bank, default_target) in enumerate(PLAN_CONTENT_TASKS):
+        topics = PLAN_CONTENT_TOPICS[bank]
+        title, how = topics[(rotation + i) % len(topics)]
+        prog = progress.get(field_key)
+        target = int(prog['target']) if prog and prog['target'] else default_target
+        done = prog['done'] if prog else 0
+        details = [_plan_detail(nice, f'target {target} this week',
+                                'done' if done >= target else f'{done} of {target}',
+                                'ok' if done >= target else 'warn')]
+        if done >= target:
+            details.append(_plan_detail('Already logged in your Daily Log this week',
+                                        tone='ok'))
+        out.append(_plan_candidate(
+            'pipeline', f'content_{bank}', chip,
+            f'{nice} this week — {title}',
+            details, f'Weekly commitment · Daily Log: {field_key}',
+            amount_label='Pipeline',
+            fallback=f'{how} One piece of thinking, and it doubles as material for the other '
+                     f'channels this week.',
+        ))
+    return out
+
 def _rule_channel_partners(ctx):
     """General advice, not a data-derived row — labelled as such on the page.
     Tahfeel has no CRM records for the channel network (freezone agents, banks,
@@ -9668,31 +9697,11 @@ def _rule_channel_partners(ctx):
     )]
 
 
-# ── Section 7 (data hygiene that costs money) ─────────────────────────────────
-
-def _rule_alerts_disabled(ctx):
-    rows = [c for c in ctx.customers
-            if (c.ac_status or 'Active') == 'Active' and not c.alerts_enabled]
-    if not rows:
-        return []
-    details = [_plan_detail(ctx.cust_name(c), 'expiry reminders off', tone='warn') for c in rows]
-    return [_plan_candidate(
-        'retain', 'alerts_disabled', 'Hygiene',
-        f'{len(rows)} active client{"s" if len(rows) > 1 else ""} with expiry alerts switched off',
-        details, 'Customer.alerts_enabled = false',
-        amount_label='Risk',
-        fallback=('These clients silently receive none of our expiry reminders, so a lapsed licence '
-                  'becomes our problem and a lost renewal. Confirm their number and turn alerts on '
-                  'while you have them on the phone.'),
-    )]
-
-
 PLAN_RULES = [
     _rule_renewals, _rule_expired_docs, _rule_corp_tax, _rule_vat,
     _rule_open_quotes, _rule_stuck_jobs,
-    _rule_dormant, _rule_missing_ejari, _rule_headcount_growth,
-    _rule_multi_entity_owners, _rule_retainer_candidates, _rule_touchpoints,
-    _rule_alerts_disabled,
+    _rule_dormant, _rule_retainer_candidates, _rule_touchpoints,
+    _rule_weekly_content,
     _rule_review_asks, _rule_referral_asks, _rule_testimonials,
     _rule_overdue_leads, _rule_due_enquiries, _rule_stalled_leads,
     _rule_reopen_lost, _rule_unconverted_enquiries, _rule_winback,
