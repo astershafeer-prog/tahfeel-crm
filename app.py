@@ -719,6 +719,84 @@ class ActivityType(db.Model):
     sort_order = db.Column(db.Integer, default=0)
     active = db.Column(db.Boolean, default=True)
 
+class ActivityValue(db.Model):
+    """One day's count for an activity type that has no dedicated column on
+    ActivityLog — that is, anything an admin created through the Daily Log screen.
+
+    ActivityLog was built with a hard-coded column per activity, but the admin UI
+    lets you add new ones, and those had nowhere to live: the save path called
+    setattr() with a name SQLAlchemy doesn't map, which is silently dropped, so
+    the number vanished on save and always read back as zero. Custom activities
+    are stored here instead; the original built-in columns are left exactly as
+    they are, so no existing data moves.
+
+    Always read and write through activity_read()/activity_write(), which pick the
+    right storage for a given field_key."""
+    __tablename__ = 'activity_value'
+    id        = db.Column(db.Integer, primary_key=True)
+    log_id    = db.Column(db.Integer, db.ForeignKey('activity_log.id'), nullable=False, index=True)
+    field_key = db.Column(db.String(60), nullable=False, index=True)
+    value     = db.Column(db.Integer, default=0)
+    __table_args__ = (db.UniqueConstraint('log_id', 'field_key',
+                                          name='uq_activity_value_log_field'),)
+
+# Columns on ActivityLog that are NOT activity counters.
+_ACTIVITY_META_COLUMNS = {'id', 'user_id', 'log_date', 'off_day', 'notes',
+                          'created_at', 'updated_at'}
+_ACTIVITY_CORE_FIELDS = None
+
+def activity_core_fields():
+    """field_keys that have a real column on activity_log (the original set)."""
+    global _ACTIVITY_CORE_FIELDS
+    if _ACTIVITY_CORE_FIELDS is None:
+        _ACTIVITY_CORE_FIELDS = ({c.name for c in ActivityLog.__table__.columns}
+                                 - _ACTIVITY_META_COLUMNS)
+    return _ACTIVITY_CORE_FIELDS
+
+def activity_extras_for(logs):
+    """{(log_id, field_key): value} for a batch of logs — one query, so summing a
+    month of logs across a team doesn't turn into hundreds of them."""
+    ids = [l.id for l in logs if getattr(l, 'id', None)]
+    if not ids:
+        return {}
+    try:
+        rows = ActivityValue.query.filter(ActivityValue.log_id.in_(ids)).all()
+    except Exception:
+        return {}      # table not created yet — behave as if there are no extras
+    return {(r.log_id, r.field_key): (r.value or 0) for r in rows}
+
+def activity_read(log, field_key, extras=None):
+    """Today's count for one activity, whichever storage it lives in. Pass the
+    result of activity_extras_for() as `extras` when reading in a loop."""
+    if not log:
+        return 0
+    if field_key in activity_core_fields():
+        return int(getattr(log, field_key, 0) or 0)
+    if extras is not None:
+        return int(extras.get((log.id, field_key), 0) or 0)
+    try:
+        row = ActivityValue.query.filter_by(log_id=log.id, field_key=field_key).first()
+    except Exception:
+        return 0
+    return int((row.value if row else 0) or 0)
+
+def activity_write(log, field_key, value):
+    """Store one count. Caller still commits."""
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        value = 0
+    if field_key in activity_core_fields():
+        setattr(log, field_key, value)
+        return
+    if log.id is None:
+        db.session.flush()      # a brand-new log needs its id before we can point at it
+    row = ActivityValue.query.filter_by(log_id=log.id, field_key=field_key).first()
+    if not row:
+        row = ActivityValue(log_id=log.id, field_key=field_key)
+        db.session.add(row)
+    row.value = value
+
 class WhatsAppMessage(db.Model):
     """One WhatsApp message (in or out). Threaded by wa_id (the contact's number)."""
     __tablename__ = 'whats_app_message'
@@ -5455,13 +5533,15 @@ def activity_log():
         except:
             pass
 
-    # Build summary per user
+    # Build summary per user. Custom activities live in activity_value, so pull
+    # them all up front rather than querying per log per field.
+    extras = activity_extras_for(logs)
     user_summaries = {}
     for u in sales_users:
         user_logs = [l for l in logs if l.user_id == u.id]
         summary = {}
         for field, label, target in get_activities():
-            total = sum(getattr(l, field, 0) or 0 for l in user_logs)
+            total = sum(activity_read(l, field, extras) for l in user_logs)
             days = (to_dt - from_dt).days + 1
             weeks = max(1, days / 6)  # 6-day UAE working week (Sat–Thu)
             period_target = round(target * weeks)
@@ -5481,12 +5561,20 @@ def activity_log():
         activity_types = ActivityType.query.filter_by(active=True).order_by(ActivityType.sort_order, ActivityType.id).all()
     except Exception:
         activity_types = []
+    # The entry form has to read custom activities too, and Jinja's `attr` filter
+    # only sees real model attributes — so hand the template a plain dict.
+    today_values = {}
+    if today_log:
+        _today_extras = activity_extras_for([today_log])
+        today_values = {field: activity_read(today_log, field, _today_extras)
+                        for field, _label, _target in get_activities()}
     return render_template('activity_log.html',
                            activities=get_activities(),
                            activity_types=activity_types,
                            user_summaries=user_summaries,
                            sales_users=sales_users,
                            today_log=today_log,
+                           today_values=today_values,
                            from_date=from_date, to_date=to_date,
                            view=view, now=now)
 
@@ -5511,10 +5599,7 @@ def save_activity():
 
     for field, label, target in get_activities():
         val = request.form.get(field, '0').strip()
-        try:
-            setattr(log, field, int(val) if val else 0)
-        except:
-            setattr(log, field, 0)
+        activity_write(log, field, val if val else 0)
     log.off_day = request.form.get('off_day', '') or None
     log.notes = request.form.get('notes', '')
     log.updated_at = now_dubai()
@@ -5534,8 +5619,7 @@ def edit_activity_log(log_id):
     if request.method == 'POST':
         for field, label, target in get_activities():
             val = request.form.get(field, '0').strip()
-            try: setattr(log, field, int(val) if val else 0)
-            except: setattr(log, field, 0)
+            activity_write(log, field, val if val else 0)
         log.off_day = request.form.get('off_day', '') or None
         log.notes = request.form.get('notes', '')
         log.updated_at = now_dubai()
@@ -5552,6 +5636,12 @@ def delete_activity_log(log_id):
     if session['role'] != 'admin' and log.user_id != session['user_id']:
         flash('Access denied')
         return redirect(url_for('activity_log'))
+    # Custom-activity counts live in their own table; clear them or they outlive
+    # the log they belong to and get counted against a future log with the same id.
+    try:
+        ActivityValue.query.filter_by(log_id=log.id).delete()
+    except Exception:
+        pass
     db.session.delete(log)
     db.session.commit()
     flash('Activity log entry deleted')
@@ -9552,11 +9642,12 @@ def _plan_activity_progress(ctx):
     logs = ActivityLog.query.filter(ActivityLog.user_id == ctx.user.id,
                                     ActivityLog.log_date >= week_start,
                                     ActivityLog.log_date <= ctx.today).all()
+    _extras = activity_extras_for(logs)
     out = []
     for field_key, label, target in get_activities():
         if not target or target <= 0:
             continue
-        done = sum(int(getattr(l, field_key, 0) or 0) for l in logs)
+        done = sum(activity_read(l, field_key, _extras) for l in logs)
         out.append({'key': field_key, 'label': label, 'target': float(target),
                     'done': done, 'gap': max(0.0, float(target) - done)})
     return out
