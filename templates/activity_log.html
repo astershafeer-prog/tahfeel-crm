@@ -171,7 +171,13 @@
               <td class="num">{{ log.google_reviews or 0 }}</td>
               <td style="font-size:12px;color:var(--text-muted);">{{ log.notes or '—' }}</td>
               <td style="white-space:nowrap;">
-                <a href="/activity/{{ log.id }}/delete" style="color:var(--danger);font-size:11px;" onclick="return confirm('Delete?')">Del</a>
+                {# A real POST form, not a plain link relying on JS to rewrite it —
+                   the link version was the one flagged as unreliable. #}
+                <form method="POST" action="/activity/{{ log.id }}/delete" style="display:inline;"
+                      onsubmit="return confirm('Delete?')">
+                  <button type="submit" style="background:none;border:none;padding:0;
+                          color:var(--danger);font-size:11px;cursor:pointer;text-decoration:underline;">Del</button>
+                </form>
               </td>
             </tr>
             {% endfor %}
@@ -305,7 +311,11 @@
                 <td style="font-size:12px;color:var(--text-muted);">{{ log.notes or '—' }}</td>
                 {% if session.role == 'admin' %}
                 <td style="white-space:nowrap;">
-                <a href="/activity/{{ log.id }}/delete" style="color:var(--danger);font-size:11px;margin-right:6px;" onclick="return confirm('Delete this entry?')">Del</a>
+                <form method="POST" action="/activity/{{ log.id }}/delete" style="display:inline;"
+                      onsubmit="return confirm('Delete this entry?')">
+                  <button type="submit" style="background:none;border:none;padding:0;margin-right:6px;
+                          color:var(--danger);font-size:11px;cursor:pointer;text-decoration:underline;">Del</button>
+                </form>
               </td>
                 {% endif %}
               </tr>
@@ -368,7 +378,13 @@
                      in Jinja — so a label containing an apostrophe broke out of the string
                      and killed the handler, and a NULL target emitted bare `None`. #}
                   <button onclick="editActivity({{ at.id }}, {{ (at.label or '')|tojson }}, {{ _wt|tojson }})" class="ib" title="Edit">✏</button>
-                  <a href="/admin/activity-type/{{ at.id }}/delete" class="ib ib-del" onclick="return confirm('Remove activity? Historical data will be preserved.')" title="Delete">🗑</a>
+                  {# A real POST form instead of a plain link — this is the exact
+                     button that prompted the fix; the .ib/.ib-del classes apply
+                     to a <button> the same way they did to the <a>. #}
+                  <form method="POST" action="/admin/activity-type/{{ at.id }}/delete" style="display:inline;"
+                        onsubmit="return confirm('Remove activity? Historical data will be preserved.')">
+                    <button type="submit" class="ib ib-del" title="Delete">🗑</button>
+                  </form>
                 </div>
                 <form id="at-form-{{ at.id }}" method="post" action="/admin/activity-type/{{ at.id }}/edit" style="display:none;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">
                   <input type="text" name="label" id="at-input-label-{{ at.id }}" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:220px;">
