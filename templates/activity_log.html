@@ -104,7 +104,7 @@
                   <td class="num"><span style="color:var(--text-muted);font-size:11px;font-weight:600;">{{ target }}/wk</span></td>
                   <td class="num">
                     <input type="number" name="{{ field }}" min="0" max="999" class="act-input"
-                      value="{{ today_log|attr(field) if today_log else '' }}" placeholder="0">
+                      value="{{ today_values.get(field, '') if today_log else '' }}" placeholder="0">
                   </td>
                 </tr>
                 {% endfor %}
