@@ -216,6 +216,9 @@ loadTheme();
 {% endif %}
 <div class="nav" style="background:#0F2660;">
   <a href="/dashboard" {% if active=='dashboard' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">⊞ Dashboard</a>
+  {% if session.role in ['admin', 'sales', 'staff', 'operations'] %}
+  <a href="/planner" {% if active=='planner' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">🧠 Work Planner</a>
+  {% endif %}
   {% if session.role != 'finance' %}
   <a href="/leads" {% if active=='leads' or active=='add_lead' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">◉ Leads</a>
   {% endif %}

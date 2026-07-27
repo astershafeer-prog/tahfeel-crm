@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Weekly Plan — Tahfeel CRM</title>
+<link rel="stylesheet" href="/static/css/tahfeel.css">
+<link rel="icon" href="/static/img/logo_white.png" type="image/png">
+{%- from 'macros.html' import topbar, nav, theme_loader -%}
+{{ theme_loader() }}
+<style>
+  .wp-wrap { max-width: 1400px; margin: 0 auto; padding: 20px 22px 60px; }
+
+  .wp-head { display:flex; justify-content:space-between; align-items:flex-end; gap:18px;
+             flex-wrap:wrap; margin-bottom:16px; }
+  .wp-head h1 { font-size:22px; font-weight:700; letter-spacing:-.3px; color:var(--text-primary); }
+  .wp-head .sub { font-size:12.5px; color:var(--text-muted); margin-top:3px; }
+  .wp-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .wp-actions form { display:inline; }
+
+  .wp-brief { background:linear-gradient(135deg,#12275C 0%,var(--primary) 100%); color:#fff;
+              border-radius:var(--radius-lg); padding:17px 19px; margin-bottom:12px;
+              box-shadow:var(--shadow-card); display:flex; gap:15px; align-items:flex-start; }
+  .wp-brief-icon { width:33px; height:33px; border-radius:9px; background:rgba(232,184,75,.2);
+                   border:1px solid rgba(232,184,75,.45); display:grid; place-items:center;
+                   font-size:16px; flex:0 0 auto; }
+  .wp-brief h2 { font-size:13.5px; font-weight:600; margin-bottom:4px; color:var(--accent); }
+  .wp-brief p { font-size:13px; line-height:1.6; color:rgba(255,255,255,.93); }
+  .wp-brief .meta { font-size:10.5px; color:rgba(255,255,255,.5); margin-top:8px;
+                    font-family:var(--font-mono); }
+
+  .wp-strips { display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:15px; }
+  .wp-strip { border-radius:var(--radius-md); padding:11px 14px; font-size:12.5px;
+              line-height:1.55; border:1px solid; }
+  .wp-strip b.t { display:block; font-size:10.5px; text-transform:uppercase;
+                  letter-spacing:.5px; margin-bottom:3px; }
+  .wp-strip.target { background:var(--accent-light); border-color:#EBD9A6; color:#6B4E00; }
+  .wp-strip.target b.t { color:#8A6400; }
+  .wp-strip.last { background:#F7F9FC; border-color:var(--border); color:var(--text-secondary); }
+  .wp-strip.last b.t { color:var(--text-muted); }
+  .wp-strip .warn { color:var(--danger); font-weight:600; }
+
+  .wp-kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:16px; }
+  .wp-kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md);
+            padding:11px 13px; box-shadow:var(--shadow-sm); border-top:3px solid var(--primary); }
+  .wp-kpi.k-red { border-top-color:var(--danger); }
+  .wp-kpi.k-amber { border-top-color:var(--accent); }
+  .wp-kpi.k-green { border-top-color:var(--success); }
+  .wp-kpi.k-purple { border-top-color:var(--purple); }
+  .wp-kpi .lbl { font-size:9.5px; text-transform:uppercase; letter-spacing:.5px;
+                 color:var(--text-muted); font-weight:600; }
+  .wp-kpi .val { font-size:19px; font-weight:700; margin-top:3px; letter-spacing:-.4px;
+                 color:var(--text-primary); }
+  .wp-kpi .val small { font-size:11px; font-weight:500; color:var(--text-muted); }
+  .wp-kpi .hint { font-size:10px; color:var(--text-muted); margin-top:2px; }
+
+  .wp-legend { display:flex; gap:16px; flex-wrap:wrap; font-size:11px; color:var(--text-muted);
+               background:var(--surface); border:1px solid var(--border-light);
+               border-radius:var(--radius-sm); padding:8px 12px; margin-bottom:13px;
+               align-items:center; }
+  .wp-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px;
+            vertical-align:middle; }
+  .d-db { background:var(--info); } .d-ai { background:var(--accent); } .d-web { background:#0F6E6E; }
+
+  .wp-tbl { background:var(--surface); border:1px solid var(--border);
+            border-radius:var(--radius-lg); box-shadow:var(--shadow-card); overflow:hidden; }
+  .wp-scroll { overflow-x:auto; }
+  .wp-tbl table { width:100%; border-collapse:collapse; min-width:1120px; }
+  .wp-tbl thead th { background:#F7F9FC; border-bottom:1.5px solid var(--border); text-align:left;
+                     padding:10px 11px; font-size:10px; font-weight:700; text-transform:uppercase;
+                     letter-spacing:.6px; color:var(--text-secondary); }
+  .wp-tbl thead th.ai { background:#FDFAF1; color:#7A5B00; }
+  .wp-tbl tbody td { padding:11px; border-bottom:1px solid var(--border-light);
+                     vertical-align:top; font-size:12.5px; }
+  .wp-tbl tbody tr:hover { background:#FAFBFD; }
+  .wp-tbl td.sl { font-family:var(--font-mono); font-weight:600; color:var(--text-muted);
+                  width:32px; font-size:11.5px; }
+  .wp-tbl td.ai { background:#FEFCF6; font-size:11.8px; line-height:1.56; color:#3D3320;
+                  max-width:360px; }
+  .wp-tbl td.opp { max-width:270px; }
+
+  .wp-title { font-weight:600; font-size:12.5px; line-height:1.35; color:var(--text-primary);
+              margin-top:4px; }
+  .wp-chips { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+  .wp-chip { font-size:8.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
+             padding:2px 6px; border-radius:20px; background:var(--info-bg); color:var(--info); }
+  .sec-protect .wp-chip { background:var(--danger-bg); color:var(--danger); }
+  .sec-convert .wp-chip { background:var(--success-bg); color:var(--success); }
+  .sec-retain .wp-chip { background:var(--purple-bg); color:var(--purple); }
+  .sec-reputation .wp-chip { background:#E3F4F4; color:#0F6E6E; }
+  .sec-leads .wp-chip { background:var(--info-bg); color:var(--info); }
+  .sec-pipeline .wp-chip { background:var(--accent-light); color:#7A5B00; }
+  .sec-market .wp-chip { background:var(--warning-bg); color:var(--warning); }
+  .wp-carry { font-size:8.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px;
+              padding:2px 6px; border-radius:20px; background:#EFF2F6;
+              color:var(--text-secondary); border:1px solid var(--border); }
+  .wp-carry.stale { background:var(--danger-bg); color:var(--danger); border-color:#F0C4C4; }
+  .wp-src { font-size:9.5px; color:var(--text-muted); margin-top:5px; font-style:italic; }
+
+  .wp-det { list-style:none; font-size:11.5px; color:var(--text-secondary); display:flex;
+            flex-direction:column; gap:3px; margin:0; padding:0; }
+  .wp-det li { display:flex; gap:5px; align-items:baseline; line-height:1.4; flex-wrap:wrap; }
+  .wp-det .nm { font-weight:600; color:var(--text-primary); }
+  .wp-det .mt { color:var(--text-muted); }
+  .wp-days { font-family:var(--font-mono); font-size:10px; font-weight:600; padding:1px 5px;
+             border-radius:4px; white-space:nowrap; }
+  .t-crit { background:var(--danger-bg); color:var(--danger); }
+  .t-warn { background:var(--warning-bg); color:var(--warning); }
+  .t-ok   { background:var(--success-bg); color:var(--success); }
+  .t-grey { background:#EFF2F6; color:var(--text-muted); }
+
+  .wp-amt { font-family:var(--font-mono); font-weight:600; white-space:nowrap; font-size:11.8px;
+            color:var(--text-primary); }
+  .wp-amt small { display:block; font-family:var(--font); font-size:9.5px; color:var(--text-muted);
+                  font-weight:500; margin-top:2px; }
+  .wp-amt.none { color:var(--text-muted); font-weight:500; font-family:var(--font); font-size:11px; }
+
+  .wp-cite { display:inline-flex; align-items:center; gap:4px; font-size:9.5px; background:#E3F4F4;
+             color:#0F6E6E; border:1px solid #BCE0E0; padding:2px 6px; border-radius:4px;
+             margin-top:5px; margin-right:4px; font-weight:600; }
+
+  select.wp-st { border:1px solid var(--border); border-radius:var(--radius-sm); padding:5px 6px;
+                 font-size:11.5px; color:var(--text-secondary); background:#fff; width:98px;
+                 cursor:pointer; }
+  select.wp-st.s-done  { background:var(--success-bg); border-color:#B7DDC8; color:var(--success); font-weight:600; }
+  select.wp-st.s-later { background:var(--warning-bg); border-color:#F0D9B0; color:var(--warning); font-weight:600; }
+  select.wp-st.s-skip  { background:#EFF2F6; border-color:var(--border); color:var(--text-muted); }
+
+  tr.wp-sec td { padding:8px 11px; font-size:10px; font-weight:700; text-transform:uppercase;
+                 letter-spacing:.7px; border-bottom:1px solid var(--border);
+                 border-top:1px solid var(--border); }
+  tr.wp-sec .cnt { float:right; font-weight:600; text-transform:none; letter-spacing:0; opacity:.75; }
+  tr.wp-sec.sec-protect td { background:#FDF1F1; color:var(--danger); }
+  tr.wp-sec.sec-convert td { background:#EFF8F3; color:var(--success); }
+  tr.wp-sec.sec-retain td { background:#F4F3FE; color:var(--purple); }
+  tr.wp-sec.sec-reputation td { background:#EFF8F8; color:#0F6E6E; }
+  tr.wp-sec.sec-leads td { background:#F0F5FD; color:var(--info); }
+  tr.wp-sec.sec-pipeline td { background:#FDF8EC; color:#7A5B00; }
+  tr.wp-sec.sec-market td { background:#FEF6EA; color:var(--warning); }
+  tr.wp-empty td { color:var(--text-muted); font-size:11.5px; font-style:italic; padding:12px 11px; }
+  tr.done-row { opacity:.55; }
+
+  .wp-card { background:var(--surface); border:1px solid var(--border);
+             border-radius:var(--radius-lg); box-shadow:var(--shadow-card);
+             padding:15px 17px; margin-top:16px; }
+  .wp-card h3 { font-size:12.5px; font-weight:700; margin-bottom:2px; color:var(--text-primary); }
+  .wp-card .sub { font-size:11px; color:var(--text-muted); margin-bottom:12px; }
+  .sc-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:9px; }
+  .sc { border:1px solid var(--border-light); border-radius:var(--radius-sm); padding:8px 10px;
+        background:#FAFBFD; }
+  .sc .n { font-size:10.5px; color:var(--text-secondary); font-weight:600; display:flex;
+           justify-content:space-between; gap:8px; }
+  .sc .n em { font-style:normal; font-family:var(--font-mono); color:var(--text-muted); font-size:10px; }
+  .sc .bar { height:5px; border-radius:3px; background:#E6EBF2; margin-top:6px; overflow:hidden; }
+  .sc .bar i { display:block; height:100%; border-radius:3px; background:var(--primary); }
+  .sc .bar i.full { background:var(--success); }
+  .sc .bar i.mid  { background:var(--accent); }
+  .sc .bar i.low  { background:var(--danger); }
+
+  .wp-note { border-radius:var(--radius-sm); padding:11px 13px; font-size:12px; margin-top:14px;
+             line-height:1.6; background:#F7F9FC; border:1px solid var(--border);
+             border-left:3px solid var(--primary); color:var(--text-secondary); }
+  .wp-note b { color:var(--text-primary); }
+  .wp-foot { margin-top:18px; font-size:11px; color:var(--text-muted); text-align:center;
+             line-height:1.7; }
+
+  @media (max-width:1100px) {
+    .wp-kpis { grid-template-columns:repeat(2,1fr); }
+    .wp-strips { grid-template-columns:1fr; }
+  }
+  @media (max-width:768px) {
+    .wp-head { flex-direction:column; align-items:stretch; }
+    .wp-wrap { padding:16px 12px 40px; }
+  }
+</style>
+</head>
+<body>
+{{ topbar() }}
+{{ nav('planner') }}
+
+<div class="wp-wrap">
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="wp-head">
+    <div>
+      <h1>{% if viewing_other %}{{ plan_user.name }}'s Weekly Plan{% else %}My Weekly Plan{% endif %}</h1>
+      <div class="sub">
+        {{ week_start.strftime('%a %d %b') }} – {{ week_end.strftime('%a %d %b %Y') }}
+        &nbsp;·&nbsp; reviewed {{ scanned.customers }} client{{ '' if scanned.customers == 1 else 's' }},
+        {{ scanned.leads }} lead{{ '' if scanned.leads == 1 else 's' }},
+        {{ scanned.enquiries }} enquir{{ 'y' if scanned.enquiries == 1 else 'ies' }},
+        {{ scanned.jobs }} open job{{ '' if scanned.jobs == 1 else 's' }},
+        {{ scanned.documents }} document{{ '' if scanned.documents == 1 else 's' }}
+      </div>
+    </div>
+    <div class="wp-actions">
+      {% if session.role == 'admin' and reps %}
+      <form method="GET" action="/planner">
+        <select name="user_id" onchange="this.form.submit()" class="wp-st" style="width:auto;">
+          <option value="">— view a rep —</option>
+          {% for r in reps %}
+          <option value="{{ r.id }}" {% if r.id == plan_user.id %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      {% endif %}
+      <form method="POST" action="/planner/regenerate">
+        {% if viewing_other %}<input type="hidden" name="user_id" value="{{ plan_user.id }}">{% endif %}
+        <button type="submit" class="btn-sm" title="Refresh the facts, keep your statuses">⟳ Refresh facts</button>
+      </form>
+      <form method="POST" action="/planner/regenerate">
+        {% if viewing_other %}<input type="hidden" name="user_id" value="{{ plan_user.id }}">{% endif %}
+        <input type="hidden" name="rewrite" value="1">
+        <button type="submit" class="btn-sm" title="Ask the AI to rewrite every recommendation">✎ Rewrite advice</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="wp-brief">
+    <div class="wp-brief-icon">🧠</div>
+    <div>
+      <h2>Your week, in order of what matters</h2>
+      <p>
+        {% if ai_brief %}
+          {{ ai_brief }}
+        {% elif total_count %}
+          {{ plan_user.name.split()[0] }} — {{ total_count }} task{{ '' if total_count == 1 else 's' }} on
+          this week's plan{% if urgent_count %}, {{ urgent_count }} of them urgent{% endif %}.
+          {% if amt_max %}The renewal and service work here is worth
+            AED {{ '{:,.0f}'.format(amt_min) }}–{{ '{:,.0f}'.format(amt_max) }} if it closes.{% endif %}
+          Work top to bottom: protecting revenue you already have beats chasing new business,
+          and the sections are ordered that way.
+          {% if carried_count %} {{ carried_count }} item{{ '' if carried_count == 1 else 's' }}
+            carried over from last week — clear those or mark them Skip.{% endif %}
+        {% else %}
+          {{ plan_user.name.split()[0] }} — nothing needs your attention this week based on the data in
+          the CRM. That is either genuinely good news or a sign records need updating.
+        {% endif %}
+      </p>
+      <div class="meta">
+        {% if ai_brief %}Written by Claude from CRM facts{% else %}Computed from CRM{% endif %}
+        · generated {{ now.strftime('%a %d %b %H:%M') }} GST
+      </div>
+    </div>
+  </div>
+
+  <div class="wp-strips">
+    <div class="wp-strip target">
+      <b class="t">🎯 Path to target</b>
+      {% if amount_target %}
+        You are at AED {{ '{:,.0f}'.format(closed_actual) }} of
+        {{ '{:,.0f}'.format(amount_target) }} for {{ now.strftime('%B') }}
+        ({{ target_pct }}%).
+        {% if target_remaining %}AED {{ '{:,.0f}'.format(target_remaining) }} to go —
+          the renewals at the top of this plan are the surest way to close that gap.
+        {% else %}Target reached — protect it by keeping renewals from slipping.{% endif %}
+      {% else %}
+        No monthly revenue target set for {{ now.strftime('%B') }}, so there is nothing to measure
+        this plan against. Ask an admin to set one on the Targets page.
+      {% endif %}
+    </div>
+    <div class="wp-strip last">
+      <b class="t">↩ Last week</b>
+      {% if prev_total %}
+        Completed <b>{{ prev_done }} of {{ prev_total }}</b>.
+        {% if carried_count %}
+          <span class="warn">{{ carried_count }} unfinished item{{ '' if carried_count == 1 else 's' }}</span>
+          carried into this plan.
+        {% else %}Nothing carried over.{% endif %}
+      {% else %}
+        This is your first weekly plan — there is nothing to compare against yet.
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="wp-kpis">
+    <div class="wp-kpi k-red">
+      <div class="lbl">Urgent</div>
+      <div class="val">{{ urgent_count }} <small>task{{ '' if urgent_count == 1 else 's' }}</small></div>
+      <div class="hint">Expiring soon or already overdue</div>
+    </div>
+    <div class="wp-kpi k-amber">
+      <div class="lbl">Opportunity</div>
+      <div class="val">
+        {% if amt_max %}{{ '{:,.0f}'.format(amt_min) }}<small>–{{ '{:,.0f}'.format(amt_max) }}</small>
+        {% else %}—{% endif %}
+      </div>
+      <div class="hint">AED, from the service price list</div>
+    </div>
+    <div class="wp-kpi k-green">
+      <div class="lbl">Closed this month</div>
+      <div class="val">{{ '{:,.0f}'.format(closed_actual) }}</div>
+      <div class="hint">AED revenue counted</div>
+    </div>
+    <div class="wp-kpi k-purple">
+      <div class="lbl">Target progress</div>
+      <div class="val">{% if target_pct is not none %}{{ target_pct }}<small>%</small>{% else %}—{% endif %}</div>
+      <div class="hint">
+        {% if amount_target %}of AED {{ '{:,.0f}'.format(amount_target) }}{% else %}no target set{% endif %}
+      </div>
+    </div>
+    <div class="wp-kpi">
+      <div class="lbl">Plan completed</div>
+      <div class="val">{{ done_count }}<small>/{{ total_count }}</small></div>
+      <div class="hint">Updates as you mark rows</div>
+    </div>
+  </div>
+
+  <div class="wp-legend">
+    <span><span class="wp-dot d-db"></span>Facts from your CRM — computed, never written by AI</span>
+    <span><span class="wp-dot d-ai"></span>AI-written recommendation</span>
+    <span><span class="wp-carry">↻ carried</span> rolled over from last week automatically</span>
+  </div>
+
+  <div class="wp-tbl">
+   <div class="wp-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th style="min-width:185px">Task</th>
+          <th style="min-width:240px">Opportunity <span class="wp-dot d-db"></span></th>
+          <th class="ai" style="min-width:330px">AI Recommendation <span class="wp-dot d-ai"></span></th>
+          <th style="min-width:110px">Amount (AED)</th>
+          <th style="min-width:104px">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% set counter = namespace(n=0) %}
+      {% for key, label, rows in sections %}
+        <tr class="wp-sec sec-{{ key }}">
+          <td colspan="6">
+            {{ label }}
+            <span class="cnt">
+              {% if rows %}{{ rows|length }} task{{ '' if rows|length == 1 else 's' }}{% else %}nothing this week{% endif %}
+            </span>
+          </td>
+        </tr>
+        {% if rows %}
+          {% for item in rows %}
+          {% set counter.n = counter.n + 1 %}
+          <tr class="sec-{{ key }} {% if item.status == 'Done' %}done-row{% endif %}">
+            <td class="sl">{{ counter.n }}</td>
+            <td>
+              <div class="wp-chips">
+                {% if item.chip %}<span class="wp-chip">{{ item.chip }}</span>{% endif %}
+                {% if item.is_carried %}
+                  <span class="wp-carry {% if item.is_stale %}stale{% endif %}">↻ {{ item.carry_count }}{{ 'nd' if item.carry_count == 2 else ('rd' if item.carry_count == 3 else 'th') }} week</span>
+                {% endif %}
+              </div>
+              <div class="wp-title">{{ item.title }}</div>
+              {% if item.source_note %}<div class="wp-src">{{ item.source_note }}</div>{% endif %}
+            </td>
+            <td class="opp">
+              {% if item.details %}
+              <ul class="wp-det">
+                {% for d in item.details %}
+                <li>
+                  <span class="nm">{{ d.name }}</span>
+                  {% if d.meta %}<span class="mt">{{ d.meta }}</span>{% endif %}
+                  {% if d.days_label %}<span class="wp-days t-{{ d.tone }}">{{ d.days_label }}</span>{% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+              {% for c in item.citations %}
+                <a class="wp-cite" href="{{ c.url }}" target="_blank" rel="noopener">🔗 {{ c.title }}</a>
+              {% endfor %}
+            </td>
+            <td class="ai">{{ item.recommendation }}</td>
+            <td>
+              {% if item.has_amount %}
+                <span class="wp-amt">
+                  {{ '{:,.0f}'.format(item.amount_min) }}<small>– {{ '{:,.0f}'.format(item.amount_max) }}</small>
+                </span>
+              {% else %}
+                <span class="wp-amt none">{{ item.amount_label or '—' }}</span>
+              {% endif %}
+              {% if item.amount_note %}<div class="wp-src">{{ item.amount_note }}</div>{% endif %}
+            </td>
+            <td>
+              <form method="POST" action="/planner/item/{{ item.id }}/status">
+                <select name="status" class="wp-st s-{{ (item.status or 'Pending')|lower }}"
+                        onchange="this.form.submit()">
+                  {% for s in statuses %}
+                  <option value="{{ s }}" {% if (item.status or 'Pending') == s %}selected{% endif %}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr class="wp-empty">
+            <td class="sl">—</td>
+            <td colspan="5">
+              Nothing here this week.
+              {% if key == 'market' %}
+                Market and regulatory updates are added when the research step runs.
+              {% else %}
+                When a category is clear, the plan says so instead of inventing filler work.
+              {% endif %}
+            </td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+      </tbody>
+    </table>
+   </div>
+  </div>
+
+  {% if activity %}
+  <div class="wp-card">
+    <h3>Weekly activity scorecard</h3>
+    <div class="sub">Your existing Daily Log targets — the plan above is built to close these gaps, not replace them.</div>
+    <div class="sc-grid">
+      {% for a in activity %}
+      {% set pct = (100 * a.done / a.target) if a.target else 0 %}
+      <div class="sc">
+        <div class="n"><span>{{ a.label }}</span><em>{{ a.done }}/{{ a.target|int }}</em></div>
+        <div class="bar">
+          <i class="{% if pct >= 100 %}full{% elif pct >= 50 %}mid{% else %}low{% endif %}"
+             style="width:{{ [pct, 100]|min|round|int }}%"></i>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="wp-note">
+    <b>Carry-forward.</b> Anything not marked Done rolls into next Monday's plan automatically with a
+    ↻ counter. At three weeks the row turns red, because otherwise items get deferred forever and the
+    plan slowly becomes fiction. Marking <b>Skip</b> removes it and stops it returning for a month —
+    not permanently, since these rows are groups and next quarter's genuinely new expiries should
+    still reach you.
+  </div>
+
+  <div class="wp-foot">
+    Every company name, date and AED figure above is computed from your CRM — the AI writes only the
+    recommendation column.<br>
+    Plan generated Monday morning; press Regenerate any time to refresh the facts without losing
+    the statuses you set.
+  </div>
+
+</div>
+</body>
+</html>

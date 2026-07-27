@@ -821,6 +821,9 @@ AUTOMATION_DEFAULTS = {
     'auto_expiry_wa':      'off',  # WhatsApp expiry reminder at 7 & 3 days (new)
     'auto_expiry_email':   'on',   # weekly document-expiry email (existing behaviour)
     'auto_monthly_report': 'on',   # monthly compliance report email (existing behaviour)
+    'auto_weekly_planner': 'on',   # Monday AI work-planner generation (internal, sends nothing)
+    'auto_planner_ai':     'on',   # let Claude write the planner's recommendation column
+    'auto_planner_research': 'on', # live web search for the planner's market/gov row
 }
 
 def automation_on(key):
@@ -1082,6 +1085,95 @@ class ComplianceSnapshot(db.Model):
     renewal_budget_max = db.Column(db.Float, default=0)
     created_at = db.Column(db.DateTime, default=datetime.now)
     customer = db.relationship('Customer', foreign_keys=[customer_id])
+
+# ── AI Work Planner ───────────────────────────────────────────────────────────
+# Sections of the weekly plan, in the order they appear. Each rule function
+# declares which section it belongs to; the template groups rows by these.
+PLAN_SECTIONS = [
+    ('protect',    '1 · Protect revenue — renewals & compliance'),
+    ('convert',    '2 · Convert & follow through — open quotes & jobs'),
+    ('retain',     '3 · Retain & deepen — existing clients'),
+    ('reputation', '4 · Reputation & referrals — turn happy clients into pipeline'),
+    ('leads',      '5 · Leads & enquiries — follow-ups due'),
+    ('pipeline',   '6 · Build pipeline — prospecting & content'),
+    ('market',     '7 · Market & regulatory'),
+]
+PLAN_SECTION_LABELS = dict(PLAN_SECTIONS)
+PLAN_STATUSES = ['Pending', 'Done', 'Later', 'Skip']
+
+class WorkPlanItem(db.Model):
+    """One recommended action on a sales rep's weekly plan.
+
+    Every FACT on this row (names, dates, AED amounts) is computed in SQL by the
+    rule engine and stored here — `ai_recommendation` is the ONLY field an LLM
+    writes, so a model error can never corrupt an expiry date or a price. Rows
+    not marked Done are carried into the next week's plan with `carry_count`
+    incremented (see carry_forward_plan_items)."""
+    __tablename__ = 'work_plan_item'
+    id            = db.Column(db.Integer, primary_key=True)
+    user_id       = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    week_start    = db.Column(db.Date, nullable=False, index=True)   # Monday of the plan week
+    section       = db.Column(db.String(20))            # key from PLAN_SECTIONS
+    category      = db.Column(db.String(40), index=True)  # rule key, e.g. 'renewal_trade_licence'
+    sort_order    = db.Column(db.Integer, default=0)
+    title         = db.Column(db.String(200))           # "3 trade licences expiring"
+    chip          = db.Column(db.String(30))            # short badge label, e.g. "Renewal"
+    detail_json   = db.Column(db.Text)                  # JSON list of {name, meta, days_label, tone}
+    source_note   = db.Column(db.String(160))           # provenance, e.g. "Documents · expiry 31–60d"
+    amount_min    = db.Column(db.Float, default=0)
+    amount_max    = db.Column(db.Float, default=0)
+    amount_label  = db.Column(db.String(40))            # used instead of AED, e.g. "Relationship"
+    amount_note   = db.Column(db.String(60))            # small caption under the amount
+    urgency_days  = db.Column(db.Integer)               # smallest days-to-deadline in the group
+    score         = db.Column(db.Float, default=0)      # ranking score within the plan
+    ai_recommendation = db.Column(db.Text)              # LLM-written; falls back to rule text
+    fallback_text = db.Column(db.Text)                  # deterministic text used if no LLM
+    citations_json = db.Column(db.Text)                 # JSON list of {title, url} for web-search rows
+    status        = db.Column(db.String(20), default='Pending', index=True)
+    skip_reason   = db.Column(db.String(200))
+    carry_count   = db.Column(db.Integer, default=1)    # 1 = first week it appeared
+    created_at    = db.Column(db.DateTime, default=now_dubai)
+    actioned_at   = db.Column(db.DateTime)
+    user          = db.relationship('User', foreign_keys=[user_id])
+    # One row per (rep, week, rule) — makes re-running the generator idempotent.
+    __table_args__ = (db.UniqueConstraint('user_id', 'week_start', 'category',
+                                          name='uq_work_plan_user_week_category'),)
+
+    @property
+    def details(self):
+        """Parsed detail rows (the named companies/leads behind this task)."""
+        import json
+        try:
+            return json.loads(self.detail_json) if self.detail_json else []
+        except Exception:
+            return []
+
+    @property
+    def citations(self):
+        import json
+        try:
+            return json.loads(self.citations_json) if self.citations_json else []
+        except Exception:
+            return []
+
+    @property
+    def recommendation(self):
+        """What to show in the AI Recommendation column — the LLM text when we
+        have it, otherwise the deterministic fallback so the row is never blank."""
+        return (self.ai_recommendation or '').strip() or (self.fallback_text or '')
+
+    @property
+    def is_carried(self):
+        return (self.carry_count or 1) > 1
+
+    @property
+    def is_stale(self):
+        """Carried three weeks or more — the plan stops being polite about it."""
+        return (self.carry_count or 1) >= 3
+
+    @property
+    def has_amount(self):
+        return bool((self.amount_max or 0) > 0 or (self.amount_min or 0) > 0)
 
 @app.context_processor
 def inject_globals():
@@ -8719,6 +8811,1475 @@ def analytics():
         expiring_30=expiring_30, expiring_60=expiring_60, expiring_90=expiring_90,
         top_doc_types=top_doc_types,
     )
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  AI WORK PLANNER — deterministic rule engine
+#
+#  Every fact a rep sees is computed here in plain Python/SQL: names, dates and
+#  AED figures. The LLM layer (further down) only rewrites the recommendation
+#  prose, so a model mistake can never produce a wrong expiry date or price.
+#
+#  Expiry lead time is TIERED on purpose. A trade licence needs quote → client
+#  decision → documents → authority submission, which is 3–4 weeks, so chasing
+#  at 14 days is already late. Renewals therefore surface as a watchlist at
+#  61–90 days, become a real task at 60, and are flagged as late under 14.
+# ══════════════════════════════════════════════════════════════════════════════
+
+PLAN_ACT_WINDOW      = 60   # a renewal becomes a real task at this many days out
+PLAN_WATCHLIST_WINDOW = 90  # 61..90 days shows as a compact "coming up" row
+# How far past expiry still counts as a renewal. A licence that lapsed last week
+# is a late renewal; one that lapsed four months ago is a different conversation
+# (recovery or win-back) and must not sit in the same row — it would both
+# mislabel the task and, because scoring rewards urgency, let one long-dead
+# document dominate the ranking of the entire plan.
+PLAN_EXPIRED_FLOOR   = -30
+PLAN_DORMANT_DAYS    = 90
+PLAN_STALLED_LEAD_DAYS = 14
+PLAN_DETAIL_CAP      = 6    # named rows shown per task before "+N more"
+PLAN_ROLES           = ('sales', 'staff', 'operations', 'admin')
+
+# Document type families. Matched by lowercase substring against Document.doc_type,
+# which is free text in this schema, so a licence may be "Trade License" or
+# "Trade Licence" depending on who typed it.
+RENEWAL_FAMILIES = [
+    ('trade_licence',      'trade licence',      'Trade licence',       ('trade license', 'trade licence')),
+    ('visa',               'employment visa',    'Employment visas',    ('visa',)),
+    ('establishment_card', 'establishment card', 'Establishment cards', ('establishment card',)),
+    ('labour_card',        'labour card',        'Labour cards',        ('labor card', 'labour card')),
+    ('ejari',              'Ejari / tenancy',    'Ejari / tenancy',     ('ejari', 'tenancy')),
+    ('emirates_id',        'Emirates ID',        'Emirates IDs',        ('emirates id',)),
+    ('passport',           'passport',           'Passports',           ('passport',)),
+]
+
+PLAN_SECTION_BASE_SCORE = {
+    'protect': 100, 'convert': 80, 'leads': 70, 'retain': 50,
+    'reputation': 40, 'pipeline': 30, 'market': 20,
+}
+
+def plan_week_start(when=None):
+    """Monday of the plan week — same convention as the Daily Log page."""
+    d = when or now_dubai()
+    return (d - timedelta(days=d.weekday())).date()
+
+def _plan_dl(expiry, today):
+    """Days until expiry, or None when the date is missing or a pre-2000
+    placeholder (see has_valid_expiry)."""
+    if not has_valid_expiry(expiry):
+        return None
+    d = expiry.date() if hasattr(expiry, 'date') else expiry
+    return (d - today).days
+
+def _plan_tone(days):
+    if days is None:      return 'grey'
+    if days <= 14:        return 'crit'   # includes expired (negative)
+    if days <= 60:        return 'warn'
+    return 'ok'
+
+def _plan_days_label(days):
+    if days is None:  return 'no date'
+    if days < 0:      return f'expired {abs(days)}d'
+    if days == 0:     return 'today'
+    return f'{days}d'
+
+def _plan_age_label(days):
+    if days is None:  return 'unknown'
+    if days <= 0:     return 'today'
+    return f'{days}d'
+
+def _plan_detail(name, meta=None, days_label=None, tone='grey'):
+    return {'name': name or '—', 'meta': meta or '', 'days_label': days_label or '', 'tone': tone}
+
+def _plan_cap_details(details):
+    """Cap the named list so one task can't flood the table."""
+    if len(details) <= PLAN_DETAIL_CAP:
+        return details
+    extra = len(details) - PLAN_DETAIL_CAP
+    kept = details[:PLAN_DETAIL_CAP]
+    kept.append(_plan_detail(f'+ {extra} more', tone='grey'))
+    return kept
+
+def _plan_candidate(section, category, chip, title, details, source_note,
+                    amount=(0, 0), amount_label=None, amount_note=None,
+                    urgency_days=None, fallback='', citations=None):
+    """Build one plan-row candidate. `amount` is an (min, max) AED range;
+    pass amount_label instead for non-revenue work ('Relationship' etc)."""
+    lo, hi = amount or (0, 0)
+    score = PLAN_SECTION_BASE_SCORE.get(section, 10)
+    if urgency_days is not None:
+        score += max(0, 60 - urgency_days)          # sooner (or expired) ranks higher
+    score += min(30.0, (hi or 0) / 1000.0)          # log-ish revenue nudge, capped
+    return {
+        'section': section, 'category': category, 'chip': chip, 'title': title,
+        'details': _plan_cap_details(details), 'source_note': source_note,
+        'amount_min': lo or 0, 'amount_max': hi or 0,
+        'amount_label': amount_label, 'amount_note': amount_note,
+        'urgency_days': urgency_days, 'score': round(score, 2),
+        'fallback_text': fallback, 'citations': citations or [],
+    }
+
+class PlanContext:
+    """All of one rep's data, loaded once, so the rules don't run N+1 queries."""
+
+    def __init__(self, user, today=None):
+        self.user = user
+        self.today = today or now_dubai().date()
+        self.now = now_dubai()
+
+        self.customers = Customer.query.filter_by(assigned_to=user.id).all()
+        self.customer_ids = [c.id for c in self.customers]
+        self.customer_by_id = {c.id: c for c in self.customers}
+
+        ids = self.customer_ids
+        self.documents = (Document.query.filter(Document.customer_id.in_(ids)).all()
+                          if ids else [])
+        self.jobs = (Job.query.filter(Job.customer_id.in_(ids)).all() if ids else [])
+        self.owners = (Owner.query.filter(Owner.customer_id.in_(ids)).all() if ids else [])
+        self.employees = (Employee.query.filter(Employee.customer_id.in_(ids)).all() if ids else [])
+        self.calls = (CustomerCall.query.filter(CustomerCall.customer_id.in_(ids)).all() if ids else [])
+
+        self.leads = Lead.query.filter_by(assigned_to=user.id).all()
+        lead_ids = [l.id for l in self.leads]
+        self.lead_updates = (LeadUpdate.query.filter(LeadUpdate.lead_id.in_(lead_ids)).all()
+                             if lead_ids else [])
+        self.enquiries = Enquiry.query.filter_by(assigned_to=user.id).all()
+
+        # last activity indexes
+        self.last_call = {}
+        for c in self.calls:
+            if c.called_at and (c.customer_id not in self.last_call or c.called_at > self.last_call[c.customer_id]):
+                self.last_call[c.customer_id] = c.called_at
+        self.last_job_touch = {}
+        for j in self.jobs:
+            stamp = j.completed_at or j.created_at
+            if stamp and (j.customer_id not in self.last_job_touch or stamp > self.last_job_touch[j.customer_id]):
+                self.last_job_touch[j.customer_id] = stamp
+        self.last_lead_update = {}
+        for u in self.lead_updates:
+            if u.created_at and (u.lead_id not in self.last_lead_update or u.created_at > self.last_lead_update[u.lead_id]):
+                self.last_lead_update[u.lead_id] = u.created_at
+
+    # ── small helpers the rules share ────────────────────────────────────────
+    def dl(self, expiry):
+        return _plan_dl(expiry, self.today)
+
+    def cust_name(self, customer):
+        return (customer.trade_name or customer.company or customer.name or 'Unnamed client')
+
+    def days_since_contact(self, customer_id):
+        """Most recent of a logged call and a job touch. The /analytics dormancy
+        scan only looks at jobs, which wrongly flags a client a rep has actually
+        been calling — this counts both."""
+        stamps = [s for s in (self.last_call.get(customer_id), self.last_job_touch.get(customer_id)) if s]
+        if not stamps:
+            return None
+        return (self.now - max(stamps)).days
+
+    def doc_family(self, doc_type):
+        t = (doc_type or '').strip().lower()
+        for key, singular, plural, needles in RENEWAL_FAMILIES:
+            if any(n in t for n in needles):
+                return key, singular, plural
+        return 'other_docs', 'document', 'Other documents'
+
+    def renewal_amount(self, docs):
+        """Indicative AED range for renewing these documents, via the existing
+        jurisdiction-aware price list."""
+        by_juris = {}
+        for d in docs:
+            cust = self.customer_by_id.get(d.customer_id)
+            by_juris.setdefault(cust.jurisdiction if cust else None, []).append(d.doc_type)
+        lo = hi = 0
+        for juris, types in by_juris.items():
+            a, b = _renewal_budget_range(types, jurisdiction=juris)
+            lo += a or 0
+            hi += b or 0
+        return (lo, hi)
+
+
+# ── Section 1: protect revenue ────────────────────────────────────────────────
+
+def _rule_renewals(ctx):
+    """One task per document family inside the action window, plus a single
+    compact watchlist row for everything 61–90 days out."""
+    out = []
+    act, watch = {}, []
+    for d in ctx.documents:
+        days = ctx.dl(d.expiry_date)
+        if days is None or days > PLAN_WATCHLIST_WINDOW or days < PLAN_EXPIRED_FLOOR:
+            continue   # long-expired documents belong to _rule_expired_docs
+        if days > PLAN_ACT_WINDOW:
+            watch.append((d, days))
+        else:
+            key, singular, plural = ctx.doc_family(d.doc_type)
+            act.setdefault(key, {'label': plural, 'singular': singular, 'rows': []})['rows'].append((d, days))
+
+    for key, grp in act.items():
+        rows = sorted(grp['rows'], key=lambda r: r[1])
+        docs = [d for d, _ in rows]
+        details = [
+            _plan_detail(ctx.cust_name(ctx.customer_by_id.get(d.customer_id)),
+                         d.owner_name if d.belongs_to in ('Staff', 'Employee', 'Individual') else None,
+                         _plan_days_label(days), _plan_tone(days))
+            for d, days in rows
+        ]
+        soonest = rows[0][1]
+        n = len(rows)
+        expired = len([1 for _, dd in rows if dd < 0])
+        lo, hi = ctx.renewal_amount(docs)
+        if soonest < 0:
+            urgency = 'Already expired — recover first, fines are accruing.'
+        elif soonest <= 14:
+            urgency = f'Soonest is {soonest} days away, which is late for this service — call today.'
+        elif soonest <= 30:
+            urgency = f'Soonest is {soonest} days away. Quote now; submission still needs time.'
+        else:
+            urgency = f'Soonest is {soonest} days away — the right week to open the conversation and quote.'
+        out.append(_plan_candidate(
+            'protect', f'renewal_{key}', 'Renewal',
+            f'{n} {grp["label"].lower() if n > 1 else grp["singular"]} expiring'
+            + (f' · {expired} already expired' if expired else ''),
+            details, 'Documents · expiry ≤60d',
+            amount=(lo, hi), urgency_days=soonest,
+            fallback=(f'{urgency} Group these into one submission per client where you can — '
+                      f'it is an easier approval than several separate ones.'),
+        ))
+
+    if watch:
+        watch.sort(key=lambda r: r[1])
+        details = [
+            _plan_detail(ctx.cust_name(ctx.customer_by_id.get(d.customer_id)),
+                         d.doc_type, _plan_days_label(days), 'ok')
+            for d, days in watch
+        ]
+        lo, hi = ctx.renewal_amount([d for d, _ in watch])
+        out.append(_plan_candidate(
+            'protect', 'renewal_watchlist', 'Watchlist',
+            f'{len(watch)} renewals coming up (61–90 days)',
+            details, 'Documents · expiry 61–90d',
+            amount=(lo, hi), amount_note='next month’s pipeline',
+            urgency_days=watch[0][1],
+            fallback=('No action needed this week — this is your forward view so nothing '
+                      'arrives as a surprise. These become real tasks at 60 days.'),
+        ))
+    return out
+
+def _rule_expired_docs(ctx):
+    """Documents already lapsed beyond the renewal window. Kept separate from the
+    renewal rows so a four-month-dead licence is never presented as "expiring",
+    and so an active client with a lapsed document can't fall through the gap
+    between the renewal rule and the win-back rule."""
+    rows = []
+    for d in ctx.documents:
+        days = ctx.dl(d.expiry_date)
+        if days is None or days >= PLAN_EXPIRED_FLOOR:
+            continue
+        rows.append((d, days))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: r[1])
+    details = [_plan_detail(ctx.cust_name(ctx.customer_by_id.get(d.customer_id)),
+                            d.doc_type, _plan_days_label(days), 'crit')
+               for d, days in rows]
+    return [_plan_candidate(
+        'protect', 'expired_docs', 'Expired',
+        f'{len(rows)} document{"s" if len(rows) > 1 else ""} expired and not renewed',
+        details, f'Documents · lapsed more than {abs(PLAN_EXPIRED_FLOOR)} days ago',
+        amount_label='Compliance risk', urgency_days=0,
+        fallback=('These lapsed some time ago, so establish the facts before quoting: was it '
+                  'renewed elsewhere, is the company still trading, or has this genuinely been '
+                  'left? Fines usually accrue while a licence is lapsed, so the honest opening is '
+                  'to help them understand their exposure rather than to sell a renewal.'),
+    )]
+
+def _rule_corp_tax(ctx):
+    rows = []
+    for c in ctx.customers:
+        if (c.corp_tax_status or '').strip() == 'Filed':
+            continue
+        days = _plan_dl(c.corp_tax_due_date, ctx.today)
+        if days is None or days > 150:
+            continue
+        rows.append((c, days))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: r[1])
+    details = [_plan_detail(ctx.cust_name(c),
+                            f'due {c.corp_tax_due_date.strftime("%d %b %Y")}',
+                            _plan_days_label(d), _plan_tone(d)) for c, d in rows]
+    return [_plan_candidate(
+        'protect', 'corp_tax', 'Tax',
+        f'{len(rows)} client{"s" if len(rows) > 1 else ""} corporate tax not filed',
+        details, 'Customer · corp_tax_status', urgency_days=rows[0][1],
+        amount_label='Service fee',
+        fallback=('Frame this as avoiding the late-registration penalty, not as an upsell. '
+                  'Offer a fixed fee. Where a client also has a licence renewing, propose one '
+                  'combined engagement rather than two separate conversations.'),
+    )]
+
+def _rule_vat(ctx):
+    rows = []
+    for c in ctx.customers:
+        if (c.vat_status or '').strip() == 'Filed':
+            continue
+        days = _plan_dl(c.vat_due_date, ctx.today)
+        if days is None or days > 90:
+            continue
+        rows.append((c, days))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: r[1])
+    details = [_plan_detail(ctx.cust_name(c),
+                            f'due {c.vat_due_date.strftime("%d %b %Y")}',
+                            _plan_days_label(d), _plan_tone(d)) for c, d in rows]
+    return [_plan_candidate(
+        'protect', 'vat', 'VAT',
+        f'{len(rows)} client{"s" if len(rows) > 1 else ""} VAT return due',
+        details, 'Customer · vat_status', urgency_days=rows[0][1],
+        amount_label='Service fee',
+        fallback=('VAT deadlines are fixed and penalties are automatic, so this is a service '
+                  'call rather than a sale. Confirm who is filing; if it is not you, ask why not.'),
+    )]
+
+
+# ── Section 2: convert & follow through ───────────────────────────────────────
+
+def _rule_open_quotes(ctx):
+    rows = []
+    for l in ctx.leads:
+        if (l.status or '') != 'Proposal':
+            continue
+        stamp = ctx.last_lead_update.get(l.id) or l.created_at
+        age = (ctx.now - stamp).days if stamp else None
+        rows.append((l, age))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: -(r[1] or 0))
+    details = [_plan_detail(l.company or l.name, l.service,
+                            f'sent {_plan_age_label(a)} ago', 'warn' if (a or 0) >= 5 else 'grey')
+               for l, a in rows]
+    return [_plan_candidate(
+        'convert', 'open_quotes', 'Quote',
+        f'{len(rows)} quotation{"s" if len(rows) > 1 else ""} awaiting reply',
+        details, 'Leads at Proposal stage',
+        amount_label='Open pipeline', urgency_days=0,
+        fallback=('A quote sitting a week needs a decision, not another follow-up. Ask plainly '
+                  'whether price or timing is the blocker — you cannot fix an objection you have '
+                  'not heard. Offer to walk through the breakdown on a call; written quotes '
+                  'usually stall on one line item.'),
+    )]
+
+def _rule_stuck_jobs(ctx):
+    rows = []
+    for j in ctx.jobs:
+        if (j.status or '') not in ('On Hold', 'Delayed'):
+            continue
+        stamp = j.created_at
+        age = (ctx.now - stamp).days if stamp else None
+        rows.append((j, age))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: -(r[1] or 0))
+    details = [_plan_detail(ctx.cust_name(ctx.customer_by_id.get(j.customer_id)),
+                            f'{j.job_type or "job"} · {j.status}',
+                            _plan_age_label(a), 'crit' if (a or 0) >= 14 else 'warn')
+               for j, a in rows]
+    return [_plan_candidate(
+        'convert', 'stuck_jobs', 'Stuck job',
+        f'{len(rows)} job{"s" if len(rows) > 1 else ""} on hold or delayed',
+        details, 'Job.status On Hold / Delayed',
+        amount_label='Retention', urgency_days=0,
+        fallback=('Silence is what turns a delay into a complaint. Give each client the current '
+                  'status and a realistic next date, even if the honest answer is "still with the '
+                  'authority". Where the client also has a renewal due, handle both in one call.'),
+    )]
+
+
+# ── Section 3: retain & deepen ────────────────────────────────────────────────
+
+def _rule_dormant(ctx):
+    rows = []
+    for c in ctx.customers:
+        if (c.ac_status or '') in ('Closed',):
+            continue
+        days = ctx.days_since_contact(c.id)
+        if days is None or days < PLAN_DORMANT_DAYS:
+            continue
+        rows.append((c, days))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: -r[1])
+    details = [_plan_detail(ctx.cust_name(c), None, f'{d}d quiet', 'grey') for c, d in rows]
+    return [_plan_candidate(
+        'retain', 'dormant', 'Dormant',
+        f'{len(rows)} client{"s" if len(rows) > 1 else ""} not contacted in 90+ days',
+        details, 'CustomerCall + job activity',
+        amount_label='Relationship', urgency_days=30,
+        fallback=('Make these genuine check-in calls with no pitch attached — a long silence is '
+                  'how a client quietly moves to a competitor at renewal time. Ask how business '
+                  'is going and whether headcount changed, and log the outcome either way.'),
+    )]
+
+def _rule_missing_ejari(ctx):
+    have = set()
+    for d in ctx.documents:
+        key, _, _ = ctx.doc_family(d.doc_type)
+        if key == 'ejari':
+            have.add(d.customer_id)
+    rows = [c for c in ctx.customers
+            if c.id not in have
+            and (c.ac_status or 'Active') == 'Active'
+            and (c.customer_type or '') == 'Company']
+    if not rows:
+        return []
+    details = [_plan_detail(ctx.cust_name(c), 'no Ejari on file', tone='warn') for c in rows]
+    return [_plan_candidate(
+        'retain', 'missing_ejari', 'Gap',
+        f'{len(rows)} active compan{"ies" if len(rows) > 1 else "y"} with no Ejari on file',
+        details, 'Documents · no Ejari record',
+        amount_label='Service opportunity',
+        fallback=('A missing Ejari blocks visa processing later, so this is a real problem to '
+                  'solve rather than a cross-sell. Check whether they simply never sent it to us '
+                  'or genuinely do not have one — the second case is work for you.'),
+    )]
+
+def _rule_headcount_growth(ctx):
+    cutoff = ctx.now - timedelta(days=90)
+    grew = {}
+    for e in ctx.employees:
+        if e.created_at and e.created_at >= cutoff:
+            grew[e.customer_id] = grew.get(e.customer_id, 0) + 1
+    rows = sorted(grew.items(), key=lambda kv: -kv[1])
+    if not rows:
+        return []
+    details = [_plan_detail(ctx.cust_name(ctx.customer_by_id.get(cid)),
+                            f'{n} staff added', tone='ok') for cid, n in rows]
+    return [_plan_candidate(
+        'retain', 'headcount_growth', 'Growth',
+        f'{len(rows)} client{"s" if len(rows) > 1 else ""} added staff recently',
+        details, 'Employee records · last 90d',
+        amount_label='Visa pipeline',
+        fallback=('A client who is hiring will need visas and labour cards shortly. Getting ahead '
+                  'of that is far easier than reacting to an expiry, and it is a natural reason '
+                  'to call without pitching.'),
+    )]
+
+def _rule_multi_entity_owners(ctx):
+    by_name = {}
+    for o in ctx.owners:
+        nm = (o.name or '').strip().lower()
+        if nm:
+            by_name.setdefault(nm, set()).add(o.customer_id)
+    rows = [(nm, cids) for nm, cids in by_name.items() if len(cids) > 1]
+    if not rows:
+        return []
+    details = []
+    for nm, cids in rows:
+        names = ', '.join(sorted(ctx.cust_name(ctx.customer_by_id.get(c)) for c in cids))
+        details.append(_plan_detail(nm.title(), f'{len(cids)} entities · {names}', tone='ok'))
+    return [_plan_candidate(
+        'retain', 'multi_entity_owners', 'Multi-entity',
+        f'{len(rows)} owner{"s" if len(rows) > 1 else ""} holding more than one company',
+        details, 'Owner records across clients',
+        amount_label='Expansion',
+        fallback=('An owner who already runs two entities is the most likely person to open a '
+                  'third. Ask what is next rather than pitching a service — branch registration, '
+                  'an activity addition or a second licence usually surfaces on its own.'),
+    )]
+
+def _rule_retainer_candidates(ctx):
+    horizon = 180
+    fams = {}
+    for d in ctx.documents:
+        days = ctx.dl(d.expiry_date)
+        if days is None or days > horizon:
+            continue
+        key, _, _ = ctx.doc_family(d.doc_type)
+        fams.setdefault(d.customer_id, set()).add(key)
+    rows = [(cid, ks) for cid, ks in fams.items() if len(ks) >= 3]
+    if not rows:
+        return []
+    rows.sort(key=lambda kv: -len(kv[1]))
+    details = [_plan_detail(ctx.cust_name(ctx.customer_by_id.get(cid)),
+                            f'{len(ks)} document types renewing separately', tone='ok')
+               for cid, ks in rows]
+    return [_plan_candidate(
+        'retain', 'retainer_candidates', 'Retainer',
+        f'{len(rows)} client{"s" if len(rows) > 1 else ""} paying renewal-by-renewal',
+        details, 'Documents · 3+ types due within 180d',
+        amount_label='Recurring revenue',
+        fallback=('These clients are buying from you piecemeal across the year. Bundling their '
+                  'renewals into one annual arrangement means less admin for them and predictable '
+                  'recurring revenue for you — the single highest-leverage conversation on this plan.'),
+    )]
+
+def _rule_touchpoints(ctx):
+    """Birthdays and company anniversaries falling inside the plan week."""
+    week_start = plan_week_start(ctx.now)
+    week_days = {(week_start + timedelta(days=i)).strftime('%m-%d') for i in range(7)}
+    details = []
+    for o in ctx.owners:
+        if o.date_of_birth and o.date_of_birth.strftime('%m-%d') in week_days:
+            details.append(_plan_detail(o.name, 'birthday · ' + o.date_of_birth.strftime('%d %b'),
+                                        tone='ok'))
+    for c in ctx.customers:
+        d = c.ac_opening_date
+        if d and d.strftime('%m-%d') in week_days:
+            yrs = ctx.today.year - d.year
+            if yrs >= 1:
+                details.append(_plan_detail(ctx.cust_name(c),
+                                            f'{yrs} year{"s" if yrs > 1 else ""} · {d.strftime("%d %b")}',
+                                            tone='ok'))
+    if not details:
+        return []
+    return [_plan_candidate(
+        'retain', 'touchpoints', 'Touchpoint',
+        f'{len(details)} birthday{"s" if len(details) > 1 else ""} / anniversar{"ies" if len(details) > 1 else "y"} this week',
+        details, 'Owner DOB · account opening date',
+        amount_label='Goodwill',
+        fallback=('Cheap goodwill that pays off at renewal. Birthday messages may already '
+                  'auto-send, so add a personal line rather than letting a template do the work. '
+                  'A company anniversary is worth an actual call.'),
+    )]
+
+
+# ── Section 4: reputation & referrals ─────────────────────────────────────────
+
+def _rule_review_asks(ctx):
+    cutoff = ctx.now - timedelta(days=30)
+    rows = [j for j in ctx.jobs
+            if (j.status or '') == 'Closed' and j.completed_at and j.completed_at >= cutoff]
+    if not rows:
+        return []
+    rows.sort(key=lambda j: -(ctx.now - j.completed_at).days)
+    details = [_plan_detail(ctx.cust_name(ctx.customer_by_id.get(j.customer_id)),
+                            j.job_type,
+                            f'closed {(ctx.now - j.completed_at).days}d ago',
+                            'ok' if (ctx.now - j.completed_at).days <= 14 else 'grey')
+               for j in rows]
+    return [_plan_candidate(
+        'reputation', 'review_asks', 'Reviews',
+        f'{len(rows)} recently closed job{"s" if len(rows) > 1 else ""} — ask for a Google review',
+        details, 'Jobs closed <30d (no per-client review tracking yet)',
+        amount_label='Reputation',
+        fallback=('Ask while the result is still fresh — after a month people forget how much you '
+                  'helped. Send the link straight after a positive conversation, never cold, and '
+                  'start with the most recent close. Skip anyone with an unresolved complaint.'),
+    )]
+
+def _rule_referral_asks(ctx):
+    closed = {}
+    for j in ctx.jobs:
+        if (j.status or '') == 'Closed':
+            closed[j.customer_id] = closed.get(j.customer_id, 0) + 1
+    rows = [(cid, n) for cid, n in closed.items() if n >= 3]
+    if not rows:
+        return []
+    rows.sort(key=lambda kv: -kv[1])
+    details = [_plan_detail(ctx.cust_name(ctx.customer_by_id.get(cid)),
+                            f'{n} closed jobs', tone='ok') for cid, n in rows]
+    return [_plan_candidate(
+        'reputation', 'referral_asks', 'Referral',
+        f'{len(rows)} loyal client{"s" if len(rows) > 1 else ""} worth asking for an introduction',
+        details, 'Clients with 3+ closed jobs',
+        amount_label='Pipeline',
+        fallback=('These clients have used you repeatedly, which makes them your easiest untapped '
+                  'pipeline. Be specific rather than vague: instead of "know anyone?", ask about a '
+                  'named neighbour or supplier. A specific ask converts far better than a general one.'),
+    )]
+
+def _rule_testimonials(ctx):
+    rows = []
+    for j in ctx.jobs:
+        if (j.testimonial_status or '') != 'Requested':
+            continue
+        stamp = j.testimonial_requested_at
+        age = (ctx.now - stamp).days if stamp else None
+        if age is not None and age < 10:
+            continue
+        rows.append((j, age))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: -(r[1] or 0))
+    details = [_plan_detail(ctx.cust_name(ctx.customer_by_id.get(j.customer_id)),
+                            f'asked {_plan_age_label(a)} ago', tone='warn')
+               for j, a in rows]
+    return [_plan_candidate(
+        'reputation', 'testimonials', 'Testimonial',
+        f'{len(rows)} testimonial{"s" if len(rows) > 1 else ""} requested but not received',
+        details, 'Job.testimonial_status = Requested',
+        amount_label='Marketing asset',
+        fallback=('They said yes and then went quiet, which usually means they do not know what to '
+                  'write. Remove the friction: send two or three sentences they can edit, or offer '
+                  'to take a short voice note. One nudge each, then let it go.'),
+    )]
+
+
+# ── Section 5: leads & enquiries ──────────────────────────────────────────────
+
+def _rule_overdue_leads(ctx):
+    rows = []
+    for l in ctx.leads:
+        if (l.status or '') in ('Converted', 'Lost'):
+            continue
+        if not l.due_date or l.due_date >= ctx.now:
+            continue
+        rows.append((l, (ctx.now - l.due_date).days))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: -r[1])
+    details = [_plan_detail(l.company or l.name, l.status,
+                            f'{d}d late', 'crit' if d >= 3 else 'warn') for l, d in rows]
+    return [_plan_candidate(
+        'leads', 'overdue_leads', 'Overdue',
+        f'{len(rows)} lead{"s" if len(rows) > 1 else ""} past follow-up date',
+        details, 'Lead.due_date in the past',
+        amount_label='Pipeline', urgency_days=0,
+        fallback=('Work the newest enquiries first — a day-old lead converts several times better '
+                  'than a week-old one. For anything sitting at Qualified, send something concrete '
+                  'like a cost breakdown rather than another "just checking in".'),
+    )]
+
+def _rule_due_enquiries(ctx):
+    rows = []
+    for e in ctx.enquiries:
+        if (e.status or 'Open') != 'Open':
+            continue
+        if not e.remind_date or e.remind_date > ctx.today:
+            continue
+        rows.append((e, (ctx.today - e.remind_date).days))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: -r[1])
+    details = [_plan_detail(e.name, (e.enquiry or e.service or '')[:60],
+                            'due today' if d == 0 else f'{d}d late',
+                            'crit' if d > 0 else 'warn') for e, d in rows]
+    return [_plan_candidate(
+        'leads', 'due_enquiries', 'Enquiry',
+        f'{len(rows)} open enquir{"ies" if len(rows) > 1 else "y"} — callback promised',
+        details, 'Enquiry · Open, reminder due',
+        amount_label='Pipeline', urgency_days=0,
+        fallback=('These are people you personally promised to call back, so missing them costs '
+                  'more trust than a cold lead ever would. Clear them first. If a call shows real '
+                  'intent, convert it to a lead; if not, resolve it so your queue reflects reality.'),
+    )]
+
+def _rule_stalled_leads(ctx):
+    rows = []
+    for l in ctx.leads:
+        if (l.status or '') not in ('Contacted', 'Qualified', 'Proposal'):
+            continue
+        stamp = ctx.last_lead_update.get(l.id) or l.created_at
+        if not stamp:
+            continue
+        age = (ctx.now - stamp).days
+        if age < PLAN_STALLED_LEAD_DAYS:
+            continue
+        rows.append((l, age))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: -r[1])
+    details = [_plan_detail(l.company or l.name, l.status, f'{a}d quiet', 'grey') for l, a in rows]
+    return [_plan_candidate(
+        'leads', 'stalled_leads', 'Stalled',
+        f'{len(rows)} lead{"s" if len(rows) > 1 else ""} with no activity in 14+ days',
+        details, 'Last lead update age',
+        amount_label='Pipeline',
+        fallback=('These went quiet, they did not say no. Do not re-pitch — send one message that '
+                  'gives them a reason to reply. If nobody answers this week, mark them Future and '
+                  'stop spending time there; a clean pipeline beats a hopeful one.'),
+    )]
+
+def _rule_reopen_lost(ctx):
+    reasons = {}
+    for u in ctx.lead_updates:
+        if u.lost_reason:
+            reasons[u.lead_id] = u.lost_reason
+    soft = ('price', 'expensive', 'cost', 'budget', 'later', 'not now', 'timing',
+            'compare', 'comparing', 'think', 'postpone', 'hold')
+    rows = []
+    for l in ctx.leads:
+        if (l.status or '') != 'Lost':
+            continue
+        stamp = ctx.last_lead_update.get(l.id) or l.created_at
+        if not stamp:
+            continue
+        age = (ctx.now - stamp).days
+        if not (60 <= age <= 180):
+            continue
+        reason = (reasons.get(l.id) or '').strip()
+        if reason and not any(s in reason.lower() for s in soft):
+            continue   # lost to a competitor or hard no — leave it alone
+        rows.append((l, age, reason))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: r[1])
+    details = [_plan_detail(l.company or l.name, (reason or 'no reason recorded')[:50],
+                            f'{age}d ago', 'grey') for l, age, reason in rows]
+    return [_plan_candidate(
+        'leads', 'reopen_lost', 'Reopen',
+        f'{len(rows)} lost lead{"s" if len(rows) > 1 else ""} worth a second try',
+        details, 'Lost 60–180d, price/timing reason',
+        amount_label='Pipeline',
+        fallback=('These were lost to price or timing rather than to a competitor, which makes '
+                  'them the reopenable ones. Months on, "later" has often become "now". Do not '
+                  'repeat the old quote — ask what they ended up doing.'),
+    )]
+
+def _rule_unconverted_enquiries(ctx):
+    rows = []
+    for e in ctx.enquiries:
+        if (e.status or '') != 'Resolved' or e.converted_lead_id:
+            continue
+        if not e.created_at:
+            continue
+        age = (ctx.now - e.created_at).days
+        if not (30 <= age <= 180):
+            continue
+        rows.append((e, age))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: r[1])
+    details = [_plan_detail(e.name, (e.enquiry or e.service or '')[:60], f'{a}d ago', 'grey')
+               for e, a in rows]
+    return [_plan_candidate(
+        'leads', 'unconverted_enquiries', 'Revisit',
+        f'{len(rows)} old enquir{"ies" if len(rows) > 1 else "y"} that never became a lead',
+        details, 'Enquiry resolved, never converted',
+        amount_label='Pipeline',
+        fallback=('Someone asked about a service and it was closed without ever becoming a lead. '
+                  'These people already raised their hand once, so a short "did you get this '
+                  'sorted?" is low effort and occasionally free business.'),
+    )]
+
+def _rule_winback(ctx):
+    rows = []
+    for c in ctx.customers:
+        inactive = (c.ac_status or '') in ('Inactive', 'Closed')
+        lic_expired = False
+        for d in ctx.documents:
+            if d.customer_id != c.id:
+                continue
+            key, _, _ = ctx.doc_family(d.doc_type)
+            days = ctx.dl(d.expiry_date)
+            if key == 'trade_licence' and days is not None and days < -30:
+                lic_expired = True
+        if not (inactive or lic_expired):
+            continue
+        quiet = ctx.days_since_contact(c.id)
+        if quiet is not None and quiet < 120:
+            continue
+        rows.append((c, quiet, 'account inactive' if inactive else 'licence lapsed'))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: -(r[1] or 0))
+    details = [_plan_detail(ctx.cust_name(c), why,
+                            f'{q}d quiet' if q is not None else 'never contacted', 'grey')
+               for c, q, why in rows]
+    return [_plan_candidate(
+        'leads', 'winback', 'Win-back',
+        f'{len(rows)} lapsed client{"s" if len(rows) > 1 else ""} worth reviving',
+        details, 'Inactive account or licence lapsed 30d+',
+        amount_label='Win-back',
+        fallback=('These people already trusted you once, which makes them warmer than any cold '
+                  'list. Ask what happened rather than selling — some closed the business, but '
+                  'some simply drifted and would come back if asked.'),
+    )]
+
+
+# ── Section 6: build pipeline ─────────────────────────────────────────────────
+
+# Activity fields that make sense as a weekly prospecting/content suggestion,
+# with the wording the plan uses. Targets come from ActivityType.weekly_target.
+PLAN_ACTIVITY_IDEAS = {
+    'linkedin_writing':     ('LinkedIn', 'LinkedIn article'),
+    'dm_instagram':         ('DMs', 'Instagram DMs'),
+    'dm_linkedin':          ('DMs', 'LinkedIn DMs'),
+    'videos_instagram':     ('Video', 'Reel / short video'),
+    'posts_social':         ('Content', 'Social posts'),
+    'calls_cold':           ('Cold', 'Cold calls'),
+    'whatsapp_prospecting': ('Outreach', 'WhatsApp prospecting'),
+    'google_reviews':       ('Reviews', 'Google reviews collected'),
+    'referral_building':    ('Referral', 'Referral building'),
+    'real_estate_relations':('Network', 'Real estate agent relationships'),
+    'networking_events':    ('Events', 'Networking events'),
+    'community_active':     ('Community', 'Community activity'),
+}
+
+def _plan_activity_progress(ctx):
+    """This week's Daily Log totals for the rep, against their weekly targets."""
+    week_start = plan_week_start(ctx.now)
+    logs = ActivityLog.query.filter(ActivityLog.user_id == ctx.user.id,
+                                    ActivityLog.log_date >= week_start,
+                                    ActivityLog.log_date <= ctx.today).all()
+    out = []
+    for field_key, label, target in get_activities():
+        if not target or target <= 0:
+            continue
+        done = sum(int(getattr(l, field_key, 0) or 0) for l in logs)
+        out.append({'key': field_key, 'label': label, 'target': float(target),
+                    'done': done, 'gap': max(0.0, float(target) - done)})
+    return out
+
+def _rule_activity_gaps(ctx, progress=None):
+    """One row per behind-target prospecting/content activity, worst first.
+    Capped so the plan stays readable."""
+    progress = progress if progress is not None else _plan_activity_progress(ctx)
+    behind = [p for p in progress if p['gap'] > 0 and p['key'] in PLAN_ACTIVITY_IDEAS]
+    behind.sort(key=lambda p: -(p['gap'] / max(p['target'], 1)))
+    out = []
+    for p in behind[:4]:
+        chip, nice = PLAN_ACTIVITY_IDEAS[p['key']]
+        done, target = p['done'], int(p['target']) if float(p['target']).is_integer() else p['target']
+        out.append(_plan_candidate(
+            'pipeline', f'activity_{p["key"]}', chip,
+            f'{nice} — {done} of {target} this week',
+            [_plan_detail(nice, f'target {target} · done {done}',
+                          f'{int(p["gap"])} to go', 'warn' if done else 'crit')],
+            f'Daily Log target · {p["key"]}',
+            amount_label='Pipeline',
+            fallback=(f'You are {int(p["gap"])} short of your weekly target of {target}. '
+                      f'Spreading it across the week works better than trying to catch up at the end.'),
+        ))
+    return out
+
+def _rule_channel_partners(ctx):
+    """General advice, not a data-derived row — labelled as such on the page.
+    Tahfeel has no CRM records for the channel network (freezone agents, banks,
+    fit-out firms, brokers), so the plan must not pretend otherwise."""
+    week = plan_week_start(ctx.now)
+    targets = [
+        ('Free zone channel partners', 'agents who register companies and need a compliance partner'),
+        ('Bank relationship managers', 'every new company needs an account — and they need a setup partner'),
+        ('Fit-out & interior companies', 'their clients are opening premises and need licences and Ejari'),
+        ('Real estate brokers', 'commercial tenants need Ejari, licences and often visas'),
+        ('Business centres & flexi-desk providers', 'a constant stream of new licence holders'),
+        ('Auditors & accountants', 'they see corporate tax and VAT needs before you do'),
+    ]
+    pick = targets[week.toordinal() // 7 % len(targets)]
+    return [_plan_candidate(
+        'pipeline', 'channel_partners', 'Network',
+        f'Build one channel relationship: {pick[0]}',
+        [_plan_detail(pick[0], pick[1], 'this week', 'ok')],
+        'General advice — not derived from your CRM data',
+        amount_label='Pipeline',
+        fallback=(f'Aim for one real conversation this week, not a mass approach. {pick[1].capitalize()}. '
+                  f'A single active referral partner produces more than a month of cold calling, and '
+                  f'this is a relationship you build once and keep.'),
+    )]
+
+
+# ── Section 7 (data hygiene that costs money) ─────────────────────────────────
+
+def _rule_alerts_disabled(ctx):
+    rows = [c for c in ctx.customers
+            if (c.ac_status or 'Active') == 'Active' and not c.alerts_enabled]
+    if not rows:
+        return []
+    details = [_plan_detail(ctx.cust_name(c), 'expiry reminders off', tone='warn') for c in rows]
+    return [_plan_candidate(
+        'retain', 'alerts_disabled', 'Hygiene',
+        f'{len(rows)} active client{"s" if len(rows) > 1 else ""} with expiry alerts switched off',
+        details, 'Customer.alerts_enabled = false',
+        amount_label='Risk',
+        fallback=('These clients silently receive none of our expiry reminders, so a lapsed licence '
+                  'becomes our problem and a lost renewal. Confirm their number and turn alerts on '
+                  'while you have them on the phone.'),
+    )]
+
+
+PLAN_RULES = [
+    _rule_renewals, _rule_expired_docs, _rule_corp_tax, _rule_vat,
+    _rule_open_quotes, _rule_stuck_jobs,
+    _rule_dormant, _rule_missing_ejari, _rule_headcount_growth,
+    _rule_multi_entity_owners, _rule_retainer_candidates, _rule_touchpoints,
+    _rule_alerts_disabled,
+    _rule_review_asks, _rule_referral_asks, _rule_testimonials,
+    _rule_overdue_leads, _rule_due_enquiries, _rule_stalled_leads,
+    _rule_reopen_lost, _rule_unconverted_enquiries, _rule_winback,
+    _rule_channel_partners,
+]
+
+def build_plan_candidates(user, today=None):
+    """Run every rule for one rep and return ranked row candidates.
+    A failing rule is skipped rather than killing the whole plan."""
+    ctx = PlanContext(user, today)
+    progress = _plan_activity_progress(ctx)
+    out = []
+    for rule in PLAN_RULES:
+        try:
+            out.extend(rule(ctx) or [])
+        except Exception as e:
+            print(f'[PLANNER] rule {getattr(rule, "__name__", rule)} failed for user {user.id}: {e}')
+    try:
+        out.extend(_rule_activity_gaps(ctx, progress) or [])
+    except Exception as e:
+        print(f'[PLANNER] activity rule failed for user {user.id}: {e}')
+    out.sort(key=lambda c: -c['score'])
+    return ctx, progress, out
+
+
+# ── Persistence: generate, carry forward, summarise ───────────────────────────
+
+# A skipped task is suppressed for this many weeks, then allowed back. Permanent
+# suppression would be wrong here: these rows are GROUPS ("3 licences expiring"),
+# so killing the category forever would hide next quarter's genuinely new expiries.
+PLAN_SKIP_SUPPRESS_WEEKS = 4
+
+# Categories written by the research step rather than by a rule. The generator's
+# cleanup sweep must leave these alone — they are legitimately absent from the
+# rule output, and deleting them would wipe the row (and its citations) every
+# time a rep pressed Refresh.
+PLAN_EXTERNAL_CATEGORIES = {'market_research'}
+
+def plan_eligible_users():
+    """Reps who should get a plan: active, non-finance, and actually own something."""
+    users = User.query.filter_by(active=True).all()
+    out = []
+    for u in users:
+        if (u.role or '') not in PLAN_ROLES:
+            continue
+        has_book = (Customer.query.filter_by(assigned_to=u.id).first()
+                    or Lead.query.filter_by(assigned_to=u.id).first()
+                    or Enquiry.query.filter_by(assigned_to=u.id).first())
+        if has_book:
+            out.append(u)
+    return out
+
+def generate_weekly_plan(user, week_start=None, today=None):
+    """Build (or refresh) one rep's plan for a week. Idempotent: re-running keeps
+    each row's status and carry count, and only refreshes the computed facts.
+    Returns (created, updated, skipped_suppressed)."""
+    week_start = week_start or plan_week_start()
+    ctx, progress, candidates = build_plan_candidates(user, today)
+
+    existing = {i.category: i for i in WorkPlanItem.query.filter_by(
+        user_id=user.id, week_start=week_start).all()}
+
+    # Carry state from the previous week: how long has this been sitting, and did
+    # the rep explicitly skip it recently?
+    prev_start = week_start - timedelta(days=7)
+    prev = {i.category: i for i in WorkPlanItem.query.filter_by(
+        user_id=user.id, week_start=prev_start).all()}
+    suppress_since = week_start - timedelta(weeks=PLAN_SKIP_SUPPRESS_WEEKS)
+    skipped = {i.category for i in WorkPlanItem.query.filter(
+        WorkPlanItem.user_id == user.id,
+        WorkPlanItem.status == 'Skip',
+        WorkPlanItem.week_start >= suppress_since,
+        WorkPlanItem.week_start < week_start).all()}
+
+    created = updated = suppressed = 0
+    import json
+    for order, cand in enumerate(candidates):
+        cat = cand['category']
+        if cat in skipped and cat not in existing:
+            suppressed += 1
+            continue
+        item = existing.get(cat)
+        if not item:
+            item = WorkPlanItem(user_id=user.id, week_start=week_start, category=cat)
+            prior = prev.get(cat)
+            # Only a genuinely unfinished task carries; Done/Skip start fresh.
+            if prior and (prior.status or 'Pending') in ('Pending', 'Later'):
+                item.carry_count = (prior.carry_count or 1) + 1
+                item.ai_recommendation = prior.ai_recommendation
+            else:
+                item.carry_count = 1
+            db.session.add(item)
+            created += 1
+        else:
+            updated += 1
+        item.section       = cand['section']
+        item.chip          = cand['chip']
+        item.title         = cand['title']
+        item.detail_json   = json.dumps(cand['details'])
+        item.source_note   = cand['source_note']
+        item.amount_min    = cand['amount_min']
+        item.amount_max    = cand['amount_max']
+        item.amount_label  = cand['amount_label']
+        item.amount_note   = cand['amount_note']
+        item.urgency_days  = cand['urgency_days']
+        item.score         = cand['score']
+        item.fallback_text = cand['fallback_text']
+        item.sort_order    = order
+        if cand['citations']:
+            item.citations_json = json.dumps(cand['citations'])
+
+    # Rows whose underlying data no longer qualifies (renewal done, lead converted)
+    # disappear from the plan — but never delete something the rep already acted on.
+    live = {c['category'] for c in candidates}
+    for cat, item in existing.items():
+        if cat in PLAN_EXTERNAL_CATEGORIES:
+            continue
+        if cat not in live and (item.status or 'Pending') == 'Pending':
+            db.session.delete(item)
+
+    db.session.commit()
+    return created, updated, suppressed
+
+def plan_items_for(user_id, week_start):
+    items = WorkPlanItem.query.filter_by(user_id=user_id, week_start=week_start) \
+        .order_by(WorkPlanItem.sort_order, WorkPlanItem.id).all()
+    order = {k: i for i, (k, _) in enumerate(PLAN_SECTIONS)}
+    items.sort(key=lambda i: (order.get(i.section, 99), i.sort_order or 0))
+    return items
+
+def plan_page_context(user, week_start):
+    """Everything the planner page shows around the table: KPIs, path to target,
+    last week's completion, and the activity scorecard."""
+    items = plan_items_for(user.id, week_start)
+    now = now_dubai()
+
+    # money
+    amt_min = sum((i.amount_min or 0) for i in items)
+    amt_max = sum((i.amount_max or 0) for i in items)
+    urgent = len([i for i in items
+                  if (i.urgency_days is not None and i.urgency_days <= 30)
+                  or (i.section in ('protect', 'convert', 'leads') and i.urgency_days == 0)])
+    done = len([i for i in items if (i.status or '') == 'Done'])
+
+    # month target vs actual (same shape as My Desk)
+    target_row = MonthlyTarget.query.filter_by(user_id=user.id, month=now.month, year=now.year).first()
+    amount_target = float(target_row.amount_target or 0) if target_row else 0.0
+    my_jobs = Job.query.filter_by(assigned_to=user.id).all()
+    closed_actual = sum((j.revenue or 0) for j in my_jobs
+                        if j.revenue_date and j.revenue_date.month == now.month
+                        and j.revenue_date.year == now.year)
+    pct = round(100 * closed_actual / amount_target) if amount_target else None
+    remaining = max(0.0, amount_target - closed_actual) if amount_target else None
+
+    # last week
+    prev_start = week_start - timedelta(days=7)
+    prev_items = WorkPlanItem.query.filter_by(user_id=user.id, week_start=prev_start).all()
+    prev_done = len([i for i in prev_items if (i.status or '') == 'Done'])
+    carried = len([i for i in items if i.is_carried])
+
+    ctx = PlanContext(user)
+    return {
+        'items': items,
+        'sections': [(k, label, [i for i in items if i.section == k])
+                     for k, label in PLAN_SECTIONS],
+        'amt_min': amt_min, 'amt_max': amt_max,
+        'urgent_count': urgent, 'done_count': done, 'total_count': len(items),
+        'amount_target': amount_target, 'closed_actual': closed_actual,
+        'target_pct': pct, 'target_remaining': remaining,
+        'prev_done': prev_done, 'prev_total': len(prev_items), 'carried_count': carried,
+        'activity': _plan_activity_progress(ctx),
+        'scanned': {'customers': len(ctx.customers), 'leads': len(ctx.leads),
+                    'enquiries': len(ctx.enquiries), 'documents': len(ctx.documents),
+                    'jobs': len([j for j in ctx.jobs
+                                 if (j.status or '') not in ('Closed', 'Done')])},
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  AI layer — Claude writes the recommendation column, and nothing else
+#
+#  Reuses the Anthropic wiring the WhatsApp bot already relies on: the SDK reads
+#  ANTHROPIC_API_KEY from the environment, and the stable system prompt is cached
+#  so re-reads cost ~10% (same trick as whatsapp_webhook.ai_reply).
+#
+#  The model is handed the facts as JSON and told to invent nothing. It cannot
+#  corrupt a date or a price because it never writes those fields — every figure
+#  on the page comes from the rule engine above. If the call fails, is refused,
+#  or no API key is set, each row still renders its deterministic fallback_text.
+# ══════════════════════════════════════════════════════════════════════════════
+
+PLANNER_MODEL_DEFAULT = 'claude-opus-5'
+
+def planner_model():
+    return (get_setting('planner_ai_model')
+            or os.environ.get('PLANNER_AI_MODEL')
+            or PLANNER_MODEL_DEFAULT)
+
+# Kept byte-stable so the cached prefix actually gets reused week to week —
+# do not interpolate dates or names into this string.
+PLANNER_SYSTEM_PROMPT = """You are an experienced UAE business-setup sales manager writing the \
+recommendation column of a salesperson's weekly work plan at Tahfeel Business Setup Services, \
+a Dubai firm that handles company formation and ongoing compliance for UAE businesses.
+
+You will receive a JSON array of tasks. Each task already contains every fact: client names, \
+document types, days until expiry, AED amounts, and where the data came from. Your job is ONLY \
+to write the advice.
+
+Rules you must follow:
+1. Never state a fact that is not in the JSON. No invented client names, dates, amounts, \
+   authorities, regulations, or penalties. If you do not know a figure, do not imply one.
+2. Never contradict the JSON. If it says 9 days, do not write "next week".
+3. Write to the salesperson, not the client. Second person, plain English, no bullet points, \
+   no headings, no markdown. 40-70 words per task.
+4. Be genuinely useful: say what to do first and why, and what to lead the conversation with. \
+   Where the data supports it, say which specific client to start with.
+5. Sell with judgement, not pressure. Compliance deadlines are help, not leverage. For \
+   relationship and dormant tasks, say explicitly that no pitch is needed.
+6. If a task's data is weak or a suggestion is a guess rather than a signal, say so plainly \
+   rather than dressing it up. Honesty is more useful than confidence here.
+7. If a task has been carried over for three weeks or more, tell them to either do it this \
+   week or skip it properly.
+
+Also write a short weekly brief: 3-4 sentences to open the plan, naming the highest-value thing \
+to do first and the biggest gap. Same rules — facts only from the JSON."""
+
+PLANNER_OUTPUT_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'brief': {
+            'type': 'string',
+            'description': 'A 3-4 sentence opening brief for the week, facts only from the input.',
+        },
+        'recommendations': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'category': {'type': 'string',
+                                 'description': 'The task category, copied exactly from the input.'},
+                    'recommendation': {'type': 'string',
+                                       'description': '40-70 words of advice for this task.'},
+                },
+                'required': ['category', 'recommendation'],
+                'additionalProperties': False,
+            },
+        },
+    },
+    'required': ['brief', 'recommendations'],
+    'additionalProperties': False,
+}
+
+def _plan_ai_payload(items):
+    """The facts handed to the model. Deliberately narrow: no phone numbers, no
+    emails, no document IDs — only what's needed to write useful advice."""
+    out = []
+    for i in items:
+        out.append({
+            'category': i.category,
+            'task': i.title,
+            'why_this_appears': i.source_note,
+            'details': [{'name': d.get('name'), 'note': d.get('meta'),
+                         'timing': d.get('days_label')} for d in i.details],
+            'aed_value': ({'min': i.amount_min, 'max': i.amount_max}
+                          if i.has_amount else (i.amount_label or None)),
+            'soonest_deadline_days': i.urgency_days,
+            'weeks_carried': i.carry_count or 1,
+        })
+    return out
+
+def generate_plan_recommendations(user, week_start, force=False):
+    """Fill in the AI recommendation column for one rep's week. Returns the number
+    of rows written. Safe to call repeatedly — only rows still missing a
+    recommendation are sent, so a re-run costs nothing once the week is written."""
+    if not os.environ.get('ANTHROPIC_API_KEY'):
+        print('[PLANNER] no ANTHROPIC_API_KEY — keeping deterministic text')
+        return 0
+    if not automation_on('auto_planner_ai'):
+        return 0
+
+    items = plan_items_for(user.id, week_start)
+    todo = items if force else [i for i in items if not (i.ai_recommendation or '').strip()]
+    if not todo:
+        return 0
+
+    import json
+    import anthropic
+    client = anthropic.Anthropic()
+    resp = client.messages.create(
+        model=planner_model(),
+        # Thinking is on by default on this model and shares this ceiling with the
+        # response, so leave real headroom — a tight cap truncates mid-plan.
+        max_tokens=16000,
+        system=[{'type': 'text', 'text': PLANNER_SYSTEM_PROMPT,
+                 'cache_control': {'type': 'ephemeral'}}],
+        output_config={'format': {'type': 'json_schema', 'schema': PLANNER_OUTPUT_SCHEMA}},
+        messages=[{'role': 'user', 'content': json.dumps({
+            'salesperson': (user.name or '').split()[0] if user.name else 'there',
+            'tasks': _plan_ai_payload(todo),
+        }, ensure_ascii=False)}],
+    )
+    if resp.stop_reason == 'refusal':
+        # Nothing to salvage, and the deterministic text is already a decent
+        # answer — better than substituting prose we can't inspect.
+        print(f'[PLANNER] model declined the request for user {user.id}; keeping fallback text')
+        return 0
+
+    text = ''.join(b.text for b in resp.content if b.type == 'text').strip()
+    if not text:
+        return 0
+    data = json.loads(text)
+
+    by_cat = {i.category: i for i in todo}
+    written = 0
+    for rec in data.get('recommendations', []):
+        item = by_cat.get(rec.get('category'))
+        body = (rec.get('recommendation') or '').strip()
+        if item and body:
+            item.ai_recommendation = body
+            written += 1
+    brief = (data.get('brief') or '').strip()
+    if brief:
+        # AppSetting.value is 300 chars; the brief is prose, so give it its own room.
+        set_setting(f'planbrief:{user.id}:{week_start.isoformat()}', brief[:300])
+    db.session.commit()
+    print(f'[PLANNER] wrote {written} recommendations for {user.name} '
+          f'({resp.usage.input_tokens} in / {resp.usage.output_tokens} out, '
+          f'{resp.usage.cache_read_input_tokens} cached)')
+    return written
+
+def plan_brief_for(user_id, week_start):
+    return get_setting(f'planbrief:{user_id}:{week_start.isoformat()}')
+
+
+# ── Market & regulatory research (live web search, citations shown) ───────────
+
+PLANNER_RESEARCH_PROMPT = """You are researching UAE business-setup and compliance news for a \
+Dubai firm's sales team. Search the web and report only what you can source.
+
+Return at most two findings, each one that a salesperson could usefully raise with clients:
+1. A government or regulatory update (deadlines, new requirements, fee changes) affecting UAE \
+   companies in the jurisdictions listed.
+2. A market or competitive item (free zone promotions, package pricing, competitor moves).
+
+Hard rules:
+- Only report something you actually found in a search result. Do not recall it from memory.
+- Give the publication date. If you cannot establish that an item is current, say so in the \
+  recommendation rather than presenting it as new.
+- Say plainly how many of the firm's clients it affects, using the counts provided — do not \
+  invent client names.
+- Keep each recommendation to 40-70 words, written to the salesperson."""
+
+def _plan_client_profile(ctx):
+    """Aggregate-only context for the research call — counts and categories, never
+    client names. There is no reason to send the client book to a search query."""
+    juris, activities, statuses = {}, {}, {}
+    for c in ctx.customers:
+        juris[c.jurisdiction or 'Unspecified'] = juris.get(c.jurisdiction or 'Unspecified', 0) + 1
+        if c.business_activity:
+            key = c.business_activity.strip()[:40]
+            activities[key] = activities.get(key, 0) + 1
+        statuses[c.ac_status or 'Unspecified'] = statuses.get(c.ac_status or 'Unspecified', 0) + 1
+    return {'total_clients': len(ctx.customers), 'by_jurisdiction': juris,
+            'by_activity': activities, 'by_status': statuses}
+
+def generate_plan_market_research(user, week_start):
+    """Add the market/regulatory rows using live web search, storing the source
+    links so a rep can verify before repeating anything to a client. Entirely
+    optional — the plan is complete and correct without it."""
+    if not os.environ.get('ANTHROPIC_API_KEY'):
+        return 0
+    if not automation_on('auto_planner_research'):
+        return 0
+
+    import json
+    import anthropic
+    ctx = PlanContext(user)
+    client = anthropic.Anthropic()
+    tools = [{'type': 'web_search_20260209', 'name': 'web_search', 'max_uses': 6}]
+    messages = [{'role': 'user', 'content': json.dumps({
+        'today': ctx.today.isoformat(),
+        'client_profile': _plan_client_profile(ctx),
+    })}]
+
+    resp = client.messages.create(
+        model=planner_model(), max_tokens=16000,
+        system=[{'type': 'text', 'text': PLANNER_RESEARCH_PROMPT,
+                 'cache_control': {'type': 'ephemeral'}}],
+        tools=tools, messages=messages,
+    )
+    # A long server-tool turn can pause; resend to let it continue where it left off.
+    for _ in range(4):
+        if resp.stop_reason != 'pause_turn':
+            break
+        messages = messages + [{'role': 'assistant', 'content': resp.content}]
+        resp = client.messages.create(
+            model=planner_model(), max_tokens=16000,
+            system=[{'type': 'text', 'text': PLANNER_RESEARCH_PROMPT,
+                     'cache_control': {'type': 'ephemeral'}}],
+            tools=tools, messages=messages)
+    if resp.stop_reason == 'refusal':
+        print(f'[PLANNER] research declined for user {user.id}')
+        return 0
+
+    # Collect citations. On success a web_search_tool_result carries a LIST of
+    # results; on failure the same field is a single error object — hence the check.
+    citations, findings = [], []
+    for block in resp.content:
+        if block.type == 'web_search_tool_result':
+            results = getattr(block, 'content', None)
+            if isinstance(results, list):
+                for r in results:
+                    url = getattr(r, 'url', None)
+                    title = getattr(r, 'title', None) or url
+                    if url:
+                        citations.append({'title': (title or '')[:60], 'url': url})
+            else:
+                print(f'[PLANNER] web search error: {getattr(results, "error_code", results)}')
+        elif block.type == 'text' and block.text.strip():
+            findings.append(block.text.strip())
+
+    if not findings:
+        return 0
+    body = '\n\n'.join(findings)
+    # De-dupe citations by URL, keep the first few.
+    seen, cites = set(), []
+    for c in citations:
+        if c['url'] not in seen:
+            seen.add(c['url'])
+            cites.append(c)
+    cites = cites[:4]
+
+    item = WorkPlanItem.query.filter_by(user_id=user.id, week_start=week_start,
+                                        category='market_research').first()
+    if not item:
+        item = WorkPlanItem(user_id=user.id, week_start=week_start,
+                            category='market_research', carry_count=1)
+        db.session.add(item)
+    item.section = 'market'
+    item.chip = 'Research'
+    item.title = 'Market & regulatory updates worth sharing'
+    item.detail_json = json.dumps([
+        _plan_detail(f'{len(ctx.customers)} clients in your book', 'matched by jurisdiction',
+                     tone='grey')])
+    item.source_note = 'Live web search — verify the source before telling a client'
+    item.amount_label = 'Client value'
+    item.ai_recommendation = body[:2000]
+    item.fallback_text = ('Market research did not return a usable result this week. '
+                          'Nothing to share unless you have your own source.')
+    item.citations_json = json.dumps(cites)
+    item.score = PLAN_SECTION_BASE_SCORE['market']
+    item.sort_order = 900
+    db.session.commit()
+    print(f'[PLANNER] research row written for {user.name} with {len(cites)} citations')
+    return 1
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@app.route('/planner')
+@login_required
+def work_planner():
+    """The weekly AI work plan. Generates on first visit so a rep never lands on
+    an empty page waiting for Monday's cron."""
+    week_start = plan_week_start()
+    arg = request.args.get('week')
+    if arg:
+        try:
+            week_start = plan_week_start(datetime.strptime(arg, '%Y-%m-%d'))
+        except Exception:
+            pass
+
+    # Admins own no client book of their own, so let them review a rep's plan.
+    user = User.query.get(session['user_id'])
+    viewing_other = False
+    if session.get('role') == 'admin' and request.args.get('user_id'):
+        try:
+            other = User.query.get(int(request.args['user_id']))
+            if other:
+                user, viewing_other = other, True
+        except Exception:
+            pass
+
+    if not WorkPlanItem.query.filter_by(user_id=user.id, week_start=week_start).first():
+        try:
+            generate_weekly_plan(user, week_start)
+        except Exception as e:
+            db.session.rollback()
+            print(f'[PLANNER] generate failed for user {user.id}: {e}')
+            flash('Could not build the plan just now — please try Regenerate.')
+        # The rows are already complete and readable without this; if the AI step
+        # fails we keep the deterministic text rather than blocking the page.
+        for step in (generate_plan_recommendations, generate_plan_market_research):
+            try:
+                step(user, week_start)
+            except Exception as e:
+                db.session.rollback()
+                print(f'[PLANNER] {step.__name__} failed for user {user.id}: {e}')
+
+    data = plan_page_context(user, week_start)
+    return render_template('work_planner.html',
+        now=now_dubai(), week_start=week_start, week_end=week_start + timedelta(days=6),
+        plan_user=user, viewing_other=viewing_other,
+        reps=(plan_eligible_users() if session.get('role') == 'admin' else []),
+        section_labels=PLAN_SECTION_LABELS, statuses=PLAN_STATUSES,
+        ai_brief=plan_brief_for(user.id, week_start),
+        **data)
+
+@app.route('/planner/regenerate', methods=['POST'])
+@login_required
+def work_planner_regenerate():
+    """Refresh the computed facts for this week, keeping every status the rep set."""
+    week_start = plan_week_start()
+    user_id = session['user_id']
+    if session.get('role') == 'admin' and request.form.get('user_id'):
+        try:
+            user_id = int(request.form['user_id'])
+        except Exception:
+            pass
+    user = User.query.get_or_404(user_id)
+    rewrite = request.form.get('rewrite') == '1'
+    try:
+        created, updated, _ = generate_weekly_plan(user, week_start)
+        wrote = generate_plan_recommendations(user, week_start, force=rewrite)
+        flash(f'Plan refreshed — {created} new, {updated} updated'
+              + (f', {wrote} recommendations rewritten.' if wrote else '.'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Could not refresh the plan: {e}')
+    return redirect(url_for('work_planner', **({'user_id': user_id}
+                                               if user_id != session['user_id'] else {})))
+
+@app.route('/planner/item/<int:item_id>/status', methods=['POST'])
+@login_required
+def work_planner_set_status(item_id):
+    item = WorkPlanItem.query.get_or_404(item_id)
+    if item.user_id != session['user_id'] and session.get('role') != 'admin':
+        flash('That plan item is not yours.')
+        return redirect(url_for('work_planner'))
+    new_status = (request.form.get('status') or '').strip()
+    if new_status not in PLAN_STATUSES:
+        flash('Unknown status.')
+        return redirect(url_for('work_planner'))
+    item.status = new_status
+    item.actioned_at = now_dubai() if new_status != 'Pending' else None
+    if new_status == 'Skip':
+        item.skip_reason = (request.form.get('reason') or '').strip()[:200]
+    db.session.commit()
+    if request.form.get('ajax'):
+        return jsonify({'ok': True, 'status': item.status})
+    return redirect(url_for('work_planner',
+                            **({'user_id': item.user_id}
+                               if item.user_id != session['user_id'] else {})))
+
+@app.route('/cron/generate-weekly-plan')
+def cron_generate_weekly_plan():
+    """Build every rep's plan for the current week. Intended for a Monday-morning
+    scheduler. GET /cron/generate-weekly-plan?key=CRON_KEY"""
+    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+        return 'Forbidden', 403
+    if not automation_on('auto_weekly_planner'):
+        return jsonify({'skipped': 'auto_weekly_planner is off'})
+    week_start = plan_week_start()
+    results, total_new = [], 0
+    for u in plan_eligible_users():
+        row = {'user': u.name}
+        try:
+            created, updated, suppressed = generate_weekly_plan(u, week_start)
+            total_new += created
+            row.update({'created': created, 'updated': updated, 'suppressed': suppressed})
+        except Exception as e:
+            db.session.rollback()
+            row['error'] = str(e)
+            results.append(row)
+            continue
+        # AI steps are best-effort: a failure here leaves a complete, readable plan
+        # built from the deterministic text, so never fail the whole run for it.
+        for key, step in (('ai', generate_plan_recommendations),
+                          ('research', generate_plan_market_research)):
+            try:
+                row[key] = step(u, week_start)
+            except Exception as e:
+                db.session.rollback()
+                row[f'{key}_error'] = str(e)
+        results.append(row)
+    _mark_run('weekly_planner', f'{len(results)} reps, {total_new} new items')
+    return jsonify({'week_start': week_start.isoformat(), 'reps': results})
 
 from reports import reports_bp
 app.register_blueprint(reports_bp)
