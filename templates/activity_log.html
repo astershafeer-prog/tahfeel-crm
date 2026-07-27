@@ -357,10 +357,17 @@
             <tr style="border-bottom:1px solid var(--border-light);">
               <td style="padding:9px 12px;color:var(--text-muted);">{{ loop.index }}</td>
               <td style="padding:9px 12px;font-weight:500;" id="at-label-{{ at.id }}">{{ at.label }}</td>
-              <td style="padding:9px 12px;text-align:center;font-weight:600;color:var(--primary);" id="at-target-{{ at.id }}">{{ at.weekly_target|int if at.weekly_target == (at.weekly_target|int) else at.weekly_target }}</td>
+              {# `or 0` guards a NULL target: without it the comparison below renders
+                 the literal "None" into the page and into the JS call. #}
+              {% set _wt = at.weekly_target or 0 %}
+              <td style="padding:9px 12px;text-align:center;font-weight:600;color:var(--primary);" id="at-target-{{ at.id }}">{{ _wt|int if _wt == (_wt|int) else _wt }}</td>
               <td style="padding:9px 12px;text-align:center;">
                 <div id="at-actions-{{ at.id }}" style="display:flex;gap:6px;justify-content:center;">
-                  <button onclick="editActivity({{ at.id }}, '{{ at.label|replace("'","\'") }}', {{ at.weekly_target }})" class="ib" title="Edit">✏</button>
+                  {# tojson emits valid JS literals and quotes them itself. The previous
+                     hand-rolled escaping was a no-op — replace("'", "\'") is replace("'", "'")
+                     in Jinja — so a label containing an apostrophe broke out of the string
+                     and killed the handler, and a NULL target emitted bare `None`. #}
+                  <button onclick="editActivity({{ at.id }}, {{ (at.label or '')|tojson }}, {{ _wt|tojson }})" class="ib" title="Edit">✏</button>
                   <a href="/admin/activity-type/{{ at.id }}/delete" class="ib ib-del" onclick="return confirm('Remove activity? Historical data will be preserved.')" title="Delete">🗑</a>
                 </div>
                 <form id="at-form-{{ at.id }}" method="post" action="/admin/activity-type/{{ at.id }}/edit" style="display:none;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">
