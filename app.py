@@ -2889,7 +2889,12 @@ def admin_panel():
     aod_unverified_count = len([c for c in _ac_opening_date_suspects() if not c.ac_opening_date_confirmed])
     renewal_costs = DocRenewalCost.query.order_by(DocRenewalCost.doc_type, DocRenewalCost.jurisdiction).all()
     # Moved here from the Daily Log page 2026-07-27 — only an admin could use it there.
-    activity_types = ActivityType.query.order_by(ActivityType.sort_order, ActivityType.id).all()
+    # Must filter to active=True: a soft-deleted type has active=False but the row
+    # is never removed from the database, only hidden — querying without this
+    # filter shows every "removed" activity forever, which is exactly the bug
+    # reported (delete says "removed" but the row never actually disappears).
+    activity_types = ActivityType.query.filter_by(active=True) \
+        .order_by(ActivityType.sort_order, ActivityType.id).all()
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
                            wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi,
