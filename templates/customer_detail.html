@@ -350,6 +350,7 @@
               {% endif %}
             </td>
             <td style="white-space:nowrap;">
+              {% if session.role in ['admin', 'operations'] %}
               <a href="/documents/{{ doc.id }}/edit?next=/customers/{{ customer.id }}"
                  style="color:var(--primary);font-size:12px;text-decoration:none;font-weight:600;margin-right:10px;">✏ Edit</a>
               <form method="POST" action="/documents/{{ doc.id }}/delete?next=/customers/{{ customer.id }}"
@@ -357,6 +358,7 @@
                 <button type="submit" style="background:none;border:none;padding:0;color:var(--danger);
                         font-size:12px;font-weight:600;cursor:pointer;">🗑 Delete</button>
               </form>
+              {% else %}<span style="color:var(--text-muted);font-size:12px;">—</span>{% endif %}
             </td>
           </tr>
           {% endfor %}
