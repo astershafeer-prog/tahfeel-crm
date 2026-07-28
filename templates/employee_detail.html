@@ -84,7 +84,11 @@
               <td>{% if d.file_url %}<a href="/documents/{{ d.id }}/file" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>
               <td style="white-space:nowrap;">
                 <a href="/documents/{{ d.id }}/edit?next=/employees/{{ emp.id }}" style="color:#1A3B8B;font-size:12px;text-decoration:none;font-weight:600;margin-right:10px;">✏ Edit</a>
-                <a href="/documents/{{ d.id }}/delete?next=/employees/{{ emp.id }}" onclick="return confirm('Remove this document?')" style="color:#DC2626;font-size:12px;text-decoration:none;font-weight:600;">🗑 Delete</a>
+                <form method="POST" action="/documents/{{ d.id }}/delete?next=/employees/{{ emp.id }}"
+                      style="display:inline;" onsubmit="return confirm('Remove this document?')">
+                  <button type="submit" style="background:none;border:none;padding:0;color:#DC2626;
+                          font-size:12px;font-weight:600;cursor:pointer;">🗑 Delete</button>
+                </form>
               </td>
             </tr>
             {% else %}
