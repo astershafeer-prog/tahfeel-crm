@@ -86,12 +86,40 @@
           </label>
 
           <!-- 5. Monthly compliance report (Email) -->
-          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;border-bottom:1px solid #EEF2F7;">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;">
             <input type="checkbox" name="auto_monthly_report" value="on" {{ 'checked' if autos.auto_monthly_report }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📊 Monthly compliance report — Email</span>
               <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Email · on the 1st of each month, every alerts-enabled customer gets their full document-status report.</span>
               {% if runs.monthly_report %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.monthly_report }}</span>{% endif %}
+            </span>
+          </label>
+
+          <!-- 6. AI Work Planner: weekly plan generation -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;">
+            <input type="checkbox" name="auto_weekly_planner" value="on" {{ 'checked' if autos.auto_weekly_planner }} style="width:18px;height:18px;margin-top:2px;">
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-primary);">🧠 AI Work Planner — generate weekly plan</span>
+              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Internal only, sends nothing to clients · every Monday morning, builds each sales rep's ranked action plan (renewals, leads, compliance, prospecting) from CRM data. Turning this off stops new plans being generated but does not remove the page.</span>
+              {% if runs.weekly_planner %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.weekly_planner }}</span>{% endif %}
+            </span>
+          </label>
+
+          <!-- 7. AI Work Planner: AI-written recommendations -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;">
+            <input type="checkbox" name="auto_planner_ai" value="on" {{ 'checked' if autos.auto_planner_ai }} style="width:18px;height:18px;margin-top:2px;">
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-primary);">✎ AI Work Planner — AI-written advice</span>
+              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Uses your Anthropic (Claude) API key · writes the recommendation text for each plan row. Every fact — names, dates, AED amounts — is always computed from your CRM data regardless of this setting; this only controls whether Claude phrases the advice or the plan falls back to plain, rule-based wording.</span>
+            </span>
+          </label>
+
+          <!-- 8. AI Work Planner: live web research -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;border-bottom:1px solid #EEF2F7;">
+            <input type="checkbox" name="auto_planner_research" value="on" {{ 'checked' if autos.auto_planner_research }} style="width:18px;height:18px;margin-top:2px;">
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-primary);">🌐 AI Work Planner — market &amp; regulatory research</span>
+              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Uses live web search · adds one row per week on UAE regulatory updates or market/competitor moves, with source links shown so a rep can verify before repeating anything to a client.</span>
             </span>
           </label>
 
@@ -461,6 +489,75 @@
       </div></div>
     </details>
 
+    <!-- Activity Types (Daily Log) — moved here from the Daily Log page 2026-07-27:
+         only an admin can add/edit/remove these, so a rep opening their own daily
+         numbers screen had no use for this section sitting on it. -->
+    <details class="acc" id="activity-types">
+      <summary>📋 Activity Types (Daily Log)</summary>
+      <div class="acc-inner">
+      <div style="padding:14px 18px;">
+        <div style="font-size:12.5px;color:#64748B;margin-bottom:12px;line-height:1.6;">
+          Add, edit or remove the activities tracked on every sales rep's Daily Log page,
+          and set each one's weekly target.
+        </div>
+        <form method="post" action="/admin/activity-type/add" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="filter-group">
+            <label style="font-size:11px;color:#64748B;">Activity Name *</label>
+            <input type="text" name="label" placeholder="e.g. Cold Email Campaign" required style="padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;min-width:260px;">
+          </div>
+          <div class="filter-group">
+            <label style="font-size:11px;color:#64748B;">Weekly Target</label>
+            <input type="number" name="weekly_target" value="5" min="0.1" step="0.1" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;width:80px;">
+          </div>
+          <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">+ Add Activity</button>
+        </form>
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">#</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Activity Name</th>
+            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Weekly Target</th>
+            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Actions</th>
+          </tr></thead>
+          <tbody>
+            {% for at in activity_types %}
+            <tr style="border-bottom:1px solid var(--border-light);">
+              <td style="padding:9px 12px;color:var(--text-muted);">{{ loop.index }}</td>
+              <td style="padding:9px 12px;font-weight:500;" id="at-label-{{ at.id }}">{{ at.label }}</td>
+              {# `or 0` guards a NULL target: without it the comparison below renders
+                 the literal "None" into the page and into the JS call. #}
+              {% set _wt = at.weekly_target or 0 %}
+              <td style="padding:9px 12px;text-align:center;font-weight:600;color:var(--primary);" id="at-target-{{ at.id }}">{{ _wt|int if _wt == (_wt|int) else _wt }}</td>
+              <td style="padding:9px 12px;text-align:center;">
+                <div id="at-actions-{{ at.id }}" style="display:flex;gap:6px;justify-content:center;">
+                  {# tojson emits valid JS literals and quotes them itself — see the
+                     Daily Log delete-button fix earlier this session for why that
+                     matters (a NULL target or an apostrophe in the label used to
+                     break this exact button). #}
+                  <button onclick="editActivity({{ at.id }}, {{ (at.label or '')|tojson }}, {{ _wt|tojson }})" class="ib" title="Edit">✏</button>
+                  <form method="POST" action="/admin/activity-type/{{ at.id }}/delete" style="display:inline;"
+                        onsubmit="return confirm('Remove activity? Historical data will be preserved.')">
+                    <button type="submit" class="ib ib-del" title="Delete">🗑</button>
+                  </form>
+                </div>
+                <form id="at-form-{{ at.id }}" method="post" action="/admin/activity-type/{{ at.id }}/edit" style="display:none;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">
+                  <input type="text" name="label" id="at-input-label-{{ at.id }}" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:220px;">
+                  <input type="number" name="weekly_target" id="at-input-target-{{ at.id }}" step="0.1" min="0.1" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:65px;">
+                  <button type="submit" style="background:var(--success);color:white;padding:5px 12px;border-radius:5px;border:none;font-size:12px;cursor:pointer;">Save</button>
+                  <button type="button" onclick="cancelEdit({{ at.id }})" style="background:white;color:var(--text-secondary);padding:5px 10px;border-radius:5px;border:1px solid var(--border);font-size:12px;cursor:pointer;">Cancel</button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-light);">No activities yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+      </div>
+    </details>
+
     <!-- Tasks & Documents -->
     <details class="acc">
       <summary>💼 Tasks &amp; Documents</summary>
@@ -791,6 +888,17 @@ Every service task is priced here — Cost Price stays internal (never shown in 
     function caCancel(id) { document.getElementById('ca-view-'+id).style.display='flex'; document.getElementById('ca-form-'+id).style.display='none'; }
     function dtEdit(id) { document.getElementById('dt-view-'+id).style.display='none'; document.getElementById('dt-form-'+id).style.display='flex'; }
     function dtCancel(id) { document.getElementById('dt-view-'+id).style.display='flex'; document.getElementById('dt-form-'+id).style.display='none'; }
+    function editActivity(id, label, target) {
+      document.getElementById('at-actions-' + id).style.display = 'none';
+      const form = document.getElementById('at-form-' + id);
+      form.style.display = 'flex';
+      document.getElementById('at-input-label-' + id).value = label;
+      document.getElementById('at-input-target-' + id).value = target;
+    }
+    function cancelEdit(id) {
+      document.getElementById('at-form-' + id).style.display = 'none';
+      document.getElementById('at-actions-' + id).style.display = 'flex';
+    }
     function rcEdit(id) { document.getElementById('rc-view-'+id).style.display='none'; document.getElementById('rc-form-row-'+id).style.display=''; }
     function rcCancel(id) { document.getElementById('rc-view-'+id).style.display=''; document.getElementById('rc-form-row-'+id).style.display='none'; }
     function rcFilter(input) {

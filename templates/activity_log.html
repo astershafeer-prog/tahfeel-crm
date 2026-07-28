@@ -335,74 +335,6 @@
     {% endif %}
     {% endif %}
 
-    <!-- Admin: Manage Activity Types -->
-    {% if session.role == 'admin' %}
-    <div class="card" style="margin-top:20px;">
-      <div class="card-header">
-        <h2>⚙ Manage Activity Types</h2>
-        <span style="font-size:11px;color:var(--text-muted);">Add, edit or remove tracked activities and their daily targets</span>
-      </div>
-      <div class="card-body">
-        <form method="post" action="/admin/activity-type/add" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
-          <div class="filter-group">
-            <label>Activity Name *</label>
-            <input type="text" name="label" placeholder="e.g. Cold Email Campaign" required style="padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;min-width:260px;">
-          </div>
-          <div class="filter-group">
-            <label>Weekly Target</label>
-            <input type="number" name="weekly_target" value="5" min="0.1" step="0.1" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;width:80px;">
-          </div>
-          <button type="submit" class="btn-primary">+ Add Activity</button>
-        </form>
-        <hr class="divider">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead><tr>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">#</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Activity Name</th>
-            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Weekly Target</th>
-            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Actions</th>
-          </tr></thead>
-          <tbody>
-            {% for at in activity_types %}
-            <tr style="border-bottom:1px solid var(--border-light);">
-              <td style="padding:9px 12px;color:var(--text-muted);">{{ loop.index }}</td>
-              <td style="padding:9px 12px;font-weight:500;" id="at-label-{{ at.id }}">{{ at.label }}</td>
-              {# `or 0` guards a NULL target: without it the comparison below renders
-                 the literal "None" into the page and into the JS call. #}
-              {% set _wt = at.weekly_target or 0 %}
-              <td style="padding:9px 12px;text-align:center;font-weight:600;color:var(--primary);" id="at-target-{{ at.id }}">{{ _wt|int if _wt == (_wt|int) else _wt }}</td>
-              <td style="padding:9px 12px;text-align:center;">
-                <div id="at-actions-{{ at.id }}" style="display:flex;gap:6px;justify-content:center;">
-                  {# tojson emits valid JS literals and quotes them itself. The previous
-                     hand-rolled escaping was a no-op — replace("'", "\'") is replace("'", "'")
-                     in Jinja — so a label containing an apostrophe broke out of the string
-                     and killed the handler, and a NULL target emitted bare `None`. #}
-                  <button onclick="editActivity({{ at.id }}, {{ (at.label or '')|tojson }}, {{ _wt|tojson }})" class="ib" title="Edit">✏</button>
-                  {# A real POST form instead of a plain link — this is the exact
-                     button that prompted the fix; the .ib/.ib-del classes apply
-                     to a <button> the same way they did to the <a>. #}
-                  <form method="POST" action="/admin/activity-type/{{ at.id }}/delete" style="display:inline;"
-                        onsubmit="return confirm('Remove activity? Historical data will be preserved.')">
-                    <button type="submit" class="ib ib-del" title="Delete">🗑</button>
-                  </form>
-                </div>
-                <form id="at-form-{{ at.id }}" method="post" action="/admin/activity-type/{{ at.id }}/edit" style="display:none;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">
-                  <input type="text" name="label" id="at-input-label-{{ at.id }}" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:220px;">
-                  <input type="number" name="weekly_target" id="at-input-target-{{ at.id }}" step="0.1" min="0.1" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:12px;width:65px;">
-                  <button type="submit" style="background:var(--success);color:white;padding:5px 12px;border-radius:5px;border:none;font-size:12px;cursor:pointer;">Save</button>
-                  <button type="button" onclick="cancelEdit({{ at.id }})" style="background:white;color:var(--text-secondary);padding:5px 10px;border-radius:5px;border:1px solid var(--border);font-size:12px;cursor:pointer;">Cancel</button>
-                </form>
-              </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-light);">No activities yet.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endif %}
-
   </div>
 
   <script>
@@ -503,19 +435,6 @@
       document.getElementById('offDayInput').value = '';
       document.getElementById('activityFields').style.opacity = '1';
       document.getElementById('activityFields').style.pointerEvents = 'auto';
-    }
-
-    // Activity type inline edit — admin only
-    function editActivity(id, label, target) {
-      document.getElementById('at-actions-' + id).style.display = 'none';
-      const form = document.getElementById('at-form-' + id);
-      form.style.display = 'flex';
-      document.getElementById('at-input-label-' + id).value = label;
-      document.getElementById('at-input-target-' + id).value = target;
-    }
-    function cancelEdit(id) {
-      document.getElementById('at-form-' + id).style.display = 'none';
-      document.getElementById('at-actions-' + id).style.display = 'flex';
     }
   </script>
 </body>
