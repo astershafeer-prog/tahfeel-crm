@@ -13,8 +13,8 @@
   {{ nav('add_lead') }}
   <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}{% for msg in messages %}
-        <div class="flash">{{ msg }}</div>
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {{ 'error' if cat == 'error' else ('warning' if cat == 'warning' else '') }}">{{ msg }}</div>
       {% endfor %}{% endif %}
     {% endwith %}
     <div class="grid">
