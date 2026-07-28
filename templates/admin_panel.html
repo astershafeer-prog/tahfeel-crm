@@ -892,5 +892,25 @@ Every service task is priced here — Cost Price stays internal (never shown in 
     function paEdit(id) { document.getElementById('pa-view-'+id).style.display='none'; document.getElementById('pa-form-'+id).style.display='flex'; }
     function paCancel(id) { document.getElementById('pa-view-'+id).style.display='flex'; document.getElementById('pa-form-'+id).style.display='none'; }
   </script>
+  <script>
+    // Every "Save"/"Add" action on this page redirects back to
+    // /admin#<section-id> so the page returns to the section you were in —
+    // but a <details> with no `open` attribute renders collapsed by default,
+    // and merely being the link target does not open it (that auto-open
+    // behaviour only applies when the target is a descendant INSIDE a closed
+    // <details>, not when the id is on the <details> itself, which is the case
+    // for every accordion on this page). Without this, every accordion here —
+    // not just Activity Types — re-collapses after any save and has to be
+    // reopened by hand.
+    (function () {
+      var hash = (window.location.hash || '').slice(1);
+      if (!hash) return;
+      var el = document.getElementById(hash);
+      if (el && el.tagName === 'DETAILS') {
+        el.open = true;
+        el.scrollIntoView({ block: 'start' });
+      }
+    })();
+  </script>
 </body>
 </html>
