@@ -2019,49 +2019,34 @@ def dashboard():
             total_monthly_target = 0
         staff_stats = []
         for u in users:
-            u_leads = [l for l in all_leads_db if l.assigned_to == u.id and in_period(l.created_at, wl_filter)]
+            # Leads "in hand": everything assigned to them that isn't closed out yet
+            # (includes New/Initiated/Future/etc.), regardless of when the lead was
+            # created — this is a snapshot of current workload, not a monthly count.
+            u_leads_all = [l for l in all_leads_db if l.assigned_to == u.id]
+            u_leads_in_hand = len([l for l in u_leads_all if l.status not in ('Lost', 'Converted')])
             u_jobs_all = [j for j in all_jobs_db if j.assigned_to == u.id]
-            u_jobs = [j for j in u_jobs_all if in_period(j.created_at, wl_filter)]
-            u_closed = [j for j in u_jobs_all if j.status == 'Closed']
-            # Sales value: credited to the customer's representative (assigned_to on customer)
-            u_sales_jobs = [j for j in all_jobs_db if j.customer and j.customer.assigned_to == u.id and in_period(j.created_at, wl_filter)]
-            u_sales_closed = [j for j in all_jobs_db if j.customer and j.customer.assigned_to == u.id and j.status == 'Closed']
-            u_invoiced = sum((j.amount_invoiced or 0) for j in u_sales_jobs if j.status not in ['Pending Finance Approval'])
-            u_closed_val = sum((j.amount_received or 0) for j in u_sales_closed)
-            
-            # Initiated = leads where staff took action (status NOT "New")
-            u_initiated = len([l for l in u_leads if l.status != 'New'])
-            
-            # New leads = leads with status "New" (not yet contacted)
-            u_new_leads = len([l for l in u_leads if l.status == 'New'])
-            
+            u_active_jobs = len([j for j in u_jobs_all if j.status not in ['Done', 'Closed', 'Pending Finance Approval']])
+            # Revenue: recognized THIS month (cash-basis via revenue_date), same rule the
+            # dashboard's own "Revenue (Closed)" total above uses — credited to the
+            # customer's sales rep (customer.assigned_to), across all of their jobs
+            # regardless of when each job itself was created.
+            u_sales_jobs_all = [j for j in all_jobs_db if j.customer and j.customer.assigned_to == u.id]
             try:
-                u_revenue = sum((j.revenue or 0) for j in u_sales_closed)
-                # Add partial revenues from non-closed jobs for this staff
-                for j in u_sales_jobs:
-                    if j.status not in ['Closed', 'Closed - Pending Partner Commission']:
-                        u_revenue += sum(pr.amount for pr in j.partial_revenues)
+                u_revenue = sum((j.revenue or 0) for j in u_sales_jobs_all
+                                 if j.status in ('Closed', 'Closed - Pending Partner Commission')
+                                 and in_period(j.revenue_date, wl_filter))
+                for j in u_sales_jobs_all:
+                    for pr in j.partial_revenues:
+                        if in_period(pr.revenue_date, wl_filter):
+                            u_revenue += pr.amount
             except:
                 u_revenue = 0
-            t = staff_targets.get(u.id)
-            amount_target = (t.amount_target or 0) if t else 0
             staff_stats.append({
                 'name': u.name,
                 'role': u.role,
-                'leads': len(u_leads),
-                'initiated': u_initiated,
-                'new_leads': u_new_leads,
-                'overdue_leads': len([l for l in u_leads if l.due_date and l.due_date < now and l.status not in ['Converted','Lost']]),
-                'conversions': len([l for l in u_leads if l.status == 'Converted']),
-                'lost': len([l for l in u_leads if l.status == 'Lost']),
-                'future': len([l for l in u_leads if l.status == 'Future']),
-                'active_jobs': len([j for j in u_jobs_all if j.status not in ['Done','Closed','Pending Finance Approval']]),
-                'overdue_jobs': len([j for j in u_jobs_all if j.due_date and j.due_date < now and j.status not in ['Done','Closed','Pending Finance Approval']]),
-                'invoiced': u_invoiced,
-                'closed_val': u_closed_val,
+                'leads': u_leads_in_hand,
+                'active_jobs': u_active_jobs,
                 'revenue': u_revenue,
-                'amount_target': amount_target,
-                'leads_this_month': len(u_leads),
             })
         today_leads = [l for l in all_leads_db if l.created_at and l.created_at.date() == now.date()][:10]
 
