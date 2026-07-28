@@ -1,5 +1,6 @@
 # v19
 import os
+import hmac
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -150,6 +151,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS only
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20MB cap on any single request body/upload
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tahfeel.db')).replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -1459,6 +1461,13 @@ def finance_required(f):
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated
+
+def _valid_cron_key():
+    """Constant-time check for ?key= against CRON_KEY. Fails closed if CRON_KEY is unset."""
+    expected = os.environ.get('CRON_KEY')
+    if not expected:
+        return False
+    return hmac.compare_digest(request.args.get('key', ''), expected)
 
 def apply_lead_filters(leads, args, now):
     date_filter = args.get('date')
@@ -6083,6 +6092,9 @@ def edit_employee(employee_id):
 @app.route('/employees/<int:employee_id>/delete', methods=['POST'])
 @login_required
 def delete_employee(employee_id):
+    if session['role'] not in ['admin', 'operations']:
+        flash('Access denied')
+        return redirect(url_for('customer_detail', customer_id=Employee.query.get_or_404(employee_id).customer_id))
     e = Employee.query.get_or_404(employee_id)
     cid = e.customer_id
     Document.query.filter_by(employee_id=e.id).delete(synchronize_session=False)
@@ -6474,7 +6486,7 @@ def _doc_table_html(customer, items, intro, is_first_alert=False):
 @app.route('/cron/expiry-alerts')
 def cron_expiry_alerts():
     from flask import jsonify
-    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+    if not _valid_cron_key():
         return 'Forbidden', 403
     if not automation_on('auto_expiry_email'):
         return jsonify({'skipped': 'weekly document-expiry email is turned OFF in the admin panel'})
@@ -7060,7 +7072,7 @@ def cron_monthly_reports():
     """Monthly customer compliance reports — hit by external cron on the 1st.
     GET /cron/monthly-reports?key=CRON_KEY"""
     from flask import jsonify
-    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+    if not _valid_cron_key():
         return 'Forbidden', 403
     if not automation_on('auto_monthly_report'):
         return jsonify({'skipped': 'monthly compliance report is turned OFF in the admin panel'})
@@ -7107,7 +7119,7 @@ def cron_birthday_wishes():
     own mobile; skipped if none saved; resigned/terminated employees excluded).
     Once per person per year (dedupe). GET /cron/birthday-wishes?key=CRON_KEY"""
     from flask import jsonify
-    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+    if not _valid_cron_key():
         return 'Forbidden', 403
     if not automation_on('auto_birthday'):
         return jsonify({'skipped': 'birthday automation is turned OFF in the admin panel'})
@@ -7200,7 +7212,7 @@ def cron_expiry_wa():
     is exactly 7 or 3 days from expiry. Once per document per milestone (dedupe), and
     only for customers who have alerts enabled. GET /cron/expiry-wa?key=CRON_KEY"""
     from flask import jsonify
-    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+    if not _valid_cron_key():
         return 'Forbidden', 403
     if not automation_on('auto_expiry_wa'):
         return jsonify({'skipped': 'expiry-WhatsApp automation is turned OFF in the admin panel'})
@@ -7471,8 +7483,11 @@ def document_whatsapp_remind(doc_id):
     """Send the approved expiry-reminder template (compliance_alert_v1) from the
     business number for one document — API path, logged to the CRM thread."""
     from whatsapp_webhook import send_template, log_message, normalize_phone
-    doc = Document.query.get_or_404(doc_id)
     back = request.referrer or url_for('documents')
+    if session['role'] not in ['sales', 'operations', 'admin']:
+        flash('Access denied')
+        return redirect(back)
+    doc = Document.query.get_or_404(doc_id)
     tpl = wa_template_active('compliance_alert_v1')
     if not tpl:
         flash('Expiry-reminder template isn\'t active yet — activate compliance_alert_v1 in WhatsApp Templates.', 'error')
@@ -7636,6 +7651,10 @@ def edit_document(doc_id):
 @app.route('/documents/<int:doc_id>/delete', methods=['POST'])
 @login_required
 def delete_document(doc_id):
+    if session['role'] not in ['admin', 'operations']:
+        flash('Access denied')
+        next_url = request.args.get('next')
+        return _safe_redirect(next_url, 'documents')
     doc = Document.query.get_or_404(doc_id)
     db.session.delete(doc)
     db.session.commit()
@@ -10476,7 +10495,7 @@ def work_planner_set_status(item_id):
 def cron_generate_weekly_plan():
     """Build every rep's plan for the current week. Intended for a Monday-morning
     scheduler. GET /cron/generate-weekly-plan?key=CRON_KEY"""
-    if not os.environ.get('CRON_KEY') or request.args.get('key', '') != os.environ.get('CRON_KEY'):
+    if not _valid_cron_key():
         return 'Forbidden', 403
     if not automation_on('auto_weekly_planner'):
         return jsonify({'skipped': 'auto_weekly_planner is off'})
