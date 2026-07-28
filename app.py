@@ -2874,7 +2874,7 @@ def admin_panel():
     partners = Partner.query.order_by(Partner.name).all()
     wa_auto_welcome = automation_on('wa_auto_welcome')
     autos = {k: automation_on(k) for k in AUTOMATION_DEFAULTS}
-    runs = {k: get_setting(f'run_{k}') for k in ('birthday', 'expiry_wa', 'expiry_email', 'monthly_report')}
+    runs = {k: get_setting(f'run_{k}') for k in ('birthday', 'expiry_wa', 'expiry_email', 'monthly_report', 'weekly_planner')}
     capi = {
         'enabled': get_setting('capi_enabled', 'off') == 'on',
         'token_set': bool(get_setting('capi_token', '')),
@@ -2888,12 +2888,15 @@ def admin_panel():
     authorities = LicensingAuthority.query.order_by(LicensingAuthority.sort_order, LicensingAuthority.name).all()
     aod_unverified_count = len([c for c in _ac_opening_date_suspects() if not c.ac_opening_date_confirmed])
     renewal_costs = DocRenewalCost.query.order_by(DocRenewalCost.doc_type, DocRenewalCost.jurisdiction).all()
+    # Moved here from the Daily Log page 2026-07-27 — only an admin could use it there.
+    activity_types = ActivityType.query.order_by(ActivityType.sort_order, ActivityType.id).all()
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
                            wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi,
                            subtask_list=subtask_list, authorities=authorities,
                            aod_unverified_count=aod_unverified_count, renewal_costs=renewal_costs,
-                           price_jurisdictions=JURISDICTIONS_PRICE_LIST)
+                           price_jurisdictions=JURISDICTIONS_PRICE_LIST,
+                           activity_types=activity_types)
 
 @app.route('/admin/whatsapp-settings', methods=['POST'])
 @login_required
@@ -5578,18 +5581,30 @@ def activity_log():
             summary[field] = {'total': total, 'target': period_target, 'pct': pct}
         user_summaries[u.id] = {'user': u, 'summary': summary, 'logs': user_logs}
 
-    # Today's log for current user (for the entry form)
+    # Which day's entry the personal form shows/edits. Defaults to today, but the
+    # date picker's onchange reloads with ?entry_date=YYYY-MM-DD so a rep can pull
+    # up an earlier day and correct it — see checkExistingLog() in the template.
+    # This was previously broken: the picker called that function on every change,
+    # but it was never defined anywhere, so picking a past date did nothing and a
+    # rep had no way to load — and therefore no way to safely edit — an older
+    # entry without either guessing blindly or deleting and re-adding it.
+    entry_date = now.date()
+    _requested = request.args.get('entry_date')
+    if _requested:
+        try:
+            _d = datetime.strptime(_requested, '%Y-%m-%d').date()
+            if _d <= now.date():          # the field's `max` already blocks future dates client-side
+                entry_date = _d
+        except ValueError:
+            pass
+
     today_log = None
     if session['role'] == 'sales':
         today_log = ActivityLog.query.filter_by(
             user_id=session['user_id'],
-            log_date=now.date()
+            log_date=entry_date
         ).first()
 
-    try:
-        activity_types = ActivityType.query.filter_by(active=True).order_by(ActivityType.sort_order, ActivityType.id).all()
-    except Exception:
-        activity_types = []
     # The entry form has to read custom activities too, and Jinja's `attr` filter
     # only sees real model attributes — so hand the template a plain dict.
     today_values = {}
@@ -5599,11 +5614,11 @@ def activity_log():
                         for field, _label, _target in get_activities()}
     return render_template('activity_log.html',
                            activities=get_activities(),
-                           activity_types=activity_types,
                            user_summaries=user_summaries,
                            sales_users=sales_users,
                            today_log=today_log,
                            today_values=today_values,
+                           entry_date=entry_date,
                            from_date=from_date, to_date=to_date,
                            view=view, now=now)
 
@@ -5687,7 +5702,7 @@ def admin_add_activity_type():
     target = request.form.get('daily_target', '1').strip()
     if not label:
         flash('Activity name is required')
-        return redirect(url_for('activity_log'))
+        return redirect(url_for('admin_panel') + '#activity-types')
     # Generate a safe field_key from label
     import re as re_mod
     field_key = re_mod.sub(r'[^a-z0-9]', '_', label.lower())[:40]
@@ -5707,7 +5722,7 @@ def admin_add_activity_type():
     db.session.add(at)
     db.session.commit()
     flash(f'Activity "{label}" added')
-    return redirect(url_for('activity_log'))
+    return redirect(url_for('admin_panel') + '#activity-types')
 
 @app.route('/admin/activity-type/<int:type_id>/edit', methods=['POST'])
 @login_required
@@ -5721,7 +5736,7 @@ def admin_edit_activity_type(type_id):
         pass
     db.session.commit()
     flash(f'Activity updated')
-    return redirect(url_for('activity_log'))
+    return redirect(url_for('admin_panel') + '#activity-types')
 
 @app.route('/admin/activity-type/<int:type_id>/delete', methods=['POST'])
 @login_required
@@ -5731,7 +5746,7 @@ def admin_delete_activity_type(type_id):
     at.active = False  # Soft delete — preserve historical data
     db.session.commit()
     flash(f'Activity "{at.label}" removed')
-    return redirect(url_for('activity_log'))
+    return redirect(url_for('admin_panel') + '#activity-types')
 
 
 # ── Admin Edit Routes ─────────────────────────────────────────────────────────
