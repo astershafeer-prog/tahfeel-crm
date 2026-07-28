@@ -5727,20 +5727,6 @@ def admin_add_activity_type():
     flash(f'Activity "{label}" added')
     return redirect(url_for('admin_panel') + '#activity-types')
 
-@app.route('/admin/activity-type/<int:type_id>/edit', methods=['POST'])
-@login_required
-@admin_required
-def admin_edit_activity_type(type_id):
-    at = ActivityType.query.get_or_404(type_id)
-    at.label = request.form.get('label', at.label).strip()
-    try:
-        at.weekly_target = float(request.form.get('weekly_target', at.weekly_target))
-    except:
-        pass
-    db.session.commit()
-    flash(f'Activity updated')
-    return redirect(url_for('admin_panel') + '#activity-types')
-
 @app.route('/admin/activity-type/<int:type_id>/delete', methods=['POST'])
 @login_required
 @admin_required
@@ -7598,6 +7584,9 @@ def add_document():
 @app.route('/documents/<int:doc_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_document(doc_id):
+    if session['role'] not in ['admin', 'operations']:
+        flash('Access denied')
+        return _safe_redirect(request.args.get('next'), 'documents')
     doc = Document.query.get_or_404(doc_id)
     doc_types = DocType.query.order_by(DocType.name).all()
     customers = Customer.query.order_by(Customer.name).all()

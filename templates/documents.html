@@ -140,10 +140,12 @@
                   <button type="submit" class="doc-act" style="background:#128C7E;color:white;" title="Approved reminder from the business number — logged in the CRM, replies come to the inbox">📨 Reminder</button>
                 </form>
                 {% endif %}
+                {% if session.role in ['admin', 'operations'] %}
                 <a href="/documents/{{ doc.id }}/edit" class="doc-act" style="background:#F1F5F9;color:#334155;" title="Edit document">✏ Edit</a>
                 <form method="POST" action="/documents/{{ doc.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove this document?')">
                   <button type="submit" class="doc-act" style="background:#FEE2E2;color:#B91C1C;" title="Delete document">🗑</button>
                 </form>
+                {% endif %}
               </div>
             </td>
           </tr>
