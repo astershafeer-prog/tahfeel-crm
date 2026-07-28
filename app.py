@@ -1,6 +1,7 @@
 # v19
 import os
 import hmac
+from types import SimpleNamespace
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -2788,6 +2789,13 @@ def edit_lead(lead_id):
         flash('Lead updated successfully')
         return redirect(url_for('lead_detail', lead_id=lead_id))
     campaigns = Campaign.query.order_by(Campaign.name).all()
+    # Meta leads carry whatever campaign name Facebook/Instagram used at the time —
+    # never pre-registered in the admin Campaign list. If we don't offer it as an
+    # option here, the dropdown falls back to blank and the next save silently
+    # wipes the real campaign name. Add it as a one-off option so it stays selected
+    # and round-trips unchanged if nobody touches the field.
+    if lead.campaign and lead.campaign not in [c.name for c in campaigns]:
+        campaigns = [SimpleNamespace(name=lead.campaign)] + campaigns
     return render_template('edit_lead.html', lead=lead, users=users, services=services, sources=sources, campaigns=campaigns, now=now)
 
 @app.route('/leads/<int:lead_id>/delete', methods=['POST'])

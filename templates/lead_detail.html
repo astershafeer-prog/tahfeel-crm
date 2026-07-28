@@ -101,6 +101,12 @@
               <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Source</div>
               <div style="font-size:14px;color:var(--text-primary);">{{ lead.source or '—' }}{% if lead.sub_source %} · {{ lead.sub_source }}{% endif %}</div>
             </div>
+            {% if lead.campaign %}
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Campaign</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.campaign }}</div>
+            </div>
+            {% endif %}
             <div>
               <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Contact Attempts</div>
               <div style="font-size:14px;color:var(--text-primary);">{{ lead.attempts or 0 }}{% if lead.first_contacted_at %} · 1st reached {{ lead.first_contacted_at.strftime('%d %b') }}{% endif %}</div>
