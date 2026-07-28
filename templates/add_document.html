@@ -13,7 +13,7 @@
   {{ nav('documents') }}
   <div class="container" style="max-width:780px;">
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}{% for msg in messages %}
+      {% if messages %}{% for cat, msg in messages %}
       <div class="flash" style="display:flex;justify-content:space-between;align-items:center;">
         <span>✓ {{ msg }}</span>
         <a href="/documents" style="background:var(--primary);color:white;padding:5px 14px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">View All Documents →</a>
