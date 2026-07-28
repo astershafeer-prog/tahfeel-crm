@@ -2365,6 +2365,12 @@ def lead_detail(lead_id):
         if stage == 'Future' and not followup_dt:
             flash('Please pick a future revisit date for a Future lead.')
             return redirect(url_for('lead_detail', lead_id=lead_id))
+        # Activity is mandatory on every update — it's what drives the attempts
+        # counter, first-contact timestamp, and the Daily Log activity scorecard.
+        # "Note" is always available as the catch-all when nothing else fits.
+        if not activity_type:
+            flash('Please select what activity you did (use "Note" if nothing else fits).')
+            return redirect(url_for('lead_detail', lead_id=lead_id))
         # ── Lead quality is mandatory once a real contact is made ──
         # A "positive action" = any logged activity that isn't a no-answer or a plain
         # note, OR moving the lead forward. You can't judge quality on a no-answer, so

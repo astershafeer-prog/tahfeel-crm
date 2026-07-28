@@ -165,9 +165,9 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>Activity (what did you do?)</label>
-                <select name="activity_type">
-                  <option value="">— None —</option>
+                <label>Activity (what did you do?) <span style="color:var(--danger);">*</span></label>
+                <select name="activity_type" required>
+                  <option value="" disabled selected hidden>— Select activity —</option>
                   <option>Call — connected</option>
                   <option>Call — no answer</option>
                   <option>WhatsApp sent</option>
