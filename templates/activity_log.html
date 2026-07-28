@@ -74,21 +74,27 @@
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
             <div class="filter-group">
               <label>Date</label>
-              <input type="date" name="log_date" id="logDate" value="{{ now.date().strftime('%Y-%m-%d') }}" max="{{ now.date().strftime('%Y-%m-%d') }}" onchange="checkExistingLog()">
+              {# Reflects the day actually loaded below, not always today — picking an
+                 earlier date reloads the page via checkExistingLog() so the numbers,
+                 notes and off-day marker for THAT day come back pre-filled instead of
+                 showing blank fields that would silently overwrite it on save. #}
+              <input type="date" name="log_date" id="logDate" value="{{ entry_date.strftime('%Y-%m-%d') }}" max="{{ now.date().strftime('%Y-%m-%d') }}" onchange="checkExistingLog()">
             </div>
             <div>
               <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:5px;">Mark as</div>
               <div style="display:flex;gap:8px;">
-                <button type="button" class="off-btn" data-val="Off Day" onclick="selectOffDay(this)">🏠 Off Day</button>
-                <button type="button" class="off-btn" data-val="Public Holiday" onclick="selectOffDay(this)">🎉 Public Holiday</button>
-                <button type="button" class="off-btn" data-val="Annual Leave" onclick="selectOffDay(this)">✈️ Annual Leave</button>
+                <button type="button" class="off-btn {{ 'selected' if today_log and today_log.off_day == 'Off Day' }}" data-val="Off Day" onclick="selectOffDay(this)">🏠 Off Day</button>
+                <button type="button" class="off-btn {{ 'selected' if today_log and today_log.off_day == 'Public Holiday' }}" data-val="Public Holiday" onclick="selectOffDay(this)">🎉 Public Holiday</button>
+                <button type="button" class="off-btn {{ 'selected' if today_log and today_log.off_day == 'Annual Leave' }}" data-val="Annual Leave" onclick="selectOffDay(this)">✈️ Annual Leave</button>
                 <button type="button" class="off-btn" onclick="clearOffDay()" style="font-size:11px;color:var(--danger);border-color:var(--danger);">✕ Clear</button>
               </div>
             </div>
-            <input type="hidden" name="off_day" id="offDayInput" value="">
+            <input type="hidden" name="off_day" id="offDayInput" value="{{ today_log.off_day if today_log and today_log.off_day else '' }}">
           </div>
 
-          <div id="activityFields">
+          {# Matches the dimmed look selectOffDay()/clearOffDay() apply on click, so a
+             loaded off-day entry looks consistent instead of only dimming after a click. #}
+          <div id="activityFields" {% if today_log and today_log.off_day %}style="opacity:.3;pointer-events:none;"{% endif %}>
             <table class="activity-table">
               <thead>
                 <tr>
@@ -114,11 +120,11 @@
 
           <div class="form-group" style="margin-top:12px;">
             <label>Notes (optional)</label>
-            <input type="text" name="notes" value="{{ today_log.notes if today_log else '' }}" placeholder="Any notes for today...">
+            <input type="text" name="notes" value="{{ today_log.notes if today_log else '' }}" placeholder="Any notes for this day...">
           </div>
           <div class="form-actions">
             <button type="submit" class="btn-primary">Save Log</button>
-            {% if today_log %}<span style="font-size:12px;color:var(--success);margin-left:8px;">✓ Already logged — saving will update</span>{% endif %}
+            {% if today_log %}<span style="font-size:12px;color:var(--success);margin-left:8px;">✓ Existing entry loaded for {{ entry_date.strftime('%d %b %Y') }} — saving will update it</span>{% endif %}
           </div>
         </form>
       </div>
@@ -420,6 +426,15 @@
     function showAdminForm(uid) {
       const el = document.getElementById('admin-form-' + uid);
       el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Date picker changed: reload showing that day's entry (if any) so it loads
+    // pre-filled for editing instead of the form silently staying on today's data.
+    // This was called here before but never defined anywhere — picking a past date
+    // did nothing, which is why an existing entry could not be edited from the UI.
+    function checkExistingLog() {
+      const d = document.getElementById('logDate').value;
+      if (d) window.location.href = '/activity?entry_date=' + encodeURIComponent(d);
     }
 
     // Off day selection

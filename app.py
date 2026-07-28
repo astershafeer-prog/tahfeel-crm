@@ -5581,12 +5581,28 @@ def activity_log():
             summary[field] = {'total': total, 'target': period_target, 'pct': pct}
         user_summaries[u.id] = {'user': u, 'summary': summary, 'logs': user_logs}
 
-    # Today's log for current user (for the entry form)
+    # Which day's entry the personal form shows/edits. Defaults to today, but the
+    # date picker's onchange reloads with ?entry_date=YYYY-MM-DD so a rep can pull
+    # up an earlier day and correct it — see checkExistingLog() in the template.
+    # This was previously broken: the picker called that function on every change,
+    # but it was never defined anywhere, so picking a past date did nothing and a
+    # rep had no way to load — and therefore no way to safely edit — an older
+    # entry without either guessing blindly or deleting and re-adding it.
+    entry_date = now.date()
+    _requested = request.args.get('entry_date')
+    if _requested:
+        try:
+            _d = datetime.strptime(_requested, '%Y-%m-%d').date()
+            if _d <= now.date():          # the field's `max` already blocks future dates client-side
+                entry_date = _d
+        except ValueError:
+            pass
+
     today_log = None
     if session['role'] == 'sales':
         today_log = ActivityLog.query.filter_by(
             user_id=session['user_id'],
-            log_date=now.date()
+            log_date=entry_date
         ).first()
 
     # The entry form has to read custom activities too, and Jinja's `attr` filter
@@ -5602,6 +5618,7 @@ def activity_log():
                            sales_users=sales_users,
                            today_log=today_log,
                            today_values=today_values,
+                           entry_date=entry_date,
                            from_date=from_date, to_date=to_date,
                            view=view, now=now)
 
