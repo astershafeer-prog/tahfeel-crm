@@ -5704,7 +5704,11 @@ def delete_activity_log(log_id):
 @admin_required
 def admin_add_activity_type():
     label = request.form.get('label', '').strip()
-    target = request.form.get('daily_target', '1').strip()
+    # The form field is named "weekly_target" (see admin_panel.html) — this used
+    # to read "daily_target", a name that never existed in the submission, so
+    # every add silently fell back to the default of 1 regardless of what number
+    # was actually typed in.
+    target = request.form.get('weekly_target', '1').strip()
     if not label:
         flash('Activity name is required')
         return redirect(url_for('admin_panel') + '#activity-types')
