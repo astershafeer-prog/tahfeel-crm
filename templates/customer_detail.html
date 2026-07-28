@@ -198,32 +198,6 @@
       <div class="card-stat cs-red"><div class="cs-left"><div class="cs-label">Pending</div><div class="cs-value" style="font-size:16px;">AED {{ '{:,.0f}'.format(total_invoiced - total_received) }}</div></div><div class="cs-icon cs-red">⚠</div></div>
     </div>
 
-    <!-- Tasks -->
-    <div class="card" style="margin-bottom:12px;">
-      <div class="card-header">
-        <h2>Tasks <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ jobs|length }}</span></h2>
-        <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add" style="font-size:12px;padding:6px 14px;">+ Add Task</a>
-      </div>
-      {% if jobs %}
-      <table>
-        <thead><tr><th>Service</th><th>Assigned</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-          {% for job in jobs %}
-          <tr>
-            <td><strong>{{ job.job_type }}</strong></td>
-            <td>{% if job.assignee %}<div class="av-wrap"><div class="av">{{ job.assignee.name[:2].upper() }}</div><span class="av-name">{{ job.assignee.name.split()[0] }}</span></div>{% else %}—{% endif %}</td>
-            <td><span class="due-pill {% if job.due_date and job.due_date < now %}overdue{% endif %}">📅 {{ job.due_date.strftime('%d %b') if job.due_date else '—' }}</span></td>
-            <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job_status_label(job.status) }}</span></td>
-            <td><a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="empty">No tasks yet. <a href="/jobs/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add first task →</a></div>
-      {% endif %}
-    </div>
-
     {% if customer.customer_type == 'Company' %}
     <!-- Employees -->
     <div class="card" style="margin-bottom:12px;">
@@ -388,6 +362,43 @@
       </table>
       {% else %}
       <div class="empty">No documents yet. <a href="/documents/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add document →</a></div>
+      {% endif %}
+    </div>
+
+    <!-- Tasks — kept last: this list only grows over a client's lifetime, so
+         putting it after the more static sections keeps them from drifting
+         further down the page every time another task is added. -->
+    <div class="card" style="margin-bottom:30px;">
+      <div class="card-header">
+        <h2>Tasks <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ jobs|length }}</span></h2>
+        <a href="/jobs/add?customer_id={{ customer.id }}" class="btn-add" style="font-size:12px;padding:6px 14px;">+ Add Task</a>
+      </div>
+      {% if jobs %}
+      <div style="max-height:420px;overflow-y:auto;">
+      <table>
+        <thead><tr><th>Service</th><th>Assigned</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr>
+            <td>
+              <strong>{{ job.job_type }}</strong>
+              {% if job.assignee or job.service_note %}
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                {% if job.assignee %}👤 {{ job.assignee.name }}{% endif %}{% if job.assignee and job.service_note %} · {% endif %}{% if job.service_note %}{{ job.service_note }}{% endif %}
+              </div>
+              {% endif %}
+            </td>
+            <td>{% if job.assignee %}<div class="av-wrap"><div class="av">{{ job.assignee.name[:2].upper() }}</div><span class="av-name">{{ job.assignee.name.split()[0] }}</span></div>{% else %}—{% endif %}</td>
+            <td><span class="due-pill {% if job.due_date and job.due_date < now %}overdue{% endif %}">📅 {{ job.due_date.strftime('%d %b') if job.due_date else '—' }}</span></td>
+            <td><span class="badge b-{{ job.status|lower|replace(' ','') }}">{{ job_status_label(job.status) }}</span></td>
+            <td><a href="/jobs/{{ job.id }}" class="ib" title="View">👁</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="empty">No tasks yet. <a href="/jobs/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add first task →</a></div>
       {% endif %}
     </div>
   </div>
