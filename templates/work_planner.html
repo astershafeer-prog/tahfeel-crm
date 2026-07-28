@@ -61,6 +61,22 @@
                background:var(--surface); border:1px solid var(--border-light);
                border-radius:var(--radius-sm); padding:8px 12px; margin-bottom:13px;
                align-items:center; }
+  .wp-legend .tgl { margin-left:auto; }
+
+  /* Section jump pills — skip straight to a section instead of scrolling. */
+  .wp-jump { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:13px; }
+  .wp-jump a { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600;
+               text-decoration:none; padding:5px 11px; border-radius:20px;
+               border:1px solid var(--border); background:var(--surface);
+               color:var(--text-secondary); transition:border-color .12s, color .12s; }
+  .wp-jump a:hover { border-color:var(--primary); color:var(--primary); }
+  .wp-jump a.empty { opacity:.45; }
+  .wp-jump .dot { width:8px; height:8px; border-radius:50%; display:inline-block; flex:0 0 auto; }
+  .wp-jump .n { font-family:var(--font-mono); font-size:10px; color:var(--text-muted); }
+  .j-protect .dot { background:var(--danger); }   .j-convert .dot { background:var(--success); }
+  .j-retain .dot { background:var(--purple); }    .j-reputation .dot { background:#0F6E6E; }
+  .j-leads .dot { background:var(--info); }       .j-pipeline .dot { background:var(--accent); }
+  .j-market .dot { background:var(--warning); }
   .wp-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px;
             vertical-align:middle; }
   .d-db { background:var(--info); } .d-ai { background:var(--accent); } .d-web { background:#0F6E6E; }
@@ -75,7 +91,23 @@
   .wp-tbl thead th.ai { background:#FDFAF1; color:#7A5B00; }
   .wp-tbl tbody td { padding:11px; border-bottom:1px solid var(--border-light);
                      vertical-align:top; font-size:12.5px; }
+  .wp-tbl tbody tr { transition:opacity .35s; }
   .wp-tbl tbody tr:hover { background:#FAFBFD; }
+  /* Done rows are hidden by default (toggle in the legend bar shows them) so the
+     table reads as "what's left", not "everything that ever happened". */
+  .wp-tbl.hide-done tr.done-row { display:none; }
+
+  /* Sticky column headers while scrolling a long plan. Only on wide screens:
+     below 1200px the table lives inside a horizontal-scroll wrapper, and a
+     sticky header can't escape an overflow container — so there we leave it. */
+  @media (min-width:1200px) {
+    .wp-tbl, .wp-scroll { overflow:visible; }
+    .wp-tbl thead th { position:sticky; top:102px; /* topbar 56 + nav 46 */
+                       z-index:5; box-shadow:0 1.5px 0 var(--border); }
+    .wp-tbl thead th:first-child { border-top-left-radius:var(--radius-lg); }
+    .wp-tbl thead th:last-child { border-top-right-radius:var(--radius-lg); }
+  }
+  tr.wp-sec { scroll-margin-top:150px; }
   .wp-tbl td.sl { font-family:var(--font-mono); font-weight:600; color:var(--text-muted);
                   width:32px; font-size:11.5px; }
   .wp-tbl td.ai { background:#FEFCF6; font-size:11.8px; line-height:1.56; color:#3D3320;
@@ -189,7 +221,11 @@
     @page { size: A4 landscape; margin: 10mm; }
 
     .topbar, .nav, .wp-actions, .wp-legend, .wp-brief .brief-icon,
-    .wp-foot, .flash, form { display: none !important; }
+    .wp-jump, .wp-foot, .flash, form { display: none !important; }
+
+    /* Paper always shows the whole plan, including rows hidden as Done on screen. */
+    .wp-tbl.hide-done tr.done-row { display: table-row !important; }
+    tr.done-row { opacity: 1; }
 
     body { background:#fff !important; font-size:9.5pt; }
     .wp-wrap { max-width:none; padding:0; }
@@ -391,7 +427,7 @@
     </div>
     <div class="wp-kpi">
       <div class="lbl">Plan completed</div>
-      <div class="val">{{ done_count }}<small>/{{ total_count }}</small></div>
+      <div class="val"><span id="wp-done-n">{{ done_count }}</span><small>/{{ total_count }}</small></div>
       <div class="hint">Updates as you mark rows</div>
     </div>
   </div>
@@ -408,6 +444,18 @@
     <span><span class="wp-dot d-db"></span>Facts from your CRM — computed, never written by AI</span>
     <span><span class="wp-dot d-ai"></span>AI-written recommendation</span>
     <span><span class="wp-carry">↻ carried</span> rolled over from last week automatically</span>
+    <button type="button" id="wp-done-toggle" class="btn-sm tgl"
+            title="Completed rows are tucked away so the plan shows what's left">
+      Show done (<span id="wp-done-tgl-n">{{ done_count }}</span>)
+    </button>
+  </div>
+
+  <div class="wp-jump">
+    {% for key, label, rows in sections %}
+    <a href="#sec-{{ key }}" class="j-{{ key }} {% if not rows %}empty{% endif %}">
+      <span class="dot"></span>{{ label }}<span class="n">{{ rows|length }}</span>
+    </a>
+    {% endfor %}
   </div>
 
   <div class="wp-tbl">
@@ -426,7 +474,7 @@
       <tbody>
       {% set counter = namespace(n=0) %}
       {% for key, label, rows in sections %}
-        <tr class="wp-sec sec-{{ key }}">
+        <tr class="wp-sec sec-{{ key }}" id="sec-{{ key }}">
           <td colspan="6">
             {{ label }}
             <span class="cnt">
@@ -479,7 +527,8 @@
             <td>
               <form method="POST" action="/planner/item/{{ item.id }}/status">
                 <select name="status" class="wp-st s-{{ (item.status or 'Pending')|lower }}"
-                        onchange="this.form.submit()">
+                        data-prev="{{ item.status or 'Pending' }}"
+                        onchange="wpStatus(this)">
                   {% for s in statuses %}
                   <option value="{{ s }}" {% if (item.status or 'Pending') == s %}selected{% endif %}>{{ s }}</option>
                   {% endfor %}
@@ -544,5 +593,84 @@
   </div>
 
 </div>
+
+<script>
+(function () {
+  var tbl = document.querySelector('.wp-tbl');
+  var toggle = document.getElementById('wp-done-toggle');
+  if (!tbl) return;
+
+  function doneCount() { return tbl.querySelectorAll('tr.done-row').length; }
+
+  function updateCounts() {
+    var n = doneCount();
+    var kpi = document.getElementById('wp-done-n');
+    if (kpi) kpi.textContent = n;
+    var tn = document.getElementById('wp-done-tgl-n');
+    if (tn) tn.textContent = n;
+    if (toggle) {
+      toggle.childNodes[0].textContent = (tbl.classList.contains('hide-done') ? 'Show done (' : 'Hide done (');
+    }
+  }
+
+  function applyHide(hide) {
+    tbl.classList.toggle('hide-done', hide);
+    try { localStorage.setItem('wp_show_done', hide ? '' : '1'); } catch (e) {}
+    updateCounts();
+  }
+
+  if (toggle) {
+    toggle.addEventListener('click', function () {
+      applyHide(!tbl.classList.contains('hide-done'));
+    });
+  }
+  var showPref = '';
+  try { showPref = localStorage.getItem('wp_show_done') || ''; } catch (e) {}
+  applyHide(!showPref);
+
+  // Status changes save in place — the backend already answers JSON when
+  // ajax=1 is sent; before this, every change was a full page reload that
+  // dumped the rep back at the top of the table.
+  window.wpStatus = function (sel) {
+    var form = sel.form, row = sel.closest('tr');
+    var fd = new FormData(form);
+    fd.set('status', sel.value);
+    fd.set('ajax', '1');
+    if (sel.value === 'Skip') {
+      var r = prompt('Why skip this? (kept for the record — it will not return for a month)');
+      if (r === null) { sel.value = sel.dataset.prev || 'Pending'; return; }
+      fd.set('reason', r);
+    }
+    sel.disabled = true;
+    fetch(form.action, { method: 'POST', body: fd })
+      .then(function (resp) { if (!resp.ok) throw new Error(resp.status); return resp.json(); })
+      .then(function (j) {
+        sel.disabled = false;
+        sel.className = 'wp-st s-' + j.status.toLowerCase();
+        sel.dataset.prev = j.status;
+        var ps = row.querySelector('.wp-print-status');
+        if (ps) ps.textContent = j.status;
+        var isDone = j.status === 'Done';
+        if (isDone && tbl.classList.contains('hide-done')) {
+          row.style.opacity = 0;   /* fade, then the class hides it */
+          setTimeout(function () {
+            row.classList.add('done-row');
+            row.style.opacity = '';
+            updateCounts();
+          }, 350);
+        } else {
+          row.classList.toggle('done-row', isDone);
+          updateCounts();
+        }
+      })
+      .catch(function () {
+        /* AJAX failed (offline, session expired…) — fall back to the normal
+           full-page submit so the change is never silently lost. */
+        sel.disabled = false;
+        form.submit();
+      });
+  };
+})();
+</script>
 </body>
 </html>
