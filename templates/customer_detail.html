@@ -352,9 +352,11 @@
             <td style="white-space:nowrap;">
               <a href="/documents/{{ doc.id }}/edit?next=/customers/{{ customer.id }}"
                  style="color:var(--primary);font-size:12px;text-decoration:none;font-weight:600;margin-right:10px;">✏ Edit</a>
-              <a href="/documents/{{ doc.id }}/delete?next=/customers/{{ customer.id }}"
-                 onclick="return confirm('Remove this document?')"
-                 style="color:var(--danger);font-size:12px;text-decoration:none;font-weight:600;">🗑 Delete</a>
+              <form method="POST" action="/documents/{{ doc.id }}/delete?next=/customers/{{ customer.id }}"
+                    style="display:inline;" onsubmit="return confirm('Remove this document?')">
+                <button type="submit" style="background:none;border:none;padding:0;color:var(--danger);
+                        font-size:12px;font-weight:600;cursor:pointer;">🗑 Delete</button>
+              </form>
             </td>
           </tr>
           {% endfor %}
