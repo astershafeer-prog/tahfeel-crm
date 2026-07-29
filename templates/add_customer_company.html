@@ -6,6 +6,21 @@
   <title>Tahfeel CRM — Add Company Client</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .wiz-nav{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+    .wiz-tab{flex:1;min-width:120px;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;
+             border:1.5px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:600;
+             color:var(--text-muted);cursor:default;transition:border-color .15s,color .15s,background .15s;}
+    .wiz-tab .n{width:20px;height:20px;border-radius:50%;background:var(--border);color:#fff;flex:0 0 auto;
+                display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+    .wiz-tab.active{border-color:var(--primary);color:var(--primary);background:var(--info-bg);}
+    .wiz-tab.active .n{background:var(--primary);}
+    .wiz-tab.done{color:var(--success);cursor:pointer;}
+    .wiz-tab.done .n{background:var(--success);}
+    .wiz-tab.done:hover{border-color:var(--success);}
+    .wiz-foot{display:flex;justify-content:space-between;gap:10px;margin-top:4px;}
+    .owner-row{background:var(--bg);border-radius:var(--radius-md);padding:14px;margin-bottom:10px;border:1px solid var(--border);}
+  </style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
@@ -17,11 +32,20 @@
     {% endwith %}
     <a href="/customers/add{% if lead_id %}?lead_id={{ lead_id }}{% endif %}" style="display:inline-block;margin-bottom:14px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Change client type</a>
 
-    <form method="post" action="/customers/add" enctype="multipart/form-data">
+    <div class="wiz-nav">
+      <div class="wiz-tab" data-tab="0"><span class="n">1</span> Basic &amp; Company Info</div>
+      <div class="wiz-tab" data-tab="1"><span class="n">2</span> Tax &amp; Compliance</div>
+      <div class="wiz-tab" data-tab="2"><span class="n">3</span> UBO / Owners</div>
+      <div class="wiz-tab" data-tab="3"><span class="n">4</span> Documents</div>
+    </div>
+
+    <form method="post" action="/customers/add" enctype="multipart/form-data" id="companyForm">
       <input type="hidden" name="customer_type" value="Company">
       {% if lead_id %}<input type="hidden" name="lead_id" value="{{ lead_id }}">{% endif %}
       {% if request.args.get('next') %}<input type="hidden" name="next" value="{{ request.args.get('next') }}">{% endif %}
 
+      <!-- Step 1: Basic Info + Company Details -->
+      <div class="wiz-step" data-step="0">
       <div class="card card-customers" style="margin-bottom:12px;">
         <div class="card-header">
           <h2>🏢 Add Company Client</h2>
@@ -89,14 +113,6 @@
             <div class="form-group"><label>UAE Pass Access Number</label><input type="text" name="uae_pass_number" placeholder="+971 5X XXX XXXX"></div>
             <div class="form-group"><label>UAE Pass Name</label><input type="text" name="uae_pass_name" placeholder="Name on the UAE Pass account"></div>
 
-            <div class="form-group" style="grid-column:1/-1;"><div class="section-label" style="margin-top:8px;">🧾 Tax &amp; Compliance</div></div>
-            <div class="form-group"><label>VAT Registered</label><select name="vat_registered"><option value="">— No —</option><option value="Yes">Yes</option></select>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">If Yes, this year's 4 quarterly due dates are created automatically — mark each one Filed as it happens.</div>
-            </div>
-            <div class="form-group"><label>Corporate Tax Registered</label><select name="corp_tax_registered"><option value="">— No —</option><option value="Yes">Yes</option></select>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">If Yes, this year's annual due date is created automatically.</div>
-            </div>
-
             <div class="form-group">
               <label>Source *</label>
               <select name="source" required>
@@ -126,8 +142,46 @@
           </div>
         </div>
       </div>
+      <div class="wiz-foot"><span></span><button type="button" class="btn-primary wiz-next">Next: Tax &amp; Compliance →</button></div>
+      </div>
 
-      <!-- Documents Card -->
+      <!-- Step 2: Tax & Compliance -->
+      <div class="wiz-step" data-step="1" style="display:none;">
+      <div class="card card-customers" style="margin-bottom:12px;">
+        <div class="card-header"><h2>🧾 Tax &amp; Compliance</h2></div>
+        <div class="card-body">
+          <div class="form-row-2">
+            <div class="form-group"><label>VAT Registered</label><select name="vat_registered"><option value="" {% if prefill.get('vat_registered')!='Yes' %}selected{% endif %}>— No —</option><option value="Yes" {% if prefill.get('vat_registered')=='Yes' %}selected{% endif %}>Yes</option></select>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">If Yes, this year's 4 quarterly due dates are created automatically — mark each one Filed as it happens, from the client's profile.</div>
+            </div>
+            <div class="form-group"><label>Corporate Tax Registered</label><select name="corp_tax_registered"><option value="" {% if prefill.get('corp_tax_registered')!='Yes' %}selected{% endif %}>— No —</option><option value="Yes" {% if prefill.get('corp_tax_registered')=='Yes' %}selected{% endif %}>Yes</option></select>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">If Yes, this year's annual due date is created automatically.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="wiz-foot"><button type="button" class="btn-cancel wiz-back">← Back</button><button type="button" class="btn-primary wiz-next">Next: UBO / Owners →</button></div>
+      </div>
+
+      <!-- Step 3: UBO / Owners -->
+      <div class="wiz-step" data-step="2" style="display:none;">
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-header">
+          <h2>👥 UBO / Owners <span style="font-size:12px;font-weight:400;color:var(--text-muted);">Optional — add now, or from the client's profile later</span></h2>
+          <button type="button" onclick="addOwnerRow()" class="btn-sm" style="border-color:var(--primary);color:var(--primary);">+ Add Owner</button>
+        </div>
+        <div class="card-body">
+          <div id="owner-rows"></div>
+          <div id="owner-empty" style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">
+            No owners added yet. Click "+ Add Owner" for Shareholders, Directors, or Authorized Signatories.
+          </div>
+        </div>
+      </div>
+      <div class="wiz-foot"><button type="button" class="btn-cancel wiz-back">← Back</button><button type="button" class="btn-primary wiz-next">Next: Documents →</button></div>
+      </div>
+
+      <!-- Step 4: Documents -->
+      <div class="wiz-step" data-step="3" style="display:none;">
       <div class="card" style="margin-bottom:12px;">
         <div class="card-header">
           <h2>📄 Documents <span style="font-size:12px;font-weight:400;color:var(--text-muted);">Optional — add company documents right away</span></h2>
@@ -142,9 +196,13 @@
       </div>
 
       <input type="hidden" name="allow_duplicate" id="allowDup" value="">
-      <div class="form-actions">
-        <button type="submit" class="btn-primary">Save Customer</button>
-        <a href="/customers" class="btn-cancel">Cancel</a>
+      <div class="wiz-foot">
+        <button type="button" class="btn-cancel wiz-back">← Back</button>
+        <div class="form-actions" style="margin:0;">
+          <button type="submit" class="btn-primary">Save Customer</button>
+          <a href="/customers" class="btn-cancel">Cancel</a>
+        </div>
+      </div>
       </div>
     </form>
   </div>
@@ -197,6 +255,49 @@
       document.getElementById('doc-row-' + id)?.remove();
       if (!document.querySelector('#doc-rows > div')) {
         document.getElementById('doc-empty').style.display = 'block';
+      }
+    }
+
+    let ownerCount = 0;
+    const ownerRoles = ['Shareholder','Director','Manager','Authorized Signatory','Partner','UBO'];
+
+    function addOwnerRow() {
+      ownerCount++;
+      document.getElementById('owner-empty').style.display = 'none';
+      const opts = ownerRoles.map(r => `<option value="${r}">${r}</option>`).join('');
+      const div = document.createElement('div');
+      div.id = 'owner-row-' + ownerCount;
+      div.className = 'owner-row';
+      div.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Owner ${ownerCount}</span>
+          <button type="button" onclick="removeOwner(${ownerCount})" style="background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;">✕ Remove</button>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Full Name *</label>
+            <input type="text" name="owner_name[]" required placeholder="Owner's name">
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Role</label>
+            <select name="owner_role[]">
+              <option value="">— Select —</option>
+              ${opts}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Share %</label>
+            <input type="number" name="owner_share[]" min="0" max="100" step="0.1" placeholder="e.g. 50">
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Nationality, passport, EID and birthday can be added later from the client's profile.</div>`;
+      document.getElementById('owner-rows').appendChild(div);
+    }
+
+    function removeOwner(id) {
+      document.getElementById('owner-row-' + id)?.remove();
+      if (!document.querySelector('#owner-rows > div')) {
+        document.getElementById('owner-empty').style.display = 'block';
       }
     }
   </script>
@@ -260,7 +361,7 @@
 
     // Duplicate-phone soft warning: confirm popup you can dismiss, no data lost
     (function() {
-      var form = document.querySelector('form[enctype]');
+      var form = document.getElementById('companyForm');
       if (!form) return;
       form.addEventListener('submit', function(e) {
         if (form.dataset.dupOk) return;
@@ -282,6 +383,56 @@
           })
           .catch(function() { form.dataset.dupOk = '1'; form.submit(); });
       });
+    })();
+
+    // ── Wizard step navigation ──────────────────────────────────────────────
+    // Native HTML5 validation only fires on rendered (display != none) fields —
+    // display:none elements are exempt from constraint validation entirely — so
+    // each step is validated on "Next" (while its fields are still visible),
+    // which is also the ONLY point anything gets enforced given hidden steps.
+    // Tabs can only be clicked to jump BACK to an already-completed step, never
+    // forward, so that guarantee holds by the time Save is reachable.
+    (function() {
+      var steps = Array.prototype.slice.call(document.querySelectorAll('.wiz-step'));
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('.wiz-tab'));
+      var current = 0;
+
+      function showStep(i) {
+        steps.forEach(function(s, idx) { s.style.display = idx === i ? '' : 'none'; });
+        tabs.forEach(function(t, idx) {
+          t.classList.toggle('active', idx === i);
+          t.classList.toggle('done', idx < i);
+        });
+        current = i;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function validateStep(i) {
+        var fields = steps[i].querySelectorAll('input, select, textarea');
+        for (var j = 0; j < fields.length; j++) {
+          if (!fields[j].checkValidity()) { fields[j].reportValidity(); return false; }
+        }
+        return true;
+      }
+
+      document.querySelectorAll('.wiz-next').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          if (!validateStep(current)) return;
+          if (current < steps.length - 1) showStep(current + 1);
+        });
+      });
+      document.querySelectorAll('.wiz-back').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          if (current > 0) showStep(current - 1);
+        });
+      });
+      tabs.forEach(function(t, idx) {
+        t.addEventListener('click', function() {
+          if (idx < current) showStep(idx);
+        });
+      });
+
+      showStep(0);
     })();
   </script>
 </body>

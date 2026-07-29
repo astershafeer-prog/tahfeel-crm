@@ -275,7 +275,10 @@
         {% endif %}
       </div>
       <div class="hc-card">
-        <div class="sec-head"><h2>🧾 Tax &amp; Compliance</h2></div>
+        <div class="sec-head">
+          <h2>🧾 Tax &amp; Compliance</h2>
+          <a href="/customers/{{ customer.id }}" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;">Manage on profile →</a>
+        </div>
         <div class="dgrid">
           {% if not customer.vat_registered and not customer.corp_tax_registered %}
           <div class="dtile" style="border-top-color:#94A3B8;">
@@ -295,10 +298,6 @@
             <div class="ex" style="color:{{ col }};">✓ Filed {{ f.filed_at.strftime('%d %b %Y') }}</div>
             {% else %}
             <div class="ex" style="color:{{ col }};">{{ 'Overdue · ' if days < 0 }}Due {{ f.due_date.strftime('%d %b %Y') }}</div>
-            <form method="POST" action="/customers/{{ customer.id }}/tax-filing/{{ f.id }}/mark-filed" style="margin-top:7px;">
-              <input type="hidden" name="next" value="/customers/{{ customer.id }}/health">
-              <button type="submit" style="width:100%;background:{{ col }};color:#fff;border:none;border-radius:7px;padding:5px 0;font-size:11px;font-weight:700;cursor:pointer;">Mark Filed</button>
-            </form>
             {% endif %}
           </div>
           {% endfor %}

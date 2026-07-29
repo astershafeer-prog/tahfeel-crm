@@ -1682,6 +1682,39 @@ def api_lead_alerts():
     latest_id = new_leads[0].id if new_leads else 0
     return jsonify({'count': count, 'unseen': unseen, 'latest_id': latest_id, 'recent': recent})
 
+@app.route('/api/wa-assign-alerts')
+@login_required
+def api_wa_assign_alerts():
+    """Lightweight JSON feed for the WhatsApp-assignment bell/toast in the top
+    bar — same pattern as /api/lead-alerts, but for conversations assigned to
+    this user (round-robin hand-over or a manual assign) that aren't Done yet.
+    WhatsAppThread's primary key is the phone number, not a sortable int id,
+    so 'since' is an epoch timestamp instead of an id cursor — self-consistent
+    because both directions of the round trip go through the same server
+    process's datetime<->epoch conversion, even though the underlying
+    datetimes are naive Dubai-local rather than true UTC."""
+    from flask import jsonify
+    since = request.args.get('since', 0, type=float)
+    since_dt = datetime.fromtimestamp(since) if since else None
+    base = WhatsAppThread.query.filter(
+        WhatsAppThread.assigned_to == session['user_id'],
+        WhatsAppThread.resolved == False,
+        WhatsAppThread.assigned_at.isnot(None))
+    count = base.count()
+    unseen = base.filter(WhatsAppThread.assigned_at > since_dt).count() if since_dt else count
+    threads = base.order_by(WhatsAppThread.assigned_at.desc()).limit(8).all()
+    recent = []
+    for t in threads:
+        m = WhatsAppMessage.query.filter_by(wa_id=t.wa_id).filter(WhatsAppMessage.contact_name.isnot(None)).first()
+        recent.append({
+            'wa_id': t.wa_id,
+            'name': (m.contact_name if m else None) or ('+' + t.wa_id),
+            'assigned_at': t.assigned_at.strftime('%d %b, %I:%M %p'),
+            'assigned_at_ts': t.assigned_at.timestamp(),
+        })
+    latest_ts = threads[0].assigned_at.timestamp() if threads else 0
+    return jsonify({'count': count, 'unseen': unseen, 'latest_ts': latest_ts, 'recent': recent})
+
 def _needs_attention(role, user_id, now):
     """TASK 2.2: role-filtered, period-independent "Needs Attention" summary
     for the banner at the top of /dashboard. Always computed fresh (not tied
@@ -3923,7 +3956,13 @@ def customers():
 @login_required
 def api_customer_phone_exists():
     from flask import jsonify
-    phone = (request.args.get('phone') or '').strip()
+    # Must normalize the same way add_customer() does before checking — every
+    # stored Customer.phone is compact E.164 (no spaces), but the raw input
+    # here still has the "+971 " spacing the phone-country widget inserts.
+    # Comparing un-normalized against normalized meant this almost always
+    # said "doesn't exist" even for a real duplicate, silently skipping the
+    # confirm() popup and leaving only the abrupt server-side flash to catch it.
+    phone = normalize_phone_e164((request.args.get('phone') or '').strip())
     if not phone:
         return jsonify({'exists': False, 'name': ''})
     c = Customer.query.filter_by(phone=phone).first()
@@ -4139,6 +4178,26 @@ def add_customer():
             )
             db.session.add(doc)
 
+        # Save inline owners (Company wizard's UBO/Owners step) — same
+        # array-field pattern as documents above, same reason: nothing here
+        # can be created before customer.id exists.
+        owner_names = request.form.getlist('owner_name[]')
+        owner_roles = request.form.getlist('owner_role[]')
+        owner_shares = request.form.getlist('owner_share[]')
+        for i, oname in enumerate(owner_names):
+            if not oname.strip(): continue
+            share = None
+            try:
+                if i < len(owner_shares) and owner_shares[i]:
+                    share = float(owner_shares[i])
+            except ValueError:
+                share = None
+            db.session.add(Owner(
+                customer_id=customer.id, name=oname.strip(),
+                role=owner_roles[i] if i < len(owner_roles) and owner_roles[i] else None,
+                share_pct=share,
+            ))
+
         db.session.commit()
         flash('Customer added successfully')
         return redirect(url_for('customer_detail', customer_id=customer.id))
@@ -4192,7 +4251,9 @@ def customer_detail(customer_id):
                            called_this_month=customer_id in called_this_month_ids(now),
                            last_job=last_job,
                            completeness_pct=completeness_pct, completeness_missing=completeness_missing,
-                           services=[s.name for s in Service.query.order_by(Service.name).all()])
+                           services=[s.name for s in Service.query.order_by(Service.name).all()],
+                           tax_filings=TaxFiling.query.filter_by(customer_id=customer_id)
+                               .order_by(TaxFiling.filed_at.is_(None).desc(), TaxFiling.due_date).all())
 
 
 @app.route('/customers/<int:customer_id>/health')
@@ -10714,7 +10775,7 @@ def whatsapp_inbox():
     elif flt == 'done':
         thread_list = [t for t in thread_list if t['resolved']]
 
-    staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).order_by(User.name).all()
+    staff = User.query.filter_by(active=True, role='sales').order_by(User.name).all()
     return render_template('whatsapp_inbox.html', threads=thread_list, now=now_dubai(),
                            q=q, flt=flt, counts=counts, staff=staff,
                            wa_templates=wa_send_context(), wa_health=_wa_health())
@@ -10869,7 +10930,7 @@ def whatsapp_thread(wa_id):
         except Exception:
             pass
     thread = WhatsAppThread.query.get(wa_id)
-    staff = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).order_by(User.name).all()
+    staff = User.query.filter_by(active=True, role='sales').order_by(User.name).all()
     quick_replies = QuickReply.query.filter(
         (QuickReply.staff_id == session.get('user_id')) | (QuickReply.is_global == True)
     ).order_by(QuickReply.label).all()
@@ -10889,8 +10950,14 @@ def whatsapp_thread(wa_id):
 @app.route('/whatsapp/<wa_id>/assign', methods=['POST'])
 @login_required
 def whatsapp_assign(wa_id):
-    """Assign (or reassign / unassign) a WhatsApp conversation to a staff member."""
+    """Assign (or reassign / unassign) a WhatsApp conversation to a staff member.
+    WhatsApp is a sales-owned channel — only a sales-role user can be assigned."""
     staff_id = request.form.get('staff_id')
+    if staff_id:
+        target = User.query.get(int(staff_id))
+        if not target or target.role != 'sales':
+            flash('WhatsApp conversations can only be assigned to sales staff.', 'error')
+            return redirect(request.referrer or url_for('whatsapp_thread', wa_id=wa_id))
     thread = WhatsAppThread.query.get(wa_id)
     if not thread:
         thread = WhatsAppThread(wa_id=wa_id)
