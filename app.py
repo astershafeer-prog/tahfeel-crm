@@ -4208,9 +4208,16 @@ def add_customer():
     if ctype not in ('Individual', 'Company'):
         return render_template('add_customer_choose.html', converted_leads=converted_leads, quick_lead=lead_for_prefill)
     prefill = _lead_customer_prefill(lead_for_prefill, ctype)
+    # The due-date math only depends on the current year, not on any customer
+    # data — so it can be previewed before the client is even saved, even
+    # though the real TaxFiling rows aren't created until then.
+    _yr = now_dubai().year
+    vat_preview = [{'label': f'Q{q} {_yr}', 'due': _vat_due_date(_yr, q).strftime('%d %b %Y')} for q in range(1, 5)]
+    corp_tax_preview = {'label': f'FY{_yr}', 'due': _corp_tax_due_date(_yr).strftime('%d %b %Y')}
     return render_template(_customer_type_template(ctype), converted_leads=converted_leads, sources=sources, users=users, doc_types=doc_types,
                            authorities=_authority_names(), attribution_sources=CLIENT_ATTRIBUTION_SOURCES,
-                           prefill=prefill, lead_id=lead_for_prefill.id if lead_for_prefill else '')
+                           prefill=prefill, lead_id=lead_for_prefill.id if lead_for_prefill else '',
+                           vat_preview=vat_preview, corp_tax_preview=corp_tax_preview)
 
 @app.route('/customers/<int:customer_id>/tax-filing/<int:filing_id>/mark-filed', methods=['POST'])
 @login_required
