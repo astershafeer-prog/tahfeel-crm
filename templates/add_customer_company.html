@@ -151,11 +151,19 @@
         <div class="card-header"><h2>🧾 Tax &amp; Compliance</h2></div>
         <div class="card-body">
           <div class="form-row-2">
-            <div class="form-group"><label>VAT Registered</label><select name="vat_registered"><option value="" {% if prefill.get('vat_registered')!='Yes' %}selected{% endif %}>— No —</option><option value="Yes" {% if prefill.get('vat_registered')=='Yes' %}selected{% endif %}>Yes</option></select>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">If Yes, this year's 4 quarterly due dates are created automatically — mark each one Filed as it happens, from the client's profile.</div>
+            <div class="form-group"><label>VAT Registered</label><select name="vat_registered" id="vatRegSel" onchange="tfToggleTaxPreview()"><option value="" {% if prefill.get('vat_registered')!='Yes' %}selected{% endif %}>— No —</option><option value="Yes" {% if prefill.get('vat_registered')=='Yes' %}selected{% endif %}>Yes</option></select>
+              <div id="vatPreview" style="display:none;margin-top:6px;">
+                {% for p in vat_preview %}
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--border-light);"><span style="color:var(--text-muted);">{{ p.label }}</span><span style="font-weight:600;">{{ p.due }}</span></div>
+                {% endfor %}
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;">Preview only — created once you save. Mark each Filed from the client's profile as it happens.</div>
+              </div>
             </div>
-            <div class="form-group"><label>Corporate Tax Registered</label><select name="corp_tax_registered"><option value="" {% if prefill.get('corp_tax_registered')!='Yes' %}selected{% endif %}>— No —</option><option value="Yes" {% if prefill.get('corp_tax_registered')=='Yes' %}selected{% endif %}>Yes</option></select>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">If Yes, this year's annual due date is created automatically.</div>
+            <div class="form-group"><label>Corporate Tax Registered</label><select name="corp_tax_registered" id="ctRegSel" onchange="tfToggleTaxPreview()"><option value="" {% if prefill.get('corp_tax_registered')!='Yes' %}selected{% endif %}>— No —</option><option value="Yes" {% if prefill.get('corp_tax_registered')=='Yes' %}selected{% endif %}>Yes</option></select>
+              <div id="ctPreview" style="display:none;margin-top:6px;">
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--border-light);"><span style="color:var(--text-muted);">{{ corp_tax_preview.label }}</span><span style="font-weight:600;">{{ corp_tax_preview.due }}</span></div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;">Preview only — created once you save.</div>
+              </div>
             </div>
           </div>
         </div>
@@ -333,6 +341,12 @@
     document.querySelector('input[name="phone"]').addEventListener('input', function() {
       if (document.getElementById('waSame') && document.getElementById('waSame').checked) syncWhatsApp();
     });
+
+    function tfToggleTaxPreview() {
+      document.getElementById('vatPreview').style.display = document.getElementById('vatRegSel').value === 'Yes' ? 'block' : 'none';
+      document.getElementById('ctPreview').style.display = document.getElementById('ctRegSel').value === 'Yes' ? 'block' : 'none';
+    }
+    tfToggleTaxPreview();  // correct on load if Yes was already selected (redisplay after an error)
 
     // Default AC opening date to today — flagged amber until the staff member
     // actually edits it, so it isn't mistaken for a real license issuance date.
