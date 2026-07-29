@@ -11,6 +11,11 @@
       <span id="leadBellBadge" style="display:none;position:absolute;top:-7px;right:-9px;background:#E53E3E;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:999px;padding:0 4px;box-shadow:0 0 0 2px rgba(15,38,96,.9);">0</span>
     </a>
 
+    <a href="/whatsapp" id="waAssignBell" title="Conversations assigned to you" style="position:relative;text-decoration:none;display:flex;align-items:center;font-size:19px;line-height:1;margin-right:4px;">
+      <span style="filter:grayscale(0);">💬</span>
+      <span id="waAssignBellBadge" style="display:none;position:absolute;top:-7px;right:-9px;background:#25D366;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:999px;padding:0 4px;box-shadow:0 0 0 2px rgba(15,38,96,.9);">0</span>
+    </a>
+
     <div class="topbar-user">
       <div class="topbar-avatar">{{ session.user_name[0]|upper if session.user_name else 'U' }}</div>
       <span>{{ session.user_name }}</span>
@@ -67,6 +72,7 @@ loadTheme();
 @keyframes tfBellShake { 0%,100%{transform:rotate(0);} 20%{transform:rotate(16deg);} 40%{transform:rotate(-14deg);} 60%{transform:rotate(10deg);} 80%{transform:rotate(-6deg);} }
 @keyframes tfBellPulse { 0%,100%{box-shadow:0 0 0 0 rgba(229,62,62,.5);} 50%{box-shadow:0 0 0 6px rgba(229,62,62,0);} }
 #leadBell.ring span:first-child { display:inline-block; animation: tfBellShake .6s ease; }
+#waAssignBell.ring span:first-child { display:inline-block; animation: tfBellShake .6s ease; }
 </style>
 <script>
 // ── New-lead alert: bell badge + toast + beep (polls every 25s) ──────────────
@@ -164,6 +170,104 @@ loadTheme();
 
   poll();                       // run shortly after load
   setInterval(poll, 25000);     // then every 25s
+})();
+</script>
+
+<script>
+// ── WhatsApp-assignment alert: bell badge + toast + beep — same pattern as the
+// new-lead bell above, for a conversation just assigned to you (round-robin
+// hand-over or a manual assign). Uses an epoch-timestamp cursor instead of an
+// id, since WhatsAppThread's primary key is the phone number, not a
+// sortable int (see /api/wa-assign-alerts).
+(function(){
+  var BELL_KEY = 'tahfeel_lastWaAssignTs_{{ session.user_id }}';
+  var SEEN_KEY = 'tahfeel_seenWaAssignTs_{{ session.user_id }}';
+  var bell  = document.getElementById('waAssignBell');
+  var badge = document.getElementById('waAssignBellBadge');
+  if(!bell || !badge) return;
+  var firstRun = true;
+  var lastLatestTs = 0;
+
+  bell.addEventListener('click', function(){
+    if(lastLatestTs) localStorage.setItem(SEEN_KEY, String(lastLatestTs));
+    badge.style.display = 'none';
+  });
+
+  function beep(){
+    try{
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if(!Ctx) return;
+      var ctx = new Ctx(), o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = 660;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+      o.start(); o.stop(ctx.currentTime + 0.45);
+    } catch(e){}
+  }
+
+  function showBigAlert(t, extra){
+    var old = document.getElementById('tfWaAlert');
+    if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'tfWaAlert';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(8,18,45,.55);'+
+      'display:flex;align-items:center;justify-content:center;animation:tfFadeIn .2s ease;';
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;color:#0F2660;width:min(92vw,440px);border-radius:20px;'+
+      'padding:32px 28px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.45);'+
+      'border-top:7px solid #25D366;animation:tfPop .3s cubic-bezier(.2,.9,.3,1.35);font-family:inherit;';
+    card.innerHTML =
+      '<div style="font-size:52px;line-height:1;margin-bottom:6px;">💬</div>'+
+      '<div style="font-size:13px;font-weight:800;letter-spacing:1.5px;color:#0F8A3C;margin-bottom:12px;">WHATSAPP ASSIGNED TO YOU</div>'+
+      '<div style="font-size:27px;font-weight:800;margin-bottom:5px;line-height:1.15;">'+ (t.name||'Conversation') +'</div>'+
+      (t.assigned_at ? '<div style="font-size:12px;color:#9aa6bd;">'+ t.assigned_at +'</div>' : '')+
+      (extra>0 ? '<div style="margin-top:14px;font-size:13px;font-weight:700;color:#E53E3E;">+ '+extra+' more waiting</div>' : '')+
+      '<div style="display:flex;gap:10px;margin-top:24px;">'+
+        '<button id="tfWaAlertOpen" style="flex:1;background:#0F2660;color:#fff;border:none;padding:14px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">Open Chat →</button>'+
+        '<button id="tfWaAlertClose" style="background:#EDF1F7;color:#46557a;border:none;padding:14px 18px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">Dismiss</button>'+
+      '</div>';
+    ov.appendChild(card);
+    document.body.appendChild(ov);
+    function close(){ ov.style.transition='opacity .2s'; ov.style.opacity='0'; setTimeout(function(){ if(ov.parentNode) ov.remove(); }, 200); }
+    document.getElementById('tfWaAlertOpen').onclick = function(){ window.location.href = '/whatsapp/' + t.wa_id; };
+    document.getElementById('tfWaAlertClose').onclick = close;
+    ov.onclick = function(e){ if(e.target === ov) close(); };
+  }
+
+  function poll(){
+    var seen = parseFloat(localStorage.getItem(SEEN_KEY) || '0');
+    fetch('/api/wa-assign-alerts?since=' + seen, { headers: { 'X-Requested-With': 'fetch' } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(!d) return;
+        lastLatestTs = d.latest_ts || 0;
+        var unseen = (typeof d.unseen === 'number') ? d.unseen : d.count;
+        if(unseen > 0){ badge.textContent = unseen > 99 ? '99+' : unseen; badge.style.display = 'block'; }
+        else { badge.style.display = 'none'; }
+
+        var stored = parseFloat(localStorage.getItem(BELL_KEY) || '0');
+        if(firstRun){
+          if(d.latest_ts > stored) localStorage.setItem(BELL_KEY, String(d.latest_ts));
+          firstRun = false;
+          return;
+        }
+        if(d.latest_ts > stored){
+          var fresh = (d.recent || []).filter(function(t){ return t.assigned_at_ts > stored; });
+          if(fresh.length){
+            showBigAlert(fresh[0], fresh.length - 1);
+            beep();
+            bell.classList.remove('ring'); void bell.offsetWidth; bell.classList.add('ring');
+          }
+          localStorage.setItem(BELL_KEY, String(d.latest_ts));
+        }
+      })
+      .catch(function(){});
+  }
+
+  poll();
+  setInterval(poll, 25000);
 })();
 </script>
 

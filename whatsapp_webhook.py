@@ -515,36 +515,46 @@ def decide_reply(wa_id, text, is_first):
             print(f'[WA] AI reply failed ({e}); falling back to scripted menu')
     return _menu_reply(wa_id, text, is_first), False
 
+def _round_robin_sales_rep():
+    """Least-recently-assigned active sales rep (on-leave staff skipped). WhatsApp
+    conversations are a sales function — this is the only source of a WhatsApp
+    assignment, whether the contact is brand-new or an existing lead/customer
+    whose assigned rep isn't on the sales team."""
+    from app import User, WhatsAppThread
+    sales = User.query.filter(User.active == True, User.on_leave == False,
+                              User.role == 'sales').order_by(User.id).all()
+    if not sales:
+        sales = User.query.filter(User.active == True, User.role == 'sales').order_by(User.id).all()
+    if not sales:
+        return None
+    def _last_chat(s):
+        t = (WhatsAppThread.query.filter_by(assigned_to=s.id)
+             .filter(WhatsAppThread.assigned_at.isnot(None))
+             .order_by(WhatsAppThread.assigned_at.desc()).first())
+        return t.assigned_at if t else datetime.min
+    return min(sales, key=_last_chat).id
+
 def do_handover(wa_id):
     """The AI decided a human should take over: assign the chat to a rep and pause
     the bot. For a brand-new prospect, create a round-robin Lead (same as Meta) so
-    the rep gets the new-lead bell alert; known contacts route to their own rep."""
+    the rep gets the new-lead bell alert; a known contact routes to their own rep
+    ONLY if that rep is on the sales team — WhatsApp stays a sales-owned channel,
+    so a lead/customer assigned to ops/finance/etc. still round-robins to sales."""
     from app import db, WhatsAppMessage, WhatsAppThread, Lead, Customer, LeadUpdate, User
     key = normalize_phone(wa_id)
     lead_id, customer_id = find_contact(wa_id)
     rep_id = None
     if customer_id:
         c = Customer.query.get(customer_id)
-        rep_id = c.assigned_to if c else None
+        if c and c.rep and c.rep.role == 'sales':
+            rep_id = c.assigned_to
     elif lead_id:
         l = Lead.query.get(lead_id)
-        rep_id = l.assigned_to if l else None
-    else:
-        # unknown number → round-robin assign the CHAT to a sales rep (NO lead yet).
-        # The rep reviews the conversation and clicks "Convert to Lead" for genuine ones.
-        # Rotation = least-recently-assigned active sales rep (on-leave staff skipped).
-        sales = User.query.filter(User.active == True, User.on_leave == False,
-                                  User.role == 'sales').order_by(User.id).all()
-        if not sales:
-            sales = User.query.filter(User.active == True, User.role == 'sales').order_by(User.id).all()
-        rep_id = None
-        if sales:
-            def _last_chat(s):
-                t = (WhatsAppThread.query.filter_by(assigned_to=s.id)
-                     .filter(WhatsAppThread.assigned_at.isnot(None))
-                     .order_by(WhatsAppThread.assigned_at.desc()).first())
-                return t.assigned_at if t else datetime.min
-            rep_id = min(sales, key=_last_chat).id
+        if l and l.assignee and l.assignee.role == 'sales':
+            rep_id = l.assigned_to
+    if not rep_id:
+        # Unknown number, or known but not assigned to a sales rep — round-robin.
+        rep_id = _round_robin_sales_rep()
     thread = WhatsAppThread.query.get(key)
     if not thread:
         thread = WhatsAppThread(wa_id=key)
