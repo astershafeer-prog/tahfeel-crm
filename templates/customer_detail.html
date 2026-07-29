@@ -369,6 +369,48 @@
       {% endif %}
     </div>
 
+    <!-- Tax & Compliance -->
+    <div class="card card-customers" style="margin-bottom:30px;">
+      <div class="card-header">
+        <h2>🧾 Tax &amp; Compliance <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ tax_filings|length }}</span></h2>
+      </div>
+      {% if not customer.vat_registered and not customer.corp_tax_registered %}
+      <div class="empty">Not VAT / Corp Tax registered. <a href="/customers/{{ customer.id }}/edit" style="color:var(--primary);">Set on Edit Client →</a></div>
+      {% elif tax_filings %}
+      <table>
+        <thead><tr><th>Type</th><th>Period</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for f in tax_filings %}
+          {% set days = (f.due_date - today).days %}
+          <tr {% if not f.filed_at and days < 0 %}style="background:#fff0f0;"{% elif not f.filed_at and days <= 30 %}style="background:#fff8f8;"{% endif %}>
+            <td><strong>{{ 'VAT' if f.tax_type=='VAT' else 'Corporate Tax' }}</strong></td>
+            <td>{{ f.period_label }}</td>
+            <td>
+              {{ f.due_date.strftime('%d %b %Y') }}
+              {% if not f.filed_at and days < 0 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> OVERDUE</span>
+              {% elif not f.filed_at and days <= 30 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> ⚠ {{ days }}d</span>{% endif %}
+            </td>
+            <td>
+              {% if f.filed_at %}<span style="background:var(--success-bg);color:var(--success);padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;">✓ Filed {{ f.filed_at.strftime('%d %b %Y') }}</span>
+              {% else %}<span style="background:#F1F5F9;color:#64748B;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;">Pending</span>{% endif %}
+            </td>
+            <td>
+              {% if not f.filed_at %}
+              <form method="POST" action="/customers/{{ customer.id }}/tax-filing/{{ f.id }}/mark-filed" style="display:inline;">
+                <input type="hidden" name="next" value="/customers/{{ customer.id }}">
+                <button type="submit" style="background:none;border:none;padding:0;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;">✓ Mark Filed</button>
+              </form>
+              {% else %}<span style="color:var(--text-muted);font-size:12px;">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">Registered, but no filing periods yet.</div>
+      {% endif %}
+    </div>
+
     <!-- Tasks — kept last: this list only grows over a client's lifetime, so
          putting it after the more static sections keeps them from drifting
          further down the page every time another task is added. -->

@@ -4192,7 +4192,9 @@ def customer_detail(customer_id):
                            called_this_month=customer_id in called_this_month_ids(now),
                            last_job=last_job,
                            completeness_pct=completeness_pct, completeness_missing=completeness_missing,
-                           services=[s.name for s in Service.query.order_by(Service.name).all()])
+                           services=[s.name for s in Service.query.order_by(Service.name).all()],
+                           tax_filings=TaxFiling.query.filter_by(customer_id=customer_id)
+                               .order_by(TaxFiling.filed_at.is_(None).desc(), TaxFiling.due_date).all())
 
 
 @app.route('/customers/<int:customer_id>/health')
