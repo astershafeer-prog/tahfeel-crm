@@ -58,7 +58,7 @@ def signed_document_url(file_url, public_id):
         format=fmt, sign_url=True, secure=True)
     return url
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 DUBAI_TZ = timezone(timedelta(hours=4))
 def now_dubai():
     return datetime.now(DUBAI_TZ).replace(tzinfo=None)
@@ -457,10 +457,19 @@ class Customer(db.Model):
     uae_pass_number = db.Column(db.String(50))   # UAE Pass access / account number
     uae_pass_name = db.Column(db.String(100))    # name on the UAE Pass account
     # Tax filing tracking (shown as Compliance cards; auto-roll on Filed)
+    # DEPRECATED — superseded by vat_registered/corp_tax_registered + TaxFiling
+    # below, which track real per-period history instead of one rolling date.
+    # Left in place (unused by new code) so existing data isn't dropped; the
+    # owner is backfilling old customers into TaxFiling manually.
     vat_status = db.Column(db.String(20))        # 'Filed' / 'Not filed'
     vat_due_date = db.Column(db.Date)            # next VAT filing due
     corp_tax_status = db.Column(db.String(20))   # 'Filed' / 'Not filed'
     corp_tax_due_date = db.Column(db.Date)       # next corporate-tax filing due
+    # VAT is quarterly, Corp Tax is annual — registering generates this year's
+    # TaxFiling row(s); each period is marked filed individually and kept as
+    # permanent history, never overwritten.
+    vat_registered = db.Column(db.Boolean, default=False)
+    corp_tax_registered = db.Column(db.Boolean, default=False)
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -1177,6 +1186,22 @@ class ComplianceSnapshot(db.Model):
     expired_count = db.Column(db.Integer, default=0)
     renewal_budget_min = db.Column(db.Float, default=0)
     renewal_budget_max = db.Column(db.Float, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    customer = db.relationship('Customer', foreign_keys=[customer_id])
+
+class TaxFiling(db.Model):
+    """One row per VAT quarter or Corp Tax year a customer is registered for.
+    Filed rows are permanent history — never edited or deleted once filed_at
+    is set. Unfiled rows that haven't come due yet get cleared if the customer
+    deregisters (_clear_unfiled_future_filings); anything already overdue
+    stays as a record of the gap."""
+    __tablename__ = 'tax_filing'
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False, index=True)
+    tax_type = db.Column(db.String(10), nullable=False)     # 'VAT' / 'CorpTax'
+    period_label = db.Column(db.String(20), nullable=False)  # 'Q3 2026' / 'FY2026'
+    due_date = db.Column(db.Date, nullable=False)
+    filed_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     customer = db.relationship('Customer', foreign_keys=[customer_id])
 
@@ -3912,26 +3937,62 @@ def _add_months(d, months):
     m = m % 12 + 1
     return d.replace(year=y, month=m, day=min(d.day, calendar.monthrange(y, m)[1]))
 
+def _vat_due_date(year, quarter):
+    """VAT return due 28th of the month after the quarter ends."""
+    due_month = quarter * 3 + 1
+    due_year = year
+    if due_month > 12:
+        due_month -= 12
+        due_year += 1
+    return date(due_year, due_month, 28)
+
+def _corp_tax_due_date(year):
+    """Corp Tax return due 9 months after the financial year ends. Every
+    client is assumed calendar-year (Jan-Dec) — Dec 31 + 9 months lands on
+    Sep 30 the following year via _add_months' day-clamping."""
+    return _add_months(date(year, 12, 31), 9)
+
+def _generate_tax_filings(customer, tax_type, year=None):
+    """Create this year's TaxFiling row(s) for a newly-registered customer —
+    4 quarters for VAT, 1 year for Corp Tax. Idempotent: skips periods that
+    already exist so re-saving the form never duplicates rows."""
+    year = year or now_dubai().year
+    existing = {f.period_label for f in TaxFiling.query.filter_by(
+        customer_id=customer.id, tax_type=tax_type).all()}
+    if tax_type == 'VAT':
+        periods = [(f'Q{q} {year}', _vat_due_date(year, q)) for q in range(1, 5)]
+    else:
+        periods = [(f'FY{year}', _corp_tax_due_date(year))]
+    for label, due in periods:
+        if label in existing:
+            continue
+        db.session.add(TaxFiling(customer_id=customer.id, tax_type=tax_type,
+                                  period_label=label, due_date=due))
+
+def _clear_unfiled_future_filings(customer, tax_type):
+    """On deregistering: drop rows that aren't due yet and were never filed —
+    they're not real obligations anymore. Anything already overdue-and-unfiled
+    stays as a record of the gap; anything filed is permanent history either way."""
+    today = now_dubai().date()
+    TaxFiling.query.filter(
+        TaxFiling.customer_id == customer.id, TaxFiling.tax_type == tax_type,
+        TaxFiling.filed_at.is_(None), TaxFiling.due_date > today
+    ).delete(synchronize_session=False)
+
 def _save_tax_fields(customer):
-    """Save VAT + Corporate-tax filing status/due from the form.
-    Auto-roll: marking 'Filed' advances the due date one period (VAT quarterly,
-    corp tax yearly) and resets status to 'Not filed' (next period now due)."""
-    for prefix, months in (('vat', 3), ('corp_tax', 12)):
-        if (prefix + '_status') not in request.form and (prefix + '_due_date') not in request.form:
-            continue  # form didn't include these — preserve existing values
-        status = (request.form.get(prefix + '_status') or '').strip()
-        due_str = (request.form.get(prefix + '_due_date') or '').strip()
-        due = None
-        if due_str:
-            try:
-                due = datetime.strptime(due_str, '%Y-%m-%d').date()
-            except ValueError:
-                due = None
-        if status == 'Filed' and due:
-            due = _add_months(due, months)
-            status = 'Not filed'
-        setattr(customer, prefix + '_status', status or None)
-        setattr(customer, prefix + '_due_date', due)
+    """Sync VAT/Corp Tax registration from the form and (re)generate this
+    year's TaxFiling rows accordingly. Only acts on a control actually present
+    in the submitted form, so a partial form update never wipes registration."""
+    for field, tax_type in (('vat_registered', 'VAT'), ('corp_tax_registered', 'CorpTax')):
+        if field not in request.form:
+            continue
+        new_val = request.form.get(field) == 'Yes'
+        old_val = bool(getattr(customer, field))
+        setattr(customer, field, new_val)
+        if new_val and not old_val:
+            _generate_tax_filings(customer, tax_type)
+        elif not new_val and old_val:
+            _clear_unfiled_future_filings(customer, tax_type)
 
 def _customer_type_template(ctype):
     return 'add_customer_company.html' if ctype == 'Company' else 'add_customer_individual.html'
@@ -4092,6 +4153,16 @@ def add_customer():
                            authorities=_authority_names(), attribution_sources=CLIENT_ATTRIBUTION_SOURCES,
                            prefill=prefill, lead_id=lead_for_prefill.id if lead_for_prefill else '')
 
+@app.route('/customers/<int:customer_id>/tax-filing/<int:filing_id>/mark-filed', methods=['POST'])
+@login_required
+def mark_tax_filing_filed(customer_id, filing_id):
+    filing = TaxFiling.query.filter_by(id=filing_id, customer_id=customer_id).first_or_404()
+    if not filing.filed_at:
+        filing.filed_at = now_dubai()
+        db.session.commit()
+        flash(f'{filing.tax_type} {filing.period_label} marked filed')
+    return _safe_redirect(request.form.get('next'), 'customer_detail', customer_id=customer_id)
+
 @app.route('/customers/<int:customer_id>')
 @login_required
 def customer_detail(customer_id):
@@ -4164,9 +4235,10 @@ def customer_health(customer_id):
     emp_expired = len([d for d in emp_docs if dleft(d) < 0])
     # Upcoming renewals = anything due within the next 30 days (docs + tax filings)
     renewals_30 = len([d for d in docs if 0 <= dleft(d) <= 30])
-    for _due in (customer.vat_due_date, customer.corp_tax_due_date):
-        if _due and 0 <= (_due - today).days <= 30:
-            renewals_30 += 1
+    renewals_30 += TaxFiling.query.filter(
+        TaxFiling.customer_id == customer_id, TaxFiling.filed_at.is_(None),
+        TaxFiling.due_date >= today, TaxFiling.due_date <= today + timedelta(days=30)
+    ).count()
     wa_number = (customer.whatsapp or customer.mobile or customer.phone or '').replace(' ', '').replace('+', '')
     from_email = os.environ.get('SMTP_FROM') or os.environ.get('SMTP_USER') or 'info@tahfeel.ae'
     # TASK 3.2(b/c): renewal budget range for docs due within 90 days
@@ -4186,6 +4258,8 @@ def customer_health(customer_id):
             'newly_expiring': max(0, (_latest.expiring_count or 0) - (_prev.expiring_count or 0)),
         }
     sparkline = list(reversed(_snaps_desc))  # oldest -> newest for left-to-right rendering
+    tax_filings = TaxFiling.query.filter_by(customer_id=customer_id) \
+        .order_by(TaxFiling.filed_at.is_(None).desc(), TaxFiling.due_date).all()
     return render_template('customer_health.html', customer=customer, now=now, today=today,
                            total=total, valid=valid, expiring=expiring, expired=expired,
                            missing_expiry_count=missing_expiry_count,
@@ -4194,7 +4268,8 @@ def customer_health(customer_id):
                            emp_expired=emp_expired, owners_count=owners_count, renewals_30=renewals_30,
                            wa_number=wa_number, from_email=from_email,
                            renewal_budget_min=renewal_budget_min, renewal_budget_max=renewal_budget_max,
-                           show_renewal_warning=show_renewal_warning, trend=trend, sparkline=sparkline)
+                           show_renewal_warning=show_renewal_warning, trend=trend, sparkline=sparkline,
+                           tax_filings=tax_filings)
 
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -6931,10 +7006,11 @@ def _customer_report_data(customer_id):
     if uplift and uplift > (score or 0):
         advisor.append(f'Completing the identified renewals could improve your score to {uplift}% '
                        f'and reduce your estimated compliance risk from {risk_pct}%.')
-    if not (customer.vat_status or customer.corp_tax_status):
+    if not (customer.vat_registered or customer.corp_tax_registered):
         pass
-    elif (customer.vat_due_date and 0 <= (customer.vat_due_date - today).days <= 60) or \
-         (customer.corp_tax_due_date and 0 <= (customer.corp_tax_due_date - today).days <= 60):
+    elif TaxFiling.query.filter(
+            TaxFiling.customer_id == customer.id, TaxFiling.filed_at.is_(None),
+            TaxFiling.due_date <= today + timedelta(days=60)).first():
         advisor.append('A tax filing is due soon — please ensure returns are submitted on time.')
     else:
         advisor.append('No immediate tax issues were detected.')
@@ -6969,6 +7045,8 @@ def _customer_report_data(customer_id):
         'advisor': advisor, 'forecast': forecast, 'forecast_total': forecast_total,
         'account_manager': customer.rep.name if customer.rep else None,
         'generated': now_dubai(),
+        'tax_filings': TaxFiling.query.filter_by(customer_id=customer_id)
+            .order_by(TaxFiling.filed_at.is_(None).desc(), TaxFiling.due_date).all(),
     }
 
 def build_report_email_html(data):
@@ -7950,6 +8028,20 @@ def init_db():
             'ALTER TABLE doc_renewal_cost DROP CONSTRAINT IF EXISTS doc_renewal_cost_doc_type_key',
             'ALTER TABLE doc_renewal_cost ADD COLUMN IF NOT EXISTS jurisdiction VARCHAR(20)',
             'ALTER TABLE doc_renewal_cost ADD COLUMN IF NOT EXISTS cost_price FLOAT',
+            # VAT/Corp Tax filing history — replaces the single vat_status/
+            # vat_due_date pair with real per-period tracking
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS vat_registered BOOLEAN DEFAULT FALSE',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS corp_tax_registered BOOLEAN DEFAULT FALSE',
+            """CREATE TABLE IF NOT EXISTS tax_filing (
+                id SERIAL PRIMARY KEY,
+                customer_id INTEGER NOT NULL REFERENCES customer(id),
+                tax_type VARCHAR(10) NOT NULL,
+                period_label VARCHAR(20) NOT NULL,
+                due_date DATE NOT NULL,
+                filed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
+            'CREATE INDEX IF NOT EXISTS idx_tax_filing_customer_id ON tax_filing(customer_id)',
         ]
         for sql in migrations:
             try:
@@ -8839,6 +8931,9 @@ def analytics():
         connected_ids = called_this_month_ids(now)
         attempted_ids = attempted_this_month_ids(now)
         owners_by_cust = Counter(cid for (cid,) in db.session.query(Owner.customer_id).all())
+        open_filings_by_cust = {}
+        for f in TaxFiling.query.filter(TaxFiling.filed_at.is_(None)).all():
+            open_filings_by_cust.setdefault(f.customer_id, []).append(f)
         docs_expired = docs_30 = docs_60 = 0
         expiring_rows = []
         gaps = {'no_wa': 0, 'no_rep': 0, 'no_owner': 0, 'no_authority': 0, 'no_activity': 0}
@@ -8867,16 +8962,19 @@ def analytics():
                     expiring_rows.append({'id': c.id, 'name': c.name, 'doc': d.doc_type,
                                           'days': dl, 'date': d.expiry_date,
                                           'manager': c.rep.name if c.rep else '—'})
-            # -- tax compliance
-            if (c.vat_status or '') == 'Not filed':
+            # -- tax compliance (VAT quarterly / Corp Tax annual filing history)
+            c_open = open_filings_by_cust.get(c.id, [])
+            c_vat_open = [f for f in c_open if f.tax_type == 'VAT']
+            c_ct_open = [f for f in c_open if f.tax_type == 'CorpTax']
+            if c_vat_open:
                 tax['vat_notfiled'] += 1
-                if c.vat_due_date and c.vat_due_date < today:
+                if any(f.due_date < today for f in c_vat_open):
                     tax['vat_overdue'] += 1
-            elif not (c.vat_status or ''):
+            elif not c.vat_registered:
                 tax['vat_na'] += 1
-            if (c.corp_tax_status or '') == 'Not filed':
+            if c_ct_open:
                 tax['ct_notfiled'] += 1
-                if c.corp_tax_due_date and c.corp_tax_due_date < today:
+                if any(f.due_date < today for f in c_ct_open):
                     tax['ct_overdue'] += 1
             # -- data gaps (a fix-list, not just a stat)
             if not (c.whatsapp or c.mobile or c.phone or c.phone2):
@@ -9272,25 +9370,39 @@ def _rule_expired_docs(ctx):
                   'to help them understand their exposure rather than to sell a renewal.'),
     )]
 
+def _plan_tax_filing_rows(ctx, tax_type, horizon_days):
+    """Shared by _rule_corp_tax/_rule_vat: the most urgent unfiled TaxFiling
+    per customer, within the horizon. A customer can have more than one open
+    period (e.g. fell behind a quarter) — only the soonest/most-overdue one
+    surfaces, same as the old single-due-date behaviour."""
+    cust_ids = [c.id for c in ctx.customers]
+    if not cust_ids:
+        return []
+    open_filings = TaxFiling.query.filter(
+        TaxFiling.customer_id.in_(cust_ids), TaxFiling.tax_type == tax_type,
+        TaxFiling.filed_at.is_(None)).all()
+    cust_by_id = {c.id: c for c in ctx.customers}
+    by_cust = {}
+    for f in open_filings:
+        days = _plan_dl(f.due_date, ctx.today)
+        if days is None or days > horizon_days:
+            continue
+        if f.customer_id not in by_cust or days < by_cust[f.customer_id][1]:
+            by_cust[f.customer_id] = (f, days)
+    rows = [(cust_by_id[cid], f, days) for cid, (f, days) in by_cust.items() if cid in cust_by_id]
+    rows.sort(key=lambda r: r[2])
+    return rows
+
 def _rule_corp_tax(ctx):
-    rows = []
-    for c in ctx.customers:
-        if (c.corp_tax_status or '').strip() == 'Filed':
-            continue
-        days = _plan_dl(c.corp_tax_due_date, ctx.today)
-        if days is None or days > 150:
-            continue
-        rows.append((c, days))
+    rows = _plan_tax_filing_rows(ctx, 'CorpTax', 150)
     if not rows:
         return []
-    rows.sort(key=lambda r: r[1])
-    details = [_plan_detail(ctx.cust_name(c),
-                            f'due {c.corp_tax_due_date.strftime("%d %b %Y")}',
-                            _plan_days_label(d), _plan_tone(d)) for c, d in rows]
+    details = [_plan_detail(ctx.cust_name(c), f'{f.period_label} due {f.due_date.strftime("%d %b %Y")}',
+                            _plan_days_label(d), _plan_tone(d)) for c, f, d in rows]
     return [_plan_candidate(
         'protect', 'corp_tax', 'Tax',
         f'{len(rows)} client{"s" if len(rows) > 1 else ""} corporate tax not filed',
-        details, 'Customer · corp_tax_status', urgency_days=rows[0][1],
+        details, 'TaxFiling · CorpTax', urgency_days=rows[0][2],
         amount_label='Service fee',
         fallback=('Frame this as avoiding the late-registration penalty, not as an upsell. '
                   'Offer a fixed fee. Where a client also has a licence renewing, propose one '
@@ -9298,24 +9410,15 @@ def _rule_corp_tax(ctx):
     )]
 
 def _rule_vat(ctx):
-    rows = []
-    for c in ctx.customers:
-        if (c.vat_status or '').strip() == 'Filed':
-            continue
-        days = _plan_dl(c.vat_due_date, ctx.today)
-        if days is None or days > 90:
-            continue
-        rows.append((c, days))
+    rows = _plan_tax_filing_rows(ctx, 'VAT', 90)
     if not rows:
         return []
-    rows.sort(key=lambda r: r[1])
-    details = [_plan_detail(ctx.cust_name(c),
-                            f'due {c.vat_due_date.strftime("%d %b %Y")}',
-                            _plan_days_label(d), _plan_tone(d)) for c, d in rows]
+    details = [_plan_detail(ctx.cust_name(c), f'{f.period_label} due {f.due_date.strftime("%d %b %Y")}',
+                            _plan_days_label(d), _plan_tone(d)) for c, f, d in rows]
     return [_plan_candidate(
         'protect', 'vat', 'VAT',
         f'{len(rows)} client{"s" if len(rows) > 1 else ""} VAT return due',
-        details, 'Customer · vat_status', urgency_days=rows[0][1],
+        details, 'TaxFiling · VAT', urgency_days=rows[0][2],
         amount_label='Service fee',
         fallback=('VAT deadlines are fixed and penalties are automatic, so this is a service '
                   'call rather than a sale. Confirm who is filing; if it is not you, ask why not.'),
