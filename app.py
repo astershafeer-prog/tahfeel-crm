@@ -2337,13 +2337,11 @@ def add_lead():
         )
         db.session.add(lead)
         db.session.commit()
-        # Auto-greet on WhatsApp (approved template). Only for this single manual add —
-        # never bulk import. No-ops unless WA_AUTO_WELCOME is on. Never breaks lead add.
-        try:
-            from whatsapp_webhook import notify_new_lead
-            notify_new_lead(lead)
-        except Exception as e:
-            print(f'[WA] manual-lead greet skipped: {e}')
+        # No auto-greet here — a manually-added lead never contacted us first
+        # (cold call being logged, a referral, a walk-in), so an automatic
+        # "thanks for your interest" WhatsApp would be unsolicited and risks
+        # WhatsApp number quality. The greeting stays automatic only for
+        # genuinely inbound Meta leads (meta_webhook.py).
         flash('Lead added successfully')
         return redirect(url_for('all_leads'))
     campaigns = Campaign.query.order_by(Campaign.name).all()
@@ -3938,80 +3936,102 @@ def _save_tax_fields(customer):
 def _customer_type_template(ctype):
     return 'add_customer_company.html' if ctype == 'Company' else 'add_customer_individual.html'
 
+def _lead_customer_prefill(lead, ctype):
+    """Map a converted Lead's fields onto the Add Client form for the chosen type,
+    so 'Quick Add from Converted Lead' lands on a filled-in form instead of a blank
+    one. Company gets the lead's company name as the client name and the lead's own
+    name as the contact person; Individual just carries the lead's name straight
+    across."""
+    if not lead:
+        return {}
+    if ctype == 'Company':
+        name = lead.company or lead.name
+        contact_person = lead.name
+    else:
+        name = lead.name
+        contact_person = ''
+    return {
+        'name': name, 'contact_person': contact_person,
+        'phone': lead.phone_original or lead.phone or '',
+        'phone2': getattr(lead, 'phone2', '') or '',
+        'email': lead.email or '', 'address': lead.address or '',
+        'source': lead.source or '',
+        'assigned_to': str(lead.assigned_to) if lead.assigned_to else '',
+        'notes': lead.remarks or '',
+    }
+
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required
 def add_customer():
     converted_leads = Lead.query.filter_by(status='Converted').order_by(Lead.name).all()
     sources = Source.query.order_by(Source.name).all()
+    users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'admin'])).all()
+    doc_types = DocType.query.order_by(DocType.name).all()
+
     if request.method == 'POST':
         ctype = request.form.get('customer_type', 'Individual')
-        doc_types = DocType.query.order_by(DocType.name).all()
+        lead_id = request.form.get('lead_id') or None
+
+        def _redisplay():
+            # Re-render with everything already typed intact — a validation
+            # failure (missing field, duplicate phone) should never throw away
+            # what was entered, whether from a blank form or a Quick-Add prefill.
+            return render_template(_customer_type_template(ctype), users=users, sources=sources,
+                                   converted_leads=converted_leads, doc_types=doc_types,
+                                   attribution_sources=CLIENT_ATTRIBUTION_SOURCES,
+                                   authorities=_authority_names(),
+                                   prefill=request.form, lead_id=lead_id)
+
         if ctype == 'Company' and not (request.form.get('contact_person') or '').strip():
             flash('Contact Person is required for a Company client', 'error')
-            return redirect(url_for('add_customer', type=ctype))
-        # Validate required fields
-        if not request.form.get('lead_id'):
-            if not request.form.get('source'):
-                flash('Source is required', 'error')
-                users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types, attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
-            if not request.form.get('assigned_to'):
-                flash('Primary Representative is required', 'error')
-                users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types, attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
+            return _redisplay()
+        if not request.form.get('source'):
+            flash('Source is required', 'error')
+            return _redisplay()
+        if not request.form.get('assigned_to'):
+            flash('Primary Representative is required', 'error')
+            return _redisplay()
 
-        # Check for duplicate phone number
-        phone_to_check = None
-        lead_id = request.form.get('lead_id') or None
-        if lead_id:
-            lead = Lead.query.get(int(lead_id))
-            phone_to_check = lead.phone
-        else:
-            phone_to_check = normalize_phone_e164(request.form.get('phone', '').strip())
-
+        # Duplicate-phone check always runs against what's actually in the form —
+        # if the rep edited the number to work around a clash, that edit is what
+        # gets checked, not the originating lead's number.
+        phone_to_check = normalize_phone_e164(request.form.get('phone', '').strip())
         if phone_to_check and not request.form.get('allow_duplicate'):
             existing_customer = Customer.query.filter_by(phone=phone_to_check).first()
             if existing_customer:
                 flash(f'⚠️ Phone {phone_to_check} already exists for "{existing_customer.name}". Submit again to add anyway.', 'error')
-                users = User.query.filter_by(active=True).filter(User.role.in_(['staff', 'sales', 'operations', 'admin'])).all()
-                return render_template(_customer_type_template(ctype), users=users, sources=sources, converted_leads=converted_leads, doc_types=doc_types, attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
-        
+                return _redisplay()
+
         _attribution = request.form.get('attribution_source', '').strip() or None
         if _attribution not in CLIENT_ATTRIBUTION_SOURCES:
             _attribution = None
+        _phone_raw = request.form.get('phone', '').strip()
+        customer = Customer(
+            name=request.form.get('name', '').strip(),
+            company=request.form.get('company', '').strip() or None,
+            phone=normalize_phone_e164(_phone_raw),
+            phone_original=_phone_raw or None,
+            phone2=normalize_phone_e164(request.form.get('phone2', '').strip()) or None,
+            email=request.form.get('email', '').strip() or None,
+            address=request.form.get('address', '').strip() or None,
+            source=request.form.get('source', '').strip() or None,
+            attribution_source=_attribution,
+            nationality=request.form.get('nationality', '').strip() or None,
+            customer_type=ctype,
+            contact_person=request.form.get('contact_person', '').strip() or None,
+            assigned_to=int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None,
+            notes=request.form.get('notes', '').strip() or None,
+            date_of_birth=datetime.strptime(request.form.get('date_of_birth'), '%Y-%m-%d').date() if request.form.get('date_of_birth') else None,
+            lead_id=int(lead_id) if lead_id else None,
+        )
         if lead_id:
-            customer = Customer(
-                name=lead.name, company=lead.company, phone=lead.phone,
-                phone_original=getattr(lead, 'phone_original', None),
-                phone2=getattr(lead, 'phone2', None),
-                email=lead.email, address=lead.address, source=lead.source,
-                attribution_source=_attribution,
-                notes=request.form.get('notes'), lead_id=int(lead_id)
-            )
-            # TASK 2.3: this IS the conversion moment — stamp it here, not
-            # earlier, so an abandoned form never leaves a lead falsely marked
-            # Converted with no linked client.
-            lead.status = 'Converted'
-            lead.converted_at = now_dubai()
-        else:
-            _phone_raw = request.form.get('phone', '').strip()
-            customer = Customer(
-                name=request.form.get('name', '').strip(),
-                company=request.form.get('company', '').strip() or None,
-                phone=normalize_phone_e164(_phone_raw),
-                phone_original=_phone_raw or None,
-                phone2=normalize_phone_e164(request.form.get('phone2', '').strip()) or None,
-                email=request.form.get('email', '').strip() or None,
-                address=request.form.get('address', '').strip() or None,
-                source=request.form.get('source', '').strip() or None,
-                attribution_source=_attribution,
-                nationality=request.form.get('nationality', '').strip() or None,
-                customer_type=request.form.get('customer_type', 'Individual'),
-                contact_person=request.form.get('contact_person', '').strip() or None,
-                assigned_to=int(request.form.get('assigned_to')) if request.form.get('assigned_to') else None,
-                notes=request.form.get('notes', '').strip() or None,
-                date_of_birth=datetime.strptime(request.form.get('date_of_birth'), '%Y-%m-%d').date() if request.form.get('date_of_birth') else None
-            )
+            lead = Lead.query.get(int(lead_id))
+            if lead:
+                # TASK 2.3: this IS the conversion moment — stamp it here, not
+                # earlier, so an abandoned form never leaves a lead falsely marked
+                # Converted with no linked client.
+                lead.status = 'Converted'
+                lead.converted_at = now_dubai()
         db.session.add(customer)
         db.session.flush()  # get customer.id before commit
 
@@ -4061,13 +4081,16 @@ def add_customer():
         db.session.commit()
         flash('Customer added successfully')
         return redirect(url_for('customer_detail', customer_id=customer.id))
-    users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations','admin'])).all()
-    doc_types = DocType.query.order_by(DocType.name).all()
+
+    lead_id_arg = request.args.get('lead_id')
+    lead_for_prefill = Lead.query.get(int(lead_id_arg)) if lead_id_arg and lead_id_arg.isdigit() else None
     ctype = request.args.get('type', '')
     if ctype not in ('Individual', 'Company'):
-        return render_template('add_customer_choose.html', converted_leads=converted_leads)
+        return render_template('add_customer_choose.html', converted_leads=converted_leads, quick_lead=lead_for_prefill)
+    prefill = _lead_customer_prefill(lead_for_prefill, ctype)
     return render_template(_customer_type_template(ctype), converted_leads=converted_leads, sources=sources, users=users, doc_types=doc_types,
-                           authorities=_authority_names(), attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
+                           authorities=_authority_names(), attribution_sources=CLIENT_ATTRIBUTION_SOURCES,
+                           prefill=prefill, lead_id=lead_for_prefill.id if lead_for_prefill else '')
 
 @app.route('/customers/<int:customer_id>')
 @login_required
