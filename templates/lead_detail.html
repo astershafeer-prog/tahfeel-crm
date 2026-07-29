@@ -39,11 +39,7 @@
           {% if linked_customer %}
           <a href="/customers/{{ linked_customer.id }}" style="display:inline-flex;align-items:center;gap:6px;background:#ECFDF5;color:#059669;text-decoration:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;border:1px solid #A7F3D0;">✓ Converted → {{ linked_customer.name }}</a>
           {% else %}
-          <form method="POST" action="/customers/add" style="margin:0;" onsubmit="return confirm('Convert this lead to a client? A new client record will be created from this lead\'s details.');">
-            <input type="hidden" name="lead_id" value="{{ lead.id }}">
-            <input type="hidden" name="customer_type" value="Individual">
-            <button type="submit" style="display:inline-flex;align-items:center;gap:6px;background:#0F2660;color:white;border:none;text-decoration:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">🤝 Convert to Client</button>
-          </form>
+          <a href="/customers/add?lead_id={{ lead.id }}" style="display:inline-flex;align-items:center;gap:6px;background:#0F2660;color:white;text-decoration:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;">🤝 Convert to Client</a>
           {% endif %}
           <a href="/leads/{{ lead.id }}/edit" class="ib" title="Edit">✏</a>
         </div>
