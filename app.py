@@ -1,6 +1,7 @@
 # v19
 import os
 import hmac
+from types import SimpleNamespace
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -2364,6 +2365,12 @@ def lead_detail(lead_id):
         if stage == 'Future' and not followup_dt:
             flash('Please pick a future revisit date for a Future lead.')
             return redirect(url_for('lead_detail', lead_id=lead_id))
+        # Activity is mandatory on every update — it's what drives the attempts
+        # counter, first-contact timestamp, and the Daily Log activity scorecard.
+        # "Note" is always available as the catch-all when nothing else fits.
+        if not activity_type:
+            flash('Please select what activity you did (use "Note" if nothing else fits).')
+            return redirect(url_for('lead_detail', lead_id=lead_id))
         # ── Lead quality is mandatory once a real contact is made ──
         # A "positive action" = any logged activity that isn't a no-answer or a plain
         # note, OR moving the lead forward. You can't judge quality on a no-answer, so
@@ -2788,6 +2795,13 @@ def edit_lead(lead_id):
         flash('Lead updated successfully')
         return redirect(url_for('lead_detail', lead_id=lead_id))
     campaigns = Campaign.query.order_by(Campaign.name).all()
+    # Meta leads carry whatever campaign name Facebook/Instagram used at the time —
+    # never pre-registered in the admin Campaign list. If we don't offer it as an
+    # option here, the dropdown falls back to blank and the next save silently
+    # wipes the real campaign name. Add it as a one-off option so it stays selected
+    # and round-trips unchanged if nobody touches the field.
+    if lead.campaign and lead.campaign not in [c.name for c in campaigns]:
+        campaigns = [SimpleNamespace(name=lead.campaign)] + campaigns
     return render_template('edit_lead.html', lead=lead, users=users, services=services, sources=sources, campaigns=campaigns, now=now)
 
 @app.route('/leads/<int:lead_id>/delete', methods=['POST'])
