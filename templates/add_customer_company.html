@@ -90,10 +90,12 @@
             <div class="form-group"><label>UAE Pass Name</label><input type="text" name="uae_pass_name" placeholder="Name on the UAE Pass account"></div>
 
             <div class="form-group" style="grid-column:1/-1;"><div class="section-label" style="margin-top:8px;">🧾 Tax &amp; Compliance</div></div>
-            <div class="form-group"><label>VAT / Tax Filing</label><select name="vat_status"><option value="">— N/A —</option><option value="Not filed">Not filed</option><option value="Filed">Filed → roll to next quarter</option></select></div>
-            <div class="form-group"><label>VAT Due Date</label><input type="date" name="vat_due_date"></div>
-            <div class="form-group"><label>Corporate Tax</label><select name="corp_tax_status"><option value="">— N/A —</option><option value="Not filed">Not filed</option><option value="Filed">Filed → roll to next year</option></select></div>
-            <div class="form-group"><label>Corporate Tax Due Date</label><input type="date" name="corp_tax_due_date"></div>
+            <div class="form-group"><label>VAT Registered</label><select name="vat_registered"><option value="">— No —</option><option value="Yes">Yes</option></select>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">If Yes, this year's 4 quarterly due dates are created automatically — mark each one Filed as it happens.</div>
+            </div>
+            <div class="form-group"><label>Corporate Tax Registered</label><select name="corp_tax_registered"><option value="">— No —</option><option value="Yes">Yes</option></select>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">If Yes, this year's annual due date is created automatically.</div>
+            </div>
 
             <div class="form-group">
               <label>Source *</label>

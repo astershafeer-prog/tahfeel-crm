@@ -277,19 +277,30 @@
       <div class="hc-card">
         <div class="sec-head"><h2>🧾 Tax &amp; Compliance</h2></div>
         <div class="dgrid">
-          {% for label, icon, status, due in [
-              ('Tax Filing (VAT)', '🧾', customer.vat_status, customer.vat_due_date),
-              ('Corporate Tax', '🏛', customer.corp_tax_status, customer.corp_tax_due_date)
-          ] %}
-            {% set days = (due - today).days if due else None %}
-            {% set col = '#94A3B8' if days is none else ('#DC2626' if days < 0 else ('#B45309' if days <= 30 else '#059669')) %}
-            {% set bg = '#F1F5F9' if days is none else ('#FCEBEB' if days < 0 else ('#FAEEDA' if days <= 30 else '#E1F5EE')) %}
-            {% set txt = (status or 'Not set') if days is none else (('Overdue · ' ~ due.strftime('%d %b %Y')) if days < 0 else ('Due ' ~ due.strftime('%d %b %Y'))) %}
-            <div class="dtile" style="border-top-color:{{ col }};">
-              <div class="dico" style="background:{{ bg }};color:{{ col }};">{{ icon }}</div>
-              <div class="dt">{{ label }}</div>
-              <div class="ex" style="color:{{ col }};">{{ txt }}</div>
-            </div>
+          {% if not customer.vat_registered and not customer.corp_tax_registered %}
+          <div class="dtile" style="border-top-color:#94A3B8;">
+            <div class="dico" style="background:#F1F5F9;color:#94A3B8;">🧾</div>
+            <div class="dt">Not VAT / Corp Tax registered</div>
+            <div class="ex" style="color:#94A3B8;">Set on the client's Edit page</div>
+          </div>
+          {% endif %}
+          {% for f in tax_filings %}
+          {% set days = (f.due_date - today).days %}
+          {% set col = '#059669' if f.filed_at else ('#DC2626' if days < 0 else ('#B45309' if days <= 30 else '#94A3B8')) %}
+          {% set bg = '#E1F5EE' if f.filed_at else ('#FCEBEB' if days < 0 else ('#FAEEDA' if days <= 30 else '#F1F5F9')) %}
+          <div class="dtile" style="border-top-color:{{ col }};">
+            <div class="dico" style="background:{{ bg }};color:{{ col }};">{{ '🧾' if f.tax_type=='VAT' else '🏛' }}</div>
+            <div class="dt">{{ 'VAT' if f.tax_type=='VAT' else 'Corp Tax' }} · {{ f.period_label }}</div>
+            {% if f.filed_at %}
+            <div class="ex" style="color:{{ col }};">✓ Filed {{ f.filed_at.strftime('%d %b %Y') }}</div>
+            {% else %}
+            <div class="ex" style="color:{{ col }};">{{ 'Overdue · ' if days < 0 }}Due {{ f.due_date.strftime('%d %b %Y') }}</div>
+            <form method="POST" action="/customers/{{ customer.id }}/tax-filing/{{ f.id }}/mark-filed" style="margin-top:7px;">
+              <input type="hidden" name="next" value="/customers/{{ customer.id }}/health">
+              <button type="submit" style="width:100%;background:{{ col }};color:#fff;border:none;border-radius:7px;padding:5px 0;font-size:11px;font-weight:700;cursor:pointer;">Mark Filed</button>
+            </form>
+            {% endif %}
+          </div>
           {% endfor %}
         </div>
       </div>
