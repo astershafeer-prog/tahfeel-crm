@@ -3923,7 +3923,13 @@ def customers():
 @login_required
 def api_customer_phone_exists():
     from flask import jsonify
-    phone = (request.args.get('phone') or '').strip()
+    # Must normalize the same way add_customer() does before checking — every
+    # stored Customer.phone is compact E.164 (no spaces), but the raw input
+    # here still has the "+971 " spacing the phone-country widget inserts.
+    # Comparing un-normalized against normalized meant this almost always
+    # said "doesn't exist" even for a real duplicate, silently skipping the
+    # confirm() popup and leaving only the abrupt server-side flash to catch it.
+    phone = normalize_phone_e164((request.args.get('phone') or '').strip())
     if not phone:
         return jsonify({'exists': False, 'name': ''})
     c = Customer.query.filter_by(phone=phone).first()
@@ -4138,6 +4144,26 @@ def add_customer():
                 uploaded_by=session.get('user_id')
             )
             db.session.add(doc)
+
+        # Save inline owners (Company wizard's UBO/Owners step) — same
+        # array-field pattern as documents above, same reason: nothing here
+        # can be created before customer.id exists.
+        owner_names = request.form.getlist('owner_name[]')
+        owner_roles = request.form.getlist('owner_role[]')
+        owner_shares = request.form.getlist('owner_share[]')
+        for i, oname in enumerate(owner_names):
+            if not oname.strip(): continue
+            share = None
+            try:
+                if i < len(owner_shares) and owner_shares[i]:
+                    share = float(owner_shares[i])
+            except ValueError:
+                share = None
+            db.session.add(Owner(
+                customer_id=customer.id, name=oname.strip(),
+                role=owner_roles[i] if i < len(owner_roles) and owner_roles[i] else None,
+                share_pct=share,
+            ))
 
         db.session.commit()
         flash('Customer added successfully')
