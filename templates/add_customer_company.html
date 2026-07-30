@@ -402,20 +402,26 @@
     // ── Wizard step navigation ──────────────────────────────────────────────
     // Native HTML5 validation only fires on rendered (display != none) fields —
     // display:none elements are exempt from constraint validation entirely — so
-    // each step is validated on "Next" (while its fields are still visible),
-    // which is also the ONLY point anything gets enforced given hidden steps.
-    // Tabs can only be clicked to jump BACK to an already-completed step, never
-    // forward, so that guarantee holds by the time Save is reachable.
+    // step 1 (Basic & Company Info) is validated on "Next" while its fields are
+    // still visible, which is the ONLY point its required fields (name, phone,
+    // source, assigned rep) get enforced. That gate has to stay: jumping there
+    // straight to Documents and saving would silently skip it. Steps 2-4 (Tax,
+    // UBO, Documents) have no fields that require each other — Tax has none at
+    // all, and UBO/Documents rows are only required if you actually add one, in
+    // which case native validation still catches it since that step is visible
+    // at Save time regardless of how you got there — so once step 1 is passed,
+    // those three are freely navigable in any order via their tabs too.
     (function() {
       var steps = Array.prototype.slice.call(document.querySelectorAll('.wiz-step'));
       var tabs = Array.prototype.slice.call(document.querySelectorAll('.wiz-tab'));
       var current = 0;
+      var step1Done = false;
 
       function showStep(i) {
         steps.forEach(function(s, idx) { s.style.display = idx === i ? '' : 'none'; });
         tabs.forEach(function(t, idx) {
           t.classList.toggle('active', idx === i);
-          t.classList.toggle('done', idx < i);
+          t.classList.toggle('done', idx !== i && (idx < i || step1Done));
         });
         current = i;
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -432,6 +438,7 @@
       document.querySelectorAll('.wiz-next').forEach(function(btn) {
         btn.addEventListener('click', function() {
           if (!validateStep(current)) return;
+          if (current === 0) step1Done = true;
           if (current < steps.length - 1) showStep(current + 1);
         });
       });
@@ -442,7 +449,9 @@
       });
       tabs.forEach(function(t, idx) {
         t.addEventListener('click', function() {
-          if (idx < current) showStep(idx);
+          if (idx === current) return;
+          if (idx < current) { showStep(idx); return; }        // always free to go back
+          if (idx > 0 && step1Done) showStep(idx);              // steps 2-4 free once step 1 is passed
         });
       });
 

@@ -6,6 +6,10 @@
   <title>Tahfeel CRM — Tax Filings Due</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .tfd-table td, .tfd-table th { padding:7px 10px !important; font-size:12px !important; }
+    .tfd-client { max-width:230px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+  </style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
@@ -60,24 +64,24 @@
       </select>
       <button type="submit" style="padding:9px 16px;border:none;border-radius:10px;background:#1A3B8B;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Search</button>
       {% if type_filter or status_filter or staff_filter or q %}<a href="/tax-filings" style="font-size:12px;color:#64748B;text-decoration:none;">Clear</a>{% endif %}
+      <a href="/tax-filings/export?{{ request.query_string.decode() }}" style="margin-left:auto;padding:9px 16px;border:1.5px solid #E2E8F0;border-radius:10px;background:#fff;color:#1A3B8B;font-size:13px;font-weight:600;text-decoration:none;">⬇ Export</a>
     </form>
 
     <div class="card" style="margin-bottom:20px;">
       {% if rows %}
-      <table>
+      <table class="tfd-table">
         <thead>
-          <tr><th>Client</th><th>Account Manager</th><th>Type</th><th>Period</th><th>Due Date</th><th>Compliance</th><th>Actions</th></tr>
+          <tr><th>Client</th><th>Account Manager</th><th>Filing</th><th>Due Date</th><th>Compliance</th><th>Actions</th></tr>
         </thead>
         <tbody>
           {% for r in rows %}
           <tr {% if r.days < 0 %}style="background:#fff0f0;"{% elif r.days <= 30 %}style="background:#fff8f8;"{% endif %}>
             <td>
-              <a href="/customers/{{ r.customer.id }}" style="color:#0F2660;font-weight:700;text-decoration:none;">{{ r.customer.name }}</a>
-              {% if r.customer.ac_code %}<div style="font-size:10.5px;color:#94A3B8;">{{ r.customer.ac_code }}</div>{% endif %}
+              <a href="/customers/{{ r.customer.id }}" class="tfd-client" title="{{ r.customer.name }}" style="color:#0F2660;font-weight:700;text-decoration:none;">{{ r.customer.name }}</a>
+              {% if r.customer.ac_code %}<div style="font-size:10px;color:#94A3B8;">{{ r.customer.ac_code }}</div>{% endif %}
             </td>
             <td>{{ r.manager or '—' }}</td>
-            <td><strong>{{ 'VAT' if r.filing.tax_type=='VAT' else 'Corporate Tax' }}</strong></td>
-            <td>{{ r.filing.period_label }}</td>
+            <td><strong>{{ 'VAT' if r.filing.tax_type=='VAT' else 'Corp Tax' }}</strong> <span style="color:#94A3B8;">· {{ r.filing.period_label }}</span></td>
             <td>
               {{ r.filing.due_date.strftime('%d %b %Y') }}
               {% if r.days < 0 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> OVERDUE {{ -r.days }}d</span>
