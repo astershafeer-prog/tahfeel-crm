@@ -9188,14 +9188,12 @@ def analytics():
         for f in TaxFiling.query.filter(TaxFiling.filed_at.is_(None)).all():
             open_filings_by_cust.setdefault(f.customer_id, []).append(f)
         docs_expired = docs_30 = docs_60 = 0
-        expiring_rows = []
         tax_urgent_rows = []
         gaps = {'no_wa': 0, 'no_rep': 0, 'no_owner': 0, 'no_authority': 0, 'no_activity': 0}
         tax = {'vat_notfiled': 0, 'vat_overdue': 0, 'ct_notfiled': 0, 'ct_overdue': 0, 'vat_na': 0}
         calls = {'connected': 0, 'attempted_only': 0, 'none': 0}
         buckets = {'m1': 0, 'm3': 0, 'm6': 0, 'older': 0, 'never': 0}
-        dormant = []
-        uncalled = []
+        dormant_30 = dormant_60 = dormant_90 = 0
         mgr_data = {}
         for c in companies:
             # -- document expiry health (renewal pipeline)
@@ -9212,10 +9210,6 @@ def analytics():
                     docs_30 += 1
                 elif dl <= 60:
                     docs_60 += 1
-                if dl <= 60:
-                    expiring_rows.append({'id': c.id, 'name': c.name, 'doc': d.doc_type,
-                                          'days': dl, 'date': d.expiry_date,
-                                          'manager': c.rep.name if c.rep else '—'})
             # -- tax compliance (VAT quarterly / Corp Tax annual filing history)
             c_open = open_filings_by_cust.get(c.id, [])
             c_vat_open = [f for f in c_open if f.tax_type == 'VAT']
@@ -9259,12 +9253,8 @@ def analytics():
                 calls['connected'] += 1
             elif c.id in attempted_ids:
                 calls['attempted_only'] += 1
-                uncalled.append({'id': c.id, 'name': c.name, 'tried': True,
-                                 'manager': c.rep.name if c.rep else '—'})
             else:
                 calls['none'] += 1
-                uncalled.append({'id': c.id, 'name': c.name, 'tried': False,
-                                 'manager': c.rep.name if c.rep else '—'})
             lj = last_job.get(c.id)
             days = (now - lj).days if lj else None
             if days is None:
@@ -9277,10 +9267,13 @@ def analytics():
                 buckets['m6'] += 1
             else:
                 buckets['older'] += 1
+            if days is None or days > 30:
+                dormant_30 += 1
+            if days is None or days > 60:
+                dormant_60 += 1
             is_dormant = days is None or days > 90
             if is_dormant:
-                dormant.append({'id': c.id, 'name': c.name, 'days': days,
-                                'last': lj, 'manager': c.rep.name if c.rep else '—'})
+                dormant_90 += 1
             m = mgr_data.setdefault(c.rep.name if c.rep else 'Unassigned',
                                     {'companies': 0, 'active': 0, 'open_tasks': 0, 'dormant': 0,
                                      'called': 0})
@@ -9292,8 +9285,8 @@ def analytics():
                 m['dormant'] += 1
             if c.id in connected_ids:
                 m['called'] += 1
-        dormant.sort(key=lambda d: -(d['days'] if d['days'] is not None else 999999))
         managers = sorted(mgr_data.items(), key=lambda kv: (kv[0] == 'Unassigned', -kv[1]['companies']))
+        individual_total = Customer.query.filter_by(customer_type='Individual').count()
         # Growth: new companies added per month, last 12 months
         growth = []
         for i in range(11, -1, -1):
@@ -9305,6 +9298,7 @@ def analytics():
                                         and c.created_at.year == y_ and c.created_at.month == m_)})
         pf = {
             'total': len(companies),
+            'individual_total': individual_total,
             'status': status_counts.most_common(),
             'active': status_counts.get('Active', 0),
             'employees': Employee.query.count(),
@@ -9316,19 +9310,17 @@ def analytics():
             'activities': activity_counts.most_common(10),
             'activities_notset': sum(1 for c in companies if not (c.business_activity or '').strip()),
             'buckets': buckets,
-            'dormant': dormant[:20], 'dormant_total': len(dormant),
+            'dormant_30': dormant_30, 'dormant_60': dormant_60, 'dormant_90': dormant_90,
+            'dormant_total': dormant_90,
             'managers': managers,
             'growth': growth, 'max_growth': max((g['count'] for g in growth), default=1) or 1,
             # ── scan report ──
             'docs_expired': docs_expired, 'docs_30': docs_30, 'docs_60': docs_60,
-            'expiring': sorted(expiring_rows, key=lambda r: r['days'])[:20],
-            'expiring_total': len(expiring_rows),
             'tax': tax, 'gaps': gaps, 'calls': calls,
             'tax_urgent': sorted(tax_urgent_rows, key=lambda r: r['days'])[:20],
             'tax_urgent_total': len(tax_urgent_rows),
             'call_pct': round(100 * calls['connected'] / len(companies)) if companies else 0,
-            'uncalled': sorted(uncalled, key=lambda r: r['name'])[:20],
-            'uncalled_total': len(uncalled),
+            'uncalled_total': calls['attempted_only'] + calls['none'],
             'month_name': now.strftime('%B'),
         }
 
