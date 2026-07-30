@@ -7770,10 +7770,21 @@ def tax_filings_due():
     role as the Compliance Center does for document expiry."""
     now = now_dubai()
     today = now.date()
-    type_filter = request.args.get('type', '')       # VAT / CorpTax / ''
-    status_filter = request.args.get('status', '')   # overdue / soon / ''
-    staff_filter = request.args.get('staff', '')      # user id / ''
-    q = (request.args.get('q') or '').strip().lower()
+    type_filter, status_filter, staff_filter, q, rows, today = _tax_filings_rows(request.args)
+    expiry_tpl = wa_template_active('compliance_alert_v1')
+    users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'admin'])).order_by(User.name).all()
+    return render_template('tax_filings_due.html', rows=rows, now=now, today=today, expiry_tpl=expiry_tpl,
+                           users=users, type_filter=type_filter, status_filter=status_filter,
+                           staff_filter=staff_filter, q=q)
+
+def _tax_filings_rows(args):
+    """Shared by the /tax-filings page and its export — same filters, same rows,
+    so what you export always matches what you're looking at on screen."""
+    today = now_dubai().date()
+    type_filter = args.get('type', '')       # VAT / CorpTax / ''
+    status_filter = args.get('status', '')   # overdue / soon / ''
+    staff_filter = args.get('staff', '')      # user id / ''
+    q = (args.get('q') or '').strip().lower()
 
     filings = TaxFiling.query.filter(TaxFiling.filed_at.is_(None)).order_by(TaxFiling.due_date).all()
     cust_ids = {f.customer_id for f in filings}
@@ -7808,11 +7819,38 @@ def tax_filings_due():
             'filing': f, 'customer': cust, 'days': days, 'manager': cust.rep.name if cust.rep else None,
             'score': score, 'n_expired': n_expired, 'n_expiring': n_expiring, 'total_docs': total,
         })
-    expiry_tpl = wa_template_active('compliance_alert_v1')
-    users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'admin'])).order_by(User.name).all()
-    return render_template('tax_filings_due.html', rows=rows, now=now, today=today, expiry_tpl=expiry_tpl,
-                           users=users, type_filter=type_filter, status_filter=status_filter,
-                           staff_filter=staff_filter, q=q)
+    return type_filter, status_filter, staff_filter, q, rows, today
+
+@app.route('/tax-filings/export')
+@login_required
+def export_tax_filings():
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    _, _, _, _, rows, today = _tax_filings_rows(request.args)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Tax Filings Due'
+    headers = ['Client', 'AC Code', 'Account Manager', 'Type', 'Period', 'Due Date', 'Days',
+               'Status', 'Compliance Score', 'Docs Expired', 'Docs Expiring']
+    for i, h in enumerate(headers, 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    for r in rows:
+        ws.append([
+            r['customer'].name, r['customer'].ac_code or '', r['manager'] or '',
+            'VAT' if r['filing'].tax_type == 'VAT' else 'Corporate Tax', r['filing'].period_label,
+            r['filing'].due_date.strftime('%d/%m/%Y'), r['days'],
+            'Overdue' if r['days'] < 0 else ('Due soon' if r['days'] <= 30 else 'Pending'),
+            r['score'] if r['score'] is not None else '', r['n_expired'], r['n_expiring'],
+        ])
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = max(len(str(col[0].value or '')), 14)
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    return send_file(buf, download_name='tahfeel_tax_filings_due.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 @app.route('/documents/export')
@@ -9151,6 +9189,7 @@ def analytics():
             open_filings_by_cust.setdefault(f.customer_id, []).append(f)
         docs_expired = docs_30 = docs_60 = 0
         expiring_rows = []
+        tax_urgent_rows = []
         gaps = {'no_wa': 0, 'no_rep': 0, 'no_owner': 0, 'no_authority': 0, 'no_activity': 0}
         tax = {'vat_notfiled': 0, 'vat_overdue': 0, 'ct_notfiled': 0, 'ct_overdue': 0, 'vat_na': 0}
         calls = {'connected': 0, 'attempted_only': 0, 'none': 0}
@@ -9191,6 +9230,19 @@ def analytics():
                 tax['ct_notfiled'] += 1
                 if any(f.due_date < today for f in c_ct_open):
                     tax['ct_overdue'] += 1
+            # Row detail for the report's own urgent-filings list — not just the
+            # bar-chart counts above. Only the single most urgent open filing per
+            # company, so a company behind on multiple quarters shows once.
+            if c_open:
+                worst_f = min(c_open, key=lambda f: (f.due_date - today).days)
+                wf_days = (worst_f.due_date - today).days
+                if wf_days <= 30:
+                    tax_urgent_rows.append({
+                        'id': c.id, 'name': c.name,
+                        'type': 'VAT' if worst_f.tax_type == 'VAT' else 'Corporate Tax',
+                        'period': worst_f.period_label, 'days': wf_days,
+                        'manager': c.rep.name if c.rep else '—',
+                    })
             # -- data gaps (a fix-list, not just a stat)
             if not (c.whatsapp or c.mobile or c.phone or c.phone2):
                 gaps['no_wa'] += 1
@@ -9272,6 +9324,8 @@ def analytics():
             'expiring': sorted(expiring_rows, key=lambda r: r['days'])[:20],
             'expiring_total': len(expiring_rows),
             'tax': tax, 'gaps': gaps, 'calls': calls,
+            'tax_urgent': sorted(tax_urgent_rows, key=lambda r: r['days'])[:20],
+            'tax_urgent_total': len(tax_urgent_rows),
             'call_pct': round(100 * calls['connected'] / len(companies)) if companies else 0,
             'uncalled': sorted(uncalled, key=lambda r: r['name'])[:20],
             'uncalled_total': len(uncalled),

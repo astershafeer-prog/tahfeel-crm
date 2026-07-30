@@ -642,7 +642,9 @@
     <div class="grid2">
       <!-- Tax compliance -->
       <div class="an-card">
-        <div class="an-card-title">🧾 Tax Compliance</div>
+        <div class="an-card-title">🧾 Tax Compliance
+          <span style="font-weight:400;color:#94A3B8;font-size:11px;">· <a href="/tax-filings" style="color:#1A3B8B;">open the full worklist →</a></span>
+        </div>
         {% set tmax = [pf.tax.vat_notfiled, pf.tax.ct_notfiled, pf.tax.vat_overdue, pf.tax.ct_overdue, 1]|max %}
         <div class="bar-row"><div class="bar-label">VAT not filed</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.vat_notfiled/tmax)*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ pf.tax.vat_notfiled }}</div></div>
         <div class="bar-row"><div class="bar-label">VAT past due date</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.vat_overdue/tmax)*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ pf.tax.vat_overdue }}</div></div>
@@ -651,6 +653,25 @@
         <div style="margin-top:8px;font-size:11px;color:#94A3B8;border-top:0.5px solid #F1F5F9;padding-top:8px;">
           {{ pf.tax.vat_na }} companies have no VAT status set — they aren't counted above.
         </div>
+        {% if pf.tax_urgent %}
+        <div style="margin-top:12px;border-top:0.5px solid #F1F5F9;padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Most urgent, by company</div>
+          {% for r in pf.tax_urgent %}
+          <div class="doc-row">
+            <div>
+              <a href="/customers/{{ r.id }}" style="font-size:12px;font-weight:600;color:#1A2333;text-decoration:none;">{{ r.name }}</a>
+              <div style="font-size:10px;color:#94A3B8;">{{ r.type }} · {{ r.period }} · {{ r.manager }}</div>
+            </div>
+            {% if r.days < 0 %}
+            <span class="exp-badge" style="background:#FEE2E2;color:#991B1B;">OVERDUE {{ -r.days }}d</span>
+            {% else %}
+            <span class="exp-badge" style="background:#FFFBEB;color:#92400E;">{{ r.days }}d left</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% if pf.tax_urgent_total > pf.tax_urgent|length %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ pf.tax_urgent_total - pf.tax_urgent|length }} more — see <a href="/tax-filings" style="color:#1A3B8B;">Tax Filings Due</a></div>{% endif %}
+        </div>
+        {% endif %}
       </div>
 
       <!-- Data gaps -->
