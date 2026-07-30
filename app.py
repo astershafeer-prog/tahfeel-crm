@@ -922,6 +922,7 @@ AUTOMATION_DEFAULTS = {
     'wa_auto_welcome':     'off',  # WhatsApp welcome to new leads (existing)
     'auto_birthday':       'off',  # WhatsApp birthday wish (new)
     'auto_expiry_wa':      'off',  # WhatsApp expiry reminder at 7 & 3 days (new)
+    'auto_tax_filing_wa':  'off',  # WhatsApp VAT/Corp Tax filing reminder at 7 & 3 days (new)
     'auto_expiry_email':   'on',   # weekly document-expiry email (existing behaviour)
     'auto_monthly_report': 'on',   # monthly compliance report email (existing behaviour)
     'auto_weekly_planner': 'on',   # Monday AI work-planner generation (internal, sends nothing)
@@ -2938,7 +2939,7 @@ def admin_panel():
     partners = Partner.query.order_by(Partner.name).all()
     wa_auto_welcome = automation_on('wa_auto_welcome')
     autos = {k: automation_on(k) for k in AUTOMATION_DEFAULTS}
-    runs = {k: get_setting(f'run_{k}') for k in ('birthday', 'expiry_wa', 'expiry_email', 'monthly_report', 'weekly_planner')}
+    runs = {k: get_setting(f'run_{k}') for k in ('birthday', 'expiry_wa', 'tax_filing_wa', 'expiry_email', 'monthly_report', 'weekly_planner')}
     capi = {
         'enabled': get_setting('capi_enabled', 'off') == 'on',
         'token_set': bool(get_setting('capi_token', '')),
@@ -7414,6 +7415,60 @@ def cron_expiry_wa():
     _mark_run('expiry_wa', f'{sent} reminder(s) sent')
     return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
 
+@app.route('/cron/tax-filing-wa')
+def cron_tax_filing_wa():
+    """Daily: WhatsApp a VAT/Corp Tax filing reminder 7 or 3 days before it's due,
+    reusing the same approved compliance_alert_v1 template document-expiry
+    reminders already use. Once per filing per milestone (dedupe), only for
+    customers with alerts enabled. GET /cron/tax-filing-wa?key=CRON_KEY"""
+    from flask import jsonify
+    if not _valid_cron_key():
+        return 'Forbidden', 403
+    if not automation_on('auto_tax_filing_wa'):
+        return jsonify({'skipped': 'tax-filing-WhatsApp automation is turned OFF in the admin panel'})
+    from whatsapp_webhook import send_template, log_message
+    tpl = wa_template_active('compliance_alert_v1')
+    if not tpl:
+        return jsonify({'error': 'compliance_alert_v1 template is not active in WhatsApp Templates'})
+    today = now_dubai().date()
+    MILESTONES = (7, 3)
+    sent, skipped, details = 0, 0, []
+    filings = TaxFiling.query.filter(TaxFiling.filed_at.is_(None)).all()
+    for f in filings:
+        days = (f.due_date - today).days
+        if days not in MILESTONES:
+            continue
+        cust = f.customer
+        if not cust or not cust.alerts_enabled:
+            continue
+        key = f'taxfilingwa:{f.id}:{days}'
+        if AutoMessageLog.query.filter_by(dedupe_key=key).first():
+            continue
+        to = _cust_wa_number(cust)
+        if not to:
+            skipped += 1; details.append(f'{cust.name}/{f.tax_type} {f.period_label}: no WhatsApp number'); continue
+        first = ((cust.contact_person or cust.name or 'there').split() or ['there'])[0]
+        item = f'{"VAT" if f.tax_type == "VAT" else "Corporate Tax"} return ({f.period_label})'
+        due = f.due_date.strftime('%d %b %Y')
+        params = [first, item, due]
+        wam = send_template(to, tpl.meta_name, params=params, lang=tpl.lang or 'en')
+        body = tpl.body_preview or ''
+        for n, v in enumerate(params, start=1):
+            body = body.replace('{{%d}}' % n, v)
+        log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                    handled_by='auto-tax-filing', status='sent' if wam else 'failed',
+                    customer_id=cust.id)
+        if wam:
+            db.session.add(AutoMessageLog(kind='tax_filing_wa', dedupe_key=key,
+                                          detail=f'{cust.name} · {item} · {days}d left'))
+            db.session.commit()
+            sent += 1
+        else:
+            skipped += 1
+        details.append(f'{cust.name}/{item} ({days}d): {"sent" if wam else "FAILED"}')
+    _mark_run('tax_filing_wa', f'{sent} reminder(s) sent')
+    return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
+
 @app.route('/customers/<int:customer_id>/report.pdf')
 @login_required
 def customer_report_pdf(customer_id):
@@ -7666,6 +7721,79 @@ def document_whatsapp_remind(doc_id):
     flash('Renewal reminder sent on WhatsApp.' if wam else 'WhatsApp send failed — check the number and template.',
           'success' if wam else 'error')
     return redirect(back)
+
+
+@app.route('/tax-filing/<int:filing_id>/whatsapp-remind', methods=['POST'])
+@login_required
+def tax_filing_whatsapp_remind(filing_id):
+    """Manual send of the same reminder the daily cron sends automatically —
+    for a specific unfiled VAT/Corp Tax period, right now."""
+    from whatsapp_webhook import send_template, log_message, normalize_phone
+    back = request.referrer or url_for('tax_filings_due')
+    if session['role'] not in ['sales', 'operations', 'admin']:
+        flash('Access denied')
+        return redirect(back)
+    f = TaxFiling.query.get_or_404(filing_id)
+    tpl = wa_template_active('compliance_alert_v1')
+    if not tpl:
+        flash('Reminder template isn\'t active yet — activate compliance_alert_v1 in WhatsApp Templates.', 'error')
+        return redirect(back)
+    cust = f.customer
+    to = normalize_phone((cust.whatsapp or cust.mobile or cust.phone or cust.phone2) if cust else '')
+    if not to:
+        flash('No WhatsApp number on record for this customer.', 'error')
+        return redirect(back)
+    first = ((cust.contact_person or cust.name or 'there').split() or ['there'])[0]
+    item = f'{"VAT" if f.tax_type == "VAT" else "Corporate Tax"} return ({f.period_label})'
+    due = f.due_date.strftime('%d %b %Y')
+    params = [first, item, due]
+    wam = send_template(to, tpl.meta_name, params=params, lang=tpl.lang or 'en')
+    body = tpl.body_preview
+    for n, v in enumerate(params, start=1):
+        body = body.replace('{{%d}}' % n, v)
+    log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                handled_by=session.get('user_name', 'staff'),
+                status='sent' if wam else 'failed',
+                customer_id=cust.id if cust else None)
+    flash('Filing reminder sent on WhatsApp.' if wam else 'WhatsApp send failed — check the number and template.',
+          'success' if wam else 'error')
+    return redirect(back)
+
+
+@app.route('/tax-filings')
+@login_required
+def tax_filings_due():
+    """Cross-client worklist of every unfiled VAT/Corp Tax period, worst-due-first.
+    Mark Filed and a manual WhatsApp reminder live right here, since staff won't
+    remember to check each client's own profile every quarter — this is the one
+    place that surfaces the whole portfolio's filing obligations at once, same
+    role as the Compliance Center does for document expiry."""
+    now = now_dubai()
+    today = now.date()
+    filings = TaxFiling.query.filter(TaxFiling.filed_at.is_(None)).order_by(TaxFiling.due_date).all()
+    cust_ids = {f.customer_id for f in filings}
+    customers = {c.id: c for c in Customer.query.filter(Customer.id.in_(cust_ids)).all()} if cust_ids else {}
+    docs_by_cust = {}
+    if cust_ids:
+        for d in Document.query.filter(Document.customer_id.in_(cust_ids)).all():
+            docs_by_cust.setdefault(d.customer_id, []).append(d)
+    rows = []
+    for f in filings:
+        cust = customers.get(f.customer_id)
+        if not cust:
+            continue
+        cdocs = [d for d in docs_by_cust.get(cust.id, []) if has_valid_expiry(d.expiry_date)]
+        total = len(cdocs)
+        n_expired = len([d for d in cdocs if d.expiry_date.date() < today])
+        n_expiring = len([d for d in cdocs if 0 <= (d.expiry_date.date() - today).days <= 30])
+        n_valid = total - n_expired - n_expiring
+        score = round(100 * (n_valid + 0.5 * n_expiring) / total) if total else None
+        rows.append({
+            'filing': f, 'customer': cust, 'days': (f.due_date - today).days,
+            'score': score, 'n_expired': n_expired, 'n_expiring': n_expiring, 'total_docs': total,
+        })
+    expiry_tpl = wa_template_active('compliance_alert_v1')
+    return render_template('tax_filings_due.html', rows=rows, now=now, today=today, expiry_tpl=expiry_tpl)
 
 
 @app.route('/documents/export')

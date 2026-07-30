@@ -1,0 +1,17 @@
+name: Daily VAT/Corp Tax Filing WhatsApp Reminders
+
+on:
+  schedule:
+    - cron: '5 5 * * *'   # 09:05 Dubai (UTC+4) = 05:05 UTC, every day — staggered 5m after expiry-wa
+  workflow_dispatch: {}    # allows manual run from the Actions tab
+
+jobs:
+  tax-filing-wa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger tax-filing WhatsApp reminders (7 & 3 days before)
+        run: |
+          echo "Calling tax-filing-wa endpoint..."
+          curl -fsS "https://tahfeelcrm.online/cron/tax-filing-wa?key=${{ secrets.CRON_KEY }}" -o response.json \
+            || { echo "Request failed"; exit 1; }
+          echo "Response:"; cat response.json
