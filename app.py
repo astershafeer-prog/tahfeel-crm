@@ -7770,6 +7770,11 @@ def tax_filings_due():
     role as the Compliance Center does for document expiry."""
     now = now_dubai()
     today = now.date()
+    type_filter = request.args.get('type', '')       # VAT / CorpTax / ''
+    status_filter = request.args.get('status', '')   # overdue / soon / ''
+    staff_filter = request.args.get('staff', '')      # user id / ''
+    q = (request.args.get('q') or '').strip().lower()
+
     filings = TaxFiling.query.filter(TaxFiling.filed_at.is_(None)).order_by(TaxFiling.due_date).all()
     cust_ids = {f.customer_id for f in filings}
     customers = {c.id: c for c in Customer.query.filter(Customer.id.in_(cust_ids)).all()} if cust_ids else {}
@@ -7782,6 +7787,17 @@ def tax_filings_due():
         cust = customers.get(f.customer_id)
         if not cust:
             continue
+        if type_filter and f.tax_type != type_filter:
+            continue
+        if staff_filter and str(cust.assigned_to or '') != staff_filter:
+            continue
+        if q and q not in (cust.name or '').lower():
+            continue
+        days = (f.due_date - today).days
+        if status_filter == 'overdue' and days >= 0:
+            continue
+        if status_filter == 'soon' and not (0 <= days <= 30):
+            continue
         cdocs = [d for d in docs_by_cust.get(cust.id, []) if has_valid_expiry(d.expiry_date)]
         total = len(cdocs)
         n_expired = len([d for d in cdocs if d.expiry_date.date() < today])
@@ -7789,11 +7805,14 @@ def tax_filings_due():
         n_valid = total - n_expired - n_expiring
         score = round(100 * (n_valid + 0.5 * n_expiring) / total) if total else None
         rows.append({
-            'filing': f, 'customer': cust, 'days': (f.due_date - today).days,
+            'filing': f, 'customer': cust, 'days': days, 'manager': cust.rep.name if cust.rep else None,
             'score': score, 'n_expired': n_expired, 'n_expiring': n_expiring, 'total_docs': total,
         })
     expiry_tpl = wa_template_active('compliance_alert_v1')
-    return render_template('tax_filings_due.html', rows=rows, now=now, today=today, expiry_tpl=expiry_tpl)
+    users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'admin'])).order_by(User.name).all()
+    return render_template('tax_filings_due.html', rows=rows, now=now, today=today, expiry_tpl=expiry_tpl,
+                           users=users, type_filter=type_filter, status_filter=status_filter,
+                           staff_filter=staff_filter, q=q)
 
 
 @app.route('/documents/export')
