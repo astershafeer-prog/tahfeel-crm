@@ -75,6 +75,16 @@
             </span>
           </label>
 
+          <!-- 3b. VAT/Corp Tax filing (WhatsApp) -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;">
+            <input type="checkbox" name="auto_tax_filing_wa" value="on" {{ 'checked' if autos.auto_tax_filing_wa }} style="width:18px;height:18px;margin-top:2px;">
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-primary);">🧾 VAT / Corp Tax filing — WhatsApp</span>
+              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">WhatsApp · reminds the customer <strong>7 days</strong> and again <strong>3 days</strong> before a VAT quarter or Corp Tax year is due (same approved <strong>compliance_alert_v1</strong> template as document expiry). Only unfiled periods, customers with alerts enabled.</span>
+              {% if runs.tax_filing_wa %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.tax_filing_wa }}</span>{% endif %}
+            </span>
+          </label>
+
           <!-- 4. Document expiry (Email) -->
           <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 0;border-top:1px solid #EEF2F7;">
             <input type="checkbox" name="auto_expiry_email" value="on" {{ 'checked' if autos.auto_expiry_email }} style="width:18px;height:18px;margin-top:2px;">

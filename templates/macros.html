@@ -329,7 +329,7 @@ loadTheme();
   visible rather than hidden inside a menu.
 #}
 {% set _sales_active = active in ['leads', 'add_lead', 'enquiries', 'call_log'] %}
-{% set _docs_active = active in ['documents', 'health-check', 'invoice', 'tahfeel_doc'] %}
+{% set _docs_active = active in ['documents', 'health-check', 'tax-filings', 'invoice', 'tahfeel_doc'] %}
 {% set _insights_active = active in ['activity', 'reports', 'analytics', 'partner-commissions'] %}
 <div class="nav" style="background:#0F2660;">
   <a href="/dashboard" {% if active=='dashboard' %}class="active"{% endif %} style="display:flex;align-items:center;gap:5px;">⊞ Dashboard</a>
@@ -361,6 +361,7 @@ loadTheme();
     <div class="navgrp-menu">
       <a href="/documents" {% if active=='documents' %}class="active"{% endif %}>📄 Documents</a>
       <a href="/health-check" {% if active=='health-check' %}class="active"{% endif %}>🛡 Compliance</a>
+      <a href="/tax-filings" {% if active=='tax-filings' %}class="active"{% endif %}>🧾 Tax Filings Due</a>
       <a href="/invoice" {% if active=='invoice' %}class="active"{% endif %}>🧾 Doc Generator</a>
       {% if session.role == 'admin' or session.get('user_email') == 'saadatahfeel@gmail.com' %}
       <a href="/tahfeel-doc" {% if active=='tahfeel_doc' %}class="active"{% endif %}>📄 Tahfeel Doc</a>
