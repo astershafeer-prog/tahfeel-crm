@@ -588,17 +588,25 @@
     </div>
 
     <!-- ══ SCAN: what needs action ══ -->
-    <div class="grid4">
+    <div class="grid3">
       <div class="kpi" style="border-top:4px solid #B91C1C;">
-        <div class="kpi-label">Expired Documents</div>
+        <div class="kpi-label">Docs Expired</div>
         <div class="kpi-val" style="color:#B91C1C;">{{ pf.docs_expired }}</div>
         <div class="kpi-sub">Companies with a doc already expired</div>
       </div>
       <div class="kpi" style="border-top:4px solid #F59E0B;">
-        <div class="kpi-label">Expiring ≤ 30 Days</div>
+        <div class="kpi-label">Docs Expiring ≤ 30 Days</div>
         <div class="kpi-val" style="color:#F59E0B;">{{ pf.docs_30 }}</div>
         <div class="kpi-sub">Renewal work to win now</div>
       </div>
+      <div class="kpi" style="border-top:4px solid #FBBF24;">
+        <div class="kpi-label">Docs Expiring 31–60 Days</div>
+        <div class="kpi-val" style="color:#B45309;">{{ pf.docs_60 }}</div>
+        <div class="kpi-sub">See <a href="/documents" style="color:inherit;">Documents</a> for the list</div>
+      </div>
+    </div>
+
+    <div class="grid2">
       <div class="kpi" style="border-top:4px solid #EF4444;">
         <div class="kpi-label">Tax Overdue</div>
         <div class="kpi-val" style="color:#EF4444;">{{ pf.tax.vat_overdue + pf.tax.ct_overdue }}</div>
@@ -612,28 +620,6 @@
     </div>
 
     <div class="grid2">
-      <!-- Renewal pipeline -->
-      <div class="an-card">
-        <div class="an-card-title">⚠️ Documents Expired or Expiring ≤60 Days
-          <span style="font-weight:400;color:#94A3B8;font-size:11px;">· each company's most urgent document — this is renewal revenue</span>
-        </div>
-        {% for r in pf.expiring %}
-        <div class="doc-row">
-          <div>
-            <a href="/customers/{{ r.id }}" style="font-size:12px;font-weight:600;color:#1A2333;text-decoration:none;">{{ r.name }}</a>
-            <div style="font-size:10px;color:#94A3B8;">{{ r.doc }} · {{ r.manager }}</div>
-          </div>
-          {% if r.days < 0 %}
-          <span class="exp-badge" style="background:#FEE2E2;color:#991B1B;">EXPIRED {{ -r.days }}d ago</span>
-          {% else %}
-          <span class="exp-badge" style="background:#FFFBEB;color:#92400E;">{{ r.days }}d left</span>
-          {% endif %}
-        </div>
-        {% endfor %}
-        {% if pf.expiring_total > pf.expiring|length %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ pf.expiring_total - pf.expiring|length }} more — see <a href="/documents" style="color:#1A3B8B;">Documents</a></div>{% endif %}
-        {% if not pf.expiring %}<div class="empty-state">No company documents expiring within 60 days ✅</div>{% endif %}
-      </div>
-
       <!-- Not called this month -->
       <div class="an-card">
         <div class="an-card-title">📞 Not Yet Reached in {{ pf.month_name }}

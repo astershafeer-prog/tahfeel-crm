@@ -9188,7 +9188,6 @@ def analytics():
         for f in TaxFiling.query.filter(TaxFiling.filed_at.is_(None)).all():
             open_filings_by_cust.setdefault(f.customer_id, []).append(f)
         docs_expired = docs_30 = docs_60 = 0
-        expiring_rows = []
         tax_urgent_rows = []
         gaps = {'no_wa': 0, 'no_rep': 0, 'no_owner': 0, 'no_authority': 0, 'no_activity': 0}
         tax = {'vat_notfiled': 0, 'vat_overdue': 0, 'ct_notfiled': 0, 'ct_overdue': 0, 'vat_na': 0}
@@ -9211,10 +9210,6 @@ def analytics():
                     docs_30 += 1
                 elif dl <= 60:
                     docs_60 += 1
-                if dl <= 60:
-                    expiring_rows.append({'id': c.id, 'name': c.name, 'doc': d.doc_type,
-                                          'days': dl, 'date': d.expiry_date,
-                                          'manager': c.rep.name if c.rep else '—'})
             # -- tax compliance (VAT quarterly / Corp Tax annual filing history)
             c_open = open_filings_by_cust.get(c.id, [])
             c_vat_open = [f for f in c_open if f.tax_type == 'VAT']
@@ -9321,8 +9316,6 @@ def analytics():
             'growth': growth, 'max_growth': max((g['count'] for g in growth), default=1) or 1,
             # ── scan report ──
             'docs_expired': docs_expired, 'docs_30': docs_30, 'docs_60': docs_60,
-            'expiring': sorted(expiring_rows, key=lambda r: r['days'])[:20],
-            'expiring_total': len(expiring_rows),
             'tax': tax, 'gaps': gaps, 'calls': calls,
             'tax_urgent': sorted(tax_urgent_rows, key=lambda r: r['days'])[:20],
             'tax_urgent_total': len(tax_urgent_rows),
