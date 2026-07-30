@@ -562,9 +562,27 @@
         <div class="kpi-val" style="color:#8B5CF6;">{{ pf.owners }}</div>
         <div class="kpi-sub">On record</div>
       </div>
+      <div class="kpi" style="border-top:4px solid #06B6D4;">
+        <div class="kpi-label">Individual Clients</div>
+        <div class="kpi-val" style="color:#06B6D4;">{{ pf.individual_total }}</div>
+        <div class="kpi-sub">Not counted in Companies above</div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="kpi" style="border-top:4px solid #F59E0B;">
+        <div class="kpi-label">Dormant 30+ Days</div>
+        <div class="kpi-val" style="color:#F59E0B;">{{ pf.dormant_30 }}</div>
+        <div class="kpi-sub">No task in 30+ days or ever</div>
+      </div>
+      <div class="kpi" style="border-top:4px solid #F97316;">
+        <div class="kpi-label">Dormant 60+ Days</div>
+        <div class="kpi-val" style="color:#F97316;">{{ pf.dormant_60 }}</div>
+        <div class="kpi-sub">No task in 60+ days or ever</div>
+      </div>
       <div class="kpi" style="border-top:4px solid #EF4444;">
-        <div class="kpi-label">Dormant (90+ Days)</div>
-        <div class="kpi-val" style="color:#EF4444;">{{ pf.dormant_total }}</div>
+        <div class="kpi-label">Dormant 90+ Days</div>
+        <div class="kpi-val" style="color:#EF4444;">{{ pf.dormant_90 }}</div>
         <div class="kpi-sub">No task in 90+ days or ever</div>
       </div>
     </div>
@@ -621,21 +639,21 @@
         <div class="an-card-title">📞 Not Yet Reached in {{ pf.month_name }}
           <span style="font-weight:400;color:#94A3B8;font-size:11px;">· your call list for the rest of the month</span>
         </div>
-        {% for r in pf.uncalled %}
-        <div class="doc-row">
-          <div>
-            <a href="/customers/{{ r.id }}#calls" style="font-size:12px;font-weight:600;color:#1A2333;text-decoration:none;">{{ r.name }}</a>
-            <div style="font-size:10px;color:#94A3B8;">{{ r.manager }}</div>
+        <div class="grid3" style="margin-bottom:0;">
+          <div class="kpi" style="border-top:4px solid #64748B;padding:12px 14px;">
+            <div class="kpi-label">Not Reached</div>
+            <div class="kpi-val" style="font-size:22px;">{{ pf.uncalled_total }}</div>
           </div>
-          {% if r.tried %}
-          <span class="exp-badge" style="background:#FFFBEB;color:#92400E;">tried, no answer</span>
-          {% else %}
-          <span class="exp-badge" style="background:#F1F5F9;color:#64748B;">not called</span>
-          {% endif %}
+          <div class="kpi" style="border-top:4px solid #F59E0B;padding:12px 14px;">
+            <div class="kpi-label">Tried, No Answer</div>
+            <div class="kpi-val" style="font-size:22px;color:#92400E;">{{ pf.calls.attempted_only }}</div>
+          </div>
+          <div class="kpi" style="border-top:4px solid #94A3B8;padding:12px 14px;">
+            <div class="kpi-label">Not Called</div>
+            <div class="kpi-val" style="font-size:22px;color:#64748B;">{{ pf.calls.none }}</div>
+          </div>
         </div>
-        {% endfor %}
-        {% if pf.uncalled_total > pf.uncalled|length %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ pf.uncalled_total - pf.uncalled|length }} more to call</div>{% endif %}
-        {% if not pf.uncalled %}<div class="empty-state">Every company has been spoken to this month 🎉</div>{% endif %}
+        {% if not pf.uncalled_total %}<div class="empty-state">Every company has been spoken to this month 🎉</div>{% endif %}
       </div>
     </div>
 
@@ -718,7 +736,7 @@
     </div>
 
     <div class="grid2">
-      <div class="an-card">
+      <div class="an-card" style="grid-column:1 / -1;">
         <div class="an-card-title">Account Managers — Company Book</div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.2fr;gap:8px;padding:8px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;">
           <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Manager</span>
@@ -746,25 +764,6 @@
         </div>
         {% endfor %}
         {% if not pf.managers %}<div class="empty-state">No companies yet</div>{% endif %}
-      </div>
-
-      <div class="an-card">
-        <div class="an-card-title">💤 Dormant Companies <span style="font-weight:400;color:#94A3B8;font-size:11px;">· no task in 90+ days — your re-engagement call list</span></div>
-        {% for d in pf.dormant %}
-        <div class="doc-row">
-          <div>
-            <a href="/customers/{{ d.id }}" style="font-size:12px;font-weight:600;color:#1A2333;text-decoration:none;">{{ d.name }}</a>
-            <div style="font-size:10px;color:#94A3B8;">Manager: {{ d.manager }}</div>
-          </div>
-          {% if d.days is not none %}
-          <span class="exp-badge" style="background:#FFFBEB;color:#92400E;">{{ d.days }}d ago</span>
-          {% else %}
-          <span class="exp-badge" style="background:#FEF2F2;color:#991B1B;">never</span>
-          {% endif %}
-        </div>
-        {% endfor %}
-        {% if pf.dormant_total > pf.dormant|length %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ pf.dormant_total - pf.dormant|length }} more dormant companies</div>{% endif %}
-        {% if not pf.dormant %}<div class="empty-state">Every company has recent work ✅</div>{% endif %}
       </div>
     </div>
 
