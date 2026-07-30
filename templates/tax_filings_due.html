@@ -36,16 +36,37 @@
         <div style="font-size:19px;font-weight:800;color:#B45309;margin-top:2px;">{{ soon|length }}</div>
       </div>
       <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #1A3B8B;border-radius:10px;padding:11px 13px;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Total pending</div>
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Total pending{% if type_filter or status_filter or staff_filter or q %} (filtered){% endif %}</div>
         <div style="font-size:19px;font-weight:800;color:#1A3B8B;margin-top:2px;">{{ rows|length }}</div>
       </div>
     </div>
+
+    <form method="GET" action="/tax-filings" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <input type="text" name="q" value="{{ q or '' }}" placeholder="Search client name…" autocomplete="off"
+             style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;flex:1;min-width:180px;">
+      <select name="type" onchange="this.form.submit()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#fff;">
+        <option value="">All types</option>
+        <option value="VAT" {% if type_filter=='VAT' %}selected{% endif %}>VAT</option>
+        <option value="CorpTax" {% if type_filter=='CorpTax' %}selected{% endif %}>Corporate Tax</option>
+      </select>
+      <select name="status" onchange="this.form.submit()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#fff;">
+        <option value="">All statuses</option>
+        <option value="overdue" {% if status_filter=='overdue' %}selected{% endif %}>Overdue</option>
+        <option value="soon" {% if status_filter=='soon' %}selected{% endif %}>Due within 30 days</option>
+      </select>
+      <select name="staff" onchange="this.form.submit()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#fff;">
+        <option value="">All account managers</option>
+        {% for u in users %}<option value="{{ u.id }}" {% if staff_filter==u.id|string %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+      </select>
+      <button type="submit" style="padding:9px 16px;border:none;border-radius:10px;background:#1A3B8B;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Search</button>
+      {% if type_filter or status_filter or staff_filter or q %}<a href="/tax-filings" style="font-size:12px;color:#64748B;text-decoration:none;">Clear</a>{% endif %}
+    </form>
 
     <div class="card" style="margin-bottom:20px;">
       {% if rows %}
       <table>
         <thead>
-          <tr><th>Client</th><th>Type</th><th>Period</th><th>Due Date</th><th>Compliance</th><th>Actions</th></tr>
+          <tr><th>Client</th><th>Account Manager</th><th>Type</th><th>Period</th><th>Due Date</th><th>Compliance</th><th>Actions</th></tr>
         </thead>
         <tbody>
           {% for r in rows %}
@@ -54,6 +75,7 @@
               <a href="/customers/{{ r.customer.id }}" style="color:#0F2660;font-weight:700;text-decoration:none;">{{ r.customer.name }}</a>
               {% if r.customer.ac_code %}<div style="font-size:10.5px;color:#94A3B8;">{{ r.customer.ac_code }}</div>{% endif %}
             </td>
+            <td>{{ r.manager or '—' }}</td>
             <td><strong>{{ 'VAT' if r.filing.tax_type=='VAT' else 'Corporate Tax' }}</strong></td>
             <td>{{ r.filing.period_label }}</td>
             <td>
@@ -69,7 +91,7 @@
             </td>
             <td style="white-space:nowrap;">
               <form method="POST" action="/customers/{{ r.customer.id }}/tax-filing/{{ r.filing.id }}/mark-filed" style="display:inline;">
-                <input type="hidden" name="next" value="/tax-filings">
+                <input type="hidden" name="next" value="{{ request.full_path }}">
                 <button type="submit" style="background:none;border:none;padding:0;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;margin-right:10px;">✓ Mark Filed</button>
               </form>
               {% if expiry_tpl and (r.customer.whatsapp or r.customer.mobile or r.customer.phone or r.customer.phone2) %}
@@ -82,6 +104,8 @@
           {% endfor %}
         </tbody>
       </table>
+      {% elif type_filter or status_filter or staff_filter or q %}
+      <div class="empty">Nothing matches. <a href="/tax-filings" style="color:var(--primary);">Clear filters →</a></div>
       {% else %}
       <div class="empty">Nothing pending — every registered client is filed and current. 🎉</div>
       {% endif %}
