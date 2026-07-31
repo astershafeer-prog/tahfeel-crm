@@ -137,6 +137,39 @@ def main():
     checks.append(('deliverable provider_type inherited from template item defaults',
                    len(delivs) == 2 and delivs[0].provider_type == 'inhouse' and delivs[1].provider_type == 'vendor'))
 
+    # ── Bundle template item bulk import (Excel) ─────────────────────────────
+    if template:
+        r = c2.get(f'/admin/bundle-template/{template.id}/items/import-template')
+        checks.append(('items import-template download succeeds',
+                       r.status_code == 200 and 'spreadsheet' in r.content_type))
+
+        from openpyxl import Workbook as _WB
+        import io as _io
+        wb = _WB()
+        ws = wb.active
+        ws.append(['Service Name *', 'Category', 'Description', 'Due Days', 'Mandatory (Yes/No)', 'Default Provider', 'Vendor Name'])
+        ws.append(['Imported Mandatory Item', 'Finance', '', 12, 'Yes', 'Tahfeel', ''])
+        ws.append(['Imported Vendor Item', 'Branding', '', 18, 'No', 'Vendor', 'Smoke Vendor'])
+        buf = _io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        r = c2.post(f'/admin/bundle-template/{template.id}/items/import',
+                    data={'file': (buf, 'items.xlsx'), 'csrf_token': t2},
+                    content_type='multipart/form-data')
+        with A.app.app_context():
+            imported_items = A.BundleTemplateItem.query.filter(
+                A.BundleTemplateItem.template_id == template.id,
+                A.BundleTemplateItem.service_name.like('Imported%')
+            ).order_by(A.BundleTemplateItem.sort_order).all()
+        checks.append(('excel import creates 2 items', len(imported_items) == 2))
+        checks.append(('excel import resolves vendor name to a Vendor row',
+                       len(imported_items) == 2 and imported_items[1].default_provider_type == 'vendor'
+                       and imported_items[1].default_vendor_id == vendor.id))
+    else:
+        checks.append(('items import-template download succeeds', False))
+        checks.append(('excel import creates 2 items', False))
+        checks.append(('excel import resolves vendor name to a Vendor row', False))
+
     if delivs:
         c2.post(f'/bundle-deliverables/{delivs[0].id}/update', data={
             'status': 'Completed', 'provider_type': 'inhouse', 'csrf_token': t2,
