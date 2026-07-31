@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Owner / UBO Compliance</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .tfd-table td, .tfd-table th { padding:7px 10px !important; font-size:12px !important; }
+    .tfd-client { max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('owner-compliance') }}
+  <div class="container" style="max-width:1180px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+      <div>
+        <h1 style="font-size:22px;font-weight:800;color:#0F2660;margin:0;">🪪 Owner / UBO Compliance</h1>
+        <div style="font-size:12.5px;color:#64748B;margin-top:3px;">Every owner/UBO with a passport or Emirates ID expiring or expired, across all clients — worst due first.</div>
+      </div>
+      <a href="/health-check" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">← Back to Compliance</a>
+    </div>
+
+    {% set overdue = rows|selectattr('worst_days','lt',0)|list %}
+    {% set soon = rows|rejectattr('worst_days','lt',0)|selectattr('worst_days','le',30)|list %}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+      <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #DC2626;border-radius:10px;padding:11px 13px;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Overdue</div>
+        <div style="font-size:19px;font-weight:800;color:#DC2626;margin-top:2px;">{{ overdue|length }}</div>
+      </div>
+      <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #B45309;border-radius:10px;padding:11px 13px;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Due within 30 days</div>
+        <div style="font-size:19px;font-weight:800;color:#B45309;margin-top:2px;">{{ soon|length }}</div>
+      </div>
+      <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #1A3B8B;border-radius:10px;padding:11px 13px;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Total{% if status_filter or staff_filter or q %} (filtered){% endif %}</div>
+        <div style="font-size:19px;font-weight:800;color:#1A3B8B;margin-top:2px;">{{ rows|length }}</div>
+      </div>
+    </div>
+
+    <form method="GET" action="/owner-compliance" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <input type="text" name="q" value="{{ q or '' }}" placeholder="Search owner or client name…" autocomplete="off"
+             style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;flex:1;min-width:180px;">
+      <select name="status" onchange="this.form.submit()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#fff;">
+        <option value="">All statuses</option>
+        <option value="overdue" {% if status_filter=='overdue' %}selected{% endif %}>Overdue</option>
+        <option value="soon" {% if status_filter=='soon' %}selected{% endif %}>Due within 30 days</option>
+      </select>
+      <select name="staff" onchange="this.form.submit()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#fff;">
+        <option value="">All account managers</option>
+        {% for u in users %}<option value="{{ u.id }}" {% if staff_filter==u.id|string %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+      </select>
+      <button type="submit" style="padding:9px 16px;border:none;border-radius:10px;background:#1A3B8B;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Search</button>
+      {% if status_filter or staff_filter or q %}<a href="/owner-compliance" style="font-size:12px;color:#64748B;text-decoration:none;">Clear</a>{% endif %}
+      <a href="/owner-compliance/export?{{ request.query_string.decode() }}" style="margin-left:auto;padding:9px 16px;border:1.5px solid #E2E8F0;border-radius:10px;background:#fff;color:#1A3B8B;font-size:13px;font-weight:600;text-decoration:none;">⬇ Export</a>
+    </form>
+
+    <div class="card" style="margin-bottom:20px;">
+      {% if rows %}
+      <table class="tfd-table">
+        <thead>
+          <tr><th>Owner</th><th>Client</th><th>Account Manager</th><th>Passport</th><th>Emirates ID</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr {% if r.worst_days < 0 %}style="background:#fff0f0;"{% elif r.worst_days <= 30 %}style="background:#fff8f8;"{% endif %}>
+            <td>
+              <span class="tfd-client" title="{{ r.owner.name }}" style="color:#0F2660;font-weight:700;">{{ r.owner.name }}</span>
+              {% if r.owner.role %}<div style="font-size:10px;color:#94A3B8;">{{ r.owner.role }}</div>{% endif %}
+            </td>
+            <td><a href="/customers/{{ r.customer.id }}" class="tfd-client" title="{{ r.customer.name }}" style="color:#0F2660;font-weight:600;text-decoration:none;">{{ r.customer.name }}</a></td>
+            <td>{{ r.manager or '—' }}</td>
+            <td>
+              {% if r.owner.passport_expiry %}
+              {{ r.owner.passport_expiry.strftime('%d %b %Y') }}
+              {% if r.p_days < 0 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> OVERDUE {{ -r.p_days }}d</span>
+              {% elif r.p_days <= 30 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> ⚠ {{ r.p_days }}d</span>{% endif %}
+              {% else %}<span style="color:#94A3B8;">—</span>{% endif %}
+            </td>
+            <td>
+              {% if r.owner.eid_expiry %}
+              {{ r.owner.eid_expiry.strftime('%d %b %Y') }}
+              {% if r.e_days < 0 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> OVERDUE {{ -r.e_days }}d</span>
+              {% elif r.e_days <= 30 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> ⚠ {{ r.e_days }}d</span>{% endif %}
+              {% else %}<span style="color:#94A3B8;">—</span>{% endif %}
+            </td>
+            <td style="white-space:nowrap;">
+              <a href="/customers/{{ r.customer.id }}" style="color:var(--primary);font-size:12px;font-weight:600;text-decoration:none;margin-right:10px;">✏ Update</a>
+              {% if expiry_tpl and (r.owner.mobile or r.customer.whatsapp or r.customer.mobile or r.customer.phone) %}
+              {% set doc_type = 'passport' if (r.p_days is not none and (r.e_days is none or r.p_days <= r.e_days)) else 'eid' %}
+              <form method="POST" action="/owner-compliance/whatsapp-remind/{{ r.owner.id }}/{{ doc_type }}" style="display:inline;" onsubmit="return confirm('Send a renewal reminder to {{ r.owner.name }} from the business WhatsApp?');">
+                <button type="submit" style="background:none;border:none;padding:0;color:#128C7E;font-size:12px;font-weight:600;cursor:pointer;">📨 Remind</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% elif status_filter or staff_filter or q %}
+      <div class="empty">Nothing matches. <a href="/owner-compliance" style="color:var(--primary);">Clear filters →</a></div>
+      {% else %}
+      <div class="empty">Nothing pending — every owner's passport and Emirates ID is on file and current. 🎉</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

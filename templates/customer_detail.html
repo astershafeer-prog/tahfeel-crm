@@ -372,7 +372,10 @@
       {% endif %}
     </div>
 
-    <!-- Tax & Compliance -->
+    <!-- Tax & Compliance — Individual clients don't get VAT/Corp Tax registration
+         at all (removed from their Add/Edit forms), so this only shows for
+         Company, or if a filing record somehow already exists. -->
+    {% if customer.customer_type == 'Company' or tax_filings %}
     <div class="card card-customers" style="margin-bottom:30px;">
       <div class="card-header">
         <h2>🧾 Tax &amp; Compliance <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ tax_filings|length }}</span></h2>

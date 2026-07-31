@@ -8306,6 +8306,126 @@ def export_tax_filings():
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
+def _owner_expiry_rows(args):
+    """Owner/UBO passport + Emirates ID expiry, one row per owner (matching how
+    the client profile already shows both side by side), worst-first. Same gap
+    class as Tax Filings was: real per-owner data already exists, just never
+    had a portfolio-wide worklist — Employee ID/visa is different, that's
+    already a Document and already in the Document Expiry Report."""
+    today = now_dubai().date()
+    status_filter = args.get('status', '')   # overdue / soon / ''
+    staff_filter = args.get('staff', '')
+    q = (args.get('q') or '').strip().lower()
+
+    owners = Owner.query.filter(db.or_(Owner.passport_expiry.isnot(None), Owner.eid_expiry.isnot(None))).all()
+    cust_ids = {o.customer_id for o in owners}
+    customers = {c.id: c for c in Customer.query.filter(Customer.id.in_(cust_ids)).all()} if cust_ids else {}
+    rows = []
+    for o in owners:
+        cust = customers.get(o.customer_id)
+        if not cust:
+            continue
+        if staff_filter and str(cust.assigned_to or '') != staff_filter:
+            continue
+        if q and q not in (o.name or '').lower() and q not in (cust.name or '').lower():
+            continue
+        p_days = (o.passport_expiry - today).days if o.passport_expiry else None
+        e_days = (o.eid_expiry - today).days if o.eid_expiry else None
+        worst_days = min(d for d in (p_days, e_days) if d is not None)
+        if status_filter == 'overdue' and worst_days >= 0:
+            continue
+        if status_filter == 'soon' and not (0 <= worst_days <= 30):
+            continue
+        rows.append({
+            'owner': o, 'customer': cust, 'manager': cust.rep.name if cust.rep else None,
+            'p_days': p_days, 'e_days': e_days, 'worst_days': worst_days,
+        })
+    rows.sort(key=lambda r: r['worst_days'])
+    return status_filter, staff_filter, q, rows, today
+
+@app.route('/owner-compliance')
+@login_required
+def owner_compliance():
+    """Cross-client worklist of every owner/UBO with a passport or Emirates ID
+    expiring or expired, worst-first — same role as Tax Filings Due, for the
+    people-compliance side instead of the tax side."""
+    now = now_dubai()
+    status_filter, staff_filter, q, rows, today = _owner_expiry_rows(request.args)
+    expiry_tpl = wa_template_active('compliance_alert_v1')
+    users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'admin'])).order_by(User.name).all()
+    return render_template('owner_compliance.html', rows=rows, now=now, today=today, expiry_tpl=expiry_tpl,
+                           users=users, status_filter=status_filter, staff_filter=staff_filter, q=q)
+
+@app.route('/owner-compliance/whatsapp-remind/<int:owner_id>/<doc_type>', methods=['POST'])
+@login_required
+def owner_compliance_whatsapp_remind(owner_id, doc_type):
+    """Manual reminder to the owner's own WhatsApp (falls back to the company's
+    number if the owner has none on file) about their expiring passport/EID."""
+    from whatsapp_webhook import send_template, log_message, normalize_phone
+    back = request.referrer or url_for('owner_compliance')
+    if session['role'] not in ['sales', 'operations', 'admin']:
+        flash('Access denied')
+        return redirect(back)
+    o = Owner.query.get_or_404(owner_id)
+    cust = o.company
+    due_date = o.passport_expiry if doc_type == 'passport' else o.eid_expiry
+    if not due_date:
+        flash('No expiry date on file for that document.', 'error')
+        return redirect(back)
+    tpl = wa_template_active('compliance_alert_v1')
+    if not tpl:
+        flash('Reminder template isn\'t active yet — activate compliance_alert_v1 in WhatsApp Templates.', 'error')
+        return redirect(back)
+    to = normalize_phone(o.mobile or (cust.whatsapp or cust.mobile or cust.phone or cust.phone2 if cust else ''))
+    if not to:
+        flash('No WhatsApp number on record for this owner or their company.', 'error')
+        return redirect(back)
+    first = (o.name or 'there').split()[0]
+    item = 'Passport' if doc_type == 'passport' else 'Emirates ID'
+    params = [first, item, due_date.strftime('%d %b %Y')]
+    wam = send_template(to, tpl.meta_name, params=params, lang=tpl.lang or 'en')
+    body = tpl.body_preview
+    for n, v in enumerate(params, start=1):
+        body = body.replace('{{%d}}' % n, v)
+    log_message(to, 'out', body, msg_type='template', wam_id=wam,
+                handled_by=session.get('user_name', 'staff'), status='sent' if wam else 'failed',
+                customer_id=cust.id if cust else None)
+    flash('Renewal reminder sent on WhatsApp.' if wam else 'WhatsApp send failed — check the number and template.',
+          'success' if wam else 'error')
+    return redirect(back)
+
+@app.route('/owner-compliance/export')
+@login_required
+def export_owner_compliance():
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    _, _, _, rows, today = _owner_expiry_rows(request.args)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Owner Compliance'
+    headers = ['Owner', 'Role', 'Client', 'AC Code', 'Account Manager',
+               'Passport Expiry', 'Passport Days', 'EID Expiry', 'EID Days', 'Status']
+    for i, h in enumerate(headers, 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    for r in rows:
+        o = r['owner']
+        ws.append([
+            o.name, o.role or '', r['customer'].name, r['customer'].ac_code or '', r['manager'] or '',
+            o.passport_expiry.strftime('%d/%m/%Y') if o.passport_expiry else '', r['p_days'] if r['p_days'] is not None else '',
+            o.eid_expiry.strftime('%d/%m/%Y') if o.eid_expiry else '', r['e_days'] if r['e_days'] is not None else '',
+            'Overdue' if r['worst_days'] < 0 else ('Due soon' if r['worst_days'] <= 30 else 'Pending'),
+        ])
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = max(len(str(col[0].value or '')), 14)
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    return send_file(buf, download_name='tahfeel_owner_compliance.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
 @app.route('/documents/export')
 @login_required
 def export_documents():
