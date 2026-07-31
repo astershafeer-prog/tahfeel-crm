@@ -6346,7 +6346,7 @@ def admin_add_bundle_template_item(template_id):
     db.session.add(item)
     db.session.commit()
     flash(f'"{item.service_name}" added to {bt.name}')
-    return redirect(url_for('admin_panel') + '#bundle-templates')
+    return redirect(url_for('admin_panel') + f'#bt-items-{template_id}')
 
 @app.route('/admin/bundle-template-item/<int:item_id>/edit', methods=['POST'])
 @login_required
@@ -6355,21 +6355,133 @@ def admin_edit_bundle_template_item(item_id):
     item = BundleTemplateItem.query.get_or_404(item_id)
     if not request.form.get('service_name', '').strip():
         flash('Service name is required')
-        return redirect(url_for('admin_panel') + '#bundle-templates')
+        return redirect(url_for('admin_panel') + f'#bt-items-{item.template_id}')
     _bundle_template_item_from_form(item)
     db.session.commit()
     flash(f'"{item.service_name}" updated')
-    return redirect(url_for('admin_panel') + '#bundle-templates')
+    return redirect(url_for('admin_panel') + f'#bt-items-{item.template_id}')
 
 @app.route('/admin/bundle-template-item/<int:item_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def admin_delete_bundle_template_item(item_id):
     item = BundleTemplateItem.query.get_or_404(item_id)
+    template_id = item.template_id
     item.active = False
     db.session.commit()
     flash(f'"{item.service_name}" removed')
-    return redirect(url_for('admin_panel') + '#bundle-templates')
+    return redirect(url_for('admin_panel') + f'#bt-items-{template_id}')
+
+@app.route('/admin/bundle-template/<int:template_id>/items/import-template')
+@login_required
+@admin_required
+def bundle_template_items_import_template(template_id):
+    """Downloadable .xlsx for bulk-adding items to one bundle template, instead
+    of using the one-row-at-a-time add form. Mirrors customer_import_template's
+    dropdown-validation pattern."""
+    bt = BundleTemplate.query.get_or_404(template_id)
+    import io
+    from flask import send_file
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.worksheet.datavalidation import DataValidation
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Items'
+    headers = ['Service Name *', 'Category', 'Description', 'Due Days', 'Mandatory (Yes/No)', 'Default Provider', 'Vendor Name']
+    for i, h in enumerate(headers, 1):
+        cell = ws.cell(1, i, h)
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = PatternFill('solid', fgColor='1A3B8B')
+        cell.alignment = Alignment(horizontal='center')
+        ws.column_dimensions[cell.column_letter].width = max(len(h) + 4, 18)
+    samples = [
+        ['Business License', 'Licensing', '', 10, 'Yes', 'Tahfeel', ''],
+        ['Logo Design (2 Concepts)', 'Branding', '2 initial concepts + 2 revisions', 15, 'Yes', 'Vendor', 'Mirax Designs'],
+        ['Social Media Setup', 'Marketing', '', 25, 'No', 'Tahfeel', ''],
+    ]
+    for row in samples:
+        ws.append(row)
+    # Hidden reference sheet driving the dropdowns, same pattern as customer_import_template.
+    ref = wb.create_sheet('Reference')
+    ref.sheet_state = 'hidden'
+    for i, c in enumerate(BUNDLE_DELIVERABLE_CATEGORIES, 1):
+        ref.cell(i, 1, c)
+    for i, v in enumerate(['Yes', 'No'], 1):
+        ref.cell(i, 2, v)
+    for i, p in enumerate(['Tahfeel', 'Vendor'], 1):
+        ref.cell(i, 3, p)
+    vendor_names = [v.name for v in Vendor.query.filter_by(active=True).order_by(Vendor.name).all()]
+    for i, name in enumerate(vendor_names, 1):
+        ref.cell(i, 4, name)
+    dv_cat = DataValidation(type='list', formula1=f'Reference!$A$1:$A${len(BUNDLE_DELIVERABLE_CATEGORIES)}', allow_blank=True, showDropDown=False)
+    ws.add_data_validation(dv_cat); dv_cat.add('B2:B1000')
+    dv_mand = DataValidation(type='list', formula1='Reference!$B$1:$B$2', allow_blank=True, showDropDown=False)
+    ws.add_data_validation(dv_mand); dv_mand.add('E2:E1000')
+    dv_prov = DataValidation(type='list', formula1='Reference!$C$1:$C$2', allow_blank=True, showDropDown=False)
+    ws.add_data_validation(dv_prov); dv_prov.add('F2:F1000')
+    if vendor_names:
+        dv_vendor = DataValidation(type='list', formula1=f'Reference!$D$1:$D${len(vendor_names)}', allow_blank=True, showDropDown=False)
+        ws.add_data_validation(dv_vendor); dv_vendor.add('G2:G1000')
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    safe_name = ''.join(c for c in bt.name if c.isalnum() or c in (' ', '_', '-')).strip().replace(' ', '_') or 'bundle'
+    return send_file(buf, download_name=f'bundle_items_{safe_name}_template.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/admin/bundle-template/<int:template_id>/items/import', methods=['POST'])
+@login_required
+@admin_required
+def bundle_template_items_import(template_id):
+    bt = BundleTemplate.query.get_or_404(template_id)
+    f = request.files.get('file')
+    if not f or not f.filename.endswith('.xlsx'):
+        flash('Please upload an .xlsx file')
+        return redirect(url_for('admin_panel') + f'#bt-items-{template_id}')
+    from openpyxl import load_workbook
+    wb = load_workbook(f)
+    ws = wb.active
+    vendors_by_name = {v.name.strip().lower(): v for v in Vendor.query.filter_by(active=True).all()}
+    max_order = db.session.query(db.func.max(BundleTemplateItem.sort_order)) \
+                    .filter_by(template_id=template_id).scalar() or 0
+    imported = 0
+    unmatched_vendors = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or not row[0]:
+            continue
+        service_name = str(row[0]).strip()
+        if not service_name:
+            continue
+        category = str(row[1]).strip() if len(row) > 1 and row[1] else None
+        description = str(row[2]).strip() if len(row) > 2 and row[2] else None
+        try:
+            due_days = int(row[3]) if len(row) > 3 and row[3] not in (None, '') else 30
+        except (ValueError, TypeError):
+            due_days = 30
+        mandatory = str(row[4]).strip().lower() != 'no' if len(row) > 4 and row[4] not in (None, '') else True
+        provider_raw = str(row[5]).strip().lower() if len(row) > 5 and row[5] else 'tahfeel'
+        provider_type = 'vendor' if provider_raw == 'vendor' else 'inhouse'
+        vendor_id = None
+        if provider_type == 'vendor' and len(row) > 6 and row[6]:
+            vendor = vendors_by_name.get(str(row[6]).strip().lower())
+            if vendor:
+                vendor_id = vendor.id
+            else:
+                unmatched_vendors.append(str(row[6]).strip())
+                provider_type = 'inhouse'
+        max_order += 1
+        db.session.add(BundleTemplateItem(
+            template_id=template_id, service_name=service_name, category=category,
+            description=description, default_due_days=due_days, mandatory=mandatory,
+            sort_order=max_order, default_provider_type=provider_type, default_vendor_id=vendor_id,
+        ))
+        imported += 1
+    db.session.commit()
+    flash(f'{imported} item(s) imported into {bt.name}')
+    if unmatched_vendors:
+        flash(f'Vendor not found (set to in-house instead): {", ".join(unmatched_vendors)} — add them in Vendor Master first.', 'warning')
+    return redirect(url_for('admin_panel') + f'#bt-items-{template_id}')
 
 
 # ── Admin Edit Routes ─────────────────────────────────────────────────────────
