@@ -78,6 +78,84 @@ def main():
         W.find_contact('971500000000')
     checks.append(('whatsapp find_contact executes', True))
 
+    # ── Bundle Management ────────────────────────────────────────────────────
+    from datetime import date, timedelta as _td
+
+    r = c2.post('/admin/vendor/add', data={'name': 'Smoke Vendor', 'category': 'Branding', 'csrf_token': t2})
+    with A.app.app_context():
+        vendor = A.Vendor.query.filter_by(name='Smoke Vendor').first()
+    checks.append(('vendor add creates a Vendor row', vendor is not None))
+
+    r = c2.post('/admin/bundle-template/add', data={'name': 'Smoke Bundle', 'price_aed': '2999', 'csrf_token': t2})
+    with A.app.app_context():
+        template = A.BundleTemplate.query.filter_by(name='Smoke Bundle').first()
+    checks.append(('bundle template add creates a BundleTemplate row', template is not None))
+
+    if template:
+        c2.post(f'/admin/bundle-template/{template.id}/item/add', data={
+            'service_name': 'Mandatory Item', 'category': 'Branding', 'default_due_days': '15',
+            'mandatory': 'on', 'default_provider_type': 'inhouse', 'csrf_token': t2,
+        })
+        c2.post(f'/admin/bundle-template/{template.id}/item/add', data={
+            'service_name': 'Optional Item', 'category': 'Marketing', 'default_due_days': '20',
+            'default_provider_type': 'vendor', 'default_vendor_id': str(vendor.id) if vendor else '',
+            'csrf_token': t2,
+        })
+        with A.app.app_context():
+            items = A.BundleTemplateItem.query.filter_by(template_id=template.id, active=True) \
+                        .order_by(A.BundleTemplateItem.sort_order).all()
+        checks.append(('two template items created with ascending sort_order',
+                       len(items) == 2 and items[0].sort_order < items[1].sort_order))
+        checks.append(('mandatory flag round-trips correctly per item',
+                       len(items) == 2 and items[0].mandatory and not items[1].mandatory))
+    else:
+        items = []
+        checks.append(('two template items created with ascending sort_order', False))
+        checks.append(('mandatory flag round-trips correctly per item', False))
+
+    with A.app.app_context():
+        cust = A.Customer(name='Smoke Test Co', customer_type='Company')
+        A.db.session.add(cust)
+        A.db.session.commit()
+        cust_id = cust.id
+
+    purchase_date = date.today()
+    if template:
+        c2.post(f'/customers/{cust_id}/bundles/assign', data={
+            'template_id': str(template.id), 'purchase_date': purchase_date.isoformat(), 'csrf_token': t2,
+        })
+    with A.app.app_context():
+        cb = A.CustomerBundle.query.filter_by(customer_id=cust_id).first()
+        delivs = A.BundleDeliverable.query.filter_by(customer_bundle_id=cb.id).order_by(A.BundleDeliverable.sort_order).all() if cb else []
+    checks.append(('bundle assignment creates exactly 2 deliverables', len(delivs) == 2))
+    checks.append(('deliverable due_date = purchase_date + default_due_days',
+                   len(delivs) == 2 and delivs[0].due_date == purchase_date + _td(days=15)
+                   and delivs[1].due_date == purchase_date + _td(days=20)))
+    checks.append(('deliverable provider_type inherited from template item defaults',
+                   len(delivs) == 2 and delivs[0].provider_type == 'inhouse' and delivs[1].provider_type == 'vendor'))
+
+    if delivs:
+        c2.post(f'/bundle-deliverables/{delivs[0].id}/update', data={
+            'status': 'Completed', 'provider_type': 'inhouse', 'csrf_token': t2,
+        })
+        with A.app.app_context():
+            d0 = A.BundleDeliverable.query.get(delivs[0].id)
+            progress = A._bundle_progress(A.CustomerBundle.query.get(cb.id))
+        checks.append(('completed_date auto-stamped when status set to Completed', d0.completed_date == date.today()))
+        # 1 of 1 MANDATORY item done (the optional item never counts) = 100%
+        checks.append(('_bundle_progress ignores non-mandatory items (100% expected)', progress == 100))
+    else:
+        checks.append(('completed_date auto-stamped when status set to Completed', False))
+        checks.append(('_bundle_progress ignores non-mandatory items (100% expected)', False))
+
+    if vendor:
+        c2.post(f'/admin/vendor/{vendor.id}/delete', data={'csrf_token': t2})
+        with A.app.app_context():
+            v_after = A.Vendor.query.get(vendor.id)
+        checks.append(('vendor soft-delete preserves the row', v_after is not None and v_after.active is False))
+    else:
+        checks.append(('vendor soft-delete preserves the row', False))
+
     if os.path.exists(tmpdb):
         try: os.remove(tmpdb)
         except OSError: pass

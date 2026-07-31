@@ -328,6 +328,19 @@ input, select, textarea, button { font-family: var(--font); }
 .b-individual   { background: var(--purple-bg); color: var(--purple); }
 .b-staff        { background: var(--success-bg); color: var(--success); }
 
+/* Bundle deliverable statuses — kept separate from the Job-status badges
+   above so a future Job status rename can't silently break these.
+   Written as .badge.b-bd-* (two classes) rather than .b-bd-* alone: a later
+   generic ".badge{background:var(--primary-bg);color:var(--primary)}" rule
+   in the THEME SYSTEM section (~line 1576) ties on specificity with a
+   single-class selector and wins by source order, which was flattening
+   every status to the same blue before this was added. */
+.badge.b-bd-completed          { background: var(--success-bg); color: var(--success); }
+.badge.b-bd-inprogress         { background: var(--warning-bg); color: var(--warning); }
+.badge.b-bd-pending            { background: var(--border-light); color: var(--text-muted); }
+.badge.b-bd-overdue            { background: var(--danger-bg); color: var(--danger); }
+.badge.b-bd-waitingforcustomer { background: var(--info-bg); color: var(--info); }
+
 /* ── Tables ────────────────────────────────────────────── */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th {

@@ -616,6 +616,98 @@ class Partner(db.Model):
     active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+# ── Bundle Management ───────────────────────────────────────────────────────
+# Bundle Template = what's sold (admin-managed master data, editable without
+# touching any customer's existing deliverables). Customer Bundle + Bundle
+# Deliverable = what's actually delivered to one client — deliverable fields
+# are COPIED from the template item at assignment time, not FK-referenced, so
+# a later template edit never rewrites an already-purchased customer's list.
+
+class Vendor(db.Model):
+    __tablename__ = 'vendor'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    category = db.Column(db.String(40))            # Licensing/Branding/Finance/Banking/Marketing/PRO Services
+    contact_person = db.Column(db.String(100))
+    phone = db.Column(db.String(30))
+    email = db.Column(db.String(120))
+    website = db.Column(db.String(150))
+    preferred = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text)
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=now_dubai)
+
+BUNDLE_DELIVERABLE_CATEGORIES = ['Licensing', 'Branding', 'Finance', 'Banking', 'Marketing', 'PRO Services']
+
+class BundleTemplate(db.Model):
+    __tablename__ = 'bundle_template'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    price_aed = db.Column(db.Float, default=0)
+    description = db.Column(db.Text)
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=now_dubai)
+    items = db.relationship('BundleTemplateItem', backref='template', lazy=True,
+                             order_by='BundleTemplateItem.sort_order')
+
+class BundleTemplateItem(db.Model):
+    __tablename__ = 'bundle_template_item'
+    id = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('bundle_template.id'), nullable=False, index=True)
+    service_name = db.Column(db.String(150), nullable=False)
+    category = db.Column(db.String(40))
+    description = db.Column(db.Text)
+    default_due_days = db.Column(db.Integer, default=30)
+    mandatory = db.Column(db.Boolean, default=True)
+    sort_order = db.Column(db.Integer, default=0)
+    active = db.Column(db.Boolean, default=True)
+    default_provider_type = db.Column(db.String(10), default='inhouse')   # 'inhouse' / 'vendor'
+    default_vendor_id = db.Column(db.Integer, db.ForeignKey('vendor.id'), nullable=True)
+    default_vendor = db.relationship('Vendor', foreign_keys=[default_vendor_id])
+
+class CustomerBundle(db.Model):
+    __tablename__ = 'customer_bundle'
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False, index=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('bundle_template.id'), nullable=False)
+    purchase_date = db.Column(db.Date, nullable=False)
+    expected_completion = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(20), default='Active')   # Active / Completed / Cancelled
+    csm_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)   # Client Success Manager
+    amount_aed = db.Column(db.Float, default=0)           # snapshot of template.price_aed at purchase time
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=now_dubai)
+    customer = db.relationship('Customer', foreign_keys=[customer_id])
+    template = db.relationship('BundleTemplate', foreign_keys=[template_id])
+    csm = db.relationship('User', foreign_keys=[csm_id])
+    deliverables = db.relationship('BundleDeliverable', backref='customer_bundle', lazy=True,
+                                    order_by='BundleDeliverable.sort_order')
+
+class BundleDeliverable(db.Model):
+    __tablename__ = 'bundle_deliverable'
+    id = db.Column(db.Integer, primary_key=True)
+    customer_bundle_id = db.Column(db.Integer, db.ForeignKey('customer_bundle.id'), nullable=False, index=True)
+    service_name = db.Column(db.String(150), nullable=False)   # copied from template item at generation time
+    category = db.Column(db.String(40))
+    description = db.Column(db.Text)
+    mandatory = db.Column(db.Boolean, default=True)
+    sort_order = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(20), default='Pending')  # Pending/In Progress/Waiting for Customer/Completed
+    provider_type = db.Column(db.String(10), default='inhouse')  # 'inhouse' / 'vendor' — per-customer override
+    provider_vendor_id = db.Column(db.Integer, db.ForeignKey('vendor.id'), nullable=True)
+    assigned_to_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    due_date = db.Column(db.Date, nullable=True)
+    completed_date = db.Column(db.Date, nullable=True)
+    # Link, don't duplicate: for Finance-category items that are really VAT/Corp Tax,
+    # this points at the existing TaxFiling row instead of tracking status separately.
+    linked_tax_filing_id = db.Column(db.Integer, db.ForeignKey('tax_filing.id'), nullable=True)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=now_dubai)
+    updated_at = db.Column(db.DateTime, default=now_dubai, onupdate=now_dubai)
+    provider_vendor = db.relationship('Vendor', foreign_keys=[provider_vendor_id])
+    assignee = db.relationship('User', foreign_keys=[assigned_to_user_id])
+    linked_tax_filing = db.relationship('TaxFiling', foreign_keys=[linked_tax_filing_id])
+
 class SubTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
@@ -2960,13 +3052,17 @@ def admin_panel():
     # reported (delete says "removed" but the row never actually disappears).
     activity_types = ActivityType.query.filter_by(active=True) \
         .order_by(ActivityType.sort_order, ActivityType.id).all()
+    vendors = Vendor.query.order_by(Vendor.name).all()
+    bundle_templates = BundleTemplate.query.filter_by(active=True).order_by(BundleTemplate.name).all()
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
                            wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi,
                            subtask_list=subtask_list, authorities=authorities,
                            aod_unverified_count=aod_unverified_count, renewal_costs=renewal_costs,
                            price_jurisdictions=JURISDICTIONS_PRICE_LIST,
-                           activity_types=activity_types)
+                           activity_types=activity_types,
+                           vendors=vendors, bundle_templates=bundle_templates,
+                           vendor_categories=BUNDLE_DELIVERABLE_CATEGORIES)
 
 @app.route('/admin/whatsapp-settings', methods=['POST'])
 @login_required
@@ -3855,6 +3951,15 @@ def _customer_completeness(customer, has_dated_doc):
     pct = round(100 * present / (len(COMPLETENESS_FIELDS) + 1))
     return pct, missing
 
+def _bundle_progress(bundle):
+    """Percent of MANDATORY deliverables completed — optional items show in the
+    table but never affect this number, per the agreed progress-calc rule."""
+    mandatory = [d for d in bundle.deliverables if d.mandatory]
+    if not mandatory:
+        return 100
+    done = sum(1 for d in mandatory if d.status == 'Completed')
+    return round(done / len(mandatory) * 100)
+
 @app.route('/customers')
 @login_required
 def customers():
@@ -4230,6 +4335,125 @@ def mark_tax_filing_filed(customer_id, filing_id):
         flash(f'{filing.tax_type} {filing.period_label} marked filed')
     return _safe_redirect(request.form.get('next'), 'customer_detail', customer_id=customer_id)
 
+@app.route('/customers/<int:customer_id>/bundles/assign', methods=['POST'])
+@login_required
+def assign_bundle(customer_id):
+    """Purchases a bundle for a customer: snapshots the template's price and
+    generates one BundleDeliverable per active template item, with fields
+    COPIED (not FK-linked) so a later template edit never rewrites this
+    customer's already-purchased deliverable list."""
+    customer = Customer.query.get_or_404(customer_id)
+    template_id = request.form.get('template_id')
+    purchase_date_str = request.form.get('purchase_date')
+    if not template_id or not purchase_date_str:
+        flash('Bundle and purchase date are required')
+        return redirect(url_for('customer_detail', customer_id=customer_id))
+    template = BundleTemplate.query.get_or_404(int(template_id))
+    try:
+        purchase_date = datetime.strptime(purchase_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash('Invalid purchase date')
+        return redirect(url_for('customer_detail', customer_id=customer_id))
+    expected_completion = None
+    expected_str = request.form.get('expected_completion')
+    if expected_str:
+        try:
+            expected_completion = datetime.strptime(expected_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    csm_id = request.form.get('csm_id') or None
+
+    cb = CustomerBundle(
+        customer_id=customer_id, template_id=template.id,
+        purchase_date=purchase_date, expected_completion=expected_completion,
+        csm_id=int(csm_id) if csm_id else None,
+        amount_aed=template.price_aed or 0,
+    )
+    db.session.add(cb)
+    db.session.flush()  # assigns cb.id for the deliverables below
+
+    # Link, don't duplicate: a template item that's really a VAT/Corp Tax
+    # filing points at the existing open TaxFiling row instead of tracking
+    # its own status. If the customer isn't registered/has no open filing
+    # yet, leave it unlinked and tell staff — tax registration itself stays
+    # a separate existing flow (Edit Client), never duplicated here.
+    unlinked_tax_items = []
+    items = BundleTemplateItem.query.filter_by(template_id=template.id, active=True) \
+                .order_by(BundleTemplateItem.sort_order).all()
+    for item in items:
+        due_date = purchase_date + timedelta(days=item.default_due_days or 0)
+        linked_filing_id = None
+        name_lower = item.service_name.lower()
+        matched_tax_type = 'VAT' if 'vat' in name_lower else \
+            ('CorpTax' if ('corporate tax' in name_lower or 'corp tax' in name_lower) else None)
+        if matched_tax_type:
+            filing = TaxFiling.query.filter_by(customer_id=customer_id, tax_type=matched_tax_type,
+                                                filed_at=None).order_by(TaxFiling.due_date).first()
+            if filing:
+                linked_filing_id = filing.id
+            else:
+                unlinked_tax_items.append(item.service_name)
+        db.session.add(BundleDeliverable(
+            customer_bundle_id=cb.id,
+            service_name=item.service_name, category=item.category, description=item.description,
+            mandatory=item.mandatory, sort_order=item.sort_order,
+            provider_type=item.default_provider_type, provider_vendor_id=item.default_vendor_id,
+            due_date=due_date, linked_tax_filing_id=linked_filing_id,
+        ))
+    db.session.commit()
+    flash(f'{template.name} assigned to {customer.name}')
+    if unlinked_tax_items:
+        flash(f'No open tax filing found for: {", ".join(unlinked_tax_items)} — register VAT/Corp Tax '
+              f'on this client\'s Edit page first if not already done.', 'warning')
+    return redirect(url_for('customer_detail', customer_id=customer_id))
+
+@app.route('/customers/<int:customer_id>/bundles/<int:bundle_id>/cancel', methods=['POST'])
+@login_required
+def cancel_customer_bundle(customer_id, bundle_id):
+    cb = CustomerBundle.query.filter_by(id=bundle_id, customer_id=customer_id).first_or_404()
+    cb.status = 'Cancelled'
+    db.session.commit()
+    flash(f'{cb.template.name} bundle cancelled')
+    return redirect(url_for('customer_detail', customer_id=customer_id))
+
+@app.route('/bundle-deliverables/<int:deliverable_id>/update', methods=['POST'])
+@login_required
+def update_bundle_deliverable(deliverable_id):
+    d = BundleDeliverable.query.get_or_404(deliverable_id)
+    customer_id = d.customer_bundle.customer_id
+    d.status = request.form.get('status', d.status)
+    provider_type = request.form.get('provider_type', d.provider_type)
+    d.provider_type = provider_type
+    if provider_type == 'vendor':
+        vendor_id = request.form.get('provider_vendor_id') or None
+        d.provider_vendor_id = int(vendor_id) if vendor_id else None
+        d.assigned_to_user_id = None
+    else:
+        d.provider_vendor_id = None
+        assigned = request.form.get('assigned_to_user_id') or None
+        d.assigned_to_user_id = int(assigned) if assigned else None
+    due = request.form.get('due_date')
+    if due:
+        try:
+            d.due_date = datetime.strptime(due, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    completed = request.form.get('completed_date')
+    if completed:
+        try:
+            d.completed_date = datetime.strptime(completed, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    elif d.status == 'Completed' and not d.completed_date:
+        # Auto-stamp, mirroring mark_tax_filing_filed's auto-stamp of filed_at.
+        d.completed_date = now_dubai().date()
+    elif d.status != 'Completed':
+        d.completed_date = None
+    d.notes = request.form.get('notes', '').strip() or None
+    db.session.commit()
+    flash(f'"{d.service_name}" updated')
+    return _safe_redirect(request.form.get('next'), 'customer_detail', customer_id=customer_id)
+
 @app.route('/customers/<int:customer_id>')
 @login_required
 def customer_detail(customer_id):
@@ -4251,6 +4475,11 @@ def customer_detail(customer_id):
     has_dated_doc = any(has_valid_expiry(d.expiry_date) for d in
                         Document.query.filter_by(customer_id=customer_id).all())
     completeness_pct, completeness_missing = _customer_completeness(customer, has_dated_doc)
+    bundles = CustomerBundle.query.filter_by(customer_id=customer_id) \
+                .order_by(CustomerBundle.purchase_date.desc()).all()
+    bundle_progress = {b.id: _bundle_progress(b) for b in bundles}
+    bundle_templates = BundleTemplate.query.filter_by(active=True).order_by(BundleTemplate.name).all()
+    vendors = Vendor.query.filter_by(active=True).order_by(Vendor.name).all()
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
                            documents=docs, employees=employees, owners=owners, now=now, today=now.date(),
                            total_invoiced=total_invoiced, total_received=total_received,
@@ -4261,7 +4490,10 @@ def customer_detail(customer_id):
                            completeness_pct=completeness_pct, completeness_missing=completeness_missing,
                            services=[s.name for s in Service.query.order_by(Service.name).all()],
                            tax_filings=TaxFiling.query.filter_by(customer_id=customer_id)
-                               .order_by(TaxFiling.filed_at.is_(None).desc(), TaxFiling.due_date).all())
+                               .order_by(TaxFiling.filed_at.is_(None).desc(), TaxFiling.due_date).all(),
+                           bundles=bundles, bundle_progress=bundle_progress,
+                           bundle_templates=bundle_templates, vendors=vendors,
+                           bundle_staff=User.query.filter_by(active=True).order_by(User.name).all())
 
 
 @app.route('/customers/<int:customer_id>/health')
@@ -5917,6 +6149,164 @@ def admin_delete_activity_type(type_id):
     db.session.commit()
     flash(f'Activity "{at.label}" removed')
     return redirect(url_for('admin_panel') + '#activity-types')
+
+
+# ── Admin — Vendor Master ──────────────────────────────────────────────────────
+
+def _vendor_from_form(v):
+    v.name = request.form.get('name', '').strip()
+    v.category = request.form.get('category', '').strip() or None
+    v.contact_person = request.form.get('contact_person', '').strip() or None
+    v.phone = request.form.get('phone', '').strip() or None
+    v.email = request.form.get('email', '').strip() or None
+    v.website = request.form.get('website', '').strip() or None
+    v.preferred = request.form.get('preferred') == 'on'
+    v.notes = request.form.get('notes', '').strip() or None
+    return v
+
+@app.route('/admin/vendor/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_vendor():
+    if not request.form.get('name', '').strip():
+        flash('Vendor name is required')
+        return redirect(url_for('admin_panel') + '#vendors')
+    v = _vendor_from_form(Vendor())
+    db.session.add(v)
+    db.session.commit()
+    flash(f'Vendor "{v.name}" added')
+    return redirect(url_for('admin_panel') + '#vendors')
+
+@app.route('/admin/vendor/<int:vendor_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_vendor(vendor_id):
+    v = Vendor.query.get_or_404(vendor_id)
+    if not request.form.get('name', '').strip():
+        flash('Vendor name is required')
+        return redirect(url_for('admin_panel') + '#vendors')
+    _vendor_from_form(v)
+    db.session.commit()
+    flash(f'Vendor "{v.name}" updated')
+    return redirect(url_for('admin_panel') + '#vendors')
+
+@app.route('/admin/vendor/<int:vendor_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_vendor(vendor_id):
+    v = Vendor.query.get_or_404(vendor_id)
+    v.active = False  # Soft delete — bundle deliverables may still reference this vendor
+    db.session.commit()
+    flash(f'Vendor "{v.name}" removed')
+    return redirect(url_for('admin_panel') + '#vendors')
+
+
+# ── Admin — Bundle Templates ───────────────────────────────────────────────────
+
+@app.route('/admin/bundle-template/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_bundle_template():
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('Bundle name is required')
+        return redirect(url_for('admin_panel') + '#bundle-templates')
+    try:
+        price = float(request.form.get('price_aed', '0') or 0)
+    except ValueError:
+        price = 0
+    bt = BundleTemplate(name=name, price_aed=price,
+                         description=request.form.get('description', '').strip() or None)
+    db.session.add(bt)
+    db.session.commit()
+    flash(f'Bundle "{name}" added')
+    return redirect(url_for('admin_panel') + '#bundle-templates')
+
+@app.route('/admin/bundle-template/<int:template_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_bundle_template(template_id):
+    bt = BundleTemplate.query.get_or_404(template_id)
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('Bundle name is required')
+        return redirect(url_for('admin_panel') + '#bundle-templates')
+    try:
+        price = float(request.form.get('price_aed', '0') or 0)
+    except ValueError:
+        price = 0
+    bt.name = name
+    bt.price_aed = price
+    bt.description = request.form.get('description', '').strip() or None
+    db.session.commit()
+    flash(f'Bundle "{bt.name}" updated')
+    return redirect(url_for('admin_panel') + '#bundle-templates')
+
+@app.route('/admin/bundle-template/<int:template_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_bundle_template(template_id):
+    bt = BundleTemplate.query.get_or_404(template_id)
+    bt.active = False  # Soft delete — customers who already bought it keep their deliverables
+    db.session.commit()
+    flash(f'Bundle "{bt.name}" removed')
+    return redirect(url_for('admin_panel') + '#bundle-templates')
+
+def _bundle_template_item_from_form(item, template_id=None):
+    if template_id is not None:
+        item.template_id = template_id
+    item.service_name = request.form.get('service_name', '').strip()
+    item.category = request.form.get('category', '').strip() or None
+    item.description = request.form.get('description', '').strip() or None
+    try:
+        item.default_due_days = int(request.form.get('default_due_days', '30') or 30)
+    except ValueError:
+        item.default_due_days = 30
+    item.mandatory = request.form.get('mandatory') == 'on'
+    provider_type = request.form.get('default_provider_type', 'inhouse')
+    vendor_id = request.form.get('default_vendor_id') or None
+    item.default_provider_type = provider_type
+    item.default_vendor_id = int(vendor_id) if (provider_type == 'vendor' and vendor_id) else None
+    return item
+
+@app.route('/admin/bundle-template/<int:template_id>/item/add', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_bundle_template_item(template_id):
+    bt = BundleTemplate.query.get_or_404(template_id)
+    if not request.form.get('service_name', '').strip():
+        flash('Service name is required')
+        return redirect(url_for('admin_panel') + '#bundle-templates')
+    max_order = db.session.query(db.func.max(BundleTemplateItem.sort_order))\
+                    .filter_by(template_id=template_id).scalar() or 0
+    item = _bundle_template_item_from_form(BundleTemplateItem(sort_order=max_order + 1), template_id)
+    db.session.add(item)
+    db.session.commit()
+    flash(f'"{item.service_name}" added to {bt.name}')
+    return redirect(url_for('admin_panel') + '#bundle-templates')
+
+@app.route('/admin/bundle-template-item/<int:item_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def admin_edit_bundle_template_item(item_id):
+    item = BundleTemplateItem.query.get_or_404(item_id)
+    if not request.form.get('service_name', '').strip():
+        flash('Service name is required')
+        return redirect(url_for('admin_panel') + '#bundle-templates')
+    _bundle_template_item_from_form(item)
+    db.session.commit()
+    flash(f'"{item.service_name}" updated')
+    return redirect(url_for('admin_panel') + '#bundle-templates')
+
+@app.route('/admin/bundle-template-item/<int:item_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_bundle_template_item(item_id):
+    item = BundleTemplateItem.query.get_or_404(item_id)
+    item.active = False
+    db.session.commit()
+    flash(f'"{item.service_name}" removed')
+    return redirect(url_for('admin_panel') + '#bundle-templates')
 
 
 # ── Admin Edit Routes ─────────────────────────────────────────────────────────
