@@ -561,6 +561,252 @@
       </div>
     </details>
 
+    <!-- Vendor Master -->
+    <details class="acc" id="vendors">
+      <summary>🤝 Vendor Master</summary>
+      <div class="acc-inner">
+      <div style="padding:14px 18px;">
+        <div style="font-size:12.5px;color:#64748B;margin-bottom:12px;line-height:1.6;">
+          External vendors used as the default provider on Bundle Template items — a Logo Design
+          item might default to "Mirax Designs" here, but the actual provider can still be
+          changed per customer without touching this list.
+        </div>
+        <form method="post" action="/admin/vendor/add" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="filter-group">
+            <label style="font-size:11px;color:#64748B;">Vendor Name *</label>
+            <input type="text" name="name" placeholder="e.g. Mirax Designs" required style="padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;min-width:200px;">
+          </div>
+          <div class="filter-group">
+            <label style="font-size:11px;color:#64748B;">Category</label>
+            <select name="category" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;">
+              <option value="">— Select —</option>
+              {% for c in vendor_categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="filter-group">
+            <label style="font-size:11px;color:#64748B;">Contact Person</label>
+            <input type="text" name="contact_person" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;">
+          </div>
+          <div class="filter-group">
+            <label style="font-size:11px;color:#64748B;">Phone</label>
+            <input type="text" name="phone" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;width:130px;">
+          </div>
+          <div class="filter-group" style="flex-direction:row;align-items:center;gap:6px;">
+            <input type="checkbox" name="preferred" id="v-add-preferred" style="width:auto;">
+            <label for="v-add-preferred" style="font-size:12px;color:#64748B;">Preferred</label>
+          </div>
+          <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">+ Add Vendor</button>
+        </form>
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Vendor</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Category</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Contact</th>
+            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Preferred</th>
+            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#F8FAFC;">Actions</th>
+          </tr></thead>
+          <tbody>
+            {% for v in vendors if v.active %}
+            <tr id="v-view-{{ v.id }}" style="border-bottom:1px solid var(--border-light);">
+              <td style="padding:9px 12px;font-weight:600;">{{ v.name }}</td>
+              <td style="padding:9px 12px;color:var(--text-muted);">{{ v.category or '—' }}</td>
+              <td style="padding:9px 12px;color:var(--text-muted);">
+                {{ v.contact_person or '—' }}{% if v.phone %} · {{ v.phone }}{% endif %}
+              </td>
+              <td style="padding:9px 12px;text-align:center;">{% if v.preferred %}⭐{% else %}—{% endif %}</td>
+              <td style="padding:9px 12px;text-align:center;">
+                <div style="display:flex;gap:6px;justify-content:center;">
+                  <button onclick="vEdit({{ v.id }})" class="ib" title="Edit">✏</button>
+                  <form method="POST" action="/admin/vendor/{{ v.id }}/delete" style="display:inline;"
+                        onsubmit="return confirm('Remove vendor {{ v.name }}? Bundle items pointing at it keep their history.')">
+                    <button type="submit" class="ib ib-del" title="Delete">🗑</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <tr id="v-form-row-{{ v.id }}" style="display:none;">
+              <td colspan="5">
+                <form id="v-form-{{ v.id }}" method="POST" action="/admin/vendor/{{ v.id }}/edit" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:8px 0;">
+                  <div class="filter-group"><label style="font-size:11px;color:#64748B;">Name *</label><input type="text" name="name" value="{{ v.name }}" required style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;"></div>
+                  <div class="filter-group"><label style="font-size:11px;color:#64748B;">Category</label>
+                    <select name="category" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;">
+                      <option value="">— Select —</option>
+                      {% for c in vendor_categories %}<option value="{{ c }}" {% if v.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+                    </select>
+                  </div>
+                  <div class="filter-group"><label style="font-size:11px;color:#64748B;">Contact Person</label><input type="text" name="contact_person" value="{{ v.contact_person or '' }}" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;"></div>
+                  <div class="filter-group"><label style="font-size:11px;color:#64748B;">Phone</label><input type="text" name="phone" value="{{ v.phone or '' }}" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;width:120px;"></div>
+                  <div class="filter-group"><label style="font-size:11px;color:#64748B;">Email</label><input type="email" name="email" value="{{ v.email or '' }}" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;"></div>
+                  <div class="filter-group"><label style="font-size:11px;color:#64748B;">Website</label><input type="text" name="website" value="{{ v.website or '' }}" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;"></div>
+                  <div class="filter-group" style="flex-direction:row;align-items:center;gap:6px;"><input type="checkbox" name="preferred" id="v-edit-preferred-{{ v.id }}" {% if v.preferred %}checked{% endif %} style="width:auto;"><label for="v-edit-preferred-{{ v.id }}" style="font-size:12px;color:#64748B;">Preferred</label></div>
+                  <div class="filter-group" style="min-width:200px;flex:1;"><label style="font-size:11px;color:#64748B;">Notes</label><input type="text" name="notes" value="{{ v.notes or '' }}" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;width:100%;"></div>
+                  <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
+                  <button type="button" onclick="vCancel({{ v.id }})" class="btn-sm">Cancel</button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-light);">No vendors yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+      </div>
+    </details>
+
+    <!-- Bundle Templates -->
+    <details class="acc" id="bundle-templates">
+      <summary>📦 Bundle Templates</summary>
+      <div class="acc-inner">
+      <div style="padding:14px 18px;">
+        <div style="font-size:12.5px;color:#64748B;margin-bottom:12px;line-height:1.6;">
+          Defines what each bundle contains. Editing a template only affects future sales — a
+          customer who already bought a bundle keeps the deliverable list they were assigned at
+          purchase time.
+        </div>
+        <form method="post" action="/admin/bundle-template/add" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="filter-group">
+            <label style="font-size:11px;color:#64748B;">Bundle Name *</label>
+            <input type="text" name="name" placeholder="e.g. Launchpad" required style="padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;min-width:200px;">
+          </div>
+          <div class="filter-group">
+            <label style="font-size:11px;color:#64748B;">Price (AED)</label>
+            <input type="number" name="price_aed" min="0" step="1" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;width:110px;">
+          </div>
+          <div class="filter-group" style="min-width:220px;flex:1;">
+            <label style="font-size:11px;color:#64748B;">Description</label>
+            <input type="text" name="description" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;width:100%;">
+          </div>
+          <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">+ Add Bundle</button>
+        </form>
+
+        {% for bt in bundle_templates %}
+        <div style="border:1px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden;">
+          <div id="bt-view-{{ bt.id }}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#F8FAFC;">
+            <div>
+              <span style="font-weight:700;font-size:13.5px;">{{ bt.name }}</span>
+              <span style="font-size:12px;color:var(--text-muted);margin-left:8px;">AED {{ '{:,.0f}'.format(bt.price_aed or 0) }} · {{ bt.items|selectattr('active')|list|length }} item(s)</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button onclick="btEdit({{ bt.id }})" class="ib" title="Edit">✏</button>
+              <form method="POST" action="/admin/bundle-template/{{ bt.id }}/delete" style="display:inline;"
+                    onsubmit="return confirm('Remove bundle {{ bt.name }}? Customers who already bought it are unaffected.')">
+                <button type="submit" class="ib ib-del" title="Delete">🗑</button>
+              </form>
+            </div>
+          </div>
+          <div id="bt-form-row-{{ bt.id }}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);">
+            <form id="bt-form-{{ bt.id }}" method="POST" action="/admin/bundle-template/{{ bt.id }}/edit" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+              <div class="filter-group"><label style="font-size:11px;color:#64748B;">Name *</label><input type="text" name="name" value="{{ bt.name }}" required style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;"></div>
+              <div class="filter-group"><label style="font-size:11px;color:#64748B;">Price (AED)</label><input type="number" name="price_aed" value="{{ bt.price_aed|int if bt.price_aed else 0 }}" min="0" step="1" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;width:100px;"></div>
+              <div class="filter-group" style="min-width:220px;flex:1;"><label style="font-size:11px;color:#64748B;">Description</label><input type="text" name="description" value="{{ bt.description or '' }}" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;width:100%;"></div>
+              <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
+              <button type="button" onclick="btCancel({{ bt.id }})" class="btn-sm">Cancel</button>
+            </form>
+          </div>
+
+          <details style="padding:10px 14px;">
+            <summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:#1A3B8B;">Manage Items ({{ bt.items|selectattr('active')|list|length }})</summary>
+            <div style="margin-top:10px;">
+              <form method="post" action="/admin/bundle-template/{{ bt.id }}/item/add" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;padding:10px;background:#F8FAFC;border-radius:6px;">
+                <div class="filter-group"><label style="font-size:11px;color:#64748B;">Service Name *</label><input type="text" name="service_name" required placeholder="e.g. Logo Design (2 Concepts)" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;min-width:180px;"></div>
+                <div class="filter-group"><label style="font-size:11px;color:#64748B;">Category</label>
+                  <select name="category" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;">
+                    <option value="">— Select —</option>
+                    {% for c in vendor_categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div class="filter-group"><label style="font-size:11px;color:#64748B;">Due (days after purchase)</label><input type="number" name="default_due_days" value="30" min="0" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;width:70px;"></div>
+                <div class="filter-group" style="flex-direction:row;align-items:center;gap:6px;"><input type="checkbox" name="mandatory" checked id="bti-add-mand-{{ bt.id }}" style="width:auto;"><label for="bti-add-mand-{{ bt.id }}" style="font-size:12px;color:#64748B;">Mandatory</label></div>
+                <div class="filter-group">
+                  <label style="font-size:11px;color:#64748B;">Default Provider</label>
+                  <select name="default_provider_type" onchange="toggleVendorSelect(this, 'bti-add-vendor-{{ bt.id }}')" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;">
+                    <option value="inhouse">Tahfeel (In-house)</option>
+                    <option value="vendor">External Vendor</option>
+                  </select>
+                </div>
+                <div class="filter-group">
+                  <label style="font-size:11px;color:#64748B;">Vendor</label>
+                  <select name="default_vendor_id" id="bti-add-vendor-{{ bt.id }}" disabled style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;">
+                    <option value="">— Select —</option>
+                    {% for v in vendors if v.active %}<option value="{{ v.id }}">{{ v.name }}</option>{% endfor %}
+                  </select>
+                </div>
+                <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">+ Add Item</button>
+              </form>
+
+              <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+                <thead><tr>
+                  <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">Service</th>
+                  <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">Category</th>
+                  <th style="text-align:center;padding:6px 8px;font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">Due</th>
+                  <th style="text-align:center;padding:6px 8px;font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">Mandatory</th>
+                  <th style="text-align:left;padding:6px 8px;font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">Default Provider</th>
+                  <th style="text-align:center;padding:6px 8px;font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">Actions</th>
+                </tr></thead>
+                <tbody>
+                  {% for item in bt.items if item.active %}
+                  <tr id="bti-view-{{ item.id }}" style="border-bottom:1px solid var(--border-light);">
+                    <td style="padding:7px 8px;">{{ item.service_name }}</td>
+                    <td style="padding:7px 8px;color:var(--text-muted);">{{ item.category or '—' }}</td>
+                    <td style="padding:7px 8px;text-align:center;">{{ item.default_due_days }}d</td>
+                    <td style="padding:7px 8px;text-align:center;">{% if item.mandatory %}✅{% else %}—{% endif %}</td>
+                    <td style="padding:7px 8px;">{% if item.default_provider_type == 'vendor' and item.default_vendor %}🤝 {{ item.default_vendor.name }}{% else %}🏢 Tahfeel{% endif %}</td>
+                    <td style="padding:7px 8px;text-align:center;">
+                      <div style="display:flex;gap:4px;justify-content:center;">
+                        <button type="button" onclick="btiEdit({{ item.id }})" class="ib" title="Edit">✏</button>
+                        <form method="POST" action="/admin/bundle-template-item/{{ item.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ item.service_name }}?')">
+                          <button type="submit" class="ib ib-del" title="Delete">🗑</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr id="bti-form-row-{{ item.id }}" style="display:none;">
+                    <td colspan="6">
+                      <form id="bti-form-{{ item.id }}" method="POST" action="/admin/bundle-template-item/{{ item.id }}/edit" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:8px 0;">
+                        <div class="filter-group"><input type="text" name="service_name" value="{{ item.service_name }}" required style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;min-width:160px;"></div>
+                        <div class="filter-group">
+                          <select name="category" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;">
+                            <option value="">— Select —</option>
+                            {% for c in vendor_categories %}<option value="{{ c }}" {% if item.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+                          </select>
+                        </div>
+                        <div class="filter-group"><input type="number" name="default_due_days" value="{{ item.default_due_days }}" min="0" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;width:70px;"></div>
+                        <div class="filter-group" style="flex-direction:row;align-items:center;gap:6px;"><input type="checkbox" name="mandatory" {% if item.mandatory %}checked{% endif %} id="bti-edit-mand-{{ item.id }}" style="width:auto;"><label for="bti-edit-mand-{{ item.id }}" style="font-size:12px;color:#64748B;">Mandatory</label></div>
+                        <div class="filter-group">
+                          <select name="default_provider_type" onchange="toggleVendorSelect(this, 'bti-edit-vendor-{{ item.id }}')" style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;">
+                            <option value="inhouse" {% if item.default_provider_type != 'vendor' %}selected{% endif %}>Tahfeel (In-house)</option>
+                            <option value="vendor" {% if item.default_provider_type == 'vendor' %}selected{% endif %}>External Vendor</option>
+                          </select>
+                        </div>
+                        <div class="filter-group">
+                          <select name="default_vendor_id" id="bti-edit-vendor-{{ item.id }}" {% if item.default_provider_type != 'vendor' %}disabled{% endif %} style="padding:6px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;">
+                            <option value="">— Select —</option>
+                            {% for v in vendors if v.active %}<option value="{{ v.id }}" {% if item.default_vendor_id == v.id %}selected{% endif %}>{{ v.name }}</option>{% endfor %}
+                          </select>
+                        </div>
+                        <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
+                        <button type="button" onclick="btiCancel({{ item.id }})" class="btn-sm">Cancel</button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="6" style="padding:14px;text-align:center;color:var(--text-light);">No items yet — add the bundle's deliverables above.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+        {% else %}
+        <div style="padding:20px;text-align:center;color:var(--text-light);">No bundles yet — add one above.</div>
+        {% endfor %}
+      </div>
+      </div>
+    </details>
+
     <!-- Tasks & Documents -->
     <details class="acc">
       <summary>💼 Tasks &amp; Documents</summary>
@@ -901,6 +1147,17 @@ Every service task is priced here — Cost Price stays internal (never shown in 
     }
     function paEdit(id) { document.getElementById('pa-view-'+id).style.display='none'; document.getElementById('pa-form-'+id).style.display='flex'; }
     function paCancel(id) { document.getElementById('pa-view-'+id).style.display='flex'; document.getElementById('pa-form-'+id).style.display='none'; }
+    function vEdit(id) { document.getElementById('v-view-'+id).style.display='none'; document.getElementById('v-form-row-'+id).style.display=''; }
+    function vCancel(id) { document.getElementById('v-view-'+id).style.display=''; document.getElementById('v-form-row-'+id).style.display='none'; }
+    function btEdit(id) { document.getElementById('bt-view-'+id).style.display='none'; document.getElementById('bt-form-row-'+id).style.display='block'; }
+    function btCancel(id) { document.getElementById('bt-view-'+id).style.display='flex'; document.getElementById('bt-form-row-'+id).style.display='none'; }
+    function btiEdit(id) { document.getElementById('bti-view-'+id).style.display='none'; document.getElementById('bti-form-row-'+id).style.display=''; }
+    function btiCancel(id) { document.getElementById('bti-view-'+id).style.display=''; document.getElementById('bti-form-row-'+id).style.display='none'; }
+    function toggleVendorSelect(sel, vendorSelectId) {
+      var vs = document.getElementById(vendorSelectId);
+      if (!vs) return;
+      vs.disabled = (sel.value !== 'vendor');
+    }
   </script>
   <script>
     // Every "Save"/"Add" action on this page redirects back to

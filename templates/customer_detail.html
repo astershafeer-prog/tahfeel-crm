@@ -410,6 +410,194 @@
       <div class="empty">Registered, but no filing periods yet.</div>
       {% endif %}
     </div>
+    {% endif %}
+
+    <!-- Bundles -->
+    <div class="card card-customers" style="margin-bottom:30px;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>📦 Bundles <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ bundles|length }}</span></h2>
+        <button type="button" class="btn-add" style="font-size:12px;padding:6px 14px;" onclick="openAssignBundleModal()">+ Assign Bundle</button>
+      </div>
+      {% if bundles %}
+        {% for b in bundles %}
+        {% set pct = bundle_progress.get(b.id, 0) %}
+        <div style="{% if not loop.first %}border-top:1px solid var(--border-light);margin-top:18px;padding-top:18px;{% endif %}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-weight:700;font-size:14px;">{{ b.template.name }}</div>
+            {% if b.status == 'Active' %}
+            <form method="POST" action="/customers/{{ customer.id }}/bundles/{{ b.id }}/cancel" style="display:inline;" onsubmit="return confirm('Cancel this bundle? Deliverable history is kept.')">
+              <button type="submit" style="background:none;border:none;padding:0;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;">Cancel Bundle</button>
+            </form>
+            {% endif %}
+          </div>
+          <div class="summary-row">
+            <div class="summary-card {% if pct == 100 %}green{% elif pct < 40 %}red{% else %}amber{% endif %}">
+              <div class="label">Progress</div>
+              <div class="value">{{ pct }}%</div>
+            </div>
+            <div class="summary-card {% if b.status == 'Cancelled' %}red{% elif b.status == 'Completed' %}green{% endif %}">
+              <div class="label">Status</div>
+              <div class="value" style="font-size:15px;">{{ b.status }}</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">Purchased</div>
+              <div class="value" style="font-size:15px;">{{ b.purchase_date.strftime('%d %b %Y') }}</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">Expected Completion</div>
+              <div class="value" style="font-size:15px;">{{ b.expected_completion.strftime('%d %b %Y') if b.expected_completion else '—' }}</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">Client Success Manager</div>
+              <div class="value" style="font-size:15px;">{{ b.csm.name if b.csm else '—' }}</div>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Service</th><th>Category</th><th>Status</th><th>Provider</th><th>Assigned</th><th>Due</th><th>Completed</th><th>Action</th></tr></thead>
+            <tbody>
+              {% for d in b.deliverables %}
+              {% set overdue = d.due_date and d.due_date < today and d.status != 'Completed' %}
+              <tr>
+                <td>{{ d.service_name }}{% if not d.mandatory %} <span style="font-size:10px;color:var(--text-muted);">(optional)</span>{% endif %}</td>
+                <td style="color:var(--text-muted);">{{ d.category or '—' }}</td>
+                <td>
+                  {% if overdue %}<span class="badge b-bd-overdue">Overdue</span>
+                  {% else %}<span class="badge b-bd-{{ d.status|lower|replace(' ', '') }}">{{ d.status }}</span>{% endif %}
+                </td>
+                <td>
+                  {% if d.provider_type == 'vendor' and d.provider_vendor %}🤝 {{ d.provider_vendor.name }}
+                  {% else %}🏢 Tahfeel{% endif %}
+                </td>
+                <td>{{ d.assignee.name if d.assignee else '—' }}</td>
+                <td>{{ d.due_date.strftime('%d %b %Y') if d.due_date else '—' }}</td>
+                <td>{{ d.completed_date.strftime('%d %b %Y') if d.completed_date else '—' }}</td>
+                <td>
+                  <button type="button" class="ib" title="Update"
+                    onclick="openDeliverableEdit({
+                      id: {{ d.id }},
+                      service_name: {{ d.service_name|tojson }},
+                      status: {{ d.status|tojson }},
+                      provider_type: {{ d.provider_type|tojson }},
+                      provider_vendor_id: {{ (d.provider_vendor_id or '')|tojson }},
+                      assigned_to_user_id: {{ (d.assigned_to_user_id or '')|tojson }},
+                      due_date: {{ (d.due_date.isoformat() if d.due_date else '')|tojson }},
+                      completed_date: {{ (d.completed_date.isoformat() if d.completed_date else '')|tojson }},
+                      notes: {{ (d.notes or '')|tojson }}
+                    })">✏ Update</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty">No bundles yet. <a href="#" onclick="openAssignBundleModal();return false;" style="color:var(--primary);">Assign a bundle →</a></div>
+      {% endif %}
+    </div>
+
+    <!-- Assign Bundle modal -->
+    <div class="modal-overlay" id="assignBundleModal" style="display:none;">
+      <div class="modal-box" style="max-width:520px;width:94%;text-align:left;">
+        <h3 style="margin-top:0;">📦 Assign Bundle</h3>
+        <form method="POST" action="/customers/{{ customer.id }}/bundles/assign">
+          <div class="form-row-2">
+            <div class="form-group" style="grid-column:1/-1;">
+              <label>Bundle <span style="color:var(--danger);">*</span></label>
+              <select name="template_id" required>
+                <option value="">— Select —</option>
+                {% for t in bundle_templates %}<option value="{{ t.id }}">{{ t.name }} — AED {{ '{:,.0f}'.format(t.price_aed or 0) }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group"><label>Purchase Date <span style="color:var(--danger);">*</span></label><input type="date" name="purchase_date" required value="{{ today.isoformat() }}"></div>
+            <div class="form-group"><label>Expected Completion</label><input type="date" name="expected_completion"></div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label>Client Success Manager</label>
+              <select name="csm_id">
+                <option value="">— Unassigned —</option>
+                {% for u in bundle_staff %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
+            <button type="button" class="btn-sm" onclick="closeAssignBundleModal()">Cancel</button>
+            <button type="submit" class="btn-primary">Assign Bundle</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Update Deliverable modal — one shared form, action set per-row via JS -->
+    <div class="modal-overlay" id="deliverableEdit" style="display:none;">
+      <div class="modal-box" style="max-width:520px;width:94%;text-align:left;">
+        <h3 style="margin-top:0;">✏ Update <span id="deName"></span></h3>
+        <form method="POST" id="deliverableEditForm">
+          <input type="hidden" name="next" value="/customers/{{ customer.id }}">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Status</label>
+              <select name="status" id="deStatus">
+                {% for s in ['Pending', 'In Progress', 'Waiting for Customer', 'Completed'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Provider</label>
+              <select name="provider_type" id="deProviderType" onchange="deToggleProvider()">
+                <option value="inhouse">Tahfeel (In-house)</option>
+                <option value="vendor">External Vendor</option>
+              </select>
+            </div>
+            <div class="form-group" id="deAssignedWrap">
+              <label>Assigned To</label>
+              <select name="assigned_to_user_id" id="deAssignedTo">
+                <option value="">— Unassigned —</option>
+                {% for u in bundle_staff %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group" id="deVendorWrap" style="display:none;">
+              <label>Vendor</label>
+              <select name="provider_vendor_id" id="deVendor">
+                <option value="">— Select —</option>
+                {% for v in vendors %}<option value="{{ v.id }}">{{ v.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group"><label>Due Date</label><input type="date" name="due_date" id="deDue"></div>
+            <div class="form-group"><label>Completed Date</label><input type="date" name="completed_date" id="deCompleted"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Leave blank to auto-stamp today when status is set to Completed</div></div>
+            <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><input type="text" name="notes" id="deNotes"></div>
+          </div>
+          <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
+            <button type="button" class="btn-sm" onclick="closeDeliverableEdit()">Cancel</button>
+            <button type="submit" class="btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      function openAssignBundleModal(){ document.getElementById('assignBundleModal').classList.add('active'); }
+      function closeAssignBundleModal(){ document.getElementById('assignBundleModal').classList.remove('active'); }
+      function deToggleProvider(){
+        var isVendor = document.getElementById('deProviderType').value === 'vendor';
+        document.getElementById('deVendorWrap').style.display = isVendor ? '' : 'none';
+        document.getElementById('deAssignedWrap').style.display = isVendor ? 'none' : '';
+      }
+      function openDeliverableEdit(d){
+        document.getElementById('deliverableEditForm').action = '/bundle-deliverables/' + d.id + '/update';
+        document.getElementById('deName').textContent = d.service_name;
+        document.getElementById('deStatus').value = d.status;
+        document.getElementById('deProviderType').value = d.provider_type;
+        document.getElementById('deVendor').value = d.provider_vendor_id || '';
+        document.getElementById('deAssignedTo').value = d.assigned_to_user_id || '';
+        document.getElementById('deDue').value = d.due_date || '';
+        document.getElementById('deCompleted').value = d.completed_date || '';
+        document.getElementById('deNotes').value = d.notes || '';
+        deToggleProvider();
+        document.getElementById('deliverableEdit').classList.add('active');
+      }
+      function closeDeliverableEdit(){ document.getElementById('deliverableEdit').classList.remove('active'); }
+    </script>
 
     <!-- Tasks — kept last: this list only grows over a client's lifetime, so
          putting it after the more static sections keeps them from drifting
