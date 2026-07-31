@@ -67,22 +67,6 @@
               <input type="date" name="date_of_birth" value="{{ prefill.get('date_of_birth','') }}">
             </div>
 
-            <div class="form-group" style="grid-column:1/-1;"><div class="section-label" style="margin-top:8px;">🧾 Tax &amp; Compliance</div></div>
-            <div class="form-group"><label>VAT Registered</label><select name="vat_registered" id="vatRegSel" onchange="tfToggleTaxPreview()"><option value="" {% if prefill.get('vat_registered')!='Yes' %}selected{% endif %}>— No —</option><option value="Yes" {% if prefill.get('vat_registered')=='Yes' %}selected{% endif %}>Yes</option></select>
-              <div id="vatPreview" style="display:none;margin-top:6px;">
-                {% for p in vat_preview %}
-                <div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--border-light);"><span style="color:var(--text-muted);">{{ p.label }}</span><span style="font-weight:600;">{{ p.due }}</span></div>
-                {% endfor %}
-                <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;">Preview only — created once you save. Mark each Filed from the client's profile as it happens.</div>
-              </div>
-            </div>
-            <div class="form-group"><label>Corporate Tax Registered</label><select name="corp_tax_registered" id="ctRegSel" onchange="tfToggleTaxPreview()"><option value="" {% if prefill.get('corp_tax_registered')!='Yes' %}selected{% endif %}>— No —</option><option value="Yes" {% if prefill.get('corp_tax_registered')=='Yes' %}selected{% endif %}>Yes</option></select>
-              <div id="ctPreview" style="display:none;margin-top:6px;">
-                <div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--border-light);"><span style="color:var(--text-muted);">{{ corp_tax_preview.label }}</span><span style="font-weight:600;">{{ corp_tax_preview.due }}</span></div>
-                <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;">Preview only — created once you save.</div>
-              </div>
-            </div>
-
             <div class="form-group">
               <label>Source *</label>
               <select name="source" required>
@@ -218,12 +202,6 @@
     document.querySelector('input[name="phone"]').addEventListener('input', function() {
       if (document.getElementById('waSame') && document.getElementById('waSame').checked) syncWhatsApp();
     });
-
-    function tfToggleTaxPreview() {
-      document.getElementById('vatPreview').style.display = document.getElementById('vatRegSel').value === 'Yes' ? 'block' : 'none';
-      document.getElementById('ctPreview').style.display = document.getElementById('ctRegSel').value === 'Yes' ? 'block' : 'none';
-    }
-    tfToggleTaxPreview();  // correct on load if Yes was already selected (redisplay after an error)
 
     // Duplicate-phone soft warning: confirm popup you can dismiss, no data lost
     (function() {

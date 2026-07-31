@@ -251,7 +251,8 @@
     </div>
 
     <!-- Documents + Tax (same row) -->
-    <div class="two" style="grid-template-columns:1.7fr 1fr;">
+    {% set show_tax = customer.customer_type == 'Company' or tax_filings %}
+    <div class="two" style="grid-template-columns:{{ '1.7fr 1fr' if show_tax else '1fr' }};">
       <div class="hc-card">
         <div class="sec-head">
           <h2>🗂 Documents</h2>
@@ -274,6 +275,7 @@
         <div class="empty" style="padding:20px;">No company documents yet. <a href="/documents/add?customer_id={{ customer.id }}" style="color:var(--primary);">Add one →</a></div>
         {% endif %}
       </div>
+      {% if show_tax %}
       <div class="hc-card">
         <div class="sec-head">
           <h2>🧾 Tax &amp; Compliance</h2>
@@ -303,6 +305,7 @@
           {% endfor %}
         </div>
       </div>
+      {% endif %}
     </div>
 
     <!-- People Compliance + Upcoming Renewals -->
