@@ -4335,25 +4335,82 @@ def mark_tax_filing_filed(customer_id, filing_id):
         flash(f'{filing.tax_type} {filing.period_label} marked filed')
     return _safe_redirect(request.form.get('next'), 'customer_detail', customer_id=customer_id)
 
-@app.route('/customers/<int:customer_id>/bundles/assign', methods=['POST'])
+@app.route('/bundles')
 @login_required
-def assign_bundle(customer_id):
+def bundle_list():
+    """Cross-client worklist: every bundle any customer has purchased, with
+    progress and a derived 'Needs Follow-up' flag — same 'metric, not a
+    manual toggle' approach already used for the hot-lead indicator
+    elsewhere in this CRM. Follow-up = at least one overdue deliverable."""
+    status_filter = request.args.get('status', '')
+    followup_only = request.args.get('followup') == '1'
+    csm_filter = request.args.get('csm', '')
+    q = (request.args.get('q') or '').strip().lower()
+    customer_id_filter = request.args.get('customer_id', '')
+    today = now_dubai().date()
+
+    query = CustomerBundle.query.options(
+        db.joinedload(CustomerBundle.customer),
+        db.joinedload(CustomerBundle.template),
+        db.joinedload(CustomerBundle.csm),
+    )
+    if status_filter:
+        query = query.filter(CustomerBundle.status == status_filter)
+    if csm_filter:
+        query = query.filter(CustomerBundle.csm_id == int(csm_filter))
+    if customer_id_filter:
+        query = query.filter(CustomerBundle.customer_id == int(customer_id_filter))
+    bundles = query.order_by(CustomerBundle.purchase_date.desc()).all()
+
+    if q:
+        bundles = [b for b in bundles if q in (b.customer.name or '').lower()
+                   or q in (b.customer.company or '').lower()]
+
+    rows = []
+    for b in bundles:
+        overdue_count = sum(1 for d in b.deliverables
+                            if d.due_date and d.due_date < today and d.status != 'Completed')
+        needs_followup = overdue_count > 0
+        if followup_only and not needs_followup:
+            continue
+        rows.append({'bundle': b, 'progress': _bundle_progress(b),
+                     'needs_followup': needs_followup, 'overdue_count': overdue_count})
+
+    return render_template('bundle_list.html', rows=rows, today=today,
+                           status_filter=status_filter, followup_only=followup_only,
+                           csm_filter=csm_filter, q=request.args.get('q', ''),
+                           customer_id_filter=customer_id_filter,
+                           bundle_templates=BundleTemplate.query.filter_by(active=True).order_by(BundleTemplate.name).all(),
+                           customers=Customer.query.order_by(Customer.name).all(),
+                           bundle_staff=User.query.filter_by(active=True).order_by(User.name).all())
+
+@app.route('/bundles/assign', methods=['POST'])
+@login_required
+def assign_bundle():
     """Purchases a bundle for a customer: snapshots the template's price and
     generates one BundleDeliverable per active template item, with fields
     COPIED (not FK-linked) so a later template edit never rewrites this
-    customer's already-purchased deliverable list."""
-    customer = Customer.query.get_or_404(customer_id)
+    customer's already-purchased deliverable list. Company and bundle are
+    both chosen on the /bundles list page — customer_id comes from the form,
+    not the URL, since assignment no longer happens from a customer's own
+    profile page."""
+    customer_id = request.form.get('customer_id')
+    if not customer_id:
+        flash('Company is required')
+        return redirect(url_for('bundle_list'))
+    customer = Customer.query.get_or_404(int(customer_id))
+    customer_id = customer.id
     template_id = request.form.get('template_id')
     purchase_date_str = request.form.get('purchase_date')
     if not template_id or not purchase_date_str:
         flash('Bundle and purchase date are required')
-        return redirect(url_for('customer_detail', customer_id=customer_id))
+        return redirect(url_for('bundle_list'))
     template = BundleTemplate.query.get_or_404(int(template_id))
     try:
         purchase_date = datetime.strptime(purchase_date_str, '%Y-%m-%d').date()
     except ValueError:
         flash('Invalid purchase date')
-        return redirect(url_for('customer_detail', customer_id=customer_id))
+        return redirect(url_for('bundle_list'))
     expected_completion = None
     expected_str = request.form.get('expected_completion')
     if expected_str:
@@ -4405,22 +4462,31 @@ def assign_bundle(customer_id):
     if unlinked_tax_items:
         flash(f'No open tax filing found for: {", ".join(unlinked_tax_items)} — register VAT/Corp Tax '
               f'on this client\'s Edit page first if not already done.', 'warning')
-    return redirect(url_for('customer_detail', customer_id=customer_id))
+    return redirect(url_for('bundle_detail', bundle_id=cb.id))
 
-@app.route('/customers/<int:customer_id>/bundles/<int:bundle_id>/cancel', methods=['POST'])
+@app.route('/bundles/<int:bundle_id>/cancel', methods=['POST'])
 @login_required
-def cancel_customer_bundle(customer_id, bundle_id):
-    cb = CustomerBundle.query.filter_by(id=bundle_id, customer_id=customer_id).first_or_404()
+def cancel_customer_bundle(bundle_id):
+    cb = CustomerBundle.query.get_or_404(bundle_id)
     cb.status = 'Cancelled'
     db.session.commit()
     flash(f'{cb.template.name} bundle cancelled')
-    return redirect(url_for('customer_detail', customer_id=customer_id))
+    return redirect(url_for('bundle_detail', bundle_id=bundle_id))
+
+@app.route('/bundles/<int:bundle_id>')
+@login_required
+def bundle_detail(bundle_id):
+    cb = CustomerBundle.query.get_or_404(bundle_id)
+    return render_template('bundle_detail.html', b=cb, customer=cb.customer,
+                           progress=_bundle_progress(cb), today=now_dubai().date(),
+                           vendors=Vendor.query.filter_by(active=True).order_by(Vendor.name).all(),
+                           bundle_staff=User.query.filter_by(active=True).order_by(User.name).all())
 
 @app.route('/bundle-deliverables/<int:deliverable_id>/update', methods=['POST'])
 @login_required
 def update_bundle_deliverable(deliverable_id):
     d = BundleDeliverable.query.get_or_404(deliverable_id)
-    customer_id = d.customer_bundle.customer_id
+    bundle_id = d.customer_bundle_id
     d.status = request.form.get('status', d.status)
     provider_type = request.form.get('provider_type', d.provider_type)
     d.provider_type = provider_type
@@ -4452,7 +4518,7 @@ def update_bundle_deliverable(deliverable_id):
     d.notes = request.form.get('notes', '').strip() or None
     db.session.commit()
     flash(f'"{d.service_name}" updated')
-    return _safe_redirect(request.form.get('next'), 'customer_detail', customer_id=customer_id)
+    return _safe_redirect(request.form.get('next'), 'bundle_detail', bundle_id=bundle_id)
 
 @app.route('/customers/<int:customer_id>')
 @login_required
@@ -4475,11 +4541,10 @@ def customer_detail(customer_id):
     has_dated_doc = any(has_valid_expiry(d.expiry_date) for d in
                         Document.query.filter_by(customer_id=customer_id).all())
     completeness_pct, completeness_missing = _customer_completeness(customer, has_dated_doc)
+    # Full bundle detail (progress/deliverables/assign) lives on its own page
+    # at /bundles now — this page only needs the count for the small badge.
     bundles = CustomerBundle.query.filter_by(customer_id=customer_id) \
                 .order_by(CustomerBundle.purchase_date.desc()).all()
-    bundle_progress = {b.id: _bundle_progress(b) for b in bundles}
-    bundle_templates = BundleTemplate.query.filter_by(active=True).order_by(BundleTemplate.name).all()
-    vendors = Vendor.query.filter_by(active=True).order_by(Vendor.name).all()
     return render_template('customer_detail.html', customer=customer, jobs=jobs,
                            documents=docs, employees=employees, owners=owners, now=now, today=now.date(),
                            total_invoiced=total_invoiced, total_received=total_received,
@@ -4491,9 +4556,7 @@ def customer_detail(customer_id):
                            services=[s.name for s in Service.query.order_by(Service.name).all()],
                            tax_filings=TaxFiling.query.filter_by(customer_id=customer_id)
                                .order_by(TaxFiling.filed_at.is_(None).desc(), TaxFiling.due_date).all(),
-                           bundles=bundles, bundle_progress=bundle_progress,
-                           bundle_templates=bundle_templates, vendors=vendors,
-                           bundle_staff=User.query.filter_by(active=True).order_by(User.name).all())
+                           bundles=bundles)
 
 
 @app.route('/customers/<int:customer_id>/health')

@@ -121,8 +121,11 @@ def main():
 
     purchase_date = date.today()
     if template:
-        c2.post(f'/customers/{cust_id}/bundles/assign', data={
-            'template_id': str(template.id), 'purchase_date': purchase_date.isoformat(), 'csrf_token': t2,
+        # Assignment now happens from the standalone /bundles page, not the
+        # customer's own profile — customer_id travels in the form, not the URL.
+        c2.post('/bundles/assign', data={
+            'customer_id': str(cust_id), 'template_id': str(template.id),
+            'purchase_date': purchase_date.isoformat(), 'csrf_token': t2,
         })
     with A.app.app_context():
         cb = A.CustomerBundle.query.filter_by(customer_id=cust_id).first()
@@ -155,6 +158,19 @@ def main():
         checks.append(('vendor soft-delete preserves the row', v_after is not None and v_after.active is False))
     else:
         checks.append(('vendor soft-delete preserves the row', False))
+
+    r = c2.get('/bundles')
+    list_html = r.get_data(as_text=True)
+    checks.append(('bundle list page renders and shows the seeded customer',
+                   r.status_code == 200 and 'Smoke Test Co' in list_html))
+
+    if cb:
+        r = c2.get(f'/bundles/{cb.id}')
+        detail_html = r.get_data(as_text=True)
+        checks.append(('bundle detail page renders and shows its deliverables',
+                       r.status_code == 200 and 'Mandatory Item' in detail_html and 'Optional Item' in detail_html))
+    else:
+        checks.append(('bundle detail page renders and shows its deliverables', False))
 
     if os.path.exists(tmpdb):
         try: os.remove(tmpdb)
