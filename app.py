@@ -637,7 +637,7 @@ class Vendor(db.Model):
     active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=now_dubai)
 
-BUNDLE_DELIVERABLE_CATEGORIES = ['Licensing', 'Branding', 'Finance', 'Banking', 'Marketing', 'PRO Services']
+BUNDLE_DELIVERABLE_CATEGORIES = ['Licensing', 'Branding', 'Finance', 'Banking', 'Marketing', 'PRO Services', 'Consulting']
 
 class BundleTemplate(db.Model):
     __tablename__ = 'bundle_template'
