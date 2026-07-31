@@ -328,7 +328,7 @@ loadTheme();
   destinations, and WhatsApp carries a live unread badge that needs to stay
   visible rather than hidden inside a menu.
 #}
-{% set _sales_active = active in ['leads', 'add_lead', 'enquiries', 'call_log'] %}
+{% set _sales_active = active in ['leads', 'add_lead', 'enquiries', 'call_log', 'bundles'] %}
 {% set _docs_active = active in ['documents', 'health-check', 'tax-filings', 'invoice', 'tahfeel_doc'] %}
 {% set _insights_active = active in ['activity', 'reports', 'analytics', 'partner-commissions'] %}
 <div class="nav" style="background:#0F2660;">
@@ -348,6 +348,7 @@ loadTheme();
       {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
       <a href="/call-log" {% if active=='call_log' %}class="active"{% endif %}>📞 Call Log</a>
       {% endif %}
+      <a href="/bundles" {% if active=='bundles' %}class="active"{% endif %}>📦 Bundles</a>
     </div>
   </div>
   {% endif %}

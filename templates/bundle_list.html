@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Bundles</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .bl-table td, .bl-table th { padding:9px 10px !important; font-size:12.5px !important; }
+    .bl-client { max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+    .bl-bar { width:80px; height:6px; background:var(--border-light); border-radius:20px; overflow:hidden; display:inline-block; vertical-align:middle; }
+    .bl-bar-fill { height:100%; border-radius:20px; }
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('bundles') }}
+  <div class="container" style="max-width:1180px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+      <div>
+        <h1 style="font-size:22px;font-weight:800;color:#0F2660;margin:0;">📦 Bundles</h1>
+        <div style="font-size:12.5px;color:#64748B;margin-top:3px;">Every bundle purchased across all clients — pick a company and a bundle to assign, or open one to update its deliverables.</div>
+      </div>
+      <button type="button" class="btn-add" onclick="openAssignBundleModal()">+ Assign Bundle</button>
+    </div>
+
+    {% set followup_count = rows|selectattr('needs_followup')|list|length %}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+      <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #1A3B8B;border-radius:10px;padding:11px 13px;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Total{% if status_filter or followup_only or q or csm_filter %} (filtered){% endif %}</div>
+        <div style="font-size:19px;font-weight:800;color:#1A3B8B;margin-top:2px;">{{ rows|length }}</div>
+      </div>
+      <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #B02020;border-radius:10px;padding:11px 13px;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Needs Follow-up</div>
+        <div style="font-size:19px;font-weight:800;color:#B02020;margin-top:2px;">{{ followup_count }}</div>
+      </div>
+      <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #1E7B4A;border-radius:10px;padding:11px 13px;">
+        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Completed</div>
+        <div style="font-size:19px;font-weight:800;color:#1E7B4A;margin-top:2px;">{{ rows|selectattr('bundle.status', 'equalto', 'Completed')|list|length }}</div>
+      </div>
+    </div>
+
+    <form method="GET" action="/bundles" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <input type="text" name="q" value="{{ q or '' }}" placeholder="Search company or client name…" autocomplete="off"
+             style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;flex:1;min-width:180px;">
+      <select name="status" onchange="this.form.submit()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#fff;">
+        <option value="">All statuses</option>
+        {% for s in ['Active', 'Completed', 'Cancelled'] %}<option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+      <select name="csm" onchange="this.form.submit()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#fff;">
+        <option value="">All CSMs</option>
+        {% for u in bundle_staff %}<option value="{{ u.id }}" {% if csm_filter==u.id|string %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#475569;background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:9px 12px;cursor:pointer;">
+        <input type="checkbox" name="followup" value="1" {% if followup_only %}checked{% endif %} onchange="this.form.submit()" style="width:auto;"> Needs Follow-up only
+      </label>
+      <button type="submit" style="padding:9px 16px;border:none;border-radius:10px;background:#1A3B8B;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Search</button>
+      {% if status_filter or followup_only or q or csm_filter %}<a href="/bundles" style="font-size:12px;color:#64748B;text-decoration:none;">Clear</a>{% endif %}
+    </form>
+
+    <div class="card" style="margin-bottom:20px;">
+      {% if rows %}
+      <table class="bl-table">
+        <thead>
+          <tr><th>Company</th><th>Bundle</th><th>Progress</th><th>Status</th><th>CSM</th><th>Purchased</th><th>Follow-up</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          {% set b = r.bundle %}
+          <tr>
+            <td><a href="/customers/{{ b.customer.id }}" class="bl-client" title="{{ b.customer.name }}" style="color:#0F2660;font-weight:700;text-decoration:none;">{{ b.customer.name }}</a></td>
+            <td>{{ b.template.name }}</td>
+            <td>
+              <span class="bl-bar"><span class="bl-bar-fill" style="width:{{ r.progress }}%;background:{{ '#1E7B4A' if r.progress == 100 else ('#B02020' if r.progress < 40 else '#B05C00') }};"></span></span>
+              <span style="font-size:11px;color:#64748B;margin-left:4px;">{{ r.progress }}%</span>
+            </td>
+            <td><span class="badge {{ 'b-bd-completed' if b.status == 'Completed' else ('b-bd-overdue' if b.status == 'Cancelled' else 'b-bd-inprogress') }}">{{ b.status }}</span></td>
+            <td>{{ b.csm.name if b.csm else '—' }}</td>
+            <td>{{ b.purchase_date.strftime('%d %b %Y') }}</td>
+            <td>
+              {% if r.needs_followup %}<span class="badge b-bd-overdue">⚠ {{ r.overdue_count }} overdue</span>
+              {% else %}<span style="color:#94A3B8;font-size:12px;">—</span>{% endif %}
+            </td>
+            <td><a href="/bundles/{{ b.id }}" style="color:#1A3B8B;font-size:12px;font-weight:600;text-decoration:none;">View →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No bundles match these filters. <a href="#" onclick="openAssignBundleModal();return false;" style="color:var(--primary);">Assign one →</a></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Assign Bundle modal -->
+  <div class="modal-overlay" id="assignBundleModal" style="display:none;">
+    <div class="modal-box" style="max-width:520px;width:94%;text-align:left;">
+      <h3 style="margin-top:0;">📦 Assign Bundle</h3>
+      <form method="POST" action="/bundles/assign">
+        <div class="form-row-2">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Company / Client <span style="color:var(--danger);">*</span></label>
+            <select name="customer_id" required>
+              <option value="">— Select —</option>
+              {% for c in customers %}<option value="{{ c.id }}" {% if customer_id_filter==c.id|string %}selected{% endif %}>{{ c.name }}{% if c.company %} — {{ c.company }}{% endif %}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Bundle <span style="color:var(--danger);">*</span></label>
+            <select name="template_id" required>
+              <option value="">— Select —</option>
+              {% for t in bundle_templates %}<option value="{{ t.id }}">{{ t.name }} — AED {{ '{:,.0f}'.format(t.price_aed or 0) }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group"><label>Purchase Date <span style="color:var(--danger);">*</span></label><input type="date" name="purchase_date" required value="{{ today.isoformat() }}"></div>
+          <div class="form-group"><label>Expected Completion</label><input type="date" name="expected_completion"></div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Client Success Manager</label>
+            <select name="csm_id">
+              <option value="">— Unassigned —</option>
+              {% for u in bundle_staff %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions" style="margin-top:14px;justify-content:flex-end;">
+          <button type="button" class="btn-sm" onclick="closeAssignBundleModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Assign Bundle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openAssignBundleModal(){ document.getElementById('assignBundleModal').classList.add('active'); }
+    function closeAssignBundleModal(){ document.getElementById('assignBundleModal').classList.remove('active'); }
+  </script>
+</body>
+</html>
