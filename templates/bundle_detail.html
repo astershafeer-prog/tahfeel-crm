@@ -6,6 +6,19 @@
   <title>Tahfeel CRM — {{ b.template.name }} · {{ customer.name }}</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .bd-print-head { display:none; }
+    @media print {
+      @page { size: A4 landscape; margin: 12mm; }
+      .topbar, .nav, .no-print, .flash { display:none !important; }
+      body { background:#fff !important; }
+      .container { max-width:none; padding:0; }
+      .card { box-shadow:none; border:1px solid #999; }
+      .bd-print-head { display:block; border-bottom:2px solid #1A3B8B; padding-bottom:6px; margin-bottom:10px; }
+      .bd-print-head .t { font-size:15pt; font-weight:700; color:#1A3B8B; }
+      .bd-print-head .s { font-size:9pt; color:#444; margin-top:2px; }
+    }
+  </style>
 </head>
 <body>
   {%- from 'macros.html' import topbar, nav -%}
@@ -16,13 +29,22 @@
       {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
-    <a href="/bundles" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to Bundles</a>
+    <div class="bd-print-head">
+      <div class="t">{{ b.template.name }} — {{ customer.name }}</div>
+      <div class="s">Tahfeel Business Setup Services &nbsp;·&nbsp; Purchased {{ b.purchase_date.strftime('%d %b %Y') }}
+        &nbsp;·&nbsp; Progress {{ progress }}% &nbsp;·&nbsp; printed {{ now.strftime('%d %b %Y %H:%M') }}</div>
+    </div>
+
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <a href="/bundles" style="color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to Bundles</a>
+      <button type="button" class="btn-sm" onclick="window.print()" title="Print or save as PDF">🖨 Print</button>
+    </div>
 
     <div class="card card-customers" style="margin-bottom:30px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
         <h2>📦 {{ b.template.name }} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">— <a href="/customers/{{ customer.id }}" style="color:var(--primary);">{{ customer.name }}</a></span></h2>
         {% if b.status == 'Active' %}
-        <form method="POST" action="/bundles/{{ b.id }}/cancel" style="display:inline;" onsubmit="return confirm('Cancel this bundle? Deliverable history is kept.')">
+        <form method="POST" action="/bundles/{{ b.id }}/cancel" class="no-print" style="display:inline;" onsubmit="return confirm('Cancel this bundle? Deliverable history is kept.')">
           <button type="submit" style="background:none;border:none;padding:0;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;">Cancel Bundle</button>
         </form>
         {% endif %}
@@ -32,6 +54,9 @@
           <div class="summary-card {% if progress == 100 %}green{% elif progress < 40 %}red{% else %}amber{% endif %}">
             <div class="label">Progress</div>
             <div class="value">{{ progress }}%</div>
+            <div style="height:6px;background:var(--border-light);border-radius:4px;overflow:hidden;margin-top:6px;">
+              <div style="width:{{ progress }}%;height:100%;border-radius:4px;background:{{ '#059669' if progress == 100 else ('#DC2626' if progress < 40 else '#B45309') }};"></div>
+            </div>
           </div>
           <div class="summary-card {% if b.status == 'Cancelled' %}red{% elif b.status == 'Completed' %}green{% endif %}">
             <div class="label">Status</div>
@@ -55,10 +80,30 @@
           <thead><tr><th>Service</th><th>Category</th><th>Status</th><th>Provider</th><th>Assigned</th><th>Due</th><th>Completed</th><th>Action</th></tr></thead>
           <tbody>
             {% for d in b.deliverables %}
+            {% set tax = tax_summaries.get(d.id) %}
             {% set overdue = d.due_date and d.due_date < today and d.status != 'Completed' %}
             <tr>
               <td>{{ d.service_name }}{% if not d.mandatory %} <span style="font-size:10px;color:var(--text-muted);">(optional)</span>{% endif %}</td>
               <td style="color:var(--text-muted);">{{ d.category or '—' }}</td>
+              {% if tax %}
+              {# Live from the real TaxFiling records — this is a bundle customer, so a
+                 missed quarter is Tahfeel's own liability (government fine), not just
+                 a reminder like it is for a non-bundle client. Never a manually-set
+                 status that could say "Completed" while a quarter is still unfiled. #}
+              <td>
+                {% if tax.total_count == 0 %}<span class="badge" style="background:#F1F5F9;color:#64748B;">Not registered</span>
+                {% elif tax.overdue_count %}<span class="badge b-bd-overdue">{{ tax.overdue_count }} overdue</span>
+                {% elif tax.all_filed %}<span class="badge" style="background:#E1F5EE;color:#0F6E56;">{{ tax.filed_count }}/{{ tax.total_count }} filed</span>
+                {% else %}<span class="badge" style="background:#FAEEDA;color:#8A6400;">{{ tax.filed_count }}/{{ tax.total_count }} filed</span>{% endif %}
+              </td>
+              <td>🏢 Tahfeel</td>
+              <td>{{ d.assignee.name if d.assignee else '—' }}</td>
+              <td>{{ tax.next_due.strftime('%d %b %Y') if tax.next_due else ('All filed ✓' if tax.all_filed else '—') }}</td>
+              <td>—</td>
+              <td>
+                <a href="/tax-filings?q={{ customer.name|urlencode }}" style="color:var(--primary);font-size:12px;font-weight:600;text-decoration:none;">View in Tax Filings →</a>
+              </td>
+              {% else %}
               <td>
                 {% if overdue %}<span class="badge b-bd-overdue">Overdue</span>
                 {% else %}<span class="badge b-bd-{{ d.status|lower|replace(' ', '') }}">{{ d.status }}</span>{% endif %}
@@ -71,19 +116,18 @@
               <td>{{ d.due_date.strftime('%d %b %Y') if d.due_date else '—' }}</td>
               <td>{{ d.completed_date.strftime('%d %b %Y') if d.completed_date else '—' }}</td>
               <td>
-                <button type="button" class="ib" title="Update"
-                  onclick="openDeliverableEdit({
-                    id: {{ d.id }},
-                    service_name: {{ d.service_name|tojson }},
-                    status: {{ d.status|tojson }},
-                    provider_type: {{ d.provider_type|tojson }},
-                    provider_vendor_id: {{ (d.provider_vendor_id or '')|tojson }},
-                    assigned_to_user_id: {{ (d.assigned_to_user_id or '')|tojson }},
-                    due_date: {{ (d.due_date.isoformat() if d.due_date else '')|tojson }},
-                    completed_date: {{ (d.completed_date.isoformat() if d.completed_date else '')|tojson }},
-                    notes: {{ (d.notes or '')|tojson }}
-                  })">✏ Update</button>
+                <button type="button" class="ib no-print" title="Update" onclick="openDeliverableEdit(this)"
+                  data-id="{{ d.id }}"
+                  data-service-name="{{ d.service_name }}"
+                  data-status="{{ d.status }}"
+                  data-provider-type="{{ d.provider_type }}"
+                  data-provider-vendor-id="{{ d.provider_vendor_id or '' }}"
+                  data-assigned-to-user-id="{{ d.assigned_to_user_id or '' }}"
+                  data-due-date="{{ d.due_date.isoformat() if d.due_date else '' }}"
+                  data-completed-date="{{ d.completed_date.isoformat() if d.completed_date else '' }}"
+                  data-notes="{{ d.notes or '' }}">✏ Update</button>
               </td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>
@@ -145,15 +189,16 @@
       document.getElementById('deVendorWrap').style.display = isVendor ? '' : 'none';
       document.getElementById('deAssignedWrap').style.display = isVendor ? 'none' : '';
     }
-    function openDeliverableEdit(d){
+    function openDeliverableEdit(btn){
+      var d = btn.dataset;
       document.getElementById('deliverableEditForm').action = '/bundle-deliverables/' + d.id + '/update';
-      document.getElementById('deName').textContent = d.service_name;
+      document.getElementById('deName').textContent = d.serviceName;
       document.getElementById('deStatus').value = d.status;
-      document.getElementById('deProviderType').value = d.provider_type;
-      document.getElementById('deVendor').value = d.provider_vendor_id || '';
-      document.getElementById('deAssignedTo').value = d.assigned_to_user_id || '';
-      document.getElementById('deDue').value = d.due_date || '';
-      document.getElementById('deCompleted').value = d.completed_date || '';
+      document.getElementById('deProviderType').value = d.providerType;
+      document.getElementById('deVendor').value = d.providerVendorId || '';
+      document.getElementById('deAssignedTo').value = d.assignedToUserId || '';
+      document.getElementById('deDue').value = d.dueDate || '';
+      document.getElementById('deCompleted').value = d.completedDate || '';
       document.getElementById('deNotes').value = d.notes || '';
       deToggleProvider();
       document.getElementById('deliverableEdit').classList.add('active');
