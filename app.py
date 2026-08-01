@@ -3951,13 +3951,55 @@ def _customer_completeness(customer, has_dated_doc):
     pct = round(100 * present / (len(COMPLETENESS_FIELDS) + 1))
     return pct, missing
 
+def _bundle_deliverable_tax_type(service_name):
+    name_lower = (service_name or '').lower()
+    if 'vat' in name_lower:
+        return 'VAT'
+    if 'corporate tax' in name_lower or 'corp tax' in name_lower:
+        return 'CorpTax'
+    return None
+
+def _bundle_deliverable_tax_summary(customer_id, service_name):
+    """For a VAT/Corp-Tax-flavored bundle deliverable, live status pulled from
+    the real TaxFiling records — never a separately-tracked status a rep could
+    mark 'Completed' without the quarter actually being filed. This matters
+    specifically for bundle customers: they paid Tahfeel to handle filing, so
+    a missed quarter is Tahfeel's liability (real government fines), not just
+    a reminder like it is for a non-bundle client. Returns None if this
+    deliverable isn't tax-related."""
+    tax_type = _bundle_deliverable_tax_type(service_name)
+    if not tax_type:
+        return None
+    filings = TaxFiling.query.filter_by(customer_id=customer_id, tax_type=tax_type) \
+                .order_by(TaxFiling.due_date).all()
+    today = now_dubai().date()
+    unfiled = [f for f in filings if not f.filed_at]
+    overdue = [f for f in unfiled if f.due_date < today]
+    return {
+        'tax_type': tax_type, 'filings': filings,
+        'filed_count': len(filings) - len(unfiled), 'total_count': len(filings),
+        'overdue_count': len(overdue),
+        'next_due': min((f.due_date for f in unfiled), default=None),
+        'all_filed': len(filings) > 0 and not unfiled,
+    }
+
 def _bundle_progress(bundle):
     """Percent of MANDATORY deliverables completed — optional items show in the
-    table but never affect this number, per the agreed progress-calc rule."""
+    table but never affect this number, per the agreed progress-calc rule.
+    A VAT/Corp-Tax deliverable counts as done only when every one of the
+    customer's real filing periods is actually filed — not from its own
+    stored status field, which isn't a reliable signal for tax items."""
     mandatory = [d for d in bundle.deliverables if d.mandatory]
     if not mandatory:
         return 100
-    done = sum(1 for d in mandatory if d.status == 'Completed')
+    done = 0
+    for d in mandatory:
+        tax_summary = _bundle_deliverable_tax_summary(bundle.customer_id, d.service_name)
+        if tax_summary is not None:
+            if tax_summary['all_filed']:
+                done += 1
+        elif d.status == 'Completed':
+            done += 1
     return round(done / len(mandatory) * 100)
 
 @app.route('/customers')
@@ -4477,10 +4519,17 @@ def cancel_customer_bundle(bundle_id):
 @login_required
 def bundle_detail(bundle_id):
     cb = CustomerBundle.query.get_or_404(bundle_id)
-    return render_template('bundle_detail.html', b=cb, customer=cb.customer,
-                           progress=_bundle_progress(cb), today=now_dubai().date(),
+    now = now_dubai()
+    tax_summaries = {}
+    for d in cb.deliverables:
+        ts = _bundle_deliverable_tax_summary(cb.customer_id, d.service_name)
+        if ts:
+            tax_summaries[d.id] = ts
+    return render_template('bundle_detail.html', b=cb, customer=cb.customer, now=now,
+                           progress=_bundle_progress(cb), today=now.date(),
                            vendors=Vendor.query.filter_by(active=True).order_by(Vendor.name).all(),
-                           bundle_staff=User.query.filter_by(active=True).order_by(User.name).all())
+                           bundle_staff=User.query.filter_by(active=True).order_by(User.name).all(),
+                           tax_summaries=tax_summaries)
 
 @app.route('/bundle-deliverables/<int:deliverable_id>/update', methods=['POST'])
 @login_required
