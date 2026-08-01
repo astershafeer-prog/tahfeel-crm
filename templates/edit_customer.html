@@ -118,7 +118,7 @@
             <div class="form-group company-only"><label>Company Landline</label><input type="text" name="mobile" value="{{ customer.mobile or '' }}" placeholder="+971 4 XXX XXXX"></div>
             <div class="form-group company-only"><label>AC Opening Date</label><input type="date" name="ac_opening_date" value="{{ customer.ac_opening_date.strftime('%Y-%m-%d') if customer.ac_opening_date else '' }}"></div>
             <div class="form-group company-only"><label>AC Status</label><select name="ac_status"><option value="">— Select —</option>{% for s in ['Active','Under Formation','Inactive','Closed'] %}<option value="{{ s }}" {% if customer.ac_status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
-            <div class="form-group company-only"><label>Legal Form</label><select name="legal_form"><option value="">— Select —</option>{% for s in ['LLC','Sole Establishment','Civil Company','Branch','Free Zone Company','Free Zone Establishment','Offshore','Other'] %}<option value="{{ s }}" {% if customer.legal_form==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+            <div class="form-group company-only"><label>Legal Form</label><select name="legal_form"><option value="">— Select —</option>{% for s in ['LLC','Sole Establishment','Civil Company','Branch','Free Zone Company','Offshore','Other'] %}<option value="{{ s }}" {% if customer.legal_form==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group company-only"><label>Jurisdiction</label><select name="jurisdiction"><option value="">— Select —</option>{% for s in ['Mainland','Free Zone','Offshore'] %}<option value="{{ s }}" {% if customer.jurisdiction==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group company-only"><label>Licensing Authority</label>
               <select name="licensing_authority">
@@ -148,14 +148,6 @@
                 <option value="">— Select source —</option>
                 {% for s in sources %}<option value="{{ s.name }}" {% if customer.source == s.name %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
               </select>
-            </div>
-            <div class="form-group">
-              <label>Attribution</label>
-              <select name="attribution_source">
-                <option value="">— Select —</option>
-                {% for s in attribution_sources %}<option value="{{ s }}" {% if customer.attribution_source == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
-              </select>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">For long-term marketing attribution — separate from Source above</div>
             </div>
             <div class="form-group">
               <label>Primary Representative</label>
