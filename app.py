@@ -4250,9 +4250,6 @@ def add_customer():
                 flash(f'⚠️ Phone {phone_to_check} already exists for "{existing_customer.name}". Submit again to add anyway.', 'error')
                 return _redisplay()
 
-        _attribution = request.form.get('attribution_source', '').strip() or None
-        if _attribution not in CLIENT_ATTRIBUTION_SOURCES:
-            _attribution = None
         _phone_raw = request.form.get('phone', '').strip()
         customer = Customer(
             name=request.form.get('name', '').strip(),
@@ -4263,7 +4260,6 @@ def add_customer():
             email=request.form.get('email', '').strip() or None,
             address=request.form.get('address', '').strip() or None,
             source=request.form.get('source', '').strip() or None,
-            attribution_source=_attribution,
             nationality=request.form.get('nationality', '').strip() or None,
             customer_type=ctype,
             contact_person=request.form.get('contact_person', '').strip() or None,
@@ -4705,8 +4701,6 @@ def edit_customer(customer_id):
         customer.email = request.form.get('email', '').strip()
         customer.address = request.form.get('address', '').strip()
         customer.source = request.form.get('source', '').strip()
-        _attribution = request.form.get('attribution_source', '').strip() or None
-        customer.attribution_source = _attribution if _attribution in CLIENT_ATTRIBUTION_SOURCES else None
         customer.nationality = request.form.get('nationality', '').strip() or None
         dob_str = request.form.get('date_of_birth', '').strip()
         customer.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
@@ -9050,6 +9044,8 @@ def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )""",
             'CREATE INDEX IF NOT EXISTS idx_tax_filing_customer_id ON tax_filing(customer_id)',
+            # Legal Form: merge redundant 'Free Zone Establishment' into 'Free Zone Company'
+            "UPDATE customer SET legal_form='Free Zone Company' WHERE legal_form='Free Zone Establishment'",
         ]
         for sql in migrations:
             try:

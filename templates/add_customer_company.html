@@ -97,7 +97,7 @@
               <div id="acOpeningDateHint" style="display:none;font-size:11px;color:#B45309;margin-top:3px;">Default date — replace with actual license issuance date.</div>
             </div>
             <div class="form-group"><label>AC Status</label><select name="ac_status"><option value="">— Select —</option>{% for s in ['Active','Under Formation','Inactive','Closed'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
-            <div class="form-group"><label>Legal Form</label><select name="legal_form"><option value="">— Select —</option>{% for s in ['LLC','Sole Establishment','Civil Company','Branch','Free Zone Company','Free Zone Establishment','Offshore','Other'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
+            <div class="form-group"><label>Legal Form</label><select name="legal_form"><option value="">— Select —</option>{% for s in ['LLC','Sole Establishment','Civil Company','Branch','Free Zone Company','Offshore','Other'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group"><label>Jurisdiction</label><select name="jurisdiction"><option value="">— Select —</option>{% for s in ['Mainland','Free Zone','Offshore'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
             <div class="form-group"><label>Licensing Authority</label>
               <select name="licensing_authority">
@@ -119,14 +119,6 @@
                 <option value="">— Select source —</option>
                 {% for s in sources %}<option value="{{ s.name }}" {% if prefill.get('source')==s.name %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
               </select>
-            </div>
-            <div class="form-group">
-              <label>Attribution</label>
-              <select name="attribution_source">
-                <option value="">— Select —</option>
-                {% for s in attribution_sources %}<option value="{{ s }}" {% if prefill.get('attribution_source')==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
-              </select>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">For long-term marketing attribution — separate from Source above</div>
             </div>
             <div class="form-group">
               <label>Primary Representative *</label>
