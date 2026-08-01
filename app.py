@@ -4752,8 +4752,6 @@ def edit_customer(customer_id):
         customer.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
         customer.customer_type = request.form.get('customer_type', 'Individual')
         customer.contact_person = request.form.get('contact_person', '').strip() or None
-        customer.alert_email = request.form.get('alert_email', '').strip() or None
-        customer.alert_whatsapp = normalize_phone_e164(request.form.get('alert_whatsapp', '').strip()) or None
         customer.alerts_enabled = bool(request.form.get('alerts_enabled'))
         # Company profile fields (UAE) — only update fields actually present in the
         # submitted form, so trimmed/removed fields keep their existing values (no wipe).
