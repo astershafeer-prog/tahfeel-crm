@@ -101,7 +101,7 @@
               <td>{{ tax.next_due.strftime('%d %b %Y') if tax.next_due else ('All filed ✓' if tax.all_filed else '—') }}</td>
               <td>—</td>
               <td>
-                <a href="/tax-filings?q={{ customer.name|urlencode }}" style="color:var(--primary);font-size:12px;font-weight:600;text-decoration:none;">View in Tax Filings →</a>
+                <a href="/tax-filings?q={{ customer.name|urlencode }}&back={{ ('/bundles/' ~ b.id)|urlencode }}" style="color:var(--primary);font-size:12px;font-weight:600;text-decoration:none;">View in Tax Filings →</a>
               </td>
               {% else %}
               <td>
@@ -116,7 +116,7 @@
               <td>{{ d.due_date.strftime('%d %b %Y') if d.due_date else '—' }}</td>
               <td>{{ d.completed_date.strftime('%d %b %Y') if d.completed_date else '—' }}</td>
               <td>
-                <button type="button" class="ib no-print" title="Update" onclick="openDeliverableEdit(this)"
+                <button type="button" class="btn-sm no-print" title="Update" onclick="openDeliverableEdit(this)"
                   data-id="{{ d.id }}"
                   data-service-name="{{ d.service_name }}"
                   data-status="{{ d.status }}"

@@ -8383,13 +8383,12 @@ def tax_filings_due():
     place that surfaces the whole portfolio's filing obligations at once, same
     role as the Compliance Center does for document expiry."""
     now = now_dubai()
-    today = now.date()
-    type_filter, status_filter, staff_filter, q, rows, today = _tax_filings_rows(request.args)
+    type_filter, status_filter, staff_filter, bundle_filter, q, rows, today = _tax_filings_rows(request.args)
     expiry_tpl = wa_template_active('compliance_alert_v1')
     users = User.query.filter_by(active=True).filter(User.role.in_(['sales', 'operations', 'admin'])).order_by(User.name).all()
     return render_template('tax_filings_due.html', rows=rows, now=now, today=today, expiry_tpl=expiry_tpl,
                            users=users, type_filter=type_filter, status_filter=status_filter,
-                           staff_filter=staff_filter, q=q)
+                           staff_filter=staff_filter, bundle_filter=bundle_filter, q=q)
 
 def _tax_filings_rows(args):
     """Shared by the /tax-filings page and its export — same filters, same rows,
@@ -8398,6 +8397,7 @@ def _tax_filings_rows(args):
     type_filter = args.get('type', '')       # VAT / CorpTax / ''
     status_filter = args.get('status', '')   # overdue / soon / ''
     staff_filter = args.get('staff', '')      # user id / ''
+    bundle_filter = args.get('bundle', '')    # yes / no / ''
     q = (args.get('q') or '').strip().lower()
 
     filings = TaxFiling.query.filter(TaxFiling.filed_at.is_(None)).order_by(TaxFiling.due_date).all()
@@ -8407,6 +8407,21 @@ def _tax_filings_rows(args):
     if cust_ids:
         for d in Document.query.filter(Document.customer_id.in_(cust_ids)).all():
             docs_by_cust.setdefault(d.customer_id, []).append(d)
+    # (customer_id, tax_type) pairs an ACTIVE bundle is actually responsible for —
+    # same matching _bundle_deliverable_tax_type already uses on the bundle side,
+    # so "bundle customer" here means Tahfeel owes this specific filing, not just
+    # "has some unrelated bundle" (e.g. a Blueprint strategy bundle doesn't cover tax).
+    bundle_tax_pairs = set()
+    if cust_ids:
+        active_bundles = CustomerBundle.query.filter(
+            CustomerBundle.customer_id.in_(cust_ids), CustomerBundle.status == 'Active').all()
+        bundle_cust_by_id = {b.id: b.customer_id for b in active_bundles}
+        if bundle_cust_by_id:
+            for bd in BundleDeliverable.query.filter(
+                    BundleDeliverable.customer_bundle_id.in_(bundle_cust_by_id.keys())).all():
+                tt = _bundle_deliverable_tax_type(bd.service_name)
+                if tt:
+                    bundle_tax_pairs.add((bundle_cust_by_id[bd.customer_bundle_id], tt))
     rows = []
     for f in filings:
         cust = customers.get(f.customer_id)
@@ -8423,6 +8438,11 @@ def _tax_filings_rows(args):
             continue
         if status_filter == 'soon' and not (0 <= days <= 30):
             continue
+        is_bundle = (cust.id, f.tax_type) in bundle_tax_pairs
+        if bundle_filter == 'yes' and not is_bundle:
+            continue
+        if bundle_filter == 'no' and is_bundle:
+            continue
         cdocs = [d for d in docs_by_cust.get(cust.id, []) if has_valid_expiry(d.expiry_date)]
         total = len(cdocs)
         n_expired = len([d for d in cdocs if d.expiry_date.date() < today])
@@ -8432,8 +8452,9 @@ def _tax_filings_rows(args):
         rows.append({
             'filing': f, 'customer': cust, 'days': days, 'manager': cust.rep.name if cust.rep else None,
             'score': score, 'n_expired': n_expired, 'n_expiring': n_expiring, 'total_docs': total,
+            'is_bundle': is_bundle,
         })
-    return type_filter, status_filter, staff_filter, q, rows, today
+    return type_filter, status_filter, staff_filter, bundle_filter, q, rows, today
 
 @app.route('/tax-filings/export')
 @login_required
@@ -8442,18 +8463,18 @@ def export_tax_filings():
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     from flask import send_file
-    _, _, _, _, rows, today = _tax_filings_rows(request.args)
+    _, _, _, _, _, rows, today = _tax_filings_rows(request.args)
     wb = Workbook()
     ws = wb.active
     ws.title = 'Tax Filings Due'
-    headers = ['Client', 'AC Code', 'Account Manager', 'Type', 'Period', 'Due Date', 'Days',
+    headers = ['Client', 'AC Code', 'Account Manager', 'Bundle Customer', 'Type', 'Period', 'Due Date', 'Days',
                'Status', 'Compliance Score', 'Docs Expired', 'Docs Expiring']
     for i, h in enumerate(headers, 1):
         ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
         ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
     for r in rows:
         ws.append([
-            r['customer'].name, r['customer'].ac_code or '', r['manager'] or '',
+            r['customer'].name, r['customer'].ac_code or '', r['manager'] or '', 'Yes' if r['is_bundle'] else 'No',
             'VAT' if r['filing'].tax_type == 'VAT' else 'Corporate Tax', r['filing'].period_label,
             r['filing'].due_date.strftime('%d/%m/%Y'), r['days'],
             'Overdue' if r['days'] < 0 else ('Due soon' if r['days'] <= 30 else 'Pending'),
