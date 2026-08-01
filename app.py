@@ -4669,6 +4669,49 @@ def customer_health(customer_id):
     sparkline = list(reversed(_snaps_desc))  # oldest -> newest for left-to-right rendering
     tax_filings = TaxFiling.query.filter_by(customer_id=customer_id) \
         .order_by(TaxFiling.filed_at.is_(None).desc(), TaxFiling.due_date).all()
+
+    # Same detail the downloadable PDF report already shows — ported onto the
+    # live screen so staff don't have to download a PDF just to see it.
+    n_exp30 = len([d for d in docs if 0 <= dleft(d) <= 30])
+    risk_pct = min(95, len(expired) * 15 + n_exp30 * 8 + max(0, len(expiring) - n_exp30) * 3)
+    risk_label = 'VERY LOW' if risk_pct < 10 else 'LOW' if risk_pct < 25 else 'MEDIUM' if risk_pct < 50 else 'HIGH'
+    risk_color = '#16A34A' if risk_pct < 25 else '#F59E0B' if risk_pct < 50 else '#EF4444'
+    buckets = [
+        ('Next 30 days', n_exp30, '#EF4444'),
+        ('31–60 days', len([d for d in docs if 30 < dleft(d) <= 60]), '#F59E0B'),
+        ('61–90 days', len([d for d in docs if 60 < dleft(d) <= 90]), '#EAB308'),
+        ('90+ days', len(valid), '#16A34A'),
+    ]
+    attention = [(d, dleft(d)) for d in docs if dleft(d) <= 90][:5]
+    fc = {}
+    for d in docs:
+        if dleft(d) <= 90:
+            fc[d.doc_type or 'Other'] = fc.get(d.doc_type or 'Other', 0) + 1
+    forecast = [{'type': t, 'count': n} for t, n in sorted(fc.items(), key=lambda x: -x[1])]
+    forecast_total = sum(fc.values())
+    uplift = round(100 * (len(valid) + len(expired) + 0.5 * len(expiring)) / scored) if scored and expired else None
+    advisor = []
+    if score is not None:
+        advisor.append(f'Your company is in {band.lower()} standing with a compliance score of {score}%.')
+    if expired:
+        advisor.append(f'{len(expired)} expired document{"s" if len(expired) != 1 else ""} '
+                       f'{"significantly increase" if len(expired) > 1 else "increases"} your regulatory exposure and should be renewed without delay.')
+    elif n_exp30:
+        advisor.append(f'{n_exp30} document{"s" if n_exp30 != 1 else ""} will require renewal within the next 30 days.')
+    if uplift and uplift > (score or 0):
+        advisor.append(f'Completing the identified renewals could improve your score to {uplift}% '
+                       f'and reduce your estimated compliance risk from {risk_pct}%.')
+    if customer.vat_registered or customer.corp_tax_registered:
+        if any(not f.filed_at and f.due_date <= today + timedelta(days=60) for f in tax_filings):
+            advisor.append('A tax filing is due soon — please ensure returns are submitted on time.')
+        else:
+            advisor.append('No immediate tax issues were detected.')
+    urgent_docs = sorted([d for d in docs if dleft(d) <= 90], key=dleft)
+    if urgent_docs:
+        advisor.append(f'Priority should be given to {(urgent_docs[0].doc_type or "document").lower()} compliance.')
+    else:
+        advisor.append('Maintain your current renewal discipline to keep this strong standing.')
+
     return render_template('customer_health.html', customer=customer, now=now, today=today,
                            total=total, valid=valid, expiring=expiring, expired=expired,
                            missing_expiry_count=missing_expiry_count,
@@ -4678,7 +4721,10 @@ def customer_health(customer_id):
                            wa_number=wa_number, from_email=from_email,
                            renewal_budget_min=renewal_budget_min, renewal_budget_max=renewal_budget_max,
                            show_renewal_warning=show_renewal_warning, trend=trend, sparkline=sparkline,
-                           tax_filings=tax_filings)
+                           tax_filings=tax_filings,
+                           risk_pct=risk_pct, risk_label=risk_label, risk_color=risk_color, buckets=buckets,
+                           attention=attention, forecast=forecast, forecast_total=forecast_total, advisor=advisor,
+                           n_exp30=n_exp30)
 
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required

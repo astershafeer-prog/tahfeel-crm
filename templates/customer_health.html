@@ -181,6 +181,38 @@
       </div>
     </div>
 
+    <!-- AI Compliance Advisor + Risk Gauge — same content as the downloadable PDF report -->
+    <div class="two" style="grid-template-columns:1.6fr 1fr;">
+      <div class="hc-card" style="padding:14px 18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:700;color:#0F2660;">🤖 AI Compliance Advisor</div>
+          <span style="font-size:10px;font-weight:700;color:#7C3AED;background:#F5F3FF;padding:2px 9px;border-radius:20px;">AI-POWERED</span>
+        </div>
+        <div style="font-size:12.5px;color:#334155;line-height:1.7;">{% for s in advisor %}{{ s }} {% endfor %}</div>
+        <div style="background:#F0F7FF;border-radius:8px;padding:9px 12px;margin-top:10px;font-size:11.5px;color:#1D4ED8;">
+          {% if expired or n_exp30 %}<strong>Tahfeel can handle these renewals for you</strong> — reply here or on WhatsApp +971 50 394 5656.{% else %}<strong>Your compliance position is strong.</strong> Maintain regular renewal discipline.{% endif %}
+        </div>
+      </div>
+      <div class="hc-card" style="padding:14px 18px;text-align:center;">
+        <div style="font-size:13px;font-weight:700;color:#0F2660;margin-bottom:6px;">🎯 Compliance Risk Gauge</div>
+        <svg width="140" height="90" viewBox="0 0 100 62">
+          <path d="M 8 54 A 42 42 0 0 1 29 18" fill="none" stroke="#16A34A" stroke-width="9" stroke-linecap="round"/>
+          <path d="M 33 15 A 42 42 0 0 1 67 15" fill="none" stroke="#F59E0B" stroke-width="9" stroke-linecap="round"/>
+          <path d="M 71 18 A 42 42 0 0 1 92 54" fill="none" stroke="#EF4444" stroke-width="9" stroke-linecap="round"/>
+          <line x1="50" y1="54" x2="{{ 50 + (42 * (2 * (risk_pct / 100) - 1))|round(1) }}" y2="{{ (54 - 38 * (1 - (2 * (risk_pct / 100) - 1) ** 2) ** 0.5)|round(1) }}" stroke="#0B1B35" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="50" cy="54" r="3.5" fill="#0B1B35"/>
+        </svg>
+        <div style="font-size:20px;font-weight:800;color:{{ risk_color }};">{{ risk_pct }}%</div>
+        <div style="font-size:11px;color:{{ risk_color }};font-weight:700;">{{ risk_label }} RISK</div>
+        <div style="font-size:10px;color:#94A3B8;margin-top:2px;">estimated from document status</div>
+        <div style="margin-top:10px;text-align:left;">
+          {% for label, cnt, color in buckets %}
+          <div class="row" style="padding:4px 0;"><span class="k" style="font-size:11px;">{{ label }}</span><span class="v" style="color:{{ color }};font-size:13px;">{{ cnt }}</span></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
     <!-- TASK 3.2(b/c): renewal budget range + non-renewal warning -->
     <div class="two">
       <div class="hc-card" style="padding:14px 18px;">
@@ -194,6 +226,28 @@
       <div class="hc-card" style="padding:14px 18px;background:#FEF2F2;border:1px solid #FECACA;">
         <div style="font-size:13px;font-weight:700;color:#B91C1C;">⚠ Non-renewal attracts government fines and may affect your license status.</div>
         <div style="font-size:12px;color:#7F1D1D;margin-top:3px;">Contact Tahfeel to renew on time.</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Upcoming Renewals Forecast — same content as the downloadable PDF report -->
+    <div class="hc-card" style="padding:12px 18px;margin-bottom:12px;background:#F0F7FF;border-color:#CFE0F7;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#1A3B8B;display:flex;align-items:center;gap:8px;">📅 Upcoming Renewals Forecast <span style="font-size:10px;font-weight:700;color:#7C3AED;background:#F5F3FF;padding:2px 9px;border-radius:20px;">PREDICTIVE</span></div>
+        <div style="font-size:11px;color:#64748B;margin-top:2px;">Next 3 months</div>
+      </div>
+      <div style="font-size:13px;color:#0F2660;flex:1;min-width:200px;">
+        {% if forecast %}
+        In the next 3 months you will require:
+        {% for f in forecast %}<strong style="color:#1A3B8B;">{{ f.count }} × {{ f.type }}</strong>{% if not loop.last %} · {% endif %}{% endfor %}
+        {% else %}
+        <span style="color:#059669;font-weight:700;">No renewals due in the next 3 months — ahead of schedule.</span>
+        {% endif %}
+      </div>
+      {% if forecast_total %}
+      <div style="text-align:right;">
+        <div style="font-size:22px;font-weight:800;color:#1A3B8B;line-height:1;">{{ forecast_total }}</div>
+        <div style="font-size:10px;color:#64748B;">renewal{{ 's' if forecast_total != 1 }} to plan for</div>
       </div>
       {% endif %}
     </div>
@@ -249,6 +303,22 @@
         {% endif %}
       </div>
     </div>
+
+    <!-- Attention Required (Top 5) — same content as the downloadable PDF report -->
+    {% if attention %}
+    <div class="hc-card" style="padding:14px 18px;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;color:#0F2660;margin-bottom:8px;">🎯 Attention Required (Top 5)</div>
+      {% for d, days in attention %}
+      <div class="row">
+        <span class="k">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:{{ '#EF4444' if days < 0 or loop.index <= 2 else '#F59E0B' }};color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">{{ loop.index }}</span>
+          {{ 'Renew' if days >= 0 else 'URGENT: renew' }} {{ d.doc_type }}{% if d.owner_name and d.owner_name != customer.name %} — {{ d.owner_name }}{% endif %}
+        </span>
+        <span class="v" style="color:{{ '#B91C1C' if days < 0 else '#B45309' }};">{{ d.expiry_date.strftime('%d %b %Y') }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <!-- Documents + Tax (same row) -->
     {% set show_tax = customer.customer_type == 'Company' or tax_filings %}
