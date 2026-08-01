@@ -25,7 +25,12 @@
         <h1 style="font-size:22px;font-weight:800;color:#0F2660;margin:0;">🧾 Tax Filings Due</h1>
         <div style="font-size:12.5px;color:#64748B;margin-top:3px;">Every unfiled VAT quarter and Corp Tax year across all clients — worst due first. Mark Filed here, no need to open each client.</div>
       </div>
+      {% set back = request.args.get('back') %}
+      {% if back and back.startswith('/') %}
+      <a href="{{ back }}" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">← Back to Bundle</a>
+      {% else %}
       <a href="/health-check" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">← Back to Compliance</a>
+      {% endif %}
     </div>
 
     {% set overdue = rows|selectattr('days','lt',0)|list %}
