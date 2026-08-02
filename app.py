@@ -604,10 +604,25 @@ class CustomerCall(db.Model):
     outcome     = db.Column(db.String(30))     # Connected / No answer / Busy / Switched off / Wrong number
     notes       = db.Column(db.Text)           # what the customer actually said
     created_at  = db.Column(db.DateTime, default=now_dubai)
+    # ── Monthly Review capture (companies only) ──
+    # Each review stores its OWN snapshot rather than overwriting one record on the
+    # customer, so the timeline survives — "no website in Jan, had one by Jun" is a
+    # real signal. The digital-presence answers pre-fill from the previous review so
+    # staff confirm rather than re-answer them every month.
+    business_situation = db.Column(db.Text)
+    growth_plan        = db.Column(db.Text)
+    has_website        = db.Column(db.String(20))    # Yes / No / Building one
+    social_media       = db.Column(db.String(200))   # comma-separated platforms
+    marketing_activity = db.Column(db.String(20))    # Active / Occasional / None
+    biggest_challenge  = db.Column(db.Text)
+    support_requested  = db.Column(db.Text)
     caller      = db.relationship('User', foreign_keys=[called_by])
     customer    = db.relationship('Customer', foreign_keys=[customer_id])
 
 CALL_OUTCOMES = ['Connected', 'No answer', 'Busy', 'Switched off', 'Wrong number']
+REVIEW_WEBSITE_OPTS   = ['Yes', 'No', 'Building one']
+REVIEW_MARKETING_OPTS = ['Active', 'Occasional', 'None']
+REVIEW_SOCIAL_OPTS    = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'X', 'YouTube', 'Snapchat']
 CLIENT_ATTRIBUTION_SOURCES = ['Meta', 'Referral', 'Walk-in', 'TakeOff Event', 'Other']  # TASK 2.3(d)
 
 class Partner(db.Model):
@@ -7085,13 +7100,21 @@ def customer_calls(customer_id):
         'last_connected': connected[0].called_at if connected else None,
     }
     is_company = c.customer_type == 'Company'
+    # Carry-forward: the newest review that actually recorded digital presence.
+    # `calls` is already newest-first, so the first match is the latest answer.
+    last_digital = next((x for x in calls
+                         if x.has_website or x.social_media or x.marketing_activity), None)
     return render_template('customer_calls.html', customer=c, calls=calls, now=now,
                            call_outcomes=CALL_OUTCOMES, stats=stats, last_job=last_job,
                            called_this_month=customer_id in called_this_month_ids(now),
                            is_company=is_company,
                            brief=_monthly_review_brief(c) if is_company else [],
                            open_jobs=Job.query.filter(Job.customer_id == customer_id,
-                                                      Job.status != 'Closed').count())
+                                                      Job.status != 'Closed').count(),
+                           last_digital=last_digital,
+                           website_opts=REVIEW_WEBSITE_OPTS,
+                           marketing_opts=REVIEW_MARKETING_OPTS,
+                           social_opts=REVIEW_SOCIAL_OPTS)
 
 @app.route('/customers/<int:customer_id>/calls/add', methods=['POST'])
 @login_required
@@ -7113,10 +7136,26 @@ def add_customer_call(customer_id):
         called_at = datetime.strptime(when, '%Y-%m-%d') if when else now_dubai()
     except ValueError:
         called_at = now_dubai()
-    db.session.add(CustomerCall(customer_id=c.id, called_by=session.get('user_id'),
-                                called_at=called_at, outcome=outcome, notes=notes or None))
+    call = CustomerCall(customer_id=c.id, called_by=session.get('user_id'),
+                        called_at=called_at, outcome=outcome, notes=notes or None)
+    # Review answers only mean anything when we actually spoke to them — a
+    # 'No answer' shouldn't carry a business situation or a growth plan.
+    if outcome == 'Connected' and c.customer_type == 'Company':
+        def _f(key):
+            return (request.form.get(key) or '').strip() or None
+        call.business_situation = _f('business_situation')
+        call.growth_plan        = _f('growth_plan')
+        call.biggest_challenge  = _f('biggest_challenge')
+        call.support_requested  = _f('support_requested')
+        _web = _f('has_website')
+        call.has_website = _web if _web in REVIEW_WEBSITE_OPTS else None
+        _mkt = _f('marketing_activity')
+        call.marketing_activity = _mkt if _mkt in REVIEW_MARKETING_OPTS else None
+        picked = [s for s in request.form.getlist('social_media') if s in REVIEW_SOCIAL_OPTS]
+        call.social_media = ', '.join(picked) or None
+    db.session.add(call)
     db.session.commit()
-    flash('Call logged.' if outcome == 'Connected' else f'Logged: {outcome}.')
+    flash('Review saved.' if outcome == 'Connected' else f'Logged: {outcome}.')
     return redirect(back)
 
 @app.route('/calls/<int:call_id>/delete', methods=['POST'])
@@ -9130,6 +9169,14 @@ def init_db():
             'CREATE INDEX IF NOT EXISTS idx_tax_filing_customer_id ON tax_filing(customer_id)',
             # Legal Form: merge redundant 'Free Zone Establishment' into 'Free Zone Company'
             "UPDATE customer SET legal_form='Free Zone Company' WHERE legal_form='Free Zone Establishment'",
+            # Monthly Review capture (phase 2) — structured answers per review
+            'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS business_situation TEXT',
+            'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS growth_plan TEXT',
+            'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS has_website VARCHAR(20)',
+            'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS social_media VARCHAR(200)',
+            'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS marketing_activity VARCHAR(20)',
+            'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS biggest_challenge TEXT',
+            'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS support_requested TEXT',
         ]
         for sql in migrations:
             try:

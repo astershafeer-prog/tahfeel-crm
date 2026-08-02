@@ -22,6 +22,13 @@
     .mr-kv:last-child{border-bottom:none;}
     .mr-kv .k{color:#64748B;}
     .mr-kv .v{color:#1A2333;font-weight:700;text-align:right;}
+    .mr-sec{font-size:11px;font-weight:700;color:#133E87;text-transform:uppercase;letter-spacing:.5px;
+            margin:16px 0 8px;padding-top:12px;border-top:1px solid #F1F5F9;}
+    .mr-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:400;text-transform:none;
+             color:#475569;background:#fff;border:1.5px solid #E2E8F0;border-radius:20px;padding:5px 12px;cursor:pointer;margin:0;}
+    .mr-chip:hover{border-color:#CBD5E1;}
+    .mr-ans{font-size:12.5px;color:#334155;margin-top:6px;}
+    .mr-ans b{color:#64748B;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.3px;display:block;}
   </style>
 </head>
 <body>
@@ -137,9 +144,10 @@
       {% else %}No task has ever been created for this client.{% endif %}
     </div>
 
-    <!-- Log a call -->
+    <!-- New review / call -->
+    {% set prev_social = (last_digital.social_media or '').split(', ') if last_digital else [] %}
     <div class="card" style="margin-bottom:16px;border-top:4px solid #10B981;">
-      <div class="card-header"><h2>＋ Log a Call</h2></div>
+      <div class="card-header"><h2>＋ {{ 'New Monthly Review' if is_company else 'Log a Call' }}</h2></div>
       <form method="POST" action="/customers/{{ customer.id }}/calls/add">
         <div class="form-row-2">
           <div class="form-group"><label>Outcome <span style="color:var(--danger);">*</span></label>
@@ -150,12 +158,68 @@
           </div>
           <div class="form-group"><label>Call date</label><input type="date" name="called_at" value="{{ now.strftime('%Y-%m-%d') }}"></div>
         </div>
+
+        {# Everything below only appears once the outcome is Connected — there is no
+           review to record for a call that never happened. #}
+        <div id="reviewFields" style="display:none;">
+          {% if is_company %}
+          <div class="mr-sec">3 · Business situation</div>
+          <div class="form-group">
+            <textarea name="business_situation" rows="2" placeholder="How is the business doing right now — trading well, quiet, changes in the team…"></textarea>
+          </div>
+
+          <div class="mr-sec">4 · Growth plan</div>
+          <div class="form-group">
+            <textarea name="growth_plan" rows="2" placeholder="What are they planning — new branch, more visas, new activity, expansion…"></textarea>
+          </div>
+
+          <div class="mr-sec">5 · Digital presence
+            {% if last_digital %}<span style="font-weight:400;text-transform:none;color:#94A3B8;font-size:11px;">— carried forward from {{ last_digital.called_at.strftime('%d %b %Y') }}, change only what moved</span>{% endif %}
+          </div>
+          <div class="form-row-2">
+            <div class="form-group"><label>Website</label>
+              <select name="has_website">
+                <option value="">— Not asked —</option>
+                {% for o in website_opts %}<option value="{{ o }}" {% if last_digital and last_digital.has_website == o %}selected{% endif %}>{{ o }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group"><label>Marketing activity</label>
+              <select name="marketing_activity">
+                <option value="">— Not asked —</option>
+                {% for o in marketing_opts %}<option value="{{ o }}" {% if last_digital and last_digital.marketing_activity == o %}selected{% endif %}>{{ o }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Social media</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+              {% for s in social_opts %}
+              <label class="mr-chip">
+                <input type="checkbox" name="social_media" value="{{ s }}" {% if s in prev_social %}checked{% endif %} style="width:auto;margin:0;"> {{ s }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mr-sec">6 · Conversation summary</div>
+          <div class="form-group">
+            <label>Biggest challenge today?</label>
+            <textarea name="biggest_challenge" rows="2" placeholder="What is getting in their way…"></textarea>
+          </div>
+          <div class="form-group">
+            <label>What support did they request?</label>
+            <textarea name="support_requested" rows="2" placeholder="Anything they asked us for — quote, document, advice, introduction…"></textarea>
+          </div>
+          {% endif %}
+        </div>
+
         <div class="form-group">
-          <label>What did they say? <span id="noteReq" style="color:var(--danger);display:none;">* required when connected</span></label>
+          <label>{{ 'Anything else from the conversation' if is_company else 'What did they say?' }} <span id="noteReq" style="color:var(--danger);display:none;">* required when connected</span></label>
           <textarea name="notes" id="callNotes" rows="3" placeholder="Their update, any issues, anything they need…"></textarea>
         </div>
-        <div style="display:flex;justify-content:flex-end;">
-          <button type="submit" class="btn-primary">Save call</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:#94A3B8;">Only the summary is required — leave anything you didn't get to blank.</span>
+          <button type="submit" class="btn-primary">{{ 'Save review' if is_company else 'Save call' }}</button>
         </div>
       </form>
     </div>
@@ -175,6 +239,19 @@
             <span style="font-size:11px;color:#94A3B8;">by {{ c.caller.name if c.caller else '—' }}</span>
           </div>
           {% if c.notes %}<div style="font-size:13px;color:#334155;">{{ c.notes }}</div>{% endif %}
+          {% if c.business_situation %}<div class="mr-ans"><b>Business situation</b>{{ c.business_situation }}</div>{% endif %}
+          {% if c.growth_plan %}<div class="mr-ans"><b>Growth plan</b>{{ c.growth_plan }}</div>{% endif %}
+          {% if c.biggest_challenge %}<div class="mr-ans"><b>Biggest challenge</b>{{ c.biggest_challenge }}</div>{% endif %}
+          {% if c.support_requested %}<div class="mr-ans"><b>Support requested</b>{{ c.support_requested }}</div>{% endif %}
+          {% if c.has_website or c.marketing_activity or c.social_media %}
+          <div class="mr-ans"><b>Digital presence</b>
+            {% set bits = [] %}
+            {% if c.has_website %}{% set _ = bits.append('Website: ' ~ c.has_website) %}{% endif %}
+            {% if c.marketing_activity %}{% set _ = bits.append('Marketing: ' ~ c.marketing_activity) %}{% endif %}
+            {% if c.social_media %}{% set _ = bits.append('Social: ' ~ c.social_media) %}{% endif %}
+            {{ bits|join(' · ') }}
+          </div>
+          {% endif %}
         </div>
         <div style="display:flex;gap:6px;align-items:flex-start;">
           {% if c.outcome == 'Connected' %}
@@ -205,6 +282,7 @@
       var connected = document.getElementById('callOutcome').value === 'Connected';
       document.getElementById('noteReq').style.display = connected ? 'inline' : 'none';
       document.getElementById('callNotes').required = connected;
+      document.getElementById('reviewFields').style.display = connected ? 'block' : 'none';
     }
   </script>
 </body>
