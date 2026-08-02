@@ -106,12 +106,22 @@
               </select>
             </div>
             <div class="form-group"><label>Emirate</label><select name="emirate"><option value="">— Select —</option>{% for s in ['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah','Fujairah','Umm Al Quwain'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
-            <div class="form-group"><label>Country of Incorporation</label><input type="text" name="country_incorp" placeholder="e.g. UAE"></div>
-            <div class="form-group"><label>P.O. Box</label><input type="text" name="po_box"></div>
             <div class="form-group"><label>Business Activity</label><input type="text" name="business_activity"></div>
             <div class="form-group"><label>Website</label><input type="text" name="website" placeholder="www.company.com"></div>
-            <div class="form-group"><label>UAE Pass Access Number</label><input type="text" name="uae_pass_number" placeholder="+971 5X XXX XXXX"></div>
-            <div class="form-group"><label>UAE Pass Name</label><input type="text" name="uae_pass_name" placeholder="Name on the UAE Pass account"></div>
+            <div class="form-group">
+              <label>UAE Pass Access Number</label>
+              <input type="text" name="uae_pass_number" id="uaePassNumber" placeholder="+971 5X XXX XXXX">
+              <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:400;text-transform:none;color:var(--text-muted);margin-top:6px;cursor:pointer;">
+                <input type="checkbox" id="uaePassNumSame" onchange="syncUaePassNumber()" style="width:auto;"> Same as contact number
+              </label>
+            </div>
+            <div class="form-group">
+              <label>UAE Pass Name</label>
+              <input type="text" name="uae_pass_name" id="uaePassName" placeholder="Name on the UAE Pass account">
+              <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:400;text-transform:none;color:var(--text-muted);margin-top:6px;cursor:pointer;">
+                <input type="checkbox" id="uaePassNameSame" onchange="syncUaePassName()" style="width:auto;"> Same as contact name
+              </label>
+            </div>
 
             <div class="form-group">
               <label>Source *</label>
@@ -332,6 +342,25 @@
     }
     document.querySelector('input[name="phone"]').addEventListener('input', function() {
       if (document.getElementById('waSame') && document.getElementById('waSame').checked) syncWhatsApp();
+      if (document.getElementById('uaePassNumSame') && document.getElementById('uaePassNumSame').checked) syncUaePassNumber();
+    });
+
+    function syncUaePassNumber() {
+      var same = document.getElementById('uaePassNumSame').checked;
+      var pn = document.getElementById('uaePassNumber');
+      var ph = document.querySelector('input[name="phone"]');
+      if (same) { pn.value = ph.value; pn.readOnly = true; pn.style.background = '#f1f5f9'; }
+      else { pn.readOnly = false; pn.style.background = ''; }
+    }
+    function syncUaePassName() {
+      var same = document.getElementById('uaePassNameSame').checked;
+      var pn = document.getElementById('uaePassName');
+      var cp = document.querySelector('input[name="contact_person"]');
+      if (same) { pn.value = cp.value; pn.readOnly = true; pn.style.background = '#f1f5f9'; }
+      else { pn.readOnly = false; pn.style.background = ''; }
+    }
+    document.querySelector('input[name="contact_person"]').addEventListener('input', function() {
+      if (document.getElementById('uaePassNameSame') && document.getElementById('uaePassNameSame').checked) syncUaePassName();
     });
 
     function tfToggleTaxPreview() {

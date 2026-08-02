@@ -248,7 +248,7 @@
             <span style="background:#FFFBEB;color:#92400E;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">Not yet reached this month</span>
             {% endif %}
           {% endif %}
-          <a href="/customers/{{ customer.id }}/calls" class="btn-add" style="font-size:12px;padding:6px 14px;text-decoration:none;">Open Call Log →</a>
+          <a href="/customers/{{ customer.id }}/calls" class="btn-add" style="font-size:12px;padding:6px 14px;text-decoration:none;">{{ 'Open Monthly Review →' if customer.customer_type == 'Company' else 'Open Call Log →' }}</a>
         </div>
       </div>
       {% if calls %}
