@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Monthly Review Insights</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    .mi-kpi{background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;padding:12px 15px;}
+    .mi-kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;}
+    .mi-kpi-val{font-size:22px;font-weight:800;margin-top:3px;}
+    .mi-row{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid #F1F5F9;font-size:12.5px;}
+    .mi-row:last-child{border-bottom:none;}
+    .mi-name{font-weight:700;color:#0F2660;text-decoration:none;min-width:180px;max-width:210px;
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+    .mi-tag{font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;}
+    .mi-when{margin-left:auto;color:#94A3B8;font-size:11px;white-space:nowrap;}
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('call_log') }}
+  <div class="container" style="max-width:1080px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+      <div>
+        <h1 style="font-size:22px;font-weight:800;color:#0F2660;margin:0;">💡 Monthly Review Insights</h1>
+        <div style="font-size:12.5px;color:#64748B;margin-top:3px;">What the reviews are telling us — pitch lists and clients going quiet. Built from the latest answer recorded for each company.</div>
+      </div>
+      <a href="/call-log" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">← Back to Monthly Review</a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+      <div class="mi-kpi" style="border-top:3px solid #1A3B8B;">
+        <div class="mi-kpi-label">Companies reviewed</div>
+        <div class="mi-kpi-val" style="color:#1A3B8B;">{{ reviewed_count }}<span style="font-size:13px;color:#94A3B8;font-weight:600;"> / {{ total_companies }}</span></div>
+      </div>
+      <div class="mi-kpi" style="border-top:3px solid #7C3AED;">
+        <div class="mi-kpi-label">No website</div>
+        <div class="mi-kpi-val" style="color:#7C3AED;">{{ no_website|length }}</div>
+      </div>
+      <div class="mi-kpi" style="border-top:3px solid #B45309;">
+        <div class="mi-kpi-label">Weak marketing</div>
+        <div class="mi-kpi-val" style="color:#B45309;">{{ weak_marketing|length }}</div>
+      </div>
+      <div class="mi-kpi" style="border-top:3px solid #DC2626;">
+        <div class="mi-kpi-label">Gone quiet · 60d+</div>
+        <div class="mi-kpi-val" style="color:#DC2626;">{{ stale|length }}</div>
+      </div>
+    </div>
+
+    {# The action list — a client asked us for something and it may have gone
+       nowhere. Ranked first because it is the only one with a promise attached. #}
+    <div class="card" style="margin-bottom:14px;border-top:4px solid #059669;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>🙋 Support they asked for <span style="font-size:12px;font-weight:400;color:var(--text-muted);">{{ asks_total }} in the last 90 days</span></h2>
+      </div>
+      <div style="padding:8px 18px 14px;">
+        {% if asks %}
+        {% for a in asks %}
+        <div class="mi-row">
+          <a href="/customers/{{ a.customer_id }}/calls" class="mi-name">{{ a.customer.name }}</a>
+          <span style="color:#334155;flex:1;">{{ a.support_requested }}</span>
+          <span class="mi-when">{{ a.called_at.strftime('%d %b') }} · {{ a.caller.name if a.caller else '—' }}</span>
+        </div>
+        {% endfor %}
+        {% if asks_total > asks|length %}
+        <div style="font-size:11px;color:#94A3B8;margin-top:10px;">Showing the {{ asks|length }} most recent of {{ asks_total }}.</div>
+        {% endif %}
+        <div style="font-size:11px;color:#94A3B8;margin-top:10px;">Open a client to turn a request into an opportunity — the ➡ Opportunity button on a connected review pushes it into the sales pipeline.</div>
+        {% else %}
+        <div style="font-size:13px;color:#94A3B8;padding:8px 0;">Nothing recorded yet. This fills up as reviews capture what clients ask for.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div class="card" style="margin:0;border-top:4px solid #7C3AED;">
+        <div class="card-header"><h2>🌐 No website</h2></div>
+        <div style="padding:8px 18px 14px;">
+          {% if no_website %}
+          {% for x in no_website %}
+          <div class="mi-row">
+            <a href="/customers/{{ x.c.id }}/calls" class="mi-name">{{ x.c.name }}</a>
+            <span class="mi-tag" style="background:#F5F3FF;color:#6D28D9;">{{ x.r.has_website }}</span>
+            <span class="mi-when">{{ x.r.called_at.strftime('%d %b %Y') }}</span>
+          </div>
+          {% endfor %}
+          <div style="font-size:11px;color:#94A3B8;margin-top:10px;">A ready-made list for a website pitch.</div>
+          {% else %}
+          <div style="font-size:13px;color:#94A3B8;padding:8px 0;">No answers recorded yet.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card" style="margin:0;border-top:4px solid #B45309;">
+        <div class="card-header"><h2>📣 Marketing: none or occasional</h2></div>
+        <div style="padding:8px 18px 14px;">
+          {% if weak_marketing %}
+          {% for x in weak_marketing %}
+          <div class="mi-row">
+            <a href="/customers/{{ x.c.id }}/calls" class="mi-name">{{ x.c.name }}</a>
+            <span class="mi-tag" style="background:#FFFBEB;color:#92400E;">{{ x.r.marketing_activity }}</span>
+            <span class="mi-when">{{ x.r.called_at.strftime('%d %b %Y') }}</span>
+          </div>
+          {% endfor %}
+          <div style="font-size:11px;color:#94A3B8;margin-top:10px;">Candidates for a marketing conversation.</div>
+          {% else %}
+          <div style="font-size:13px;color:#94A3B8;padding:8px 0;">No answers recorded yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px;border-top:4px solid #DC2626;">
+      <div class="card-header"><h2>💤 Gone quiet <span style="font-size:12px;font-weight:400;color:var(--text-muted);">no connected review in 60+ days</span></h2></div>
+      <div style="padding:8px 18px 14px;">
+        {% if stale %}
+        {% for x in stale %}
+        <div class="mi-row">
+          <a href="/customers/{{ x.c.id }}/calls" class="mi-name">{{ x.c.name }}</a>
+          <span style="color:#64748B;">{{ x.c.rep.name if x.c.rep else 'No account manager' }}</span>
+          {% if x.days is none %}
+          <span class="mi-tag" style="background:#FEF2F2;color:#B91C1C;">Never reviewed</span>
+          {% else %}
+          <span class="mi-tag" style="background:#FEF2F2;color:#B91C1C;">{{ x.days }}d ago</span>
+          {% endif %}
+          <span class="mi-when">{{ x.r.called_at.strftime('%d %b %Y') if x.r else '—' }}</span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="font-size:13px;color:#059669;padding:8px 0;">✓ Every company has been reviewed within the last 60 days.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

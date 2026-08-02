@@ -7172,6 +7172,53 @@ def delete_customer_call(call_id):
     flash('Call log entry removed.')
     return redirect(back)
 
+@app.route('/reports/monthly-review')
+@login_required
+def monthly_review_insights():
+    """Turns Monthly Review answers into action lists. Everything here reads the
+    LATEST review that actually recorded an answer — a client who was asked about
+    their website in March and not since still counts as March's answer, rather
+    than silently dropping off because last month's caller skipped the question."""
+    if session.get('role') not in ('admin', 'finance', 'sales', 'operations'):
+        flash('Access denied')
+        return redirect(url_for('dashboard'))
+    now = now_dubai()
+    today = now.date()
+    companies = {c.id: c for c in Customer.query.filter_by(customer_type='Company').all()}
+    calls = CustomerCall.query.filter(CustomerCall.customer_id.in_(companies.keys())) \
+              .order_by(CustomerCall.called_at.desc()).all() if companies else []
+
+    latest_digital, latest_connected, asks = {}, {}, []
+    for x in calls:
+        if x.customer_id not in latest_digital and (x.has_website or x.marketing_activity):
+            latest_digital[x.customer_id] = x
+        if x.outcome == 'Connected' and x.customer_id not in latest_connected:
+            latest_connected[x.customer_id] = x
+        if x.support_requested and (today - x.called_at.date()).days <= 90:
+            asks.append(x)
+
+    def _rows(match):
+        out = [{'c': companies[cid], 'r': r} for cid, r in latest_digital.items() if match(r)]
+        return sorted(out, key=lambda x: (x['c'].name or '').lower())
+
+    no_website = _rows(lambda r: r.has_website in ('No', 'Building one'))
+    weak_marketing = _rows(lambda r: r.marketing_activity in ('None', 'Occasional'))
+
+    # Never reviewed, or not since 60 days — the relationship is going quiet.
+    stale = []
+    for cid, c in companies.items():
+        last = latest_connected.get(cid)
+        days = (today - last.called_at.date()).days if last else None
+        if days is None or days >= 60:
+            stale.append({'c': c, 'r': last, 'days': days})
+    # Never-reviewed first (worst case), then longest-silent first.
+    stale.sort(key=lambda x: (x['days'] is None, x['days'] or 0), reverse=True)
+
+    return render_template('monthly_review_insights.html', now=now,
+                           no_website=no_website, weak_marketing=weak_marketing,
+                           asks=asks[:50], asks_total=len(asks), stale=stale,
+                           reviewed_count=len(latest_connected), total_companies=len(companies))
+
 @app.route('/customers/<int:customer_id>/calls/<int:call_id>/to-lead', methods=['POST'])
 @login_required
 def call_to_lead(customer_id, call_id):
