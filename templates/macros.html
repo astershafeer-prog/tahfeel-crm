@@ -346,7 +346,7 @@ loadTheme();
       {% endif %}
       <a href="/enquiries" {% if active=='enquiries' %}class="active"{% endif %}>❓ Enquiries</a>
       {% if session.role in ['admin', 'finance', 'sales', 'operations'] %}
-      <a href="/call-log" {% if active=='call_log' %}class="active"{% endif %}>📞 Call Log</a>
+      <a href="/call-log" {% if active=='call_log' %}class="active"{% endif %}>🗓 Monthly Review</a>
       {% endif %}
       <a href="/bundles" {% if active=='bundles' %}class="active"{% endif %}>📦 Bundles</a>
     </div>

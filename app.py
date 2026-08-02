@@ -7030,6 +7030,41 @@ def call_log():
                            users=users, page=page, total_pages=total_pages,
                            month_name=now.strftime('%B'))
 
+def _monthly_review_brief(customer):
+    """'Immediate attention' for the Monthly Review page — what the caller should
+    know before dialling. Built entirely from data that already exists (documents,
+    tax filings), so nothing new is stored and it can never go stale."""
+    today = now_dubai().date()
+    items = []
+    docs = [d for d in Document.query.filter_by(customer_id=customer.id).all()
+            if has_valid_expiry(d.expiry_date)]
+    for d in sorted(docs, key=lambda x: x.expiry_date):
+        days = (d.expiry_date.date() - today).days
+        if days > 90:
+            continue
+        who = f' — {d.owner_name}' if d.owner_name and d.owner_name != customer.name else ''
+        if days < 0:
+            items.append({'days': days, 'tone': 'danger', 'icon': '⚠',
+                          'text': f'{d.doc_type}{who} expired {d.expiry_date.strftime("%d %b %Y")}',
+                          'tag': f'{-days}d overdue'})
+        else:
+            items.append({'days': days, 'tone': 'danger' if days <= 30 else 'warn', 'icon': '📄',
+                          'text': f'{d.doc_type}{who} expires {d.expiry_date.strftime("%d %b %Y")}',
+                          'tag': f'{days}d left'})
+    for f in TaxFiling.query.filter_by(customer_id=customer.id, filed_at=None) \
+                            .order_by(TaxFiling.due_date).all():
+        days = (f.due_date - today).days
+        if days > 90:
+            continue
+        label = 'VAT' if f.tax_type == 'VAT' else 'Corp Tax'
+        items.append({'days': days, 'tone': 'danger' if days < 0 else 'warn', 'icon': '🧾',
+                      'text': f'{label} {f.period_label} due {f.due_date.strftime("%d %b %Y")}',
+                      'tag': f'{-days}d overdue' if days < 0 else f'{days}d left'})
+    # Most urgent first across BOTH kinds — the page shows only the top few, so a
+    # docs-then-tax build order would let an overdue filing hide behind six licences.
+    items.sort(key=lambda x: x['days'])
+    return items
+
 @app.route('/customers/<int:customer_id>/calls')
 @login_required
 def customer_calls(customer_id):
@@ -7049,9 +7084,14 @@ def customer_calls(customer_id):
         'reach_rate': round(100 * len(connected) / len(calls)) if calls else 0,
         'last_connected': connected[0].called_at if connected else None,
     }
+    is_company = c.customer_type == 'Company'
     return render_template('customer_calls.html', customer=c, calls=calls, now=now,
                            call_outcomes=CALL_OUTCOMES, stats=stats, last_job=last_job,
-                           called_this_month=customer_id in called_this_month_ids(now))
+                           called_this_month=customer_id in called_this_month_ids(now),
+                           is_company=is_company,
+                           brief=_monthly_review_brief(c) if is_company else [],
+                           open_jobs=Job.query.filter(Job.customer_id == customer_id,
+                                                      Job.status != 'Closed').count())
 
 @app.route('/customers/<int:customer_id>/calls/add', methods=['POST'])
 @login_required

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tahfeel CRM — Call Log</title>
+  <title>Tahfeel CRM — {{ 'Monthly Review' if is_company else 'Call Log' }}</title>
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
   {%- from 'macros.html' import theme_loader -%}
@@ -15,6 +15,13 @@
     .cl-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;}
     .cl-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #F1F5F9;}
     .cl-dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+    .mr-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #F1F5F9;font-size:13px;}
+    .mr-row:first-child{border-top:none;}
+    .mr-tag{margin-left:auto;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;}
+    .mr-kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:12.5px;}
+    .mr-kv:last-child{border-bottom:none;}
+    .mr-kv .k{color:#64748B;}
+    .mr-kv .v{color:#1A2333;font-weight:700;text-align:right;}
   </style>
 </head>
 <body>
@@ -33,7 +40,7 @@
 
     <div class="page-header" style="margin-bottom:16px;">
       <div>
-        <h2 style="color:#133E87;">📞 Call Log</h2>
+        <h2 style="color:#133E87;">{{ '🗓 Monthly Review' if is_company else '📞 Call Log' }}</h2>
         <div style="font-size:12px;color:#94A3B8;margin-top:2px;">
           {{ customer.name }}
           {% if customer.customer_type == 'Company' %}<span class="cl-badge" style="background:#EFF6FF;color:#1D4ED8;margin-left:4px;">🏢 Company</span>
@@ -51,6 +58,54 @@
         {% endif %}
       </div>
     </div>
+
+    {% if is_company %}
+    {# Blocks 1 + 2 of the Monthly Review — both read-only, built from data that
+       already exists. Nothing here asks the caller for anything; the point is that
+       they open the page knowing why they're calling and what to raise. #}
+    <div style="display:grid;grid-template-columns:1fr 1.25fr;gap:12px;margin-bottom:16px;">
+      <div class="card" style="margin:0;border-top:4px solid #133E87;">
+        <div class="card-header"><h2>🏢 Company</h2></div>
+        <div style="padding:12px 18px 14px;">
+          <div class="mr-kv"><span class="k">Trade name</span><span class="v">{{ customer.trade_name or customer.name }}</span></div>
+          {% if customer.ac_code %}<div class="mr-kv"><span class="k">AC code</span><span class="v">{{ customer.ac_code }}</span></div>{% endif %}
+          <div class="mr-kv"><span class="k">Status</span><span class="v">{{ customer.ac_status or 'Active' }}</span></div>
+          {% if customer.legal_form %}<div class="mr-kv"><span class="k">Legal form</span><span class="v">{{ customer.legal_form }}</span></div>{% endif %}
+          {% if customer.licensing_authority %}<div class="mr-kv"><span class="k">Authority</span><span class="v">{{ customer.licensing_authority }}</span></div>{% endif %}
+          {% if customer.business_activity %}<div class="mr-kv"><span class="k">Activity</span><span class="v">{{ customer.business_activity }}</span></div>{% endif %}
+          <div class="mr-kv"><span class="k">Contact</span><span class="v">{{ customer.contact_person or '—' }}</span></div>
+          <div class="mr-kv"><span class="k">Open tasks</span><span class="v">{{ open_jobs }}</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin:0;border-top:4px solid {{ '#DC2626' if brief else '#10B981' }};">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <h2>⚠ Immediate attention</h2>
+          <a href="/customers/{{ customer.id }}/health" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;">Full compliance →</a>
+        </div>
+        <div style="padding:10px 18px 14px;">
+          {% if brief %}
+          {% for b in brief[:6] %}
+          <div class="mr-row">
+            <span>{{ b.icon }}</span>
+            <span style="color:#334155;">{{ b.text }}</span>
+            <span class="mr-tag" style="background:{{ '#FEF2F2' if b.tone == 'danger' else '#FFFBEB' }};color:{{ '#B91C1C' if b.tone == 'danger' else '#92400E' }};">{{ b.tag }}</span>
+          </div>
+          {% endfor %}
+          {% if brief|length > 6 %}
+          <div class="mr-row">
+            <a href="/customers/{{ customer.id }}/health" style="color:#1A3B8B;text-decoration:none;font-weight:600;font-size:12px;">+{{ brief|length - 6 }} more due within 90 days →</a>
+          </div>
+          {% endif %}
+          <div style="font-size:11px;color:#94A3B8;margin-top:10px;">Raise these on the call — most urgent first, renewals and filings due within 90 days.</div>
+          {% else %}
+          <div style="font-size:13px;color:#047857;padding:6px 0;">✓ Nothing expiring or due in the next 90 days.</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:6px;">Good call to focus on how the business is doing.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Stats -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
