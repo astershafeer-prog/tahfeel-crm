@@ -50,19 +50,19 @@
           <tr>
             <td>
               <div style="font-size:13px;font-weight:700;color:#1A3B8B;">{{ r.c.name }}</div>
-              {% if r.c.trade_license_no %}<div style="font-size:11px;color:#94A3B8;">TL: {{ r.c.trade_license_no }}</div>{% endif %}
+              {% if r.c.trade_license_no %}<div style="font-size:11px;color:#64748B;">TL: {{ r.c.trade_license_no }}</div>{% endif %}
             </td>
             <td style="font-size:12px;color:var(--text-muted);">{{ r.c.owner.name if r.c.owner else '—' }}</td>
-            <td style="font-size:12px;">{{ r.c.contact_person or '—' }}{% if r.c.phone %}<div style="color:#94A3B8;">{{ r.c.phone }}</div>{% endif %}</td>
+            <td style="font-size:12px;">{{ r.c.contact_person or '—' }}{% if r.c.phone %}<div style="color:#64748B;">{{ r.c.phone }}</div>{% endif %}</td>
             <td style="text-align:center;">{{ r.doc_count }}</td>
             <td>
               {% if r.soonest is none %}<span style="font-size:11px;color:#CBD5E1;">—</span>
               {% elif r.soonest < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">Expired</span>
               {% elif r.soonest <= 30 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ r.soonest }}d</span>
               {% elif r.soonest <= 60 %}<span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ r.soonest }}d</span>
-              {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ r.soonest }}d</span>{% endif %}
+              {% else %}<span style="background:#ECFDF5;color:#047857;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ r.soonest }}d</span>{% endif %}
             </td>
-            <td>{% if r.c.alerts_enabled %}<span style="color:#16A34A;font-size:12px;font-weight:600;">🔔 On</span>{% else %}<span style="color:#94A3B8;font-size:12px;">🔕 Off</span>{% endif %}</td>
+            <td>{% if r.c.alerts_enabled %}<span style="color:#16A34A;font-size:12px;font-weight:600;">🔔 On</span>{% else %}<span style="color:#64748B;font-size:12px;">🔕 Off</span>{% endif %}</td>
             <td><a href="/companies/{{ r.c.id }}" class="ib" title="Open">👁</a></td>
           </tr>
           {% endfor %}
@@ -81,7 +81,7 @@
       <form method="POST" action="/companies/add">
         <div class="form-row-2">
           <div class="form-group"><label>Company Name <span style="color:var(--danger);">*</span></label><input type="text" name="name" required placeholder="Company legal name"></div>
-          <div class="form-group"><label>Owner (Customer) <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+          <div class="form-group"><label>Owner (Customer) <span style="color:#64748B;font-weight:400;">(optional)</span></label>
             <select name="customer_id">
               <option value="">— None —</option>
               {% for cust in customers %}<option value="{{ cust.id }}">{{ cust.name }}</option>{% endfor %}

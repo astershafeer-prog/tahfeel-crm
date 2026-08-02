@@ -37,15 +37,15 @@
     {% set soon = rows|rejectattr('days','lt',0)|selectattr('days','le',30)|list %}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
       <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #DC2626;border-radius:10px;padding:11px 13px;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Overdue</div>
+        <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Overdue</div>
         <div style="font-size:19px;font-weight:800;color:#DC2626;margin-top:2px;">{{ overdue|length }}</div>
       </div>
       <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #B45309;border-radius:10px;padding:11px 13px;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Due within 30 days</div>
+        <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Due within 30 days</div>
         <div style="font-size:19px;font-weight:800;color:#B45309;margin-top:2px;">{{ soon|length }}</div>
       </div>
       <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #1A3B8B;border-radius:10px;padding:11px 13px;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Total pending{% if type_filter or status_filter or staff_filter or bundle_filter or q %} (filtered){% endif %}</div>
+        <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Total pending{% if type_filter or status_filter or staff_filter or bundle_filter or q %} (filtered){% endif %}</div>
         <div style="font-size:19px;font-weight:800;color:#1A3B8B;margin-top:2px;">{{ rows|length }}</div>
       </div>
     </div>
@@ -88,13 +88,13 @@
           <tr {% if r.days < 0 %}style="background:#fff0f0;"{% elif r.days <= 30 %}style="background:#fff8f8;"{% endif %}>
             <td>
               <a href="/customers/{{ r.customer.id }}" class="tfd-client" title="{{ r.customer.name }}" style="color:#0F2660;font-weight:700;text-decoration:none;">{{ r.customer.name }}</a>
-              <div style="font-size:10px;color:#94A3B8;">
+              <div style="font-size:10px;color:#64748B;">
                 {% if r.customer.ac_code %}{{ r.customer.ac_code }}{% endif %}
                 {% if r.is_bundle %}<span style="background:#F5F3FF;color:#7C3AED;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:4px;">📦 Bundle</span>{% endif %}
               </div>
             </td>
             <td>{{ r.manager or '—' }}</td>
-            <td><strong>{{ 'VAT' if r.filing.tax_type=='VAT' else 'Corp Tax' }}</strong> <span style="color:#94A3B8;">· {{ r.filing.period_label }}</span></td>
+            <td><strong>{{ 'VAT' if r.filing.tax_type=='VAT' else 'Corp Tax' }}</strong> <span style="color:#64748B;">· {{ r.filing.period_label }}</span></td>
             <td>
               {{ r.filing.due_date.strftime('%d %b %Y') }}
               {% if r.days < 0 %}<span style="color:var(--danger);font-size:10px;font-weight:700;"> OVERDUE {{ -r.days }}d</span>
@@ -103,8 +103,8 @@
             <td>
               {% if r.score is not none %}
               <span style="font-weight:700;color:{{ '#059669' if r.score>=70 else ('#B45309' if r.score>=50 else '#DC2626') }};">{{ r.score }}%</span>
-              <div style="font-size:10.5px;color:#94A3B8;">{{ r.total_docs }} doc{{ 's' if r.total_docs != 1 else '' }}{% if r.n_expired %} · {{ r.n_expired }} expired{% endif %}{% if r.n_expiring %} · {{ r.n_expiring }} expiring{% endif %}</div>
-              {% else %}<span style="color:#94A3B8;font-size:12px;">No dated documents</span>{% endif %}
+              <div style="font-size:10.5px;color:#64748B;">{{ r.total_docs }} doc{{ 's' if r.total_docs != 1 else '' }}{% if r.n_expired %} · {{ r.n_expired }} expired{% endif %}{% if r.n_expiring %} · {{ r.n_expiring }} expiring{% endif %}</div>
+              {% else %}<span style="color:#64748B;font-size:12px;">No dated documents</span>{% endif %}
             </td>
             <td style="white-space:nowrap;">
               <form method="POST" action="/customers/{{ r.customer.id }}/tax-filing/{{ r.filing.id }}/mark-filed" style="display:inline;">

@@ -85,10 +85,10 @@
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #64748B;padding:10px 20px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between;gap:16px;">
       <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Documents</div>
       <div style="display:flex;gap:28px;align-items:center;flex:1;justify-content:center;">
-        <a href="/documents" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A3B8B;">{{ total_docs }}</div><div style="font-size:10px;color:#94A3B8;">Total</div></a>
-        <a href="/documents?expiry=30" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#EF4444;">{{ docs_30 }}</div><div style="font-size:10px;color:#94A3B8;">≤30 Days</div></a>
-        <a href="/documents?expiry=60" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#F59E0B;">{{ docs_60 }}</div><div style="font-size:10px;color:#94A3B8;">31–60 Days</div></a>
-        <a href="/documents?expiry=90" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#475569;">{{ docs_90 }}</div><div style="font-size:10px;color:#94A3B8;">61–90 Days</div></a>
+        <a href="/documents" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A3B8B;">{{ total_docs }}</div><div style="font-size:10px;color:#64748B;">Total</div></a>
+        <a href="/documents?expiry=30" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#EF4444;">{{ docs_30 }}</div><div style="font-size:10px;color:#64748B;">≤30 Days</div></a>
+        <a href="/documents?expiry=60" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#F59E0B;">{{ docs_60 }}</div><div style="font-size:10px;color:#64748B;">31–60 Days</div></a>
+        <a href="/documents?expiry=90" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#475569;">{{ docs_90 }}</div><div style="font-size:10px;color:#64748B;">61–90 Days</div></a>
       </div>
       <a href="/documents" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;white-space:nowrap;">View all →</a>
     </div>
@@ -97,9 +97,9 @@
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #EC4899;padding:10px 20px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between;gap:16px;">
       <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">🎂 Birthdays</div>
       <div style="display:flex;gap:28px;align-items:center;flex:1;justify-content:center;">
-        <a href="/reports/birthdays?range=today" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#EC4899;">{{ bday_counts.today }}</div><div style="font-size:10px;color:#94A3B8;">Today</div></a>
-        <a href="/reports/birthdays?range=week" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#F59E0B;">{{ bday_counts.week }}</div><div style="font-size:10px;color:#94A3B8;">This Week</div></a>
-        <a href="/reports/birthdays?range=month" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A3B8B;">{{ bday_counts.month }}</div><div style="font-size:10px;color:#94A3B8;">This Month</div></a>
+        <a href="/reports/birthdays?range=today" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#EC4899;">{{ bday_counts.today }}</div><div style="font-size:10px;color:#64748B;">Today</div></a>
+        <a href="/reports/birthdays?range=week" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#F59E0B;">{{ bday_counts.week }}</div><div style="font-size:10px;color:#64748B;">This Week</div></a>
+        <a href="/reports/birthdays?range=month" style="text-decoration:none;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A3B8B;">{{ bday_counts.month }}</div><div style="font-size:10px;color:#64748B;">This Month</div></a>
       </div>
       <a href="/reports/birthdays" style="font-size:11px;color:#1A3B8B;text-decoration:none;font-weight:600;white-space:nowrap;">View all →</a>
     </div>
@@ -120,10 +120,10 @@
 
     <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:6px solid #0F2660;box-shadow:0 4px 12px rgba(0,0,0,0.06);margin-bottom:20px;overflow:hidden;">
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;padding:8px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
-        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Staff</span>
-        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Leads</span>
-        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Tasks</span>
-        <span style="font-size:10px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;">Revenue (This Month)</span>
+        <span style="font-size:10px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;">Staff</span>
+        <span style="font-size:10px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;">Leads</span>
+        <span style="font-size:10px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;">Tasks</span>
+        <span style="font-size:10px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;">Revenue (This Month)</span>
       </div>
       {% for s in staff_stats %}
       {% if s.role in ['sales', 'operations'] %}
@@ -132,7 +132,7 @@
           <div class="av" style="background:{% if loop.index%4==1 %}#1A3B8B{% elif loop.index%4==2 %}#10B981{% elif loop.index%4==3 %}#8B5CF6{% else %}#F59E0B{% endif %};">{{ s.name[:2].upper() }}</div>
           <div>
             <div style="font-size:12px;font-weight:600;color:#1A2333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.name }}</div>
-            <div style="font-size:10px;color:#94A3B8;">{{ s.role|capitalize }}</div>
+            <div style="font-size:10px;color:#64748B;">{{ s.role|capitalize }}</div>
           </div>
         </div>
         <span style="font-size:13px;color:#475569;">{{ s.leads }}</span>

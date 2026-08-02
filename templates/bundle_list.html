@@ -33,15 +33,15 @@
     {% set followup_count = rows|selectattr('needs_followup')|list|length %}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
       <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #1A3B8B;border-radius:10px;padding:11px 13px;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Total{% if status_filter or followup_only or q or csm_filter %} (filtered){% endif %}</div>
+        <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Total{% if status_filter or followup_only or q or csm_filter %} (filtered){% endif %}</div>
         <div style="font-size:19px;font-weight:800;color:#1A3B8B;margin-top:2px;">{{ rows|length }}</div>
       </div>
       <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #B02020;border-radius:10px;padding:11px 13px;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Needs Follow-up</div>
+        <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Needs Follow-up</div>
         <div style="font-size:19px;font-weight:800;color:#B02020;margin-top:2px;">{{ followup_count }}</div>
       </div>
       <div style="background:#fff;border:0.5px solid #E2E8F0;border-top:3px solid #1E7B4A;border-radius:10px;padding:11px 13px;">
-        <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Completed</div>
+        <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Completed</div>
         <div style="font-size:19px;font-weight:800;color:#1E7B4A;margin-top:2px;">{{ rows|selectattr('bundle.status', 'equalto', 'Completed')|list|length }}</div>
       </div>
     </div>
@@ -85,7 +85,7 @@
             <td>{{ b.purchase_date.strftime('%d %b %Y') }}</td>
             <td>
               {% if r.needs_followup %}<span class="badge b-bd-overdue">⚠ {{ r.overdue_count }} overdue</span>
-              {% else %}<span style="color:#94A3B8;font-size:12px;">—</span>{% endif %}
+              {% else %}<span style="color:#64748B;font-size:12px;">—</span>{% endif %}
             </td>
             <td><a href="/bundles/{{ b.id }}" style="color:#1A3B8B;font-size:12px;font-weight:600;text-decoration:none;">View →</a></td>
           </tr>

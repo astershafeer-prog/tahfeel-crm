@@ -60,7 +60,7 @@
         </label>
         <button type="submit" style="align-self:flex-start;background:#25D366;color:white;border:none;border-radius:20px;padding:8px 20px;font-weight:700;cursor:pointer;">+ Add Template</button>
       </form>
-      <div style="font-size:11px;color:#94A3B8;margin-top:8px;">
+      <div style="font-size:11px;color:#64748B;margin-top:8px;">
         Auto-fill keys: {% for k, v in var_keys.items() %}<code>{{ k }}</code> = {{ v }}{{ ' · ' if not loop.last }}{% endfor %}
       </div>
     </div>
@@ -83,7 +83,7 @@
                 <span style="font-size:10px;background:#FEE2E2;color:#991B1B;padding:1px 8px;border-radius:20px;">○ Inactive — awaiting Meta approval?</span>
                 {% endif %}
               </div>
-              <div style="font-size:11px;color:#94A3B8;margin-top:3px;">Meta name: <code>{{ t.meta_name }}</code>{% if t.var_fields %} · vars: <code>{{ t.var_fields }}</code>{% endif %}</div>
+              <div style="font-size:11px;color:#64748B;margin-top:3px;">Meta name: <code>{{ t.meta_name }}</code>{% if t.var_fields %} · vars: <code>{{ t.var_fields }}</code>{% endif %}</div>
               <div style="font-size:13px;color:var(--text-muted);white-space:pre-wrap;margin-top:4px;">{{ t.body_preview }}</div>
             </div>
             <div style="display:flex;gap:6px;flex-shrink:0;">

@@ -31,7 +31,7 @@
           <summary class="btn-sm" style="list-style:none;cursor:pointer;display:inline-block;">⬇ Export ▾</summary>
           <div style="position:absolute;right:0;top:calc(100% + 4px);background:white;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.12);min-width:170px;z-index:50;overflow:hidden;">
             <a href="/leads/export" style="display:block;padding:9px 14px;font-size:13px;color:var(--text-primary);text-decoration:none;">📋 All leads</a>
-            <a href="/leads/export?quality=Genuine" style="display:block;padding:9px 14px;font-size:13px;color:#059669;text-decoration:none;border-top:1px solid #F1F5F9;">✅ Genuine only</a>
+            <a href="/leads/export?quality=Genuine" style="display:block;padding:9px 14px;font-size:13px;color:#047857;text-decoration:none;border-top:1px solid #F1F5F9;">✅ Genuine only</a>
             <a href="/leads/export?quality=Junk" style="display:block;padding:9px 14px;font-size:13px;color:#B91C1C;text-decoration:none;border-top:1px solid #F1F5F9;">🗑 Junk only</a>
           </div>
         </details>
@@ -183,7 +183,7 @@
                       {% if lead.source and 'WhatsApp' in lead.source %}<span title="Started from a WhatsApp — AI Bot conversation" style="font-size:12px;margin-left:4px;">💬</span>{% endif %}
                       {% if lead.id in bot_lead_ids %}<span title="Customer replied on the WhatsApp bot" style="font-size:12px;margin-left:4px;">🤖</span>{% endif %}
                     </div>
-                    {% if lead.company %}<div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ lead.company }}</div>{% endif %}
+                    {% if lead.company %}<div style="font-size:11px;color:#64748B;margin-top:1px;">{{ lead.company }}</div>{% endif %}
                   </td>
                   <td>{{ lead.service or '—' }}</td>
                   <td>
@@ -209,7 +209,7 @@
                     {% elif lead.status == 'Potential Lead' %}
                       <span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif 'Connected' in lead.status or 'Called' in lead.status %}
-                      <span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                      <span style="background:#ECFDF5;color:#047857;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif 'WhatsApp' in lead.status %}
                       <span style="background:#F0FDF4;color:#16A34A;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif 'Quotation' in lead.status %}
@@ -217,7 +217,7 @@
                     {% elif lead.status == 'New' %}
                       <span style="background:#EBF2FF;color:#1A3B8B;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif lead.status == 'Qualified' %}
-                      <span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
+                      <span style="background:#ECFDF5;color:#047857;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif lead.status == 'Proposal' %}
                       <span style="background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ lead.status }}</span>
                     {% elif lead.status == 'Contacted' %}
@@ -227,12 +227,12 @@
                     {% endif %}
                     {% if lead.genuine == 'Junk' %}<span title="Junk" style="margin-left:4px;color:#B91C1C;font-size:11px;font-weight:700;">✕</span>
                     {% elif lead.genuine == 'Unreachable' %}<span title="Unreachable" style="margin-left:4px;color:#B45309;font-size:11px;font-weight:700;">⊘</span>
-                    {% elif lead.genuine == 'Genuine' %}<span title="Genuine" style="margin-left:4px;color:#059669;font-size:11px;font-weight:700;">✓</span>{% endif %}
+                    {% elif lead.genuine == 'Genuine' %}<span title="Genuine" style="margin-left:4px;color:#047857;font-size:11px;font-weight:700;">✓</span>{% endif %}
                     {% set latest_activity = lead.updates[0].activity_type if lead.updates else None %}
                     {% if latest_activity == 'Call — no answer' %}
                     <div style="font-size:10px;color:#B91C1C;font-weight:700;margin-top:3px;">☎ No Answer</div>
                     {% elif latest_activity == 'Call — connected' %}
-                    <div style="font-size:10px;color:#059669;font-weight:700;margin-top:3px;">☎ Connected</div>
+                    <div style="font-size:10px;color:#047857;font-weight:700;margin-top:3px;">☎ Connected</div>
                     {% elif latest_activity %}
                     <div style="font-size:10px;color:#64748B;font-weight:600;margin-top:3px;">{{ latest_activity }}</div>
                     {% endif %}

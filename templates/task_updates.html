@@ -74,12 +74,12 @@
             <td style="padding:9px;"><span class="badge" style="background:#EEF2FF;color:#3730A3;">{{ job_status_label(j.status) }}</span></td>
           </tr>
           {% else %}
-          <tr><td colspan="4" style="padding:24px;text-align:center;color:#94a3b8;">No active tasks with a WhatsApp number for this filter.</td></tr>
+          <tr><td colspan="4" style="padding:24px;text-align:center;color:#64748B;">No active tasks with a WhatsApp number for this filter.</td></tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
-      <div style="font-size:12px;color:#94a3b8;margin-top:8px;">{{ jobs|length }} task(s) shown · only tasks with a customer WhatsApp number appear.</div>
+      <div style="font-size:12px;color:#64748B;margin-top:8px;">{{ jobs|length }} task(s) shown · only tasks with a customer WhatsApp number appear.</div>
     </form>
     {% endif %}
   </div>

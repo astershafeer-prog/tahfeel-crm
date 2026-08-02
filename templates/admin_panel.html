@@ -10,7 +10,7 @@
     .acc{background:white;border:0.5px solid #E2E8F0;border-radius:12px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);overflow:hidden;}
     .acc>summary{list-style:none;cursor:pointer;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:700;color:#0F2660;font-size:15px;user-select:none;}
     .acc>summary::-webkit-details-marker{display:none;}
-    .acc>summary::after{content:'▾';margin-left:auto;color:#94A3B8;font-size:13px;transition:transform .15s;}
+    .acc>summary::after{content:'▾';margin-left:auto;color:#64748B;font-size:13px;transition:transform .15s;}
     .acc[open]>summary::after{transform:rotate(180deg);}
     .acc>summary:hover{background:#F8FAFC;}
     .acc-inner{padding:0 16px 16px;}
@@ -51,7 +51,7 @@
             <input type="checkbox" name="wa_auto_welcome" value="on" {{ 'checked' if autos.wa_auto_welcome }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">💬 Auto-welcome new leads</span>
-              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">WhatsApp · sends the approved welcome template the moment a new lead arrives (Meta ads + manually added). Inbound chats are handled by the bot, not greeted here.</span>
+              <span style="display:block;font-size:12px;color:#64748B;margin-top:2px;">WhatsApp · sends the approved welcome template the moment a new lead arrives (Meta ads + manually added). Inbound chats are handled by the bot, not greeted here.</span>
             </span>
           </label>
 
@@ -60,7 +60,7 @@
             <input type="checkbox" name="auto_birthday" value="on" {{ 'checked' if autos.auto_birthday }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">🎂 Birthday wishes</span>
-              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">WhatsApp · sends the approved <strong>tahfeel_birthday</strong> template at 9 AM Dubai on each customer's birthday — once a year, customers only.</span>
+              <span style="display:block;font-size:12px;color:#64748B;margin-top:2px;">WhatsApp · sends the approved <strong>tahfeel_birthday</strong> template at 9 AM Dubai on each customer's birthday — once a year, customers only.</span>
               {% if runs.birthday %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.birthday }}</span>{% endif %}
             </span>
           </label>
@@ -70,7 +70,7 @@
             <input type="checkbox" name="auto_expiry_wa" value="on" {{ 'checked' if autos.auto_expiry_wa }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📄 Document expiry — WhatsApp</span>
-              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">WhatsApp · reminds the customer <strong>7 days</strong> and again <strong>3 days</strong> before a document expires (approved <strong>compliance_alert_v1</strong> template). Only customers with alerts enabled.</span>
+              <span style="display:block;font-size:12px;color:#64748B;margin-top:2px;">WhatsApp · reminds the customer <strong>7 days</strong> and again <strong>3 days</strong> before a document expires (approved <strong>compliance_alert_v1</strong> template). Only customers with alerts enabled.</span>
               {% if runs.expiry_wa %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.expiry_wa }}</span>{% endif %}
             </span>
           </label>
@@ -80,7 +80,7 @@
             <input type="checkbox" name="auto_tax_filing_wa" value="on" {{ 'checked' if autos.auto_tax_filing_wa }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">🧾 VAT / Corp Tax filing — WhatsApp</span>
-              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">WhatsApp · reminds the customer <strong>7 days</strong> and again <strong>3 days</strong> before a VAT quarter or Corp Tax year is due (same approved <strong>compliance_alert_v1</strong> template as document expiry). Only unfiled periods, customers with alerts enabled.</span>
+              <span style="display:block;font-size:12px;color:#64748B;margin-top:2px;">WhatsApp · reminds the customer <strong>7 days</strong> and again <strong>3 days</strong> before a VAT quarter or Corp Tax year is due (same approved <strong>compliance_alert_v1</strong> template as document expiry). Only unfiled periods, customers with alerts enabled.</span>
               {% if runs.tax_filing_wa %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.tax_filing_wa }}</span>{% endif %}
             </span>
           </label>
@@ -90,7 +90,7 @@
             <input type="checkbox" name="auto_expiry_email" value="on" {{ 'checked' if autos.auto_expiry_email }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📧 Document expiry — Email</span>
-              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Email · every Monday, customers with a document expiring within 30 days (or already expired) get a reminder. Repeats weekly right up to and past expiry, until the renewed expiry date is entered.</span>
+              <span style="display:block;font-size:12px;color:#64748B;margin-top:2px;">Email · every Monday, customers with a document expiring within 30 days (or already expired) get a reminder. Repeats weekly right up to and past expiry, until the renewed expiry date is entered.</span>
               {% if runs.expiry_email %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.expiry_email }}</span>{% endif %}
             </span>
           </label>
@@ -100,7 +100,7 @@
             <input type="checkbox" name="auto_monthly_report" value="on" {{ 'checked' if autos.auto_monthly_report }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📊 Monthly compliance report — Email</span>
-              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Email · on the 1st of each month, every alerts-enabled customer gets their full document-status report.</span>
+              <span style="display:block;font-size:12px;color:#64748B;margin-top:2px;">Email · on the 1st of each month, every alerts-enabled customer gets their full document-status report.</span>
               {% if runs.monthly_report %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.monthly_report }}</span>{% endif %}
             </span>
           </label>
@@ -110,7 +110,7 @@
             <input type="checkbox" name="auto_weekly_planner" value="on" {{ 'checked' if autos.auto_weekly_planner }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">🧠 AI Work Planner — generate weekly plan</span>
-              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Internal only, sends nothing to clients · every Monday morning, builds each sales rep's ranked action plan (renewals, leads, compliance, prospecting) from CRM data. Turning this off stops new plans being generated but does not remove the page.</span>
+              <span style="display:block;font-size:12px;color:#64748B;margin-top:2px;">Internal only, sends nothing to clients · every Monday morning, builds each sales rep's ranked action plan (renewals, leads, compliance, prospecting) from CRM data. Turning this off stops new plans being generated but does not remove the page.</span>
               {% if runs.weekly_planner %}<span style="display:block;font-size:11px;color:#16A34A;margin-top:3px;">Last run: {{ runs.weekly_planner }}</span>{% endif %}
             </span>
           </label>
@@ -120,7 +120,7 @@
             <input type="checkbox" name="auto_planner_ai" value="on" {{ 'checked' if autos.auto_planner_ai }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">✎ AI Work Planner — AI-written advice</span>
-              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Uses your Anthropic (Claude) API key · writes the recommendation text for each plan row. Every fact — names, dates, AED amounts — is always computed from your CRM data regardless of this setting; this only controls whether Claude phrases the advice or the plan falls back to plain, rule-based wording.</span>
+              <span style="display:block;font-size:12px;color:#64748B;margin-top:2px;">Uses your Anthropic (Claude) API key · writes the recommendation text for each plan row. Every fact — names, dates, AED amounts — is always computed from your CRM data regardless of this setting; this only controls whether Claude phrases the advice or the plan falls back to plain, rule-based wording.</span>
             </span>
           </label>
 
@@ -129,7 +129,7 @@
             <input type="checkbox" name="auto_planner_research" value="on" {{ 'checked' if autos.auto_planner_research }} style="width:18px;height:18px;margin-top:2px;">
             <span style="flex:1;">
               <span style="font-size:14px;font-weight:700;color:var(--text-primary);">🌐 AI Work Planner — market &amp; regulatory research</span>
-              <span style="display:block;font-size:12px;color:#94A3B8;margin-top:2px;">Uses live web search · adds one row per week on UAE regulatory updates or market/competitor moves, with source links shown so a rep can verify before repeating anything to a client.</span>
+              <span style="display:block;font-size:12px;color:#64748B;margin-top:2px;">Uses live web search · adds one row per week on UAE regulatory updates or market/competitor moves, with source links shown so a rep can verify before repeating anything to a client.</span>
             </span>
           </label>
 
@@ -177,7 +177,7 @@
               <input type="text" name="capi_test_code" value="{{ capi.test_code }}" placeholder="TEST12345" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
             </div>
           </div>
-          <div style="font-size:11px;color:#94A3B8;line-height:1.5;">
+          <div style="font-size:11px;color:#64748B;line-height:1.5;">
             The <strong>event name</strong> must match what the agency sets the campaign’s “Conversion Leads” objective to
             optimise for. Use the <strong>test code</strong> (Events Manager → Test Events) to verify a live send, then clear it.
           </div>
@@ -258,7 +258,7 @@
                   <div class="form-row-2" style="align-items:flex-end;">
                     <div class="form-group"><label>Name</label><input type="text" name="name" value="{{ user.name }}" required></div>
                     <div class="form-group"><label>Email</label><input type="email" name="email" value="{{ user.email }}" required></div>
-                    <div class="form-group"><label>Mobile Number <span style="color:#94A3B8;font-weight:400;">(optional)</span></label><input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="+971 XX XXX XXXX"></div>
+                    <div class="form-group"><label>Mobile Number <span style="color:#64748B;font-weight:400;">(optional)</span></label><input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="+971 XX XXX XXXX"></div>
                     <div class="form-group">
                       <label>Role</label>
                       <select name="role">
@@ -296,7 +296,7 @@
           <div class="form-row-2" style="align-items:flex-end;">
             <div class="form-group"><label>Full Name</label><input type="text" name="name" required placeholder="Staff name"></div>
             <div class="form-group"><label>Email</label><input type="email" name="email" required placeholder="email@tahfeel.ae"></div>
-            <div class="form-group"><label>Mobile Number <span style="color:#94A3B8;font-weight:400;">(optional)</span></label><input type="text" name="phone" placeholder="+971 XX XXX XXXX"></div>
+            <div class="form-group"><label>Mobile Number <span style="color:#64748B;font-weight:400;">(optional)</span></label><input type="text" name="phone" placeholder="+971 XX XXX XXXX"></div>
             <div class="form-group"><label>Password</label><input type="password" name="password" required placeholder="Password"></div>
             <div class="form-group">
               <label>Role</label>
@@ -309,7 +309,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Leads visible from <span style="color:#94A3B8;font-weight:400;">(Marketing-Ext only)</span></label>
+              <label>Leads visible from <span style="color:#64748B;font-weight:400;">(Marketing-Ext only)</span></label>
               <input type="date" name="report_from">
             </div>
           </div>
@@ -962,7 +962,7 @@
           <h2>💰 Service Price List <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--success-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Compliance</span></h2>
         </div>
         <div class="card-body">
-          <div style="font-size:11.5px;color:#94A3B8;margin-bottom:12px;line-height:1.5;">
+          <div style="font-size:11.5px;color:#64748B;margin-bottom:12px;line-height:1.5;">
 Every service task is priced here — Cost Price stays internal (never shown in the CRM outside this table; real accounting lives in Tally). Retail Price drives the client-facing "Estimated renewal budget" figure <strong>only for names that match an actual document type</strong> (Trade License, Emirates ID, Visa…), matched by the client's jurisdiction (Mainland/Free Zone) and falling back to "Any". Other service tasks (e.g. Document Attestation, Ejari Services) are priced here for future revenue tracking but don't yet feed any calculation. Rows marked ⚠ are placeholder defaults — please review before relying on them.
           </div>
           <form method="POST" action="/admin/service-prices/add" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border-light);">
@@ -1101,7 +1101,7 @@ Every service task is priced here — Cost Price stays internal (never shown in 
           </form>
           <a href="/admin/backup/export" class="btn-sm" style="background:#133E87;color:white;border-color:#133E87;display:inline-flex;align-items:center;gap:5px;">⬇ Download Full Backup</a>
         </div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:8px;">Secure Documents is a one-time action after deploy · Enable/Turn OFF all alerts are bulk switches (each opens a confirmation) · Take compliance snapshot at end of month for the trend/sparkline · Backup downloads a full data export.</div>
+        <div style="font-size:11px;color:#64748B;margin-top:8px;">Secure Documents is a one-time action after deploy · Enable/Turn OFF all alerts are bulk switches (each opens a confirmation) · Take compliance snapshot at end of month for the trend/sparkline · Backup downloads a full data export.</div>
       </div>
     </details>
   </div>

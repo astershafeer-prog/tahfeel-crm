@@ -87,7 +87,7 @@
             <tr>
               <td>
                 <a href="/customers/{{ job.customer.id }}" style="font-weight:600;color:#1A3B8B;text-decoration:none;">{{ job.customer.name }}</a>
-                {% if job.customer.company %}<div style="font-size:11px;color:#94A3B8;">{{ job.customer.company }}</div>{% endif %}
+                {% if job.customer.company %}<div style="font-size:11px;color:#64748B;">{{ job.customer.company }}</div>{% endif %}
               </td>
               <td>{{ job.job_type }}</td>
               <td style="font-weight:600;">{{ job.partner_name }}</td>
@@ -157,7 +157,7 @@
         <div style="margin-bottom:20px;">
           <label style="font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;display:block;margin-bottom:6px;">Revenue to Book *</label>
           <input type="number" name="revenue_amount" id="revenueAmount" step="0.01" min="0" placeholder="Enter revenue amount" style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:14px;" required>
-          <div style="font-size:11px;color:#94A3B8;margin-top:4px;">Max: <span id="maxRevenue"></span> AED</div>
+          <div style="font-size:11px;color:#64748B;margin-top:4px;">Max: <span id="maxRevenue"></span> AED</div>
         </div>
         <div style="display:flex;gap:10px;">
           <button type="submit" id="submitBtn" class="btn-sm" style="flex:1;background:#10B981;color:white;padding:10px;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Submit</button>

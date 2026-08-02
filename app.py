@@ -7120,7 +7120,10 @@ def customer_calls(customer_id):
 @login_required
 def add_customer_call(customer_id):
     c = Customer.query.get_or_404(customer_id)
-    back = url_for('customer_calls', customer_id=customer_id)
+    # Carry the worklist link through the save so "← Back" still returns there.
+    _back = (request.form.get('back') or '').strip()
+    back = url_for('customer_calls', customer_id=customer_id,
+                   **({'back': _back} if _back.startswith('/') else {}))
     outcome = (request.form.get('outcome') or '').strip()
     if outcome not in CALL_OUTCOMES:
         flash('Pick a call outcome.', 'error')
@@ -7138,11 +7141,12 @@ def add_customer_call(customer_id):
         called_at = now_dubai()
     call = CustomerCall(customer_id=c.id, called_by=session.get('user_id'),
                         called_at=called_at, outcome=outcome, notes=notes or None)
-    # Review answers only mean anything when we actually spoke to them — a
-    # 'No answer' shouldn't carry a business situation or a growth plan.
-    if outcome == 'Connected' and c.customer_type == 'Company':
-        def _f(key):
-            return (request.form.get(key) or '').strip() or None
+    # Save whatever was typed regardless of outcome. The fields sit open on the page
+    # as the call agenda, so someone can fill them in and only then discover nobody
+    # answered — discarding that on a non-Connected outcome would lose real work.
+    def _f(key):
+        return (request.form.get(key) or '').strip() or None
+    if c.customer_type == 'Company':
         call.business_situation = _f('business_situation')
         call.growth_plan        = _f('growth_plan')
         call.biggest_challenge  = _f('biggest_challenge')
@@ -7155,6 +7159,24 @@ def add_customer_call(customer_id):
         call.social_media = ', '.join(picked) or None
     db.session.add(call)
     db.session.commit()
+
+    # Opportunity flagged during the call — raise the lead now rather than relying on
+    # someone remembering to press a second button after saving.
+    if request.form.get('raise_opportunity'):
+        service = _f('opportunity_service')
+        detail = call.support_requested or notes or ''
+        lead = Lead(name=c.contact_person or c.name,
+                    company=(c.name if c.customer_type == 'Company' else c.company),
+                    phone=c.mobile or c.phone or c.whatsapp, email=c.email,
+                    source='Existing Client', service=service, status='New',
+                    assigned_to=c.assigned_to or session.get('user_id'), genuine='Genuine',
+                    remarks=f'From a monthly review on {called_at.strftime("%d %b %Y")}: {detail}',
+                    due_date=now_dubai() + timedelta(days=1))
+        db.session.add(lead)
+        db.session.commit()
+        flash(f'Review saved, and an opportunity was raised for {lead.name}.')
+        return redirect(url_for('lead_detail', lead_id=lead.id))
+
     flash('Review saved.' if outcome == 'Connected' else f'Logged: {outcome}.')
     return redirect(back)
 

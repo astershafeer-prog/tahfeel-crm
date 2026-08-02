@@ -316,7 +316,7 @@
                   <input type="date" name="revenue_date" id="revenueDateInput" value="{{ now.strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}">
                 </div>
               </div>
-              <small style="color:#059669;display:block;margin-top:-8px;margin-bottom:8px;">✓ Backdate this if the work/payment was actually completed on an earlier date (e.g. late entry for last month).</small>
+              <small style="color:#047857;display:block;margin-top:-8px;margin-bottom:8px;">✓ Backdate this if the work/payment was actually completed on an earlier date (e.g. late entry for last month).</small>
             </div>
 
             <div id="partnerCommissionFields" style="display:none;">
@@ -515,7 +515,7 @@
           </select>
           {% endif %}
           <a href="javascript:void(0)" onclick="sendWA()" class="btn-sm" style="background:#25D366;color:#fff;border-color:#25D366;">💬 Web</a>
-          <span style="font-size:10px;color:#94A3B8;">Template = business number (logged) · Web = your own number (for the group)</span>
+          <span style="font-size:10px;color:#64748B;">Template = business number (logged) · Web = your own number (for the group)</span>
         </div>
         {% endif %}
         <form method="post">
@@ -575,11 +575,11 @@
           <div style="padding-top:3px;z-index:1;">
             <div style="width:22px;height:22px;border-radius:50%;
               background:{% if u.status in ['Done','Closed'] %}#10B981{% elif u.status == 'Processing' %}#F59E0B{% elif u.status in ['On Hold','Delayed'] %}#EF4444{% else %}#1A3B8B{% endif %};
-              color:white;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ idx }}</div>
+              color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ idx }}</div>
           </div>
           <div style="padding:0 0 18px 12px;">
             <div style="font-size:13px;font-weight:600;color:#1A2333;">{{ u.status }}</div>
-            <div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ u.staff_name }} · {{ u.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+            <div style="font-size:11px;color:#64748B;margin-top:1px;">{{ u.staff_name }} · {{ u.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
             {% if u.remark %}
             <div style="font-size:12px;color:#475569;margin-top:5px;background:#F8FAFC;border-radius:6px;padding:6px 10px;border-left:2px solid #E2E8F0;">{{ u.remark }}</div>
             {% endif %}
@@ -606,7 +606,7 @@
       <!-- Popup header -->
       <div style="padding:14px 20px;border-bottom:1px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;">
         <div style="font-size:14px;font-weight:700;color:#1A2333;">📊 Task Timeline Preview</div>
-        <button onclick="closePopup()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94A3B8;line-height:1;">✕</button>
+        <button onclick="closePopup()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748B;line-height:1;">✕</button>
       </div>
 
       <!-- Captured card -->
@@ -618,11 +618,11 @@
             <div style="width:36px;height:36px;background:#133E87;border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0;">T</div>
             <div>
               <div style="font-size:12px;font-weight:800;color:#133E87;line-height:1.2;">Tahfeel Business Setup Services</div>
-              <div style="font-size:9px;color:#94A3B8;margin-top:1px;">Application Status Update · Dubai, UAE</div>
+              <div style="font-size:11px;color:#64748B;margin-top:1px;">Application Status Update · Dubai, UAE</div>
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0;">
-            <div style="font-size:8px;color:#94A3B8;">Generated</div>
+            <div style="font-size:8px;color:#64748B;">Generated</div>
             <div style="font-size:10px;font-weight:600;color:#475569;" id="tlDate"></div>
           </div>
         </div>
@@ -630,7 +630,7 @@
         <!-- Customer + progress summary -->
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #F1F5F9;">
           <div>
-            <div style="font-size:8px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Customer</div>
+            <div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Customer</div>
             <div style="font-size:14px;font-weight:800;color:#1A2333;line-height:1.2;">{{ job.customer.name }}</div>
             {% if job.customer.company %}<div style="font-size:10px;color:#64748B;margin-top:1px;">{{ job.customer.company }}</div>{% endif %}
           </div>
@@ -682,22 +682,22 @@
                     {% elif is_hold %}color:#991B1B;
                     {% else %}color:#64748B;{% endif %}
                     line-height:1.3;max-width:180px;">{{ sj.job_type }}</div>
-                  <div style="font-size:9px;margin-top:2px;
+                  <div style="font-size:11px;margin-top:2px;
                     {% if is_done %}color:#0F6E56;
                     {% elif is_current %}color:#4F6FBF;
                     {% elif is_hold %}color:#B91C1C;
-                    {% else %}color:#94A3B8;{% endif %}">
+                    {% else %}color:#64748B;{% endif %}">
                     {% if sj.assignee %}{{ sj.assignee.name }}{% endif %}{% if sj.assignee and sj.due_date %} · {% endif %}{% if sj.due_date %}Due {{ sj.due_date.strftime('%d %b') }}{% endif %}
                   </div>
                 </div>
               </div>
 
               {# Status badge #}
-              <div style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;
+              <div style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;
                 {% if is_done %}background:#10B981;color:white;
                 {% elif is_current %}background:#133E87;color:white;
                 {% elif is_hold %}background:#EF4444;color:white;
-                {% else %}color:#94A3B8;border:1px solid #E2E8F0;background:white;{% endif %}">
+                {% else %}color:#64748B;border:1px solid #E2E8F0;background:white;{% endif %}">
                 {{ sj.status }}
               </div>
             </div>
@@ -707,7 +707,7 @@
         {% else %}
         {# SINGLE TASK: vertical status history #}
         <div style="margin-bottom:14px;">
-          <div style="font-size:8px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">{{ job.job_type }}{% if job.due_date %} · Due {{ job.due_date.strftime('%d %b %Y') }}{% endif %}</div>
+          <div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">{{ job.job_type }}{% if job.due_date %} · Due {{ job.due_date.strftime('%d %b %Y') }}{% endif %}</div>
           {% set updates_asc = job.updates | list | reverse | list %}
           {% if updates_asc %}
           {% for u in updates_asc %}
@@ -723,13 +723,13 @@
             </div>
             <div style="flex:1;">
               <div style="font-size:11px;font-weight:700;color:#1A2333;">{{ u.status }}</div>
-              <div style="font-size:9px;color:#94A3B8;margin-top:1px;">{{ u.created_at.strftime('%d %b %Y · %I:%M %p') }} · {{ u.staff_name }}</div>
+              <div style="font-size:11px;color:#64748B;margin-top:1px;">{{ u.created_at.strftime('%d %b %Y · %I:%M %p') }} · {{ u.staff_name }}</div>
               {% if u.remark %}<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.4;">{{ u.remark }}</div>{% endif %}
             </div>
           </div>
           {% endfor %}
           {% else %}
-          <div style="font-size:11px;color:#94A3B8;text-align:center;padding:16px 0;">No updates yet.</div>
+          <div style="font-size:11px;color:#64748B;text-align:center;padding:16px 0;">No updates yet.</div>
           {% endif %}
         </div>
         {% endif %}

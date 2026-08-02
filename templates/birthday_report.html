@@ -10,7 +10,7 @@
   {{ theme_loader() }}
   <style>
     .kpi{background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;}
-    .kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .kpi-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
     .kpi-val{font-size:26px;font-weight:800;color:#1A2333;}
     .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
     .kind-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;}
@@ -30,7 +30,7 @@
     <div class="page-header" style="margin-bottom:16px;">
       <div>
         <h2 style="color:#133E87;">🎂 Birthday Report</h2>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Customers, company owners &amp; employees with a date of birth on file — sorted by next birthday</div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">Customers, company owners &amp; employees with a date of birth on file — sorted by next birthday</div>
       </div>
       <div style="display:flex;gap:8px;">
         <a href="/reports/birthdays?range=today" class="btn-sm {% if rng=='today' %}btn-primary{% else %}btn-secondary{% endif %}">Today</a>
@@ -68,7 +68,7 @@
               {% else %}<span class="kind-badge" style="background:#ECFDF5;color:#047857;">Employee</span>{% endif %}
             </td>
             <td style="font-size:12px;color:var(--text-secondary);">{{ p.company or '—' }}</td>
-            <td style="font-size:12px;">{{ p.next.strftime('%d %b') }} <span style="color:#94A3B8;">({{ p.dob.strftime('%d %b %Y') }})</span></td>
+            <td style="font-size:12px;">{{ p.next.strftime('%d %b') }} <span style="color:#64748B;">({{ p.dob.strftime('%d %b %Y') }})</span></td>
             <td style="font-size:12px;font-weight:600;">{{ p.age }}</td>
             <td style="font-size:12px;">
               {% if p.mobile %}{{ p.mobile }}
@@ -79,7 +79,7 @@
         </tbody>
       </table>
       {% else %}
-      <div style="text-align:center;padding:40px;color:#94A3B8;font-size:13px;">
+      <div style="text-align:center;padding:40px;color:#64748B;font-size:13px;">
         No birthdays in this range.
         {% if counts.all == 0 %}<br>Add dates of birth on customers, owners, and employees to see them here.{% endif %}
       </div>

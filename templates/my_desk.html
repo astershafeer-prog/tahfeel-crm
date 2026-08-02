@@ -12,11 +12,11 @@
     .note-item:last-child { border-bottom:none; }
     .note-cb { width:15px; height:15px; border-radius:4px; border:1.5px solid #CBD5E1; flex-shrink:0; margin-top:3px; cursor:pointer; background:white; }
     .note-text { font-size:12px; color:#1A2333; line-height:1.5; flex:1; }
-    .note-text.done { text-decoration:line-through; color:#94A3B8; }
+    .note-text.done { text-decoration:line-through; color:#64748B; }
     .note-reminder { font-size:10px; font-weight:600; margin-top:3px; }
     .nr-today { color:#EF4444; }
     .nr-soon { color:#F59E0B; }
-    .nr-future { color:#94A3B8; }
+    .nr-future { color:#64748B; }
     .mention-tag { font-size:10px; background:#EBF2FF; color:#1A3B8B; padding:1px 7px; border-radius:20px; font-weight:600; margin-top:3px; display:inline-block; }
     .from-tag { font-size:10px; background:#F5F3FF; color:#6D28D9; padding:1px 7px; border-radius:20px; font-weight:600; margin-top:3px; display:inline-block; }
     .quick-add { background:white; border-radius:10px; border:0.5px solid #E2E8F0; padding:16px; }
@@ -26,7 +26,7 @@
     .section-head h2 { font-size:13px; font-weight:700; color:#1A2333; }
     .nbadge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
     .stat-box { }
-    .stat-label { font-size:10px; color:#94A3B8; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }
+    .stat-label { font-size:10px; color:#64748B; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }
     .stat-val { font-size:22px; font-weight:700; }
   </style>
 </head>
@@ -42,7 +42,7 @@
     <div class="page-head" style="margin-bottom:14px;">
       <div>
         <div class="page-head-title">📌 My Desk</div>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Your personal workspace — private to you</div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">Your personal workspace — private to you</div>
       </div>
     </div>
 
@@ -127,7 +127,7 @@
           </div>
           <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:flex-end;">
             <div class="ff">
-              <label>Remind me on <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+              <label>Remind me on <span style="color:#64748B;font-weight:400;">(optional)</span></label>
               <input type="date" name="reminder_date" class="qi" style="width:100%;" min="{{ now.strftime('%Y-%m-%d') }}">
             </div>
             <button type="submit" class="btn-primary" style="height:36px;padding:0 16px;white-space:nowrap;">+ Add</button>
@@ -141,7 +141,7 @@
         <form method="post" style="display:flex;flex-direction:column;gap:8px;">
           <input type="hidden" name="action" value="add">
           <div class="ff">
-            <label>Message <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+            <label>Message <span style="color:#64748B;font-weight:400;">(optional)</span></label>
             <input type="text" name="text" class="qi" placeholder="e.g. Team meeting at 3pm...">
           </div>
           <div class="ff">
@@ -162,7 +162,7 @@
           </div>
           <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:flex-end;">
             <div class="ff">
-              <label>Remind on <span style="color:#94A3B8;font-weight:400;">(optional)</span></label>
+              <label>Remind on <span style="color:#64748B;font-weight:400;">(optional)</span></label>
               <input type="date" name="reminder_date" class="qi" style="width:100%;" min="{{ now.strftime('%Y-%m-%d') }}">
             </div>
             <button type="submit" class="btn-primary" style="height:36px;padding:0 16px;">Send</button>
@@ -188,7 +188,7 @@
             <input type="hidden" name="action" value="done">
             <input type="hidden" name="note_id" value="{{ note.id }}">
             <button type="submit" class="note-cb" style="{% if note.is_done %}background:#10B981;border-color:#10B981;{% endif %}">
-              {% if note.is_done %}<span style="color:white;font-size:9px;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">✓</span>{% endif %}
+              {% if note.is_done %}<span style="color:white;font-size:11px;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">✓</span>{% endif %}
             </button>
           </form>
           <div style="flex:1;">

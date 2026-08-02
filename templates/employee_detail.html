@@ -53,13 +53,13 @@
       <div class="card-header"><h2>📄 Employee Documents <span style="font-size:12px;color:var(--text-muted);font-weight:400;">({{ docs|length }})</span></h2></div>
       <div class="card-body">
         <form method="POST" action="/employees/{{ emp.id }}/documents/add" enctype="multipart/form-data">
-          <div class="section-label">Add Document <span style="font-weight:400;color:#94A3B8;text-transform:none;">(passport, visa, Emirates ID, labour card, insurance, driving license…)</span></div>
+          <div class="section-label">Add Document <span style="font-weight:400;color:#64748B;text-transform:none;">(passport, visa, Emirates ID, labour card, insurance, driving license…)</span></div>
           <div class="form-row-2" style="align-items:flex-end;">
             <div class="form-group"><label>Document Type</label>
               <select name="doc_type" required><option value="">— Select —</option>{% for dt in doc_types %}<option value="{{ dt.name }}">{{ dt.name }}</option>{% endfor %}</select>
             </div>
             <div class="form-group"><label>Expiry Date</label><input type="date" name="expiry_date"></div>
-            <div class="form-group"><label>File <span style="color:#94A3B8;font-weight:400;">(optional)</span></label><input type="file" name="document_file"></div>
+            <div class="form-group"><label>File <span style="color:#64748B;font-weight:400;">(optional)</span></label><input type="file" name="document_file"></div>
             <div class="form-group"><label>Notes</label><input type="text" name="notes" placeholder="optional"></div>
           </div>
           <button type="submit" class="btn-primary" style="margin-top:4px;">+ Add Document</button>
@@ -78,7 +78,7 @@
                   {% if days < 0 %}<span style="background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">Expired {{ -days }}d ago</span>
                   {% elif days <= 30 %}<span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
                   {% elif days <= 60 %}<span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>
-                  {% else %}<span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>{% endif %}
+                  {% else %}<span style="background:#ECFDF5;color:#047857;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">{{ days }}d left</span>{% endif %}
                 {% endif %}
               </td>
               <td>{% if d.file_url %}<a href="/documents/{{ d.id }}/file" target="_blank" style="color:#1A3B8B;font-size:12px;">📎 View</a>{% else %}<span style="color:#CBD5E1;font-size:12px;">—</span>{% endif %}</td>

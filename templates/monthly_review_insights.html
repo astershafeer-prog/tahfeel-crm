@@ -8,14 +8,14 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
   <style>
     .mi-kpi{background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;padding:12px 15px;}
-    .mi-kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;}
+    .mi-kpi-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;}
     .mi-kpi-val{font-size:22px;font-weight:800;margin-top:3px;}
     .mi-row{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid #F1F5F9;font-size:12.5px;}
     .mi-row:last-child{border-bottom:none;}
     .mi-name{font-weight:700;color:#0F2660;text-decoration:none;min-width:180px;max-width:210px;
              white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
     .mi-tag{font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;}
-    .mi-when{margin-left:auto;color:#94A3B8;font-size:11px;white-space:nowrap;}
+    .mi-when{margin-left:auto;color:#64748B;font-size:11px;white-space:nowrap;}
   </style>
 </head>
 <body>
@@ -38,7 +38,7 @@
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
       <div class="mi-kpi" style="border-top:3px solid #1A3B8B;">
         <div class="mi-kpi-label">Companies reviewed</div>
-        <div class="mi-kpi-val" style="color:#1A3B8B;">{{ reviewed_count }}<span style="font-size:13px;color:#94A3B8;font-weight:600;"> / {{ total_companies }}</span></div>
+        <div class="mi-kpi-val" style="color:#1A3B8B;">{{ reviewed_count }}<span style="font-size:13px;color:#64748B;font-weight:600;"> / {{ total_companies }}</span></div>
       </div>
       <div class="mi-kpi" style="border-top:3px solid #7C3AED;">
         <div class="mi-kpi-label">No website</div>
@@ -70,11 +70,11 @@
         </div>
         {% endfor %}
         {% if asks_total > asks|length %}
-        <div style="font-size:11px;color:#94A3B8;margin-top:10px;">Showing the {{ asks|length }} most recent of {{ asks_total }}.</div>
+        <div style="font-size:11px;color:#64748B;margin-top:10px;">Showing the {{ asks|length }} most recent of {{ asks_total }}.</div>
         {% endif %}
-        <div style="font-size:11px;color:#94A3B8;margin-top:10px;">Open a client to turn a request into an opportunity — the ➡ Opportunity button on a connected review pushes it into the sales pipeline.</div>
+        <div style="font-size:11px;color:#64748B;margin-top:10px;">Open a client to turn a request into an opportunity — the ➡ Opportunity button on a connected review pushes it into the sales pipeline.</div>
         {% else %}
-        <div style="font-size:13px;color:#94A3B8;padding:8px 0;">Nothing recorded yet. This fills up as reviews capture what clients ask for.</div>
+        <div style="font-size:13px;color:#64748B;padding:8px 0;">Nothing recorded yet. This fills up as reviews capture what clients ask for.</div>
         {% endif %}
       </div>
     </div>
@@ -91,9 +91,9 @@
             <span class="mi-when">{{ x.r.called_at.strftime('%d %b %Y') }}</span>
           </div>
           {% endfor %}
-          <div style="font-size:11px;color:#94A3B8;margin-top:10px;">A ready-made list for a website pitch.</div>
+          <div style="font-size:11px;color:#64748B;margin-top:10px;">A ready-made list for a website pitch.</div>
           {% else %}
-          <div style="font-size:13px;color:#94A3B8;padding:8px 0;">No answers recorded yet.</div>
+          <div style="font-size:13px;color:#64748B;padding:8px 0;">No answers recorded yet.</div>
           {% endif %}
         </div>
       </div>
@@ -109,9 +109,9 @@
             <span class="mi-when">{{ x.r.called_at.strftime('%d %b %Y') }}</span>
           </div>
           {% endfor %}
-          <div style="font-size:11px;color:#94A3B8;margin-top:10px;">Candidates for a marketing conversation.</div>
+          <div style="font-size:11px;color:#64748B;margin-top:10px;">Candidates for a marketing conversation.</div>
           {% else %}
-          <div style="font-size:13px;color:#94A3B8;padding:8px 0;">No answers recorded yet.</div>
+          <div style="font-size:13px;color:#64748B;padding:8px 0;">No answers recorded yet.</div>
           {% endif %}
         </div>
       </div>
@@ -134,7 +134,7 @@
         </div>
         {% endfor %}
         {% else %}
-        <div style="font-size:13px;color:#059669;padding:8px 0;">✓ Every company has been reviewed within the last 60 days.</div>
+        <div style="font-size:13px;color:#047857;padding:8px 0;">✓ Every company has been reviewed within the last 60 days.</div>
         {% endif %}
       </div>
     </div>
