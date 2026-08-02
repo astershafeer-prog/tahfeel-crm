@@ -59,19 +59,19 @@
           {% if wa_health.quality == 'GREEN' %}<b style="color:#16A34A;">🟢 Green</b>
           {% elif wa_health.quality == 'YELLOW' %}<b style="color:#D97706;">🟡 Yellow</b>
           {% elif wa_health.quality == 'RED' %}<b style="color:#DC2626;">🔴 Red</b>
-          {% else %}<b style="color:#94A3B8;">{{ wa_health.quality|title }}</b>{% endif %}
+          {% else %}<b style="color:#64748B;">{{ wa_health.quality|title }}</b>{% endif %}
         </span>
         <span>Daily limit:
           <b style="color:#1A2333;">{% if wa_health.tier_limit %}{{ '{:,}'.format(wa_health.tier_limit) }} conversations / 24h{% else %}Unlimited{% endif %}</b>
         </span>
         {% if wa_health.used_today is not none %}
         <span>Started today: <b style="color:#1A2333;">≈ {{ wa_health.used_today }}</b>
-          {% if wa_health.tier_limit %}<span style="color:#94A3B8;">of {{ '{:,}'.format(wa_health.tier_limit) }}</span>{% endif %}
+          {% if wa_health.tier_limit %}<span style="color:#64748B;">of {{ '{:,}'.format(wa_health.tier_limit) }}</span>{% endif %}
         </span>
         {% endif %}
         {% if wa_health.costs %}
         <span>This month: <b style="color:#1A2333;">{{ wa_health.costs.conversations }} conversations</b>
-          <span style="color:#94A3B8;">(~${{ wa_health.costs.cost_usd }})</span></span>
+          <span style="color:#64748B;">(~${{ wa_health.costs.cost_usd }})</span></span>
         {% endif %}
       </div>
       {% endif %}
@@ -280,9 +280,9 @@
     <div style="background:white;border-radius:14px;max-width:520px;width:100%;padding:20px 22px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.25);">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
         <div style="font-size:16px;font-weight:700;color:#0F2660;">✉ New WhatsApp message</div>
-        <button type="button" onclick="closeNewMsg()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#94A3B8;">✕</button>
+        <button type="button" onclick="closeNewMsg()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#64748B;">✕</button>
       </div>
-      <div style="font-size:12px;color:#94A3B8;margin-bottom:12px;">Starts a conversation from the business number using an approved template. Include the country code (e.g. 9715…).</div>
+      <div style="font-size:12px;color:#64748B;margin-bottom:12px;">Starts a conversation from the business number using an approved template. Include the country code (e.g. 9715…).</div>
       <form method="POST" action="/whatsapp/send-template">
         <input type="hidden" name="template_id" id="nmTplId">
         <input type="hidden" name="return_url" value="{{ request.path }}">

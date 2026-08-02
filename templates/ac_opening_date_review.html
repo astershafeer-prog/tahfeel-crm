@@ -47,12 +47,12 @@
         <tbody>
           {% for c in suspects %}
           <tr>
-            <td><a href="/customers/{{ c.id }}" style="color:#1A3B8B;font-weight:600;text-decoration:none;font-size:13px;">{{ c.name }}</a>{% if c.company %}<div style="font-size:11px;color:#94A3B8;">{{ c.company }}</div>{% endif %}</td>
+            <td><a href="/customers/{{ c.id }}" style="color:#1A3B8B;font-weight:600;text-decoration:none;font-size:13px;">{{ c.name }}</a>{% if c.company %}<div style="font-size:11px;color:#64748B;">{{ c.company }}</div>{% endif %}</td>
             <td style="font-size:13px;">{{ c.ac_opening_date.strftime('%d %b %Y') }}</td>
             <td style="font-size:13px;color:var(--text-muted);">{{ c.created_at.strftime('%d %b %Y') }}</td>
             <td>
               {% if c.ac_opening_date_confirmed %}
-              <span style="background:#ECFDF5;color:#059669;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">✓ Confirmed correct</span>
+              <span style="background:#ECFDF5;color:#047857;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">✓ Confirmed correct</span>
               {% else %}
               <span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">⚠ Unverified</span>
               {% endif %}

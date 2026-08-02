@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/static/css/tahfeel.css">
   <style>
     .eq-kpi{background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
-    .eq-kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+    .eq-kpi-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
     .eq-kpi-val{font-size:24px;font-weight:800;}
     .eq-card{background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
     .eq-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;}
@@ -34,7 +34,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
       <div>
         <h2 style="color:#0F2660;margin-bottom:2px;">❓ Enquiries</h2>
-        <div style="font-size:12px;color:#94A3B8;">Quick-log a question or callback, set a reminder, then resolve it or convert it to a lead.</div>
+        <div style="font-size:12px;color:#64748B;">Quick-log a question or callback, set a reminder, then resolve it or convert it to a lead.</div>
       </div>
       <a href="/enquiries/export" class="btn-primary" style="background:#1a8d4e;border-color:#1a8d4e;text-decoration:none;">⬇ Export to Excel</a>
     </div>
@@ -56,13 +56,13 @@
         <div style="font-size:12px;font-weight:700;color:#0F2660;margin-bottom:8px;">By type / service</div>
         {% for name, cnt in by_service %}
         <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid #F1F5F9;"><span style="color:#475569;">{{ name }}</span><b style="color:#1A3B8B;">{{ cnt }}</b></div>
-        {% else %}<div style="color:#94A3B8;font-size:12px;">No enquiries yet.</div>{% endfor %}
+        {% else %}<div style="color:#64748B;font-size:12px;">No enquiries yet.</div>{% endfor %}
       </div>
       <div class="eq-card" style="padding:14px 16px;">
         <div style="font-size:12px;font-weight:700;color:#0F2660;margin-bottom:8px;">By staff</div>
         {% for name, cnt in by_staff %}
         <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid #F1F5F9;"><span style="color:#475569;">{{ name }}</span><b style="color:#1A3B8B;">{{ cnt }}</b></div>
-        {% else %}<div style="color:#94A3B8;font-size:12px;">—</div>{% endfor %}
+        {% else %}<div style="color:#64748B;font-size:12px;">—</div>{% endfor %}
       </div>
     </div>
 
@@ -96,11 +96,11 @@
     <div class="eq-card" style="overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead><tr style="background:#F8FAFC;">
-          <th style="text-align:left;padding:10px 14px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Enquiry</th>
-          <th style="text-align:left;padding:10px;width:170px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Contact</th>
-          <th style="text-align:left;padding:10px;width:150px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Assigned</th>
-          <th style="text-align:left;padding:10px;width:110px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Follow-up</th>
-          <th style="text-align:left;padding:10px 14px;width:250px;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;">Actions</th>
+          <th style="text-align:left;padding:10px 14px;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">Enquiry</th>
+          <th style="text-align:left;padding:10px;width:170px;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">Contact</th>
+          <th style="text-align:left;padding:10px;width:150px;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">Assigned</th>
+          <th style="text-align:left;padding:10px;width:110px;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">Follow-up</th>
+          <th style="text-align:left;padding:10px 14px;width:250px;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;">Actions</th>
         </tr></thead>
         <tbody>
         {% set av_colors = ['#1A3B8B','#10B981','#8B5CF6','#F59E0B','#EF4444','#06B6D4','#EC4899'] %}
@@ -109,7 +109,7 @@
         <tr class="eq-row {% if due %}due{% endif %}">
           <td style="padding:12px 14px;">
             <div style="color:#1E293B;font-weight:600;">{{ e.enquiry }}</div>
-            <div style="font-size:11px;color:#94A3B8;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <div style="font-size:11px;color:#64748B;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
               {% if e.service %}<span class="eq-badge" style="background:#EFF6FF;color:#1D4ED8;">{{ e.service }}</span>{% endif %}
               {% if e.status=='Resolved' %}<span class="eq-badge" style="background:#ECFDF5;color:#047857;">✓ Resolved</span>
               {% elif due %}<span class="eq-badge" style="background:#FEF2F2;color:#B91C1C;">Due for follow-up</span>
@@ -121,7 +121,7 @@
             <div style="font-weight:600;color:#0F2660;">{{ e.name or '—' }}</div>
             {% if e.phone %}
             <div style="font-size:11px;color:#64748B;display:flex;align-items:center;gap:6px;margin-top:2px;">{{ e.phone }}
-              <a href="https://wa.me/{{ e.phone|replace(' ','')|replace('+','') }}" target="_blank" title="Open WhatsApp chat" style="background:#25D366;color:#fff;font-size:9px;font-weight:700;padding:1px 7px;border-radius:10px;text-decoration:none;">WA</a>
+              <a href="https://wa.me/{{ e.phone|replace(' ','')|replace('+','') }}" target="_blank" title="Open WhatsApp chat" style="background:#25D366;color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;text-decoration:none;">WA</a>
             </div>
             {% endif %}
           </td>
@@ -170,7 +170,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="padding:32px;text-align:center;color:#94A3B8;">No enquiries here yet. Log one above.</td></tr>
+        <tr><td colspan="5" style="padding:32px;text-align:center;color:#64748B;">No enquiries here yet. Log one above.</td></tr>
         {% endfor %}
         </tbody>
       </table>

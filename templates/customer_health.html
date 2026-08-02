@@ -20,21 +20,21 @@
     .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px;}
     @media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr);}}
     @media(max-width:540px){.stats{grid-template-columns:repeat(2,1fr);}}
-    .stat{padding:10px 8px;text-align:center;border-radius:12px;}
+    .stat{padding:10px 8px;text-align:center;border-radius:14px;}
     .stat .lbl{font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
     .stat .num{font-size:19px;font-weight:800;line-height:1;margin:4px 0 1px;}
-    .stat .sub{font-size:9px;color:#94A3B8;}
-    .stat .ico{width:28px;height:28px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:5px;}
+    .stat .sub{font-size:11px;color:#64748B;}
+    .stat .ico{width:28px;height:28px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:5px;}
     .sec-head{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid #EEF2F7;}
     .sec-head h2{margin:0;font-size:13px;color:#0F2660;font-weight:700;display:flex;align-items:center;gap:7px;}
     .legend{display:flex;gap:12px;font-size:11px;color:#64748B;}
     .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
     .dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:14px;}
-    .dtile{background:#fff;border:1px solid #EEF2F7;border-radius:11px;border-top:3px solid #94A3B8;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .15s,transform .15s;position:relative;}
+    .dtile{background:#fff;border:1px solid #EEF2F7;border-radius:10px;border-top:3px solid #94A3B8;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .15s,transform .15s;position:relative;}
     .dtile:hover{box-shadow:0 5px 14px rgba(0,0,0,.08);transform:translateY(-2px);}
-    .dtile .dico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:7px;}
+    .dtile .dico{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:7px;}
     .dtile .dt{font-size:12px;font-weight:700;color:#1A2333;line-height:1.2;}
-    .dtile .ow{font-size:10px;color:#94A3B8;margin-top:2px;}
+    .dtile .ow{font-size:10px;color:#64748B;margin-top:2px;}
     .dtile .ex{font-size:11px;color:#475569;margin-top:6px;display:flex;align-items:center;gap:4px;}
     .dtile .file{position:absolute;top:12px;right:12px;font-size:13px;text-decoration:none;opacity:.7;}
     .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-top:10px;}
@@ -45,10 +45,10 @@
     .row:last-child{border-bottom:none;}
     .row .k{color:#64748B;display:flex;align-items:center;gap:8px;}
     .row .v{color:#1A2333;font-weight:700;}
-    .empcard{border:1px solid #EEF2F7;border-radius:12px;padding:14px;margin:0 18px 14px;}
+    .empcard{border:1px solid #EEF2F7;border-radius:14px;padding:14px;margin:0 18px 14px;}
     .empcard .eh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
     .empcard .en{font-size:14px;font-weight:700;color:#1A2333;}
-    .empcard .ed{font-size:11px;color:#94A3B8;}
+    .empcard .ed{font-size:11px;color:#64748B;}
     .echip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;margin:4px 4px 0 0;}
     .deduct{margin:0 18px 16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:11px 14px;}
     .deduct h4{margin:0 0 5px;font-size:12px;color:#B45309;display:flex;align-items:center;gap:6px;}
@@ -92,7 +92,7 @@
       {%- if days<0 %}<span class="pill" style="background:#FEF2F2;color:#B91C1C;">Expired {{ -days }}d ago</span>
       {%- elif days<=30 %}<span class="pill" style="background:#FEF2F2;color:#DC2626;">{{ days }}d left</span>
       {%- elif days<=90 %}<span class="pill" style="background:#FFFBEB;color:#B45309;">{{ days }}d left</span>
-      {%- else %}<span class="pill" style="background:#ECFDF5;color:#059669;">Valid · {{ days }}d</span>{%- endif -%}
+      {%- else %}<span class="pill" style="background:#ECFDF5;color:#047857;">Valid · {{ days }}d</span>{%- endif -%}
     {%- endif -%}
   {%- endmacro -%}
   {%- macro edgecol(d, today) -%}
@@ -120,8 +120,8 @@
     <div class="no-print hc-card" style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 16px;margin-bottom:16px;">
       <div style="font-size:13px;color:#475569;">
         <strong style="color:#0F2660;">📨 Periodic compliance emails</strong> ·
-        {% if customer.alerts_enabled %}<span style="color:#059669;font-weight:700;">ON</span>{% else %}<span style="color:#94A3B8;font-weight:700;">OFF</span>{% endif %}
-        <span style="color:#94A3B8;">— monthly PDF report + auto-reminders when a document is within 30 days. Sent from <strong>{{ from_email }}</strong> to {{ customer.alert_email or customer.email or 'client' }}.</span>
+        {% if customer.alerts_enabled %}<span style="color:#047857;font-weight:700;">ON</span>{% else %}<span style="color:#64748B;font-weight:700;">OFF</span>{% endif %}
+        <span style="color:#64748B;">— monthly PDF report + auto-reminders when a document is within 30 days. Sent from <strong>{{ from_email }}</strong> to {{ customer.alert_email or customer.email or 'client' }}.</span>
       </div>
       <form method="POST" action="/customers/{{ customer.id }}/toggle-alerts?next=health" style="margin:0;">
         <button type="submit" class="hc-btn" style="border-color:{{ '#DC2626' if customer.alerts_enabled else '#059669' }};color:{{ '#DC2626' if customer.alerts_enabled else '#059669' }};">
@@ -157,7 +157,7 @@
           <text x="55" y="61" text-anchor="middle" font-size="22" font-weight="800" fill="{{ hcol }}">{{ score }}%</text>
         </svg>
         <div style="color:{{ hcol }};font-weight:700;font-size:12px;">✓ {{ band }}</div>
-        {% else %}<div class="num" style="color:#94A3B8;">—</div><div class="sub">No documents</div>{% endif %}
+        {% else %}<div class="num" style="color:#64748B;">—</div><div class="sub">No documents</div>{% endif %}
       </div>
       <div class="hc-card stat">
         <div class="ico" style="background:#EEF2FF;color:#1A3B8B;">📁</div>
@@ -165,8 +165,8 @@
         <div class="lbl">Total Docs</div><div class="sub">Tracked items</div>
       </div>
       <div class="hc-card stat">
-        <div class="ico" style="background:#ECFDF5;color:#059669;">✓</div>
-        <div class="num" style="color:#059669;">{{ valid|length }}</div>
+        <div class="ico" style="background:#ECFDF5;color:#047857;">✓</div>
+        <div class="num" style="color:#047857;">{{ valid|length }}</div>
         <div class="lbl">Valid</div><div class="sub">All up to date</div>
       </div>
       <div class="hc-card stat">
@@ -189,7 +189,7 @@
           <span style="font-size:10px;font-weight:700;color:#7C3AED;background:#F5F3FF;padding:2px 9px;border-radius:20px;">AI-POWERED</span>
         </div>
         <div style="font-size:12.5px;color:#334155;line-height:1.7;">{% for s in advisor %}{{ s }} {% endfor %}</div>
-        <div style="background:#F0F7FF;border-radius:8px;padding:9px 12px;margin-top:10px;font-size:11.5px;color:#1D4ED8;">
+        <div style="background:#F0F7FF;border-radius:10px;padding:9px 12px;margin-top:10px;font-size:11.5px;color:#1D4ED8;">
           {% if expired or n_exp30 %}<strong>Tahfeel can handle these renewals for you</strong> — reply here or on WhatsApp +971 50 394 5656.{% else %}<strong>Your compliance position is strong.</strong> Maintain regular renewal discipline.{% endif %}
         </div>
       </div>
@@ -204,7 +204,7 @@
         </svg>
         <div style="font-size:20px;font-weight:800;color:{{ risk_color }};">{{ risk_pct }}%</div>
         <div style="font-size:11px;color:{{ risk_color }};font-weight:700;">{{ risk_label }} RISK</div>
-        <div style="font-size:10px;color:#94A3B8;margin-top:2px;">estimated from document status</div>
+        <div style="font-size:10px;color:#64748B;margin-top:2px;">estimated from document status</div>
         <div style="margin-top:10px;text-align:left;">
           {% for label, cnt, color in buckets %}
           <div class="row" style="padding:4px 0;"><span class="k" style="font-size:11px;">{{ label }}</span><span class="v" style="color:{{ color }};font-size:13px;">{{ cnt }}</span></div>
@@ -220,7 +220,7 @@
         <div style="font-size:22px;font-weight:800;color:#0F2660;margin-top:4px;">
           {% if renewal_budget_max %}AED {{ '{:,.0f}'.format(renewal_budget_min) }}–{{ '{:,.0f}'.format(renewal_budget_max) }}{% else %}—{% endif %}
         </div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:2px;">Indicative estimate — confirm with Tahfeel.</div>
+        <div style="font-size:11px;color:#64748B;margin-top:2px;">Indicative estimate — confirm with Tahfeel.</div>
       </div>
       {% if show_renewal_warning %}
       <div class="hc-card" style="padding:14px 18px;background:#FEF2F2;border:1px solid #FECACA;">
@@ -241,7 +241,7 @@
         In the next 3 months you will require:
         {% for f in forecast %}<strong style="color:#1A3B8B;">{{ f.count }} × {{ f.type }}</strong>{% if not loop.last %} · {% endif %}{% endfor %}
         {% else %}
-        <span style="color:#059669;font-weight:700;">No renewals due in the next 3 months — ahead of schedule.</span>
+        <span style="color:#047857;font-weight:700;">No renewals due in the next 3 months — ahead of schedule.</span>
         {% endif %}
       </div>
       {% if forecast_total %}
@@ -255,7 +255,7 @@
     <!-- TASK 3.3(c): Since last month — auto-hidden until 2+ snapshots exist -->
     {% if trend %}
     <div class="hc-card" style="padding:14px 18px;margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;">Since Last Month <span style="font-weight:400;text-transform:none;color:#94A3B8;">(vs. {{ trend.since_date.strftime('%d %b %Y') }})</span></div>
+      <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;">Since Last Month <span style="font-weight:400;text-transform:none;color:#64748B;">(vs. {{ trend.since_date.strftime('%d %b %Y') }})</span></div>
       <div style="display:flex;gap:24px;flex-wrap:wrap;">
         <div><span style="font-size:20px;font-weight:800;color:{{ '#16A34A' if (trend.score_delta or 0) >= 0 else '#EF4444' }};">{{ '+' if trend.score_delta and trend.score_delta > 0 else '' }}{{ trend.score_delta if trend.score_delta is not none else '—' }}{% if trend.score_delta is not none %}%{% endif %}</span> <span style="font-size:11px;color:#64748B;">score change</span></div>
         <div><span style="font-size:20px;font-weight:800;color:#16A34A;">{{ trend.documents_renewed }}</span> <span style="font-size:11px;color:#64748B;">renewed</span></div>
@@ -283,7 +283,7 @@
       <div class="hc-card">
         <div class="sec-head"><h2>📋 Summary</h2></div>
         <div class="row"><span class="k">Health Band</span><span class="v" style="color:{{ hcol }};">{{ band }}</span></div>
-        <div class="row"><span class="k">Valid documents</span><span class="v" style="color:#059669;">{{ valid|length }}</span></div>
+        <div class="row"><span class="k">Valid documents</span><span class="v" style="color:#047857;">{{ valid|length }}</span></div>
         <div class="row"><span class="k">Expiring within 90 days</span><span class="v" style="color:#B45309;">{{ expiring|length }}</span></div>
         <div class="row"><span class="k">Expired</span><span class="v" style="color:#DC2626;">{{ expired|length }}</span></div>
         {% if expired or expiring %}
@@ -295,11 +295,11 @@
           </ul>
         </div>
         {% else %}
-        <div style="padding:10px 18px 16px;color:#059669;font-size:13px;">✓ Everything is up to date.</div>
+        <div style="padding:10px 18px 16px;color:#047857;font-size:13px;">✓ Everything is up to date.</div>
         {% endif %}
         {% if missing_expiry_count %}
-        <div class="row" style="border-top:1px dashed #E2E8F0;"><span class="k" style="color:#94A3B8;">📋 Missing expiry dates</span><span class="v" style="color:#94A3B8;">{{ missing_expiry_count }} document{{ 's' if missing_expiry_count != 1 else '' }}</span></div>
-        <div style="padding:2px 18px 10px;color:#94A3B8;font-size:11px;">Not counted in the score above — add an expiry date to include {{ 'them' if missing_expiry_count != 1 else 'it' }}.</div>
+        <div class="row" style="border-top:1px dashed #E2E8F0;"><span class="k" style="color:#64748B;">📋 Missing expiry dates</span><span class="v" style="color:#64748B;">{{ missing_expiry_count }} document{{ 's' if missing_expiry_count != 1 else '' }}</span></div>
+        <div style="padding:2px 18px 10px;color:#64748B;font-size:11px;">Not counted in the score above — add an expiry date to include {{ 'them' if missing_expiry_count != 1 else 'it' }}.</div>
         {% endif %}
       </div>
     </div>
@@ -354,9 +354,9 @@
         <div class="dgrid">
           {% if not customer.vat_registered and not customer.corp_tax_registered %}
           <div class="dtile" style="border-top-color:#94A3B8;">
-            <div class="dico" style="background:#F1F5F9;color:#94A3B8;">🧾</div>
+            <div class="dico" style="background:#F1F5F9;color:#64748B;">🧾</div>
             <div class="dt">Not VAT / Corp Tax registered</div>
-            <div class="ex" style="color:#94A3B8;">Set on the client's Edit page</div>
+            <div class="ex" style="color:#64748B;">Set on the client's Edit page</div>
           </div>
           {% endif %}
           {% for f in tax_filings %}
@@ -383,20 +383,20 @@
     <div class="two" style="margin-bottom:18px;">
       <div class="hc-card" style="padding:14px 16px;">
         <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
-          <div style="width:30px;height:30px;border-radius:9px;background:#EEF2FF;color:#1A3B8B;display:inline-flex;align-items:center;justify-content:center;font-size:16px;">👥</div>
+          <div style="width:30px;height:30px;border-radius:10px;background:#EEF2FF;color:#1A3B8B;display:inline-flex;align-items:center;justify-content:center;font-size:16px;">👥</div>
           <div style="font-size:13px;font-weight:700;color:#0F2660;">People Compliance</div>
         </div>
         <div style="font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.3px;">Total Employees</div>
         <div style="font-size:26px;font-weight:800;color:#1A2333;line-height:1;margin:2px 0 11px;">{{ employees|length }}</div>
         <div style="display:flex;gap:22px;border-top:1px solid #F1F5F9;padding-top:9px;">
-          <div><div style="font-size:18px;font-weight:800;color:#059669;line-height:1;">{{ emp_valid }}</div><div style="font-size:10px;color:#64748B;margin-top:3px;">Valid</div></div>
+          <div><div style="font-size:18px;font-weight:800;color:#047857;line-height:1;">{{ emp_valid }}</div><div style="font-size:10px;color:#64748B;margin-top:3px;">Valid</div></div>
           <div><div style="font-size:18px;font-weight:800;color:#B45309;line-height:1;">{{ emp_expiring }}</div><div style="font-size:10px;color:#64748B;margin-top:3px;">Expiring Soon</div></div>
           <div><div style="font-size:18px;font-weight:800;color:#DC2626;line-height:1;">{{ emp_expired }}</div><div style="font-size:10px;color:#64748B;margin-top:3px;">Expired</div></div>
         </div>
       </div>
       <div class="hc-card" style="padding:14px 16px;display:flex;flex-direction:column;">
         <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
-          <div style="width:30px;height:30px;border-radius:9px;background:#FFF7ED;color:#B45309;display:inline-flex;align-items:center;justify-content:center;font-size:16px;">📅</div>
+          <div style="width:30px;height:30px;border-radius:10px;background:#FFF7ED;color:#B45309;display:inline-flex;align-items:center;justify-content:center;font-size:16px;">📅</div>
           <div style="font-size:13px;font-weight:700;color:#0F2660;">Upcoming Renewals</div>
         </div>
         <div style="font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.3px;">Next 30 Days</div>
@@ -406,7 +406,7 @@
     </div>
     {% endif %}
 
-    <div style="text-align:center;color:#94A3B8;font-size:11px;margin:6px 0 30px;">Tahfeel Business Solutions · Compliance Report · www.tahfeel.ae · {{ now.strftime('%d %b %Y, %I:%M %p') }}</div>
+    <div style="text-align:center;color:#64748B;font-size:11px;margin:6px 0 30px;">Tahfeel Business Solutions · Compliance Report · www.tahfeel.ae · {{ now.strftime('%d %b %Y, %I:%M %p') }}</div>
     </div>
   </div>
 </body>

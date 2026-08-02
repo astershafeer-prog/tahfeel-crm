@@ -9,14 +9,36 @@
   <style>
     .bd-print-head { display:none; }
     @media print {
-      @page { size: A4 landscape; margin: 12mm; }
-      .topbar, .nav, .no-print, .flash { display:none !important; }
-      body { background:#fff !important; }
-      .container { max-width:none; padding:0; }
-      .card { box-shadow:none; border:1px solid #999; }
+      @page { size: A4 landscape; margin: 9mm; }
+      .topbar, .nav, .no-print, .flash, .modal-overlay { display:none !important; }
+      html, body { background:#fff !important; }
+      * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+      /* Scale the sheet so a typical bundle lands on ONE landscape page. */
+      .container { max-width:100% !important; padding:0 !important; zoom:.82; }
+      .card { box-shadow:none !important; border:1px solid #999 !important;
+              margin-bottom:0 !important; page-break-inside:avoid; }
+
+      /* The horizontal scroller clips every column past the viewport when
+         printed — the single biggest cause of a broken-looking page. */
+      .bd-scroll { overflow:visible !important; }
+
+      /* The mobile breakpoints in tahfeel.css can fire at print width and
+         collapse the 5 summary tiles into 2 columns, blowing up the height.
+         Pin them back explicitly. */
+      .summary-row { display:grid !important; grid-template-columns:repeat(5,1fr) !important;
+                     gap:6px !important; margin-bottom:8px !important; }
+      .summary-card { padding:7px 9px !important; }
+      .summary-card .value { font-size:12pt !important; }
+
+      table { width:100% !important; table-layout:fixed; font-size:8pt !important; }
+      th, td { padding:4px 6px !important; word-wrap:break-word; overflow-wrap:anywhere; }
+      thead { display:table-header-group; }
+      tr { page-break-inside:avoid; }
+
       .bd-print-head { display:block; border-bottom:2px solid #1A3B8B; padding-bottom:6px; margin-bottom:10px; }
-      .bd-print-head .t { font-size:15pt; font-weight:700; color:#1A3B8B; }
-      .bd-print-head .s { font-size:9pt; color:#444; margin-top:2px; }
+      .bd-print-head .t { font-size:14pt; font-weight:700; color:#1A3B8B; }
+      .bd-print-head .s { font-size:8.5pt; color:#444; margin-top:2px; }
     }
   </style>
 </head>
@@ -75,7 +97,7 @@
             <div class="value" style="font-size:15px;">{{ b.csm.name if b.csm else '—' }}</div>
           </div>
         </div>
-        <div style="overflow-x:auto;">
+        <div class="bd-scroll" style="overflow-x:auto;">
         <table>
           <thead><tr><th>Service</th><th>Category</th><th>Status</th><th>Provider</th><th>Assigned</th><th>Due</th><th>Completed</th><th>Action</th></tr></thead>
           <tbody>

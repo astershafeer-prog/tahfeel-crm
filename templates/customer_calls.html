@@ -10,7 +10,7 @@
   {{ theme_loader() }}
   <style>
     .cl-kpi{background:#fff;border:0.5px solid #E2E8F0;border-radius:12px;padding:14px 16px;}
-    .cl-kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+    .cl-kpi-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
     .cl-kpi-val{font-size:24px;font-weight:800;}
     .cl-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;}
     .cl-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #F1F5F9;}
@@ -42,13 +42,18 @@
     {% endwith %}
 
     <div style="margin-bottom:6px;">
+      {% set back = request.args.get('back') %}
+      {% if back and back.startswith('/') %}
+      <a href="{{ back }}" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">← Back to Monthly Review list</a>
+      {% else %}
       <a href="/customers/{{ customer.id }}" style="font-size:12px;color:#1A3B8B;text-decoration:none;font-weight:600;">← Back to {{ customer.name }}</a>
+      {% endif %}
     </div>
 
     <div class="page-header" style="margin-bottom:16px;">
       <div>
         <h2 style="color:#133E87;">{{ '🗓 Monthly Review' if is_company else '📞 Call Log' }}</h2>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">
           {{ customer.name }}
           {% if customer.customer_type == 'Company' %}<span class="cl-badge" style="background:#EFF6FF;color:#1D4ED8;margin-left:4px;">🏢 Company</span>
           {% else %}<span class="cl-badge" style="background:#F1F5F9;color:#475569;margin-left:4px;">👤 Individual</span>{% endif %}
@@ -104,10 +109,10 @@
             <a href="/customers/{{ customer.id }}/health" style="color:#1A3B8B;text-decoration:none;font-weight:600;font-size:12px;">+{{ brief|length - 6 }} more due within 90 days →</a>
           </div>
           {% endif %}
-          <div style="font-size:11px;color:#94A3B8;margin-top:10px;">Raise these on the call — most urgent first, renewals and filings due within 90 days.</div>
+          <div style="font-size:11px;color:#64748B;margin-top:10px;">Raise these on the call — most urgent first, renewals and filings due within 90 days.</div>
           {% else %}
           <div style="font-size:13px;color:#047857;padding:6px 0;">✓ Nothing expiring or due in the next 90 days.</div>
-          <div style="font-size:11px;color:#94A3B8;margin-top:6px;">Good call to focus on how the business is doing.</div>
+          <div style="font-size:11px;color:#64748B;margin-top:6px;">Good call to focus on how the business is doing.</div>
           {% endif %}
         </div>
       </div>
@@ -149,6 +154,7 @@
     <div class="card" style="margin-bottom:16px;border-top:4px solid #10B981;">
       <div class="card-header"><h2>＋ {{ 'New Monthly Review' if is_company else 'Log a Call' }}</h2></div>
       <form method="POST" action="/customers/{{ customer.id }}/calls/add">
+        <input type="hidden" name="back" value="{{ request.args.get('back') or '' }}">
         <div class="form-row-2">
           <div class="form-group"><label>Outcome <span style="color:var(--danger);">*</span></label>
             <select name="outcome" id="callOutcome" required onchange="callNoteHint()">
@@ -159,9 +165,10 @@
           <div class="form-group"><label>Call date</label><input type="date" name="called_at" value="{{ now.strftime('%Y-%m-%d') }}"></div>
         </div>
 
-        {# Everything below only appears once the outcome is Connected — there is no
-           review to record for a call that never happened. #}
-        <div id="reviewFields" style="display:none;">
+        {# Visible from the moment the page loads — these are the agenda for the
+           call, not just a record of it. Hiding them behind the outcome dropdown
+           meant staff couldn't see what to ask while they were dialling. #}
+        <div id="reviewFields">
           {% if is_company %}
           <div class="mr-sec">3 · Business situation</div>
           <div class="form-group">
@@ -174,7 +181,7 @@
           </div>
 
           <div class="mr-sec">5 · Digital presence
-            {% if last_digital %}<span style="font-weight:400;text-transform:none;color:#94A3B8;font-size:11px;">— carried forward from {{ last_digital.called_at.strftime('%d %b %Y') }}, change only what moved</span>{% endif %}
+            {% if last_digital %}<span style="font-weight:400;text-transform:none;color:#64748B;font-size:11px;">— carried forward from {{ last_digital.called_at.strftime('%d %b %Y') }}, change only what moved</span>{% endif %}
           </div>
           <div class="form-row-2">
             <div class="form-group"><label>Website</label>
@@ -217,8 +224,21 @@
           <label>{{ 'Anything else from the conversation' if is_company else 'What did they say?' }} <span id="noteReq" style="color:var(--danger);display:none;">* required when connected</span></label>
           <textarea name="notes" id="callNotes" rows="3" placeholder="Their update, any issues, anything they need…"></textarea>
         </div>
+        {# Flag the opportunity as part of the call, not as a second step afterwards —
+           the lead is created on save so it can't be forgotten once the tab closes. #}
+        <div style="background:#F8FAFF;border:1.5px solid #DBE4FF;border-radius:10px;padding:11px 14px;margin-bottom:14px;">
+          <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#1A3B8B;text-transform:none;cursor:pointer;margin:0;">
+            <input type="checkbox" name="raise_opportunity" value="1" id="raiseOpp" onchange="oppToggle()" style="width:auto;margin:0;">
+            ➡ This call raised a business opportunity
+          </label>
+          <div id="oppWrap" style="display:none;margin-top:9px;">
+            <input type="text" name="opportunity_service" placeholder="What are they interested in? e.g. website, new visa, accounting">
+            <div style="font-size:11px;color:#64748B;margin-top:5px;">Creates a lead in the sales pipeline as soon as you save, assigned to this client's account manager.</div>
+          </div>
+        </div>
+
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-          <span style="font-size:11px;color:#94A3B8;">Only the summary is required — leave anything you didn't get to blank.</span>
+          <span style="font-size:11px;color:#64748B;">Only the summary is required — leave anything you didn't get to blank.</span>
           <button type="submit" class="btn-primary">{{ 'Save review' if is_company else 'Save call' }}</button>
         </div>
       </form>
@@ -236,7 +256,7 @@
             <span style="font-size:12px;font-weight:700;color:#1A2333;">{{ c.called_at.strftime('%d %b %Y') }}</span>
             {% if c.outcome == 'Connected' %}<span class="cl-badge" style="background:#ECFDF5;color:#047857;">✓ Connected</span>
             {% else %}<span class="cl-badge" style="background:#F1F5F9;color:#64748B;">{{ c.outcome }}</span>{% endif %}
-            <span style="font-size:11px;color:#94A3B8;">by {{ c.caller.name if c.caller else '—' }}</span>
+            <span style="font-size:11px;color:#64748B;">by {{ c.caller.name if c.caller else '—' }}</span>
           </div>
           {% if c.notes %}<div style="font-size:13px;color:#334155;">{{ c.notes }}</div>{% endif %}
           {% if c.business_situation %}<div class="mr-ans"><b>Business situation</b>{{ c.business_situation }}</div>{% endif %}
@@ -268,7 +288,7 @@
       </div>
       {% endfor %}
       {% else %}
-      <div class="empty" style="padding:32px;text-align:center;color:#94A3B8;">
+      <div class="empty" style="padding:32px;text-align:center;color:#64748B;">
         No calls logged yet. Use <strong>Log a Call</strong> above after your next check-in.<br>
         <span style="font-size:11px;">Tip: after saving a <b>Connected</b> call, an <b>➡ Opportunity</b> button appears on it — use that if they mentioned work they need.</span>
       </div>
@@ -282,7 +302,10 @@
       var connected = document.getElementById('callOutcome').value === 'Connected';
       document.getElementById('noteReq').style.display = connected ? 'inline' : 'none';
       document.getElementById('callNotes').required = connected;
-      document.getElementById('reviewFields').style.display = connected ? 'block' : 'none';
+    }
+    function oppToggle(){
+      document.getElementById('oppWrap').style.display =
+        document.getElementById('raiseOpp').checked ? 'block' : 'none';
     }
   </script>
 </body>

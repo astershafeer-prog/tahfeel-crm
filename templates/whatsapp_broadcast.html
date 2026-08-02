@@ -85,11 +85,11 @@
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
       {% if applied %}
       <span style="background:#E6EEFF;color:#1A3B8B;font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;">{{ with_wa|length }} filtered match{{ 'es' if with_wa|length != 1 }} with a WhatsApp number</span>
-      {% if without_wa %}<span style="font-size:12px;color:#94A3B8;">{{ without_wa|length }} excluded — no number on record</span>{% endif %}
+      {% if without_wa %}<span style="font-size:12px;color:#64748B;">{{ without_wa|length }} excluded — no number on record</span>{% endif %}
       {% endif %}
       <button type="button" onclick="bcToggleSearch()" style="background:#1A3B8B;color:white;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">+ Add recipient from clients</button>
       <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span id="bcImportStat" style="font-size:12px;color:#94A3B8;"></span>
+        <span id="bcImportStat" style="font-size:12px;color:#64748B;"></span>
         <a href="/whatsapp/broadcast/sample-excel" style="font-size:11px;color:#1A3B8B;text-decoration:none;">⬇ Sample format</a>
         <button type="button" onclick="document.getElementById('bcExcel').click()" style="background:#0F6E56;color:white;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">📥 Import numbers from Excel</button>
       </span>
@@ -98,7 +98,7 @@
 
     <div id="bcSearchPanel" style="display:none;background:white;border:0.5px solid #E2E8F0;border-radius:12px;padding:12px 14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
       <input type="text" id="bcSearchInput" placeholder="Search a client by name, company or number…" oninput="bcSearch()" autocomplete="off" style="width:100%;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-      <div id="bcSearchResults" style="margin-top:8px;max-height:240px;overflow-y:auto;font-size:13px;color:#94A3B8;">Type at least 2 characters to search your clients…</div>
+      <div id="bcSearchResults" style="margin-top:8px;max-height:240px;overflow-y:auto;font-size:13px;color:#64748B;">Type at least 2 characters to search your clients…</div>
     </div>
 
     <div id="bcExtWarn" style="display:none;background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#854F0B;line-height:1.6;">
@@ -108,7 +108,7 @@
       </label>
     </div>
 
-    <div style="font-size:11px;color:#94A3B8;margin-bottom:10px;">Excel columns: <code>Name</code> · <code>Phone</code> (with country code) · <code>Consent</code> (Yes/No) · <code>Company</code>. Only rows marked Consent = Yes are imported.</div>
+    <div style="font-size:11px;color:#64748B;margin-bottom:10px;">Excel columns: <code>Name</code> · <code>Phone</code> (with country code) · <code>Consent</code> (Yes/No) · <code>Company</code>. Only rows marked Consent = Yes are imported.</div>
 
     <form method="POST" action="/whatsapp/broadcast/send" id="bcSend">
       <input type="hidden" name="filter_summary" value="{% if args.get('business_activity') %}activity~{{ args.get('business_activity') }} {% endif %}{% for f in ['customer_type','jurisdiction','emirate','licensing_authority','nationality'] %}{% if args.get(f) and args.get(f)!='All' %}{{ f }}={{ args.get(f) }} {% endif %}{% endfor %}{% if args.get('expiry_days') %}expiry<={{ args.get('expiry_days') }}d{% endif %}">
@@ -116,13 +116,13 @@
       <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:14px;">
         <div style="padding:10px 16px;border-bottom:1px solid #F1F5F9;font-size:12px;color:#64748B;display:flex;align-items:center;gap:8px;">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="bcAll" checked onchange="bcToggleAll(this)"> Select all</label>
-          <span style="color:#94A3B8;">Remove anyone with the ✕</span>
+          <span style="color:#64748B;">Remove anyone with the ✕</span>
           <span id="bcCount" style="margin-left:auto;font-weight:600;color:#1A3B8B;"></span>
         </div>
         <div style="max-height:360px;overflow-y:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead>
-            <tr style="background:#F8FAFC;color:#94A3B8;font-size:11px;text-align:left;">
+            <tr style="background:#F8FAFC;color:#64748B;font-size:11px;text-align:left;">
               <th style="padding:6px 16px;width:28px;"></th>
               <th style="padding:6px 8px;">Customer / Company</th>
               <th style="padding:6px 8px;">Rep</th>
@@ -136,7 +136,7 @@
             {% set _fn = (c.contact_person or c.name or '') %}
             <tr class="bcTr" id="bcTr-{{ c.id }}" data-first="{{ _fn.split()[0] if _fn else '' }}" data-company="{{ c.trade_name or c.company or c.name or '' }}" style="border-bottom:1px solid #F1F5F9;">
               <td style="padding:8px 16px;width:28px;"><input type="checkbox" class="bcRow" name="customer_ids" value="{{ c.id }}" checked onchange="bcRecount()"></td>
-              <td style="padding:8px 8px;"><a href="/customers/{{ c.id }}" style="color:#0F2660;text-decoration:none;font-weight:600;">{{ c.name }}</a>{% if c.company %} <span style="color:#94A3B8;">· {{ c.company }}</span>{% endif %}</td>
+              <td style="padding:8px 8px;"><a href="/customers/{{ c.id }}" style="color:#0F2660;text-decoration:none;font-weight:600;">{{ c.name }}</a>{% if c.company %} <span style="color:#64748B;">· {{ c.company }}</span>{% endif %}</td>
               <td style="padding:8px 8px;color:#64748B;">{{ c.rep.name if c.rep else '—' }}</td>
               <td style="padding:8px 8px;color:#64748B;">{{ c.business_activity or '—' }}</td>
               <td style="padding:8px 8px;color:#64748B;text-align:right;white-space:nowrap;">{{ c.whatsapp or c.mobile or c.phone or c.phone2 }}</td>
@@ -145,7 +145,7 @@
             {% endfor %}
             </tbody>
           </table>
-          <div id="bcEmpty" style="padding:22px;text-align:center;color:#94A3B8;font-size:13px;{% if with_wa %}display:none;{% endif %}">No recipients yet — apply a filter above, or use “+ Add recipient from clients”.</div>
+          <div id="bcEmpty" style="padding:22px;text-align:center;color:#64748B;font-size:13px;{% if with_wa %}display:none;{% endif %}">No recipients yet — apply a filter above, or use “+ Add recipient from clients”.</div>
         </div>
       </div>
 
@@ -165,7 +165,7 @@
           <div id="bcPreview" style="background:#DCF8C6;border-radius:12px;border-bottom-right-radius:2px;padding:10px 14px;font-size:13px;color:#1B3A1B;line-height:1.6;white-space:pre-wrap;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px;flex-wrap:wrap;">
-          <div style="font-size:11px;color:#94A3B8;">Auto-filled fields (like first name) are personalised per customer. "Custom text" applies to everyone.</div>
+          <div style="font-size:11px;color:#64748B;">Auto-filled fields (like first name) are personalised per customer. "Custom text" applies to everyone.</div>
           <button type="submit" onclick="return bcConfirm()" style="background:#25D366;color:white;border:none;border-radius:20px;padding:10px 24px;font-weight:700;font-size:14px;cursor:pointer;">📢 Send broadcast</button>
         </div>
       </div>
@@ -183,8 +183,8 @@
         <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #F1F5F9;font-size:13px;">
           <div style="flex:1;min-width:0;">
             <strong style="color:#0F2660;">{{ b.template_label }}</strong>
-            <span style="color:#94A3B8;font-size:11px;">· {{ b.created_at.strftime('%d %b %H:%M') }}{% if b.creator %} · {{ b.creator.name }}{% endif %}</span>
-            {% if b.filter_summary %}<div style="color:#94A3B8;font-size:11px;">{{ b.filter_summary }}</div>{% endif %}
+            <span style="color:#64748B;font-size:11px;">· {{ b.created_at.strftime('%d %b %H:%M') }}{% if b.creator %} · {{ b.creator.name }}{% endif %}</span>
+            {% if b.filter_summary %}<div style="color:#64748B;font-size:11px;">{{ b.filter_summary }}</div>{% endif %}
           </div>
           <div style="text-align:right;white-space:nowrap;">
             {% if b.status == 'sending' %}<span style="color:#B45309;font-size:12px;">⏳ Sending {{ b.sent }}/{{ b.total }}</span>
@@ -193,7 +193,7 @@
         </div>
         {% endfor %}
       </div>
-      <div style="font-size:11px;color:#94A3B8;margin-top:6px;">Refresh this page to update sending progress.</div>
+      <div style="font-size:11px;color:#64748B;margin-top:6px;">Refresh this page to update sending progress.</div>
     </div>
     {% endif %}
   </div>
@@ -226,7 +226,7 @@
               var row=document.createElement('div');
               row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #F1F5F9;';
               var inList=!!document.getElementById('bcTr-'+o.id);
-              row.innerHTML='<div style="flex:1;min-width:0;color:#0F2660;">'+bcEsc(o.name)+(o.company?' <span style=\'color:#94A3B8;\'>· '+bcEsc(o.company)+'</span>':'')+'<div style=\'font-size:11px;color:#94A3B8;\'>'+bcEsc(o.phone)+(o.rep?' · '+bcEsc(o.rep):'')+'</div></div>';
+              row.innerHTML='<div style="flex:1;min-width:0;color:#0F2660;">'+bcEsc(o.name)+(o.company?' <span style=\'color:#64748B;\'>· '+bcEsc(o.company)+'</span>':'')+'<div style=\'font-size:11px;color:#64748B;\'>'+bcEsc(o.phone)+(o.rep?' · '+bcEsc(o.rep):'')+'</div></div>';
               var btn=document.createElement('button'); btn.type='button';
               btn.textContent=inList?'Added':'+ Add';
               btn.disabled=inList;
@@ -247,7 +247,7 @@
       tr.setAttribute('data-company', o.company||o.name||'');
       tr.style.borderBottom='1px solid #F1F5F9';
       tr.innerHTML='<td style="padding:8px 16px;width:28px;"><input type="checkbox" class="bcRow" name="customer_ids" value="'+o.id+'" checked onchange="bcRecount()"></td>'
-        +'<td style="padding:8px 8px;"><a href="/customers/'+o.id+'" style="color:#0F2660;text-decoration:none;font-weight:600;">'+bcEsc(o.name)+'</a>'+(o.company?' <span style="color:#94A3B8;">· '+bcEsc(o.company)+'</span>':'')+'</td>'
+        +'<td style="padding:8px 8px;"><a href="/customers/'+o.id+'" style="color:#0F2660;text-decoration:none;font-weight:600;">'+bcEsc(o.name)+'</a>'+(o.company?' <span style="color:#64748B;">· '+bcEsc(o.company)+'</span>':'')+'</td>'
         +'<td style="padding:8px 8px;color:#64748B;">'+bcEsc(o.rep||'—')+'</td>'
         +'<td style="padding:8px 8px;color:#64748B;">'+bcEsc(o.activity||'—')+'</td>'
         +'<td style="padding:8px 8px;color:#64748B;text-align:right;white-space:nowrap;">'+bcEsc(o.phone)+'</td>'
@@ -292,7 +292,7 @@
       tr.setAttribute('data-company', o.company||'');
       tr.style.borderBottom='1px solid #F1F5F9';
       tr.innerHTML='<td style="padding:8px 16px;width:28px;"><input type="checkbox" class="bcRow" checked onchange="bcRecount()"></td>'
-        +'<td style="padding:8px 8px;">'+bcEsc(o.name||'(no name)')+(o.company?' <span style="color:#94A3B8;">· '+bcEsc(o.company)+'</span>':'')+' <span style="font-size:10px;background:#FEF3C7;color:#854F0B;padding:1px 6px;border-radius:10px;">external</span></td>'
+        +'<td style="padding:8px 8px;">'+bcEsc(o.name||'(no name)')+(o.company?' <span style="color:#64748B;">· '+bcEsc(o.company)+'</span>':'')+' <span style="font-size:10px;background:#FEF3C7;color:#854F0B;padding:1px 6px;border-radius:10px;">external</span></td>'
         +'<td style="padding:8px 8px;color:#64748B;">—</td>'
         +'<td style="padding:8px 8px;color:#64748B;">—</td>'
         +'<td style="padding:8px 8px;color:#64748B;text-align:right;white-space:nowrap;">'+bcEsc(o.phone)+'</td>'

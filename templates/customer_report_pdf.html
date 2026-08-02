@@ -108,7 +108,7 @@
     <div style="font-size:15pt;font-weight:bold;color:#0B3B8C;">
       {% if renewal_budget_max %}AED {{ '{:,.0f}'.format(renewal_budget_min) }}–{{ '{:,.0f}'.format(renewal_budget_max) }}{% else %}—{% endif %}
     </div>
-    <div style="font-size:7.5pt;color:#94A3B8;margin-top:2pt;">Indicative estimate — confirm with Tahfeel.</div>
+    <div style="font-size:7.5pt;color:#64748B;margin-top:2pt;">Indicative estimate — confirm with Tahfeel.</div>
   </td>
   {% if show_renewal_warning %}
   <td class="card" style="width:65%;padding:8pt 14pt;background:#FEF2F2;border:1pt solid #FECACA;">
@@ -122,7 +122,7 @@
 {% if trend %}
 <table style="margin-top:4pt;border-spacing:3pt;border-collapse:separate;"><tr>
   <td class="card" style="width:100%;padding:8pt 11pt;">
-    <div class="hd-blue" style="margin-bottom:3pt;">SINCE LAST MONTH <span style="font-weight:normal;color:#94A3B8;">(vs. {{ trend.since_date.strftime('%d %b %Y') }})</span></div>
+    <div class="hd-blue" style="margin-bottom:3pt;">SINCE LAST MONTH <span style="font-weight:normal;color:#64748B;">(vs. {{ trend.since_date.strftime('%d %b %Y') }})</span></div>
     <table><tr>
       <td style="width:33%;text-align:center;">
         <div style="font-size:14pt;font-weight:bold;color:{{ '#16A34A' if (trend.score_delta or 0) >= 0 else '#EF4444' }};">{{ '+' if trend.score_delta and trend.score_delta > 0 else '' }}{{ trend.score_delta if trend.score_delta is not none else '—' }}{% if trend.score_delta is not none %}%{% endif %}</div>
@@ -182,7 +182,7 @@
         </svg>
         <div style="font-size:15pt;font-weight:bold;color:{{ risk_color }};">{{ risk_pct }}%</div>
         <div style="font-size:8pt;color:{{ risk_color }};font-weight:bold;">{{ risk_label }} RISK</div>
-        <div style="font-size:6.5pt;color:#94A3B8;">estimated from document status</div>
+        <div style="font-size:6.5pt;color:#64748B;">estimated from document status</div>
       </td>
       <td style="width:50%;">
         <div style="font-size:8.5pt;font-weight:bold;color:#0B1B35;margin-bottom:4pt;">Compliance timeline</div>
@@ -206,7 +206,7 @@
     {% for c in doc_cards %}
     <div style="display:inline-block;width:15.3%;vertical-align:top;border:0.8pt solid #EEF2F7;border-radius:6pt;padding:6pt 8pt;margin-right:3pt;margin-bottom:3pt;">
       <div style="height:28pt;line-height:1.25;">{{ dicon(c.type, c.color, 16) }} <span style="font-size:8.5pt;font-weight:bold;color:#0B1B35;">{{ c.type }}</span></div>
-      <div style="font-size:7pt;color:#94A3B8;">Valid till {{ c.expiry }}</div>
+      <div style="font-size:7pt;color:#64748B;">Valid till {{ c.expiry }}</div>
       <div style="font-size:15pt;font-weight:bold;color:{{ c.color }};">{{ c.days if c.days >= 0 else 0 }}</div>
       <div style="font-size:7pt;color:#64748B;">days remaining</div>
       <div class="bar" style="margin:3.5pt 0;"><div style="width:{{ c.pct }}%;background:{{ c.color }};"></div></div>
@@ -272,9 +272,9 @@
     <div class="hd-blue" style="margin-bottom:5pt;">EMPLOYEE COMPLIANCE</div>
     {% if emp_rows %}
     <table><tr>
-      <td style="font-size:7pt;color:#94A3B8;font-weight:bold;">DOCUMENT</td>
-      <td style="font-size:7pt;color:#94A3B8;font-weight:bold;text-align:right;">COMPLIANT</td>
-      <td style="font-size:7pt;color:#94A3B8;font-weight:bold;text-align:right;">DUE SOON</td>
+      <td style="font-size:7pt;color:#64748B;font-weight:bold;">DOCUMENT</td>
+      <td style="font-size:7pt;color:#64748B;font-weight:bold;text-align:right;">COMPLIANT</td>
+      <td style="font-size:7pt;color:#64748B;font-weight:bold;text-align:right;">DUE SOON</td>
     </tr>
     {% for r in emp_rows %}
     <tr>
@@ -309,17 +309,17 @@
         </td>
         <td style="vertical-align:middle;">
           <span style="font-size:11pt;font-weight:bold;color:#0B3B8C;">{{ g.holder }}</span>
-          <span style="font-size:8pt;color:#94A3B8;"> &nbsp;{{ 'Company documents' if g.kind == 'company' else 'Staff / individual' }} · {{ g.docs|length }} document{{ 's' if g.docs|length != 1 }}</span>
+          <span style="font-size:8pt;color:#64748B;"> &nbsp;{{ 'Company documents' if g.kind == 'company' else 'Staff / individual' }} · {{ g.docs|length }} document{{ 's' if g.docs|length != 1 }}</span>
         </td>
       </tr></table>
     </div>
     <table style="table-layout:fixed;">
       <colgroup><col style="width:40%;"><col style="width:22%;"><col style="width:16%;"><col style="width:22%;"></colgroup>
       <tr style="background:#FBFCFE;">
-        <th style="font-size:7.5pt;color:#94A3B8;text-align:left;padding:5pt 12pt;">DOCUMENT</th>
-        <th style="font-size:7.5pt;color:#94A3B8;text-align:left;padding:5pt 12pt;">EXPIRY DATE</th>
-        <th style="font-size:7.5pt;color:#94A3B8;text-align:right;padding:5pt 12pt;">DAYS LEFT</th>
-        <th style="font-size:7.5pt;color:#94A3B8;text-align:right;padding:5pt 12pt;">STATUS</th>
+        <th style="font-size:7.5pt;color:#64748B;text-align:left;padding:5pt 12pt;">DOCUMENT</th>
+        <th style="font-size:7.5pt;color:#64748B;text-align:left;padding:5pt 12pt;">EXPIRY DATE</th>
+        <th style="font-size:7.5pt;color:#64748B;text-align:right;padding:5pt 12pt;">DAYS LEFT</th>
+        <th style="font-size:7.5pt;color:#64748B;text-align:right;padding:5pt 12pt;">STATUS</th>
       </tr>
       {% for d, days in g.docs %}
       <tr>

@@ -27,7 +27,7 @@
     .inv-row.c3 { grid-template-columns:1fr 1fr 1fr; }
     .inv-ff label { display:block; font-size:11px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
     .inv-ff label .req { color:#DC2626; }
-    .inv-ff label .opt { color:#94A3B8; font-weight:400; text-transform:none; font-size:10px; }
+    .inv-ff label .opt { color:#64748B; font-weight:400; text-transform:none; font-size:10px; }
     .inv-ff input, .inv-ff select, .inv-ff textarea { width:100%; padding:8px 11px; border:1.5px solid #E2E8F0; border-radius:8px; font-family:inherit; font-size:13px; transition:border-color 0.2s; background:#fff; box-sizing:border-box; }
     .inv-ff input:focus, .inv-ff select:focus, .inv-ff textarea:focus { outline:none; border-color:#1A3B8B; }
     .inv-tbl { width:100%; border-collapse:collapse; margin-top:6px; table-layout:fixed; }
@@ -98,7 +98,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <div>
         <div class="page-head-title">🧾 Document Generator</div>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">Create professional invoices and quotations</div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">Create professional invoices and quotations</div>
       </div>
       <div class="gen-tabs">
         <button class="active" onclick="switchTab('invoice',this)">📄 Invoice</button>
@@ -182,7 +182,7 @@
         </div></div>
       </div>
       <div class="inv-card amber">
-        <h3>Remarks <span style="font-size:10px;color:#94A3B8;font-weight:400;text-transform:none;">(each line = bullet point)</span></h3>
+        <h3>Remarks <span style="font-size:10px;color:#64748B;font-weight:400;text-transform:none;">(each line = bullet point)</span></h3>
         <ul class="addable-list" id="invRemList"></ul>
         <button class="inv-add-btn amber" onclick="addItem('invRemList','Remark...')">+ Add Remark</button>
       </div>
@@ -264,7 +264,7 @@
         </div></div>
       </div>
       <div class="inv-card amber">
-        <h3>Remarks <span style="font-size:10px;color:#94A3B8;font-weight:400;text-transform:none;">(each line = bullet point)</span></h3>
+        <h3>Remarks <span style="font-size:10px;color:#64748B;font-weight:400;text-transform:none;">(each line = bullet point)</span></h3>
         <ul class="addable-list" id="invsRemList"></ul>
         <button class="inv-add-btn amber" onclick="addItem('invsRemList','Remark...')">+ Add Remark</button>
       </div>
@@ -349,17 +349,17 @@
         </div></div>
       </div>
       <div class="inv-card amber">
-        <h3>Terms &amp; Conditions <span style="font-size:10px;color:#94A3B8;font-weight:400;text-transform:none;">(each line = bullet point)</span></h3>
+        <h3>Terms &amp; Conditions <span style="font-size:10px;color:#64748B;font-weight:400;text-transform:none;">(each line = bullet point)</span></h3>
         <ul class="addable-list" id="qtTcList"></ul>
         <button class="inv-add-btn amber" onclick="addItem('qtTcList','Enter term...')">+ Add Term</button>
       </div>
       <div class="inv-card purple">
-        <h3>Required Documents <span style="font-size:10px;color:#94A3B8;font-weight:400;text-transform:none;">(optional)</span></h3>
+        <h3>Required Documents <span style="font-size:10px;color:#64748B;font-weight:400;text-transform:none;">(optional)</span></h3>
         <ul class="addable-list" id="qtDocList"></ul>
         <button class="inv-add-btn purple" onclick="addItem('qtDocList','Document name...')">+ Add Document</button>
       </div>
       <div class="inv-card slate">
-        <h3>Notes <span style="font-size:10px;color:#94A3B8;font-weight:400;text-transform:none;">(optional)</span></h3>
+        <h3>Notes <span style="font-size:10px;color:#64748B;font-weight:400;text-transform:none;">(optional)</span></h3>
         <ul class="addable-list" id="qtNoteList"></ul>
         <button class="inv-add-btn" onclick="addItem('qtNoteList','Note...')">+ Add Note</button>
       </div>
@@ -640,7 +640,7 @@ function docHeader(type, no, date, note, billTo, validUntil) {
   if(validUntil) metaRight+='<div class="dd-row"><span class="k">Valid Until:</span><span class="v">'+fmtDate(validUntil)+'</span></div>';
   return '<div class="pv-hdr">'+
     '<div><img src="'+LOGO+'" alt="Tahfeel" style="height:60px;object-fit:contain;" onerror="this.style.display=\'none\'">'+
-    '<div style="font-size:9px;font-weight:600;color:#1A3B8B;letter-spacing:1px;margin-top:3px;">We Make Business Happen</div></div>'+
+    '<div style="font-size:11px;font-weight:600;color:#1A3B8B;letter-spacing:1px;margin-top:3px;">We Make Business Happen</div></div>'+
     '<div class="pv-hdr-right"><div class="pv-dtype">'+type+'</div>'+
     '<div class="pv-co-info">TRN: 104627774300003<br>Wasl Ivory, Shop No.7, Al Karama, Dubai - UAE<br>+971 50 394 5656 | Info@tahfeel.ae</div></div></div>'+
     '<div class="pv-div"></div>'+
@@ -735,7 +735,7 @@ var PV_CSS = '<style>@page{size:A4;margin:0;}<'+'/style><style>'+
   '.pv-hdr img{height:56px;object-fit:contain;}'+
   '.pv-hdr-right{text-align:right;}'+
   '.pv-dtype{font-size:26px;font-weight:800;color:#1A3B8B;letter-spacing:1px;}'+
-  '.pv-co-info{font-size:9px;color:#64748B;line-height:1.8;margin-top:3px;}'+
+  '.pv-co-info{font-size:11px;color:#64748B;line-height:1.8;margin-top:3px;}'+
   '.pv-div{height:3px;background:linear-gradient(90deg,#1A3B8B,#8B5CF6);margin:0 30px;border-radius:2px;}'+
   '.pv-meta{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:14px 30px 10px;}'+
   '.pv-bto h4{font-size:8px;font-weight:700;color:#1A3B8B;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}'+
@@ -744,7 +744,7 @@ var PV_CSS = '<style>@page{size:A4;margin:0;}<'+'/style><style>'+
   '.dd-row .k{color:#64748B;}.dd-row .v{font-weight:700;color:#1A2333;min-width:100px;text-align:right;}'+
   '.pv-note{margin:0 30px 8px;background:#FFFBEB;border-left:3px solid #F59E0B;padding:5px 10px;border-radius:4px;font-size:10px;color:#92400E;}'+
   '.pv-tbl{width:calc(100% - 60px);margin:6px 30px;border-collapse:collapse;table-layout:fixed;}'+
-  '.pv-tbl thead th{background:#1A3B8B;color:#fff;padding:9px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;text-align:left;}'+
+  '.pv-tbl thead th{background:#1A3B8B;color:#fff;padding:9px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;text-align:left;}'+
   '.pv-tbl thead th.r{text-align:right;}'+
   '.pv-tbl tbody td{padding:8px 10px;border-bottom:1px solid #F1F5F9;font-size:11px;color:#1A2333;}'+
   '.pv-tbl tbody td.r{text-align:right;}'+
@@ -760,9 +760,9 @@ var PV_CSS = '<style>@page{size:A4;margin:0;}<'+'/style><style>'+
   '.pv-bank h4,.pv-sig h4{font-size:8px;font-weight:700;color:#1A3B8B;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}'+
   '.pv-bank p{font-size:10px;color:#1A2333;line-height:1.8;}'+
   '.pv-sig{text-align:center;padding-top:4px;}.pv-sig-line{border-top:1px solid #1A3B8B;margin:20px auto 4px;width:120px;}'+
-  '.pv-sig p{font-size:9px;color:#64748B;}'+
-  '.pv-ft{background:#1A3B8B;color:rgba(255,255,255,0.85);padding:8px 30px;font-size:9px;display:flex;justify-content:space-between;}'+
-  '.qt-section-head{font-size:9px;font-weight:700;color:#1A3B8B;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}'+
+  '.pv-sig p{font-size:11px;color:#64748B;}'+
+  '.pv-ft{background:#1A3B8B;color:rgba(255,255,255,0.85);padding:8px 30px;font-size:11px;display:flex;justify-content:space-between;}'+
+  '.qt-section-head{font-size:11px;font-weight:700;color:#1A3B8B;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}'+
   '.qt-bullet-list{margin:0;padding-left:14px;}.qt-bullet-list li{font-size:11px;color:#1A2333;line-height:1.9;}'+
   '.why-box{background:linear-gradient(135deg,#EBF2FF,#F5F3FF);border-radius:8px;padding:16px 20px;margin-bottom:14px;}'+
   '.why-box p{font-size:11px;color:#1A2333;line-height:2;}'+

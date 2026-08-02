@@ -12,9 +12,9 @@
     .an-card{background:white;border-radius:12px;padding:18px;border:0.5px solid #E2E8F0;margin-bottom:16px;}
     .an-card-title{font-size:13px;font-weight:700;color:#1A2333;margin-bottom:14px;}
     .kpi{background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;}
-    .kpi-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .kpi-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
     .kpi-val{font-size:26px;font-weight:800;color:#1A2333;}
-    .kpi-sub{font-size:11px;color:#94A3B8;margin-top:4px;}
+    .kpi-sub{font-size:11px;color:#64748B;margin-top:4px;}
     .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
     .bar-label{font-size:11px;color:#475569;width:120px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .bar-track{flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;}
@@ -37,9 +37,9 @@
     .pip-label{font-size:11px;color:#475569;width:150px;flex-shrink:0;}
     .pip-track{flex:1;height:14px;background:#F1F5F9;border-radius:4px;overflow:hidden;}
     .pip-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;}
-    .pip-text{font-size:9px;font-weight:700;color:white;}
+    .pip-text{font-size:11px;font-weight:700;color:white;}
     .pip-count{font-size:11px;color:#475569;width:24px;text-align:right;flex-shrink:0;}
-    .empty-state{text-align:center;padding:40px;color:#94A3B8;font-size:13px;}
+    .empty-state{text-align:center;padding:40px;color:#64748B;font-size:13px;}
   </style>
 </head>
 <body>
@@ -56,7 +56,7 @@
     <div class="page-header" style="margin-bottom:16px;">
       <div>
         <h2 style="color:#133E87;">📈 Analytics</h2>
-        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">
           {% if tab == 'companies' %}
           Company portfolio — <span style="font-weight:600;color:#1A3B8B;">snapshot of all companies (not period-filtered)</span>
           {% else %}
@@ -133,8 +133,8 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
           <div class="an-card-title" style="margin:0;">Monthly Revenue</div>
           <div style="display:flex;gap:10px;">
-            <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#133E87;display:inline-block;"></span>Invoiced</span>
-            <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#10B981;display:inline-block;"></span>Received</span>
+            <span style="font-size:10px;color:#64748B;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#133E87;display:inline-block;"></span>Invoiced</span>
+            <span style="font-size:10px;color:#64748B;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#10B981;display:inline-block;"></span>Received</span>
           </div>
         </div>
         <div style="display:flex;align-items:flex-end;gap:6px;height:90px;">
@@ -147,7 +147,7 @@
               <div style="flex:1;background:{% if loop.last %}#133E87{% else %}#DBEAFE{% endif %};border-radius:3px 3px 0 0;height:{{ inv_h if inv_h > 2 else 2 }}px;"></div>
               <div style="flex:1;background:{% if loop.last %}#10B981{% else %}#D1FAE5{% endif %};border-radius:3px 3px 0 0;height:{{ rec_h if rec_h > 2 else 2 }}px;"></div>
             </div>
-            <div style="font-size:9px;color:{% if loop.last %}#133E87{% else %}#94A3B8{% endif %};font-weight:{% if loop.last %}700{% else %}400{% endif %};">{{ m.month }}</div>
+            <div style="font-size:11px;color:{% if loop.last %}#133E87{% else %}#94A3B8{% endif %};font-weight:{% if loop.last %}700{% else %}400{% endif %};">{{ m.month }}</div>
           </div>
           {% endfor %}
         </div>
@@ -233,7 +233,7 @@
          Convert-to-Client link (converted_at), not lead status. No historical
          back-linking: only counts conversions made through this flow. -->
     <div class="an-card" style="margin-bottom:16px;">
-      <div class="an-card-title">🤝 Lead → Client Conversions <span style="font-weight:400;color:#94A3B8;font-size:11px;">· tracked since this feature launched</span></div>
+      <div class="an-card-title">🤝 Lead → Client Conversions <span style="font-weight:400;color:#64748B;font-size:11px;">· tracked since this feature launched</span></div>
       <div class="grid4" style="margin-bottom:0;">
         <div class="kpi" style="border-top:4px solid #0F2660;"><div class="kpi-label">This Month</div><div class="kpi-val">{{ conversions_this_month }}</div><div class="kpi-sub">Leads converted to clients</div></div>
         <div class="kpi" style="border-top:4px solid #10B981;"><div class="kpi-label">All Time</div><div class="kpi-val">{{ conversions_total }}</div><div class="kpi-sub">Since tracking began</div></div>
@@ -251,17 +251,17 @@
 
     <div class="grid2">
       <div class="an-card">
-        <div class="an-card-title">Daily Leads Received <span style="font-weight:400;color:#94A3B8;font-size:11px;">· avg {{ lead_daily_avg }}/day</span></div>
+        <div class="an-card-title">Daily Leads Received <span style="font-weight:400;color:#64748B;font-size:11px;">· avg {{ lead_daily_avg }}/day</span></div>
         {% if lead_daily %}
         <div style="display:flex;align-items:flex-end;gap:3px;height:110px;padding-top:6px;">
           {% for d in lead_daily %}
           <div title="{{ d.date.strftime('%d %b %Y') }}: {{ d.count }}" style="flex:1;min-width:4px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;">
-            <span style="font-size:9px;color:#94A3B8;line-height:1;">{{ d.count if d.count else '' }}</span>
+            <span style="font-size:11px;color:#64748B;line-height:1;">{{ d.count if d.count else '' }}</span>
             <div style="width:100%;border-radius:3px 3px 0 0;background:{{ '#133E87' if d.count else '#EEF2F7' }};height:{{ (d.count / lead_daily_max * 88)|round|int if lead_daily_max else 0 }}px;min-height:2px;margin-top:2px;"></div>
           </div>
           {% endfor %}
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:#94A3B8;margin-top:5px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748B;margin-top:5px;">
           <span>{{ lead_daily[0].date.strftime('%d %b') }}</span>
           {% if lead_daily|length > 2 %}<span>{{ lead_daily[lead_daily|length // 2].date.strftime('%d %b') }}</span>{% endif %}
           <span>{{ lead_daily[-1].date.strftime('%d %b') }}</span>
@@ -275,7 +275,7 @@
         <div class="bar-row"><div class="bar-label">Junk</div><div class="bar-track"><div class="bar-fill" style="width:{{ (lead_quality.junk/qt*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ lead_quality.junk }}</div></div>
         <div class="bar-row"><div class="bar-label">Unreachable</div><div class="bar-track"><div class="bar-fill" style="width:{{ (lead_quality.unreachable/qt*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ lead_quality.unreachable }}</div></div>
         <div class="bar-row"><div class="bar-label">Not reviewed</div><div class="bar-track"><div class="bar-fill" style="width:{{ (lead_quality.not_reviewed/qt*100)|int }}%;background:#CBD5E1;"></div></div><div class="bar-val">{{ lead_quality.not_reviewed }}</div></div>
-        <div style="margin-top:8px;font-size:11px;color:#94A3B8;border-top:0.5px solid #F1F5F9;padding-top:8px;">Genuine + Junk + Unreachable + Not reviewed = <b style="color:#10B981;">{{ lead_quality.total }}</b> ✓</div>
+        <div style="margin-top:8px;font-size:11px;color:#64748B;border-top:0.5px solid #F1F5F9;padding-top:8px;">Genuine + Junk + Unreachable + Not reviewed = <b style="color:#10B981;">{{ lead_quality.total }}</b> ✓</div>
       </div>
     </div>
     <div class="grid2">
@@ -329,14 +329,14 @@
               <div style="flex:1;background:{% if loop.last %}#133E87{% else %}#DBEAFE{% endif %};border-radius:3px 3px 0 0;height:{{ inv_h if inv_h > 2 else 2 }}px;"></div>
               <div style="flex:1;background:{% if loop.last %}#10B981{% else %}#D1FAE5{% endif %};border-radius:3px 3px 0 0;height:{{ rec_h if rec_h > 2 else 2 }}px;"></div>
             </div>
-            <div style="font-size:9px;color:#94A3B8;">{{ m.month }}</div>
+            <div style="font-size:11px;color:#64748B;">{{ m.month }}</div>
           </div>
           {% endfor %}
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:12px;border-top:0.5px solid #F1F5F9;">
-          <div style="text-align:center;"><div style="font-size:10px;color:#94A3B8;">Invoiced</div><div style="font-size:14px;font-weight:700;color:#133E87;">{{ '{:,.0f}'.format(total_invoiced) }}</div></div>
-          <div style="text-align:center;"><div style="font-size:10px;color:#94A3B8;">Received</div><div style="font-size:14px;font-weight:700;color:#10B981;">{{ '{:,.0f}'.format(total_received) }}</div></div>
-          <div style="text-align:center;"><div style="font-size:10px;color:#94A3B8;">Pending</div><div style="font-size:14px;font-weight:700;color:#EF4444;">{{ '{:,.0f}'.format(total_outstanding) }}</div></div>
+          <div style="text-align:center;"><div style="font-size:10px;color:#64748B;">Invoiced</div><div style="font-size:14px;font-weight:700;color:#133E87;">{{ '{:,.0f}'.format(total_invoiced) }}</div></div>
+          <div style="text-align:center;"><div style="font-size:10px;color:#64748B;">Received</div><div style="font-size:14px;font-weight:700;color:#10B981;">{{ '{:,.0f}'.format(total_received) }}</div></div>
+          <div style="text-align:center;"><div style="font-size:10px;color:#64748B;">Pending</div><div style="font-size:14px;font-weight:700;color:#EF4444;">{{ '{:,.0f}'.format(total_outstanding) }}</div></div>
         </div>
       </div>
       {% endif %}
@@ -388,7 +388,7 @@
         {% if not top_job_types %}<div class="empty-state">No jobs this period</div>{% endif %}
         {% if avg_completion > 0 %}
         <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid #F1F5F9;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:12px;color:#94A3B8;">Overall avg. days to complete</span>
+          <span style="font-size:12px;color:#64748B;">Overall avg. days to complete</span>
           <span style="font-size:16px;font-weight:700;color:#133E87;">{{ avg_completion }} days</span>
         </div>
         {% endif %}
@@ -408,15 +408,15 @@
             <div style="height:4px;background:#E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:5px;">
               <div style="width:{{ ((item.avg / max_avg) * 100)|int if max_avg and max_avg > 0 else 0 }}%;height:100%;background:{% if item.avg <= 7 %}#10B981{% elif item.avg <= 30 %}#133E87{% elif item.avg <= 60 %}#F59E0B{% else %}#EF4444{% endif %};border-radius:10px;"></div>
             </div>
-            <div style="font-size:10px;color:#94A3B8;">Based on {{ item.count }} completed job{{ 's' if item.count != 1 else '' }}</div>
+            <div style="font-size:10px;color:#64748B;">Based on {{ item.count }} completed job{{ 's' if item.count != 1 else '' }}</div>
           </div>
           {% endfor %}
         </div>
         <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;">
-          <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#10B981;display:inline-block;"></span>≤7 days (Fast)</span>
-          <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#133E87;display:inline-block;"></span>8–30 days (Normal)</span>
-          <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#F59E0B;display:inline-block;"></span>31–60 days (Long)</span>
-          <span style="font-size:10px;color:#94A3B8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#EF4444;display:inline-block;"></span>60+ days (Very Long)</span>
+          <span style="font-size:10px;color:#64748B;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#10B981;display:inline-block;"></span>≤7 days (Fast)</span>
+          <span style="font-size:10px;color:#64748B;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#133E87;display:inline-block;"></span>8–30 days (Normal)</span>
+          <span style="font-size:10px;color:#64748B;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#F59E0B;display:inline-block;"></span>31–60 days (Long)</span>
+          <span style="font-size:10px;color:#64748B;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#EF4444;display:inline-block;"></span>60+ days (Very Long)</span>
         </div>
         {% else %}
         <div class="empty-state">No completed jobs yet — data will appear as jobs are marked Done/Closed</div>
@@ -441,7 +441,7 @@
         <div class="doc-row">
           <div>
             <div style="font-size:12px;font-weight:600;color:#1A2333;">{{ doc.owner_name or '—' }}{% if doc.customer %} · {{ doc.customer.name }}{% endif %}</div>
-            <div style="font-size:10px;color:#94A3B8;">{{ doc.doc_type }} · Expired {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '' }}</div>
+            <div style="font-size:10px;color:#64748B;">{{ doc.doc_type }} · Expired {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '' }}</div>
           </div>
           {% if doc.customer and doc.customer.phone %}
           <a href="https://wa.me/{{ doc.customer.phone|replace(' ','')|replace('+','') }}" target="_blank" style="background:#25D366;color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-decoration:none;">WA</a>
@@ -450,7 +450,7 @@
           {% endif %}
         </div>
         {% endfor %}
-        {% if expired_docs|length > 8 %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ expired_docs|length - 8 }} more expired</div>{% endif %}
+        {% if expired_docs|length > 8 %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#64748B;">+{{ expired_docs|length - 8 }} more expired</div>{% endif %}
         {% else %}<div class="empty-state">No expired documents ✅</div>{% endif %}
       </div>
 
@@ -462,12 +462,12 @@
         <div class="doc-row">
           <div>
             <div style="font-size:12px;font-weight:600;color:#1A2333;">{{ doc.owner_name or '—' }}{% if doc.customer %} · {{ doc.customer.name }}{% endif %}</div>
-            <div style="font-size:10px;color:#94A3B8;">{{ doc.doc_type }} · {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '' }}</div>
+            <div style="font-size:10px;color:#64748B;">{{ doc.doc_type }} · {{ doc.expiry_date.strftime('%d %b %Y') if doc.expiry_date else '' }}</div>
           </div>
           <span class="exp-badge" style="background:#FFFBEB;color:#92400E;">{{ days }}d left</span>
         </div>
         {% endfor %}
-        {% if expiring_30|length > 8 %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ expiring_30|length - 8 }} more</div>{% endif %}
+        {% if expiring_30|length > 8 %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#64748B;">+{{ expiring_30|length - 8 }} more</div>{% endif %}
         {% else %}<div class="empty-state">No documents expiring within 30 days ✅</div>{% endif %}
       </div>
     </div>
@@ -505,13 +505,13 @@
     <div class="an-card">
       <div class="an-card-title">Individual Staff Performance</div>
       <div class="staff-row staff-hdr">
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Staff</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Leads</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Pending</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Conv.</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Rate</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Revenue (AED)</span>
-        <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Target Achievement</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Staff</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Leads</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Pending</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Conv.</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Rate</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Revenue (AED)</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Target Achievement</span>
       </div>
       {% set colors = ['#1A3B8B','#10B981','#8B5CF6','#F59E0B','#EF4444','#06B6D4','#EC4899'] %}
       {% for s in staff_stats %}
@@ -521,7 +521,7 @@
           <div class="av" style="background:{{ colors[loop.index0 % 7] }};">{{ s.name[:2].upper() }}</div>
           <div>
             <div style="font-size:12px;font-weight:700;color:#1A2333;">{{ s.name }}</div>
-            <div style="font-size:10px;color:#94A3B8;">{{ s.role|capitalize }}</div>
+            <div style="font-size:10px;color:#64748B;">{{ s.role|capitalize }}</div>
           </div>
         </div>
         <span style="font-size:13px;color:#475569;">{{ s.leads }}</span>
@@ -534,9 +534,9 @@
           <div style="height:6px;background:#F1F5F9;border-radius:10px;overflow:hidden;">
             <div style="width:{{ bar_pct }}%;height:100%;background:{% if bar_pct >= 100 %}#10B981{% elif bar_pct >= 60 %}#8B5CF6{% else %}#F59E0B{% endif %};border-radius:10px;"></div>
           </div>
-          <div style="font-size:9px;color:#94A3B8;margin-top:2px;">{{ '{:,.0f}'.format(s.revenue) }} / {{ '{:,.0f}'.format(s.target) }} ({{ bar_pct }}%)</div>
+          <div style="font-size:11px;color:#64748B;margin-top:2px;">{{ '{:,.0f}'.format(s.revenue) }} / {{ '{:,.0f}'.format(s.target) }} ({{ bar_pct }}%)</div>
           {% else %}
-          <div style="font-size:9px;color:#CBD5E1;">No target set</div>
+          <div style="font-size:11px;color:#CBD5E1;">No target set</div>
           {% endif %}
         </div>
       </div>
@@ -623,7 +623,7 @@
       <!-- Not called this month -->
       <div class="an-card">
         <div class="an-card-title">📞 Not Yet Reached in {{ pf.month_name }}
-          <span style="font-weight:400;color:#94A3B8;font-size:11px;">· your call list for the rest of the month</span>
+          <span style="font-weight:400;color:#64748B;font-size:11px;">· your call list for the rest of the month</span>
         </div>
         <div class="grid3" style="margin-bottom:0;">
           <div class="kpi" style="border-top:4px solid #64748B;padding:12px 14px;">
@@ -647,14 +647,14 @@
       <!-- Tax compliance -->
       <div class="an-card">
         <div class="an-card-title">🧾 Tax Compliance
-          <span style="font-weight:400;color:#94A3B8;font-size:11px;">· <a href="/tax-filings" style="color:#1A3B8B;">open the full worklist →</a></span>
+          <span style="font-weight:400;color:#64748B;font-size:11px;">· <a href="/tax-filings" style="color:#1A3B8B;">open the full worklist →</a></span>
         </div>
         {% set tmax = [pf.tax.vat_notfiled, pf.tax.ct_notfiled, pf.tax.vat_overdue, pf.tax.ct_overdue, 1]|max %}
         <div class="bar-row"><div class="bar-label">VAT not filed</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.vat_notfiled/tmax)*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ pf.tax.vat_notfiled }}</div></div>
         <div class="bar-row"><div class="bar-label">VAT past due date</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.vat_overdue/tmax)*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ pf.tax.vat_overdue }}</div></div>
         <div class="bar-row"><div class="bar-label">Corp tax not filed</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.ct_notfiled/tmax)*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ pf.tax.ct_notfiled }}</div></div>
         <div class="bar-row"><div class="bar-label">Corp tax past due</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.tax.ct_overdue/tmax)*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ pf.tax.ct_overdue }}</div></div>
-        <div style="margin-top:8px;font-size:11px;color:#94A3B8;border-top:0.5px solid #F1F5F9;padding-top:8px;">
+        <div style="margin-top:8px;font-size:11px;color:#64748B;border-top:0.5px solid #F1F5F9;padding-top:8px;">
           {{ pf.tax.vat_na }} companies have no VAT status set — they aren't counted above.
         </div>
         {% if pf.tax_urgent %}
@@ -664,7 +664,7 @@
           <div class="doc-row">
             <div>
               <a href="/customers/{{ r.id }}" style="font-size:12px;font-weight:600;color:#1A2333;text-decoration:none;">{{ r.name }}</a>
-              <div style="font-size:10px;color:#94A3B8;">{{ r.type }} · {{ r.period }} · {{ r.manager }}</div>
+              <div style="font-size:10px;color:#64748B;">{{ r.type }} · {{ r.period }} · {{ r.manager }}</div>
             </div>
             {% if r.days < 0 %}
             <span class="exp-badge" style="background:#FEE2E2;color:#991B1B;">OVERDUE {{ -r.days }}d</span>
@@ -673,21 +673,21 @@
             {% endif %}
           </div>
           {% endfor %}
-          {% if pf.tax_urgent_total > pf.tax_urgent|length %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#94A3B8;">+{{ pf.tax_urgent_total - pf.tax_urgent|length }} more — see <a href="/tax-filings" style="color:#1A3B8B;">Tax Filings Due</a></div>{% endif %}
+          {% if pf.tax_urgent_total > pf.tax_urgent|length %}<div style="text-align:center;padding:8px 0;font-size:11px;color:#64748B;">+{{ pf.tax_urgent_total - pf.tax_urgent|length }} more — see <a href="/tax-filings" style="color:#1A3B8B;">Tax Filings Due</a></div>{% endif %}
         </div>
         {% endif %}
       </div>
 
       <!-- Data gaps -->
       <div class="an-card">
-        <div class="an-card-title">🧹 Data Gaps <span style="font-weight:400;color:#94A3B8;font-size:11px;">· fix these and the rest of this page gets accurate</span></div>
+        <div class="an-card-title">🧹 Data Gaps <span style="font-weight:400;color:#64748B;font-size:11px;">· fix these and the rest of this page gets accurate</span></div>
         {% set gmax = [pf.gaps.no_wa, pf.gaps.no_rep, pf.gaps.no_owner, pf.gaps.no_authority, pf.gaps.no_activity, 1]|max %}
         <div class="bar-row"><div class="bar-label" title="Automations can't reach them">No phone / WhatsApp</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_wa/gmax)*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ pf.gaps.no_wa }}</div></div>
         <div class="bar-row"><div class="bar-label">No account manager</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_rep/gmax)*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ pf.gaps.no_rep }}</div></div>
         <div class="bar-row"><div class="bar-label">No owner on file</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_owner/gmax)*100)|int }}%;background:#8B5CF6;"></div></div><div class="bar-val">{{ pf.gaps.no_owner }}</div></div>
         <div class="bar-row"><div class="bar-label">No licensing authority</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_authority/gmax)*100)|int }}%;background:#06B6D4;"></div></div><div class="bar-val">{{ pf.gaps.no_authority }}</div></div>
         <div class="bar-row"><div class="bar-label">No business activity</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_activity/gmax)*100)|int }}%;background:#94A3B8;"></div></div><div class="bar-val">{{ pf.gaps.no_activity }}</div></div>
-        <div style="margin-top:8px;font-size:11px;color:#94A3B8;border-top:0.5px solid #F1F5F9;padding-top:8px;">
+        <div style="margin-top:8px;font-size:11px;color:#64748B;border-top:0.5px solid #F1F5F9;padding-top:8px;">
           "No phone/WhatsApp" is the one that bites — birthday wishes and expiry reminders silently skip those companies.
         </div>
       </div>
@@ -725,12 +725,12 @@
       <div class="an-card" style="grid-column:1 / -1;">
         <div class="an-card-title">Account Managers — Company Book</div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.2fr;gap:8px;padding:8px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;">
-          <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">Manager</span>
-          <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Companies</span>
-          <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Active</span>
-          <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Open Tasks</span>
-          <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Dormant</span>
-          <span style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;text-align:center;">Called ({{ pf.month_name[:3] }})</span>
+          <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Manager</span>
+          <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;text-align:center;">Companies</span>
+          <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;text-align:center;">Active</span>
+          <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;text-align:center;">Open Tasks</span>
+          <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;text-align:center;">Dormant</span>
+          <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;text-align:center;">Called ({{ pf.month_name[:3] }})</span>
         </div>
         {% set colors = ['#1A3B8B','#10B981','#8B5CF6','#F59E0B','#EF4444','#06B6D4','#EC4899'] %}
         {% for name, m in pf.managers %}
@@ -745,7 +745,7 @@
           <span style="font-size:13px;font-weight:700;color:#133E87;text-align:center;">{{ m.open_tasks }}</span>
           <span style="font-size:13px;font-weight:700;color:{{ '#EF4444' if m.dormant else '#CBD5E1' }};text-align:center;">{{ m.dormant if m.dormant else '—' }}</span>
           <span style="font-size:12px;font-weight:700;text-align:center;color:{{ '#10B981' if cpct >= 80 else ('#F59E0B' if cpct > 0 else '#EF4444') }};">
-            {{ m.called }}/{{ m.companies }} <span style="font-size:10px;font-weight:400;color:#94A3B8;">({{ cpct }}%)</span>
+            {{ m.called }}/{{ m.companies }} <span style="font-size:10px;font-weight:400;color:#64748B;">({{ cpct }}%)</span>
           </span>
         </div>
         {% endfor %}
@@ -778,19 +778,19 @@
         <div class="bar-row"><div class="bar-label">3–6 months ago</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.buckets.m6/bmax)*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ pf.buckets.m6 }}</div></div>
         <div class="bar-row"><div class="bar-label">6+ months ago</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.buckets.older/bmax)*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ pf.buckets.older }}</div></div>
         <div class="bar-row"><div class="bar-label">Never had a task</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.buckets.never/bmax)*100)|int }}%;background:#CBD5E1;"></div></div><div class="bar-val">{{ pf.buckets.never }}</div></div>
-        <div style="margin-top:8px;font-size:11px;color:#94A3B8;border-top:0.5px solid #F1F5F9;padding-top:8px;">When was the last task created for each company</div>
+        <div style="margin-top:8px;font-size:11px;color:#64748B;border-top:0.5px solid #F1F5F9;padding-top:8px;">When was the last task created for each company</div>
       </div>
     </div>
 
     <div class="grid2">
       <div class="an-card">
-        <div class="an-card-title">Growth — New Companies per Month <span style="font-weight:400;color:#94A3B8;font-size:11px;">· last 12 months</span></div>
+        <div class="an-card-title">Growth — New Companies per Month <span style="font-weight:400;color:#64748B;font-size:11px;">· last 12 months</span></div>
         <div style="display:flex;align-items:flex-end;gap:6px;height:100px;">
           {% for g in pf.growth %}
           <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-            <span style="font-size:9px;color:#94A3B8;line-height:1;">{{ g.count if g.count else '' }}</span>
+            <span style="font-size:11px;color:#64748B;line-height:1;">{{ g.count if g.count else '' }}</span>
             <div style="width:100%;border-radius:3px 3px 0 0;background:{% if loop.last %}#133E87{% else %}#DBEAFE{% endif %};height:{{ ((g.count/pf.max_growth)*75)|int if g.count else 2 }}px;min-height:2px;"></div>
-            <div style="font-size:9px;color:{% if loop.last %}#133E87{% else %}#94A3B8{% endif %};font-weight:{% if loop.last %}700{% else %}400{% endif %};">{{ g.month }}</div>
+            <div style="font-size:11px;color:{% if loop.last %}#133E87{% else %}#94A3B8{% endif %};font-weight:{% if loop.last %}700{% else %}400{% endif %};">{{ g.month }}</div>
           </div>
           {% endfor %}
         </div>
@@ -801,7 +801,7 @@
         {% for name, cnt in pf.activities %}
         <div class="bar-row"><div class="bar-label" title="{{ name }}">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_a)*100)|int }}%;background:#06B6D4;"></div></div><div class="bar-val">{{ cnt }}</div></div>
         {% endfor %}
-        {% if pf.activities_notset %}<div style="margin-top:8px;font-size:11px;color:#94A3B8;border-top:0.5px solid #F1F5F9;padding-top:8px;">{{ pf.activities_notset }} companies have no business activity filled in</div>{% endif %}
+        {% if pf.activities_notset %}<div style="margin-top:8px;font-size:11px;color:#64748B;border-top:0.5px solid #F1F5F9;padding-top:8px;">{{ pf.activities_notset }} companies have no business activity filled in</div>{% endif %}
         {% if not pf.activities %}<div class="empty-state">Business activity not filled in on any company yet</div>{% endif %}
       </div>
     </div>

@@ -17,7 +17,7 @@
     .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
     .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 16px 0; }
     .chip { background: #fff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; }
-    .chip .l { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .4px; }
+    .chip .l { font-size: 10px; color: #64748B; text-transform: uppercase; letter-spacing: .4px; }
     .chip .v { font-size: 21px; font-weight: 700; color: #0F2660; }
     .filter { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
     .filter label { display: block; font-size: 11px; color: #64748b; margin-bottom: 3px; }
@@ -32,11 +32,11 @@
     td { padding: 12px 14px; border-top: 0.5px solid #eef2f7; color: #334155; vertical-align: top; line-height: 1.5; }
     .mono { font-family: 'Courier New', monospace; color: #64748b; white-space: nowrap; }
     .badge { padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
-    .empty { padding: 40px; text-align: center; color: #94a3b8; }
-    .foot { font-size: 11px; color: #94a3b8; margin-top: 8px; text-align: right; }
+    .empty { padding: 40px; text-align: center; color: #64748B; }
+    .foot { font-size: 11px; color: #64748B; margin-top: 8px; text-align: right; }
     .flash { background: #FCEBEB; color: #791F1F; padding: 9px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
     .presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 14px 0 10px; }
-    .presets .pl { font-size: 11px; color: #94a3b8; margin-right: 4px; }
+    .presets .pl { font-size: 11px; color: #64748B; margin-right: 4px; }
     .pbtn { background: #fff; border: 0.5px solid #cbd5e1; border-radius: 20px; padding: 5px 13px; font-size: 12px; color: #475569; cursor: pointer; }
     .pbtn:hover { border-color: #1A3B8B; color: #1A3B8B; }
     .analytics { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; margin-bottom: 14px; }
@@ -63,7 +63,7 @@
     .dmeta b { color: #334155; font-weight: 600; }
     .dlabel { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 5px; }
     .dupd { font-size: 12px; color: #475569; margin-bottom: 4px; }
-    .dupd span { color: #94a3b8; }
+    .dupd span { color: #64748B; }
   </style>
 </head>
 <body>
@@ -76,7 +76,7 @@
     {% if g == 'Genuine' %}<span class="badge" style="background:#EAF3DE;color:#27500A;">Genuine</span>
     {% elif g == 'Junk' %}<span class="badge" style="background:#FCEBEB;color:#A32D2D;">Junk</span>
     {% elif g == 'Unreachable' %}<span class="badge" style="background:#F1EFE8;color:#5F5E5A;">Unreachable</span>
-    {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+    {% else %}<span style="color:#64748B;">—</span>{% endif %}
   {% endmacro %}
 
   <div class="topbar">
@@ -159,14 +159,14 @@
           <div class="frow">
             <span class="fl">{{ label }}</span>
             <div class="fbar" style="width:{{ [p, 4]|max }}%;background:{{ bg }};"><span style="color:{{ fg }};">{{ cnt }}</span></div>
-            <span style="font-size:11px;color:#94a3b8;white-space:nowrap;">{{ p }}%{% if note %} · {{ note }}{% endif %}</span>
+            <span style="font-size:11px;color:#64748B;white-space:nowrap;">{{ p }}%{% if note %} · {{ note }}{% endif %}</span>
           </div>
           {% endfor %}
           {% if breakdown.other %}
-          <div class="frow"><span class="fl">Other</span><div class="fbar" style="width:{{ [breakdown.p_other, 4]|max }}%;background:#F1EFE8;"><span style="color:#5F5E5A;">{{ breakdown.other }}</span></div><span style="font-size:11px;color:#94a3b8;">{{ breakdown.p_other }}%</span></div>
+          <div class="frow"><span class="fl">Other</span><div class="fbar" style="width:{{ [breakdown.p_other, 4]|max }}%;background:#F1EFE8;"><span style="color:#5F5E5A;">{{ breakdown.other }}</span></div><span style="font-size:11px;color:#64748B;">{{ breakdown.p_other }}%</span></div>
           {% endif %}
         </div>
-        <div style="margin-top:10px;font-size:11px;color:#94a3b8;border-top:0.5px solid #eef2f7;padding-top:8px;">
+        <div style="margin-top:10px;font-size:11px;color:#64748B;border-top:0.5px solid #eef2f7;padding-top:8px;">
           New + Processing + Converted + Lost + Future{% if breakdown.other %} + Other{% endif %} = <b style="color:#27500A;">{{ breakdown.total }}</b> ✓ tallies
         </div>
       </div>
@@ -187,9 +187,9 @@
           <div class="qrow sub"><span style="color:#A32D2D;">— {{ reason }}</span><span>{{ cnt }}</span></div>
           {% endfor %}
           <div class="qrow"><span style="color:#854F0B;">● Unreachable</span><b>{{ quality.unreachable }}</b></div>
-          <div class="qrow"><span style="color:#94a3b8;">● Not reviewed</span><b>{{ quality.not_reviewed }}</b></div>
+          <div class="qrow"><span style="color:#64748B;">● Not reviewed</span><b>{{ quality.not_reviewed }}</b></div>
         </div>
-        <div style="margin-top:10px;font-size:11px;color:#94a3b8;border-top:0.5px solid #eef2f7;padding-top:8px;">
+        <div style="margin-top:10px;font-size:11px;color:#64748B;border-top:0.5px solid #eef2f7;padding-top:8px;">
           Genuine + Junk + Unreachable + Not reviewed = <b style="color:#27500A;">{{ quality.total }}</b> ✓ tallies
         </div>
       </div>
@@ -204,17 +204,17 @@
           {% for d in daily %}
           <div title="{{ d.date.strftime('%d %b %Y') }}: {{ d.count }} lead{{ 's' if d.count != 1 else '' }}"
                style="flex:1;min-width:4px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;">
-            <span style="font-size:9px;color:#94a3b8;line-height:1;">{{ d.count if d.count else '' }}</span>
+            <span style="font-size:11px;color:#64748B;line-height:1;">{{ d.count if d.count else '' }}</span>
             <div style="width:100%;border-radius:3px 3px 0 0;background:{{ '#1A8D4E' if d.count else '#eef2f7' }};height:{{ (d.count / daily_max * 78)|round|int if daily_max else 0 }}px;min-height:2px;margin-top:2px;"></div>
           </div>
           {% endfor %}
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-top:5px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748B;margin-top:5px;">
           <span>{{ daily[0].date.strftime('%d %b') }}</span>
           {% if daily|length > 2 %}<span>{{ daily[daily|length // 2].date.strftime('%d %b') }}</span>{% endif %}
           <span>{{ daily[-1].date.strftime('%d %b') }}</span>
         </div>
-        {% else %}<div style="color:#94a3b8;font-size:12px;padding:24px 0;">No leads in this range.</div>{% endif %}
+        {% else %}<div style="color:#64748B;font-size:12px;padding:24px 0;">No leads in this range.</div>{% endif %}
       </div>
 
       <!-- By source: volume + quality -->
@@ -239,7 +239,7 @@
           {% endfor %}
           </tbody>
         </table>
-        {% else %}<div style="color:#94a3b8;font-size:12px;padding:24px 0;">No source data.</div>{% endif %}
+        {% else %}<div style="color:#64748B;font-size:12px;padding:24px 0;">No source data.</div>{% endif %}
       </div>
     </div>
 
@@ -259,11 +259,11 @@
         <tbody>
           {% for r in rows %}
           <tr class="lead-row" onclick="toggleRow(this)">
-            <td style="color:#94a3b8;">{{ r.date.strftime('%d %b') if r.date else '—' }}</td>
+            <td style="color:#64748B;">{{ r.date.strftime('%d %b') if r.date else '—' }}</td>
             <td>{{ r.name }}{% if r.bot_replied %} <span title="Customer replied on the WhatsApp bot" style="font-size:12px;">🤖</span>{% endif %}</td>
             <td style="color:#64748b;">{{ r.source }}</td>
             <td>{{ stage_badge(r.stage) }}</td>
-            <td>{{ status_badge(r.genuine) }}{% if r.junk_reason %}<span style="font-size:10px;color:#94a3b8;"> · {{ r.junk_reason }}</span>{% endif %}</td>
+            <td>{{ status_badge(r.genuine) }}{% if r.junk_reason %}<span style="font-size:10px;color:#64748B;"> · {{ r.junk_reason }}</span>{% endif %}</td>
             <td style="text-align:center;color:#475569;">{{ r.attempts }}</td>
             <td style="text-align:right;"><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#1A3B8B;background:#EEF4FF;padding:3px 10px;border-radius:20px;white-space:nowrap;">Details <span class="chev">▸</span></span></td>
           </tr>
@@ -280,7 +280,7 @@
                 {% for rm in r.remarks %}
                 <div class="dupd"><span>{{ rm.when.strftime('%d %b %H:%M') }}</span> — {{ rm.text }}</div>
                 {% endfor %}
-              {% else %}<div style="color:#94a3b8;font-size:12px;">No staff update yet</div>{% endif %}
+              {% else %}<div style="color:#64748B;font-size:12px;">No staff update yet</div>{% endif %}
             </div>
           </td></tr>
           {% else %}
