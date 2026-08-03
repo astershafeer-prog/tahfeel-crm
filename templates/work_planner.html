@@ -337,8 +337,10 @@
         <input type="hidden" name="rewrite" value="1">
         <button type="submit" class="btn-sm" title="Ask the AI to rewrite every recommendation">✎ Rewrite advice</button>
       </form>
+      <a href="/planner/todo{% if viewing_other %}?user_id={{ plan_user.id }}{% endif %}" class="btn-sm"
+         style="text-decoration:none;" title="A simple tick-box list to print and work from">☑ To-do list</a>
       <button type="button" class="btn-sm" onclick="window.print()"
-              title="Print or save as PDF">🖨 Print</button>
+              title="Print the full plan with recommendations">🖨 Print plan</button>
     </div>
   </div>
 
