@@ -414,7 +414,7 @@ class Customer(db.Model):
     phone_original = db.Column(db.String(30))  # TASK 1.4: as-typed value, before normalize_phone_e164()
     phone2 = db.Column(db.String(20))
     email = db.Column(db.String(100))
-    address = db.Column(db.String(200))
+    address = db.Column(db.String(500))   # widened from 200 — real addresses overran it
     source = db.Column(db.String(50))
     # TASK 2.3(d): a small, fixed attribution taxonomy for CLIENTS specifically —
     # deliberately separate from `source` (which mirrors the lead-pipeline Source
@@ -442,7 +442,8 @@ class Customer(db.Model):
     freezone_name = db.Column(db.String(120))
     emirate = db.Column(db.String(40))
     country_incorp = db.Column(db.String(60))
-    business_activity = db.Column(db.String(200))
+    # 500, not 200: a UAE licence routinely lists several activities in one string
+    business_activity = db.Column(db.String(500))
     ac_status = db.Column(db.String(30))            # Active / Under Formation / Inactive / Closed
     po_box = db.Column(db.String(30))
     mobile = db.Column(db.String(30))
@@ -4777,6 +4778,53 @@ def customer_health(customer_id):
                            attention=attention, forecast=forecast, forecast_total=forecast_total, advisor=advisor,
                            n_exp30=n_exp30)
 
+def _oversized_fields(form, model):
+    """Submitted values that exceed their DB column length.
+
+    Limits are read off the model rather than hardcoded, so they can never drift
+    from the schema. Postgres REJECTS an over-length string instead of truncating
+    it, so anything unchecked here becomes an unexplained 500 at commit — after
+    the user has filled in the whole form.
+    """
+    cols = model.__table__.columns
+    out = []
+    for key in form:
+        col = cols.get(key)
+        if col is None:
+            continue
+        limit = getattr(col.type, 'length', None)
+        val = (form.get(key) or '').strip()
+        if limit and len(val) > limit:
+            out.append({'field': key.replace('_', ' ').title(),
+                        'got': len(val), 'limit': limit})
+    return out
+
+class _CustomerFormEcho:
+    """Stand-in for a Customer so a rejected save redisplays what was typed.
+
+    The template only ever reads scalar attributes off `customer`, so handing it
+    this instead of the real row lets a validation failure re-render the filled-in
+    form without touching the database. Dates are parsed back to date objects
+    because the template calls .strftime() on them.
+    """
+    def __init__(self, customer, form):
+        import datetime as _dt
+        for col in Customer.__table__.columns:
+            setattr(self, col.name, getattr(customer, col.name, None))
+        for col in Customer.__table__.columns:
+            if col.name not in form:
+                continue
+            raw = (form.get(col.name) or '').strip()
+            if isinstance(col.type, db.Date):
+                try:
+                    setattr(self, col.name, _dt.datetime.strptime(raw, '%Y-%m-%d').date() if raw else None)
+                except ValueError:
+                    setattr(self, col.name, None)
+            else:
+                setattr(self, col.name, raw or None)
+        # Unchecked boxes submit nothing at all, so presence is the value.
+        self.alerts_enabled = bool(form.get('alerts_enabled'))
+
 @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_customer(customer_id):
@@ -4784,6 +4832,21 @@ def edit_customer(customer_id):
     sources = Source.query.order_by(Source.name).all()
     users = User.query.filter_by(active=True).filter(User.role.in_(['sales','operations','admin'])).all()
     if request.method == 'POST':
+        # Length-check BEFORE touching the row, so a rejected save leaves the
+        # database exactly as it was and the form comes back filled in.
+        _over = _oversized_fields(request.form, Customer)
+        if _over:
+            for p in _over:
+                flash(f"{p['field']} is too long — {p['got']} characters, limit is {p['limit']}. "
+                      f"Shorten it by {p['got'] - p['limit']}.", 'error')
+            return render_template('edit_customer.html',
+                customer=_CustomerFormEcho(customer, request.form),
+                sources=sources, users=users,
+                doc_types=DocType.query.order_by(DocType.name).all(),
+                existing_docs=Document.query.filter_by(customer_id=customer_id)
+                                            .order_by(Document.expiry_date).all(),
+                now=now_dubai(), authorities=_authority_names(customer.licensing_authority),
+                attribution_sources=CLIENT_ATTRIBUTION_SOURCES)
         if request.form.get('customer_type') == 'Company' and not (request.form.get('contact_person') or '').strip():
             flash('Contact Person is required for a Company client', 'error')
             return redirect(url_for('edit_customer', customer_id=customer_id))
@@ -9282,6 +9345,10 @@ def init_db():
             'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS marketing_activity VARCHAR(20)',
             'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS biggest_challenge TEXT',
             'ALTER TABLE customer_call ADD COLUMN IF NOT EXISTS support_requested TEXT',
+            # 200 chars was too tight for real UAE licence data. Postgres REJECTS an
+            # over-length string rather than truncating, so this was a 500 on save.
+            'ALTER TABLE customer ALTER COLUMN business_activity TYPE VARCHAR(500)',
+            'ALTER TABLE customer ALTER COLUMN address TYPE VARCHAR(500)',
         ]
         for sql in migrations:
             try:
