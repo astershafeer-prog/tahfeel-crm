@@ -4240,11 +4240,30 @@ def add_customer():
             # Re-render with everything already typed intact — a validation
             # failure (missing field, duplicate phone) should never throw away
             # what was entered, whether from a blank form or a Quick-Add prefill.
+            # The tax previews MUST be passed here too: the Company template
+            # iterates them, and Jinja raises UndefinedError on a missing name —
+            # so omitting them turned every validation message into a 500.
+            _yr = now_dubai().year
             return render_template(_customer_type_template(ctype), users=users, sources=sources,
                                    converted_leads=converted_leads, doc_types=doc_types,
                                    attribution_sources=CLIENT_ATTRIBUTION_SOURCES,
                                    authorities=_authority_names(),
-                                   prefill=request.form, lead_id=lead_id)
+                                   prefill=request.form, lead_id=lead_id,
+                                   vat_preview=[{'label': f'Q{q} {_yr}',
+                                                 'due': _vat_due_date(_yr, q).strftime('%d %b %Y')}
+                                                for q in range(1, 5)],
+                                   corp_tax_preview={'label': f'FY{_yr}',
+                                                     'due': _corp_tax_due_date(_yr).strftime('%d %b %Y')})
+
+        # Same length guard as the edit form: Postgres rejects an over-length
+        # string outright, so an unchecked value is a 500 at commit — here, right
+        # at the end of the wizard after every step has been filled in.
+        _over = _oversized_fields(request.form, Customer)
+        if _over:
+            for p in _over:
+                flash(f"{p['field']} is too long — {p['got']} characters, limit is {p['limit']}. "
+                      f"Shorten it by {p['got'] - p['limit']}.", 'error')
+            return _redisplay()
 
         if ctype == 'Company' and not (request.form.get('contact_person') or '').strip():
             flash('Contact Person is required for a Company client', 'error')
