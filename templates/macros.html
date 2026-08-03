@@ -498,3 +498,38 @@ loadTheme();
   </div>
 </div>
 {% endmacro %}
+
+{# ── Blocking-error popup ────────────────────────────────────────────────────
+   A flash banner at the top of the page is easy to miss on a long form — on the
+   4-step Add Client wizard you are bounced back to step 1 while the problem may
+   be on step 3. Errors get a modal instead; anything non-error still uses the
+   normal banner. Takes the already-read message list, because
+   get_flashed_messages() consumes them and can only be called once. #}
+{% macro error_modal(messages) %}
+  {% set errs = messages | selectattr('0', 'equalto', 'error') | map(attribute='1') | list %}
+  {% if errs %}
+  <div class="modal-overlay active" id="flashErrModal">
+    <div class="modal-box" style="max-width:480px;text-align:left;">
+      <h3 style="margin-top:0;color:var(--danger);display:flex;align-items:center;gap:8px;">
+        ⚠ {{ 'Could not save' if errs|length == 1 else 'Could not save — ' ~ errs|length ~ ' problems' }}
+      </h3>
+      {% if errs|length == 1 %}
+      <p style="font-size:13.5px;color:var(--text-primary);margin-bottom:20px;">{{ errs[0] }}</p>
+      {% else %}
+      <ul style="font-size:13.5px;color:var(--text-primary);margin:0 0 20px;padding-left:18px;line-height:1.8;">
+        {% for e in errs %}<li>{{ e }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">
+        Nothing was saved. What you typed is still on the form — fix the above and submit again.
+      </p>
+      <div class="modal-actions" style="justify-content:flex-end;">
+        <button type="button" class="btn-primary"
+                onclick="document.getElementById('flashErrModal').classList.remove('active')">
+          Let me fix it
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{% endmacro %}

@@ -8,12 +8,17 @@
   <link rel="icon" href="/static/img/logo_white.png" type="image/png">
 </head>
 <body>
-  {%- from 'macros.html' import topbar, nav -%}
+  {%- from 'macros.html' import topbar, nav, error_modal -%}
   {{ topbar() }}
   {{ nav('customers') }}
   <div class="container" style="max-width:860px;">
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+      {% if messages %}
+        {# Errors go to the popup instead of a banner — on a long form the banner
+           sits off-screen at the top while the problem is on another step. #}
+        {% for cat, msg in messages %}{% if cat != 'error' %}<div class="flash {% if cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endif %}{% endfor %}
+        {{ error_modal(messages) }}
+      {% endif %}
     {% endwith %}
     <a href="/customers/add{% if lead_id %}?lead_id={{ lead_id }}{% endif %}" style="display:inline-block;margin-bottom:14px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Change client type</a>
 
