@@ -87,10 +87,14 @@
           </div>
           <div>
           </div>
+          {# A company has no date of birth. Still shown if one somehow got stored,
+             so legacy data stays visible and correctable rather than hidden. #}
+          {% if customer.customer_type != 'Company' or customer.date_of_birth %}
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Date of Birth</div>
             <div style="font-size:13px;">{% if customer.date_of_birth %}{{ customer.date_of_birth.strftime('%d %b %Y') }}{% else %}—{% endif %}</div>
           </div>
+          {% endif %}
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Customer Type</div>
             <div style="font-size:13px;"><span class="badge b-{{ (customer.customer_type or 'individual')|lower }}">{{ customer.customer_type or 'Individual' }}</span></div>
