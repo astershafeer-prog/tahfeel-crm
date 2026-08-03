@@ -65,11 +65,31 @@
     <div class="card card-customers" style="margin-bottom:30px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
         <h2>📦 {{ b.template.name }} <span style="font-size:12px;font-weight:400;color:var(--text-muted);">— <a href="/customers/{{ customer.id }}" style="color:var(--primary);">{{ customer.name }}</a></span></h2>
-        {% if b.status == 'Active' %}
-        <form method="POST" action="/bundles/{{ b.id }}/cancel" class="no-print" style="display:inline;" onsubmit="return confirm('Cancel this bundle? Deliverable history is kept.')">
-          <button type="submit" style="background:none;border:none;padding:0;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;">Cancel Bundle</button>
-        </form>
-        {% endif %}
+        <div class="no-print" style="display:flex;align-items:center;gap:14px;">
+          {% if b.status == 'Active' %}
+          <form method="POST" action="/bundles/{{ b.id }}/cancel" style="display:inline;margin:0;" onsubmit="return confirm('Cancel this bundle? Deliverable history is kept, and an admin can reactivate it later.')">
+            <button type="submit" style="background:none;border:none;padding:0;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;">Cancel Bundle</button>
+          </form>
+          {% elif b.status == 'Cancelled' and session.role == 'admin' %}
+          <form method="POST" action="/bundles/{{ b.id }}/reactivate" style="display:inline;margin:0;" onsubmit="return confirm('Reactivate this bundle? It counts as a live bundle again, including for tax-filing responsibility.')">
+            <button type="submit" style="background:none;border:none;padding:0;color:#047857;font-size:11px;font-weight:600;cursor:pointer;">↩ Reactivate</button>
+          </form>
+          {% endif %}
+          {% if session.role == 'admin' %}
+          {# Mis-assignments only. Cancel is the right tool for a real cancellation —
+             this is for a bundle sitting against a company that never bought it. #}
+          {# Name and count come through data-* attributes, never interpolated into
+             the JS string: Jinja escapes an apostrophe to &#39;, the browser decodes
+             it before JS parses, and a client like "O'Brien Trading LLC" would break
+             the handler — submitting the delete with no confirmation at all. #}
+          <form method="POST" action="/bundles/{{ b.id }}/delete" style="display:inline;margin:0;"
+                onsubmit="return confirmBundleDelete(this)"
+                data-customer="{{ customer.name }}"
+                data-count="{{ b.deliverables|length }}">
+            <button type="submit" style="background:none;border:none;padding:0;color:var(--danger);font-size:11px;font-weight:600;cursor:pointer;">🗑 Delete</button>
+          </form>
+          {% endif %}
+        </div>
       </div>
       <div style="padding:20px;">
         <div class="summary-row">
@@ -226,6 +246,13 @@
       document.getElementById('deliverableEdit').classList.add('active');
     }
     function closeDeliverableEdit(){ document.getElementById('deliverableEdit').classList.remove('active'); }
+    function confirmBundleDelete(form){
+      var d = form.dataset, n = d.count;
+      return confirm('Permanently DELETE this bundle from ' + d.customer + '?\n\n'
+        + 'All ' + n + ' deliverable' + (n === '1' ? '' : 's') + ' go with it, and this cannot be undone.\n\n'
+        + 'Only do this if the bundle was assigned to the wrong company. '
+        + 'For a real cancellation, use Cancel Bundle instead.');
+    }
   </script>
 </body>
 </html>
