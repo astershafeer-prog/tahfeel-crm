@@ -11805,6 +11805,44 @@ def work_planner():
         awaiting_ai=awaiting_ai,
         **data)
 
+@app.route('/planner/todo')
+@login_required
+def work_planner_todo():
+    """A stripped print view of the same weekly plan — the execution artefact.
+
+    The planner answers "what matters this week and why", which needs the AI
+    reasoning column and the scorecard. A to-do list answers "what do I do next",
+    which needs a task, a client and a tick box. Same data, no new storage; the
+    two views exist because compressing one page to serve both jobs is what made
+    the planner feel congested in the first place."""
+    week_start = plan_week_start()
+    arg = request.args.get('week')
+    if arg:
+        try:
+            week_start = plan_week_start(datetime.strptime(arg, '%Y-%m-%d'))
+        except Exception:
+            pass
+    user = User.query.get(session['user_id'])
+    viewing_other = False
+    if session.get('role') == 'admin' and request.args.get('user_id'):
+        try:
+            other = User.query.get(int(request.args['user_id']))
+            if other:
+                user, viewing_other = other, True
+        except Exception:
+            pass
+    data = plan_page_context(user, week_start)
+    # Done and Skip are resolved — a to-do list carrying them is just noise.
+    sections = [(k, label, [i for i in rows if (i.status or 'Pending') not in ('Done', 'Skip')])
+                for k, label, rows in data['sections']]
+    sections = [s for s in sections if s[2]]
+    return render_template('work_planner_todo.html',
+        now=now_dubai(), week_start=week_start, week_end=week_start + timedelta(days=6),
+        plan_user=user, viewing_other=viewing_other, sections=sections,
+        total=sum(len(s[2]) for s in sections),
+        amt_min=sum((i.amount_min or 0) for _, _, rows in sections for i in rows),
+        amt_max=sum((i.amount_max or 0) for _, _, rows in sections for i in rows))
+
 @app.route('/planner/regenerate', methods=['POST'])
 @login_required
 def work_planner_regenerate():
