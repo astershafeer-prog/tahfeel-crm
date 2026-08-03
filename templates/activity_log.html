@@ -180,7 +180,7 @@
                 {# A real POST form, not a plain link relying on JS to rewrite it —
                    the link version was the one flagged as unreliable. #}
                 <form method="POST" action="/activity/{{ log.id }}/delete" style="display:inline;"
-                      onsubmit="return confirm('Delete?')">
+                      data-confirm="Delete?" >
                   <button type="submit" style="background:none;border:none;padding:0;
                           color:var(--danger);font-size:11px;cursor:pointer;text-decoration:underline;">Del</button>
                 </form>
@@ -318,7 +318,7 @@
                 {% if session.role == 'admin' %}
                 <td style="white-space:nowrap;">
                 <form method="POST" action="/activity/{{ log.id }}/delete" style="display:inline;"
-                      onsubmit="return confirm('Delete this entry?')">
+                      data-confirm="Delete this entry?" >
                   <button type="submit" style="background:none;border:none;padding:0;margin-right:6px;
                           color:var(--danger);font-size:11px;cursor:pointer;text-decoration:underline;">Del</button>
                 </form>

@@ -193,7 +193,7 @@
                   {% if doc.file_url %}<a href="/documents/{{ doc.id }}/file" target="_blank" style="color:var(--primary);font-size:12px;font-weight:600;text-decoration:none;margin-right:10px;">📎 View</a>{% endif %}
                   {% if session.role in ['admin', 'operations'] %}
                   <form method="POST" action="/documents/{{ doc.id }}/delete?next=/customers/{{ customer.id }}/edit"
-                        style="display:inline;" onsubmit="return confirm('Remove this document?')">
+                        style="display:inline;" data-confirm="Remove this document?" >
                     <button type="submit" style="background:none;border:none;padding:0;color:var(--danger);
                             font-size:12px;font-weight:600;cursor:pointer;">🗑 Delete</button>
                   </form>

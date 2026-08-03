@@ -47,7 +47,7 @@
             </form>
             <a href="/customers/{{ customer.id }}/edit" class="ib" title="Edit">✏</a>
             {% if session.role == 'admin' %}
-            <form method="POST" action="/customers/{{ customer.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete {{ customer.name }}? This cannot be undone.')">
+            <form method="POST" action="/customers/{{ customer.id }}/delete" style="display:inline;" data-confirm="Delete {{ customer.name }}? This cannot be undone." >
               <button type="submit" class="ib ib-del" title="Delete">🗑</button>
             </form>
             {% endif %}
@@ -306,7 +306,7 @@
                   data-pno="{{ o.passport_no|e if o.passport_no else '' }}" data-pexp="{{ o.passport_expiry.strftime('%Y-%m-%d') if o.passport_expiry else '' }}"
                   data-eno="{{ o.eid_no|e if o.eid_no else '' }}" data-eexp="{{ o.eid_expiry.strftime('%Y-%m-%d') if o.eid_expiry else '' }}"
                   data-dob="{{ o.date_of_birth.strftime('%Y-%m-%d') if o.date_of_birth else '' }}" data-mobile="{{ o.mobile|e if o.mobile else '' }}">Edit</button>
-                <form method="POST" action="/owners/{{ o.id }}/delete" onsubmit="return confirm('Remove {{ o.name }}?');" style="margin:0;">
+                <form method="POST" action="/owners/{{ o.id }}/delete" data-confirm="Remove {{ o.name }}?" style="margin:0;">
                   <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);">🗑</button>
                 </form>
               </div>
@@ -361,7 +361,7 @@
               <a href="/documents/{{ doc.id }}/edit?next=/customers/{{ customer.id }}"
                  style="color:var(--primary);font-size:12px;text-decoration:none;font-weight:600;margin-right:10px;">✏ Edit</a>
               <form method="POST" action="/documents/{{ doc.id }}/delete?next=/customers/{{ customer.id }}"
-                    style="display:inline;" onsubmit="return confirm('Remove this document?')">
+                    style="display:inline;" data-confirm="Remove this document?" >
                 <button type="submit" style="background:none;border:none;padding:0;color:var(--danger);
                         font-size:12px;font-weight:600;cursor:pointer;">🗑 Delete</button>
               </form>

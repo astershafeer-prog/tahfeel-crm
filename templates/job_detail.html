@@ -227,7 +227,7 @@
               {% if st.amount %} · <span style="color:#0F6E56;font-weight:600;">AED {{ '{:,.0f}'.format(st.amount) }}</span>{% endif %}
             </div>
           </div>
-          <form method="post" action="/subtasks/{{ st.id }}/delete" style="margin:0;" onsubmit="return confirm('Remove this step?')">
+          <form method="post" action="/subtasks/{{ st.id }}/delete" style="margin:0;" data-confirm="Remove this step?" >
             <button type="submit" title="Remove step" style="width:26px;height:26px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;">🗑</button>
           </form>
         </div>

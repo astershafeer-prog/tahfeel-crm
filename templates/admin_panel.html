@@ -351,7 +351,7 @@
                 <span style="font-size:13px;">{{ service.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="svEdit({{ service.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <form method="POST" action="/admin/service/{{ service.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ service.name }}?')">
+                  <form method="POST" action="/admin/service/{{ service.id }}/delete" style="display:inline;" data-confirm="Remove {{ service.name }}?" >
                     <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
                   </form>
                 </div>
@@ -394,7 +394,7 @@
                 <span style="font-size:13px;">{{ source.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="soEdit({{ source.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <form method="POST" action="/admin/source/{{ source.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ source.name }}?')">
+                  <form method="POST" action="/admin/source/{{ source.id }}/delete" style="display:inline;" data-confirm="Remove {{ source.name }}?" >
                     <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
                   </form>
                 </div>
@@ -437,7 +437,7 @@
                 <span style="font-size:13px;">{{ a.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="laEdit({{ a.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Rename">✏</button>
-                  <form method="POST" action="/admin/authority/{{ a.id }}/delete" style="margin:0;" onsubmit="return confirm('Remove {{ a.name }} from the list? Customers already saved with it keep the value.')">
+                  <form method="POST" action="/admin/authority/{{ a.id }}/delete" style="margin:0;" data-confirm="Remove {{ a.name }} from the list? Customers already saved with it keep the value." >
                     <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
                   </form>
                 </div>
@@ -479,7 +479,7 @@
                 <span style="font-size:13px;">{{ campaign.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="caEdit({{ campaign.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <form method="POST" action="/admin/campaign/{{ campaign.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ campaign.name }}?')">
+                  <form method="POST" action="/admin/campaign/{{ campaign.id }}/delete" style="display:inline;" data-confirm="Remove {{ campaign.name }}?" >
                     <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
                   </form>
                 </div>
@@ -545,7 +545,7 @@
                    unaffected by whatever the Edit issue was. #}
                 <div style="display:flex;gap:6px;justify-content:center;">
                   <form method="POST" action="/admin/activity-type/{{ at.id }}/delete" style="display:inline;"
-                        onsubmit="return confirm('Remove activity? Historical data will be preserved.')">
+                        data-confirm="Remove activity? Historical data will be preserved." >
                     <button type="submit" class="ib ib-del" title="Delete">🗑</button>
                   </form>
                 </div>
@@ -619,7 +619,7 @@
                 <div style="display:flex;gap:6px;justify-content:center;">
                   <button onclick="vEdit({{ v.id }})" class="ib" title="Edit">✏</button>
                   <form method="POST" action="/admin/vendor/{{ v.id }}/delete" style="display:inline;"
-                        onsubmit="return confirm('Remove vendor {{ v.name }}? Bundle items pointing at it keep their history.')">
+                        data-confirm="Remove vendor {{ v.name }}? Bundle items pointing at it keep their history." >
                     <button type="submit" class="ib ib-del" title="Delete">🗑</button>
                   </form>
                 </div>
@@ -692,7 +692,7 @@
             <div style="display:flex;gap:6px;">
               <button onclick="btEdit({{ bt.id }})" class="ib" title="Edit">✏</button>
               <form method="POST" action="/admin/bundle-template/{{ bt.id }}/delete" style="display:inline;"
-                    onsubmit="return confirm('Remove bundle {{ bt.name }}? Customers who already bought it are unaffected.')">
+                    data-confirm="Remove bundle {{ bt.name }}? Customers who already bought it are unaffected." >
                 <button type="submit" class="ib ib-del" title="Delete">🗑</button>
               </form>
             </div>
@@ -764,7 +764,7 @@
                     <td style="padding:7px 8px;text-align:center;">
                       <div style="display:flex;gap:4px;justify-content:center;">
                         <button type="button" onclick="btiEdit({{ item.id }})" class="ib" title="Edit">✏</button>
-                        <form method="POST" action="/admin/bundle-template-item/{{ item.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ item.service_name }}?')">
+                        <form method="POST" action="/admin/bundle-template-item/{{ item.id }}/delete" style="display:inline;" data-confirm="Remove {{ item.service_name }}?" >
                           <button type="submit" class="ib ib-del" title="Delete">🗑</button>
                         </form>
                       </div>
@@ -851,7 +851,7 @@
                 </div>
                 <div style="display:flex;gap:5px;">
                   <button onclick="jtEdit({{ jt.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <form method="POST" action="/admin/jobtype/{{ jt.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ jt.name }}?')">
+                  <form method="POST" action="/admin/jobtype/{{ jt.id }}/delete" style="display:inline;" data-confirm="Remove {{ jt.name }}?" >
                     <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
                   </form>
                 </div>
@@ -898,7 +898,7 @@
             {% for it in subtask_list %}
             <div id="stl-view-{{ it.id }}" style="display:flex;align-items:center;gap:10px;padding:7px 6px;border-bottom:1px solid var(--border-light);">
               <span style="flex:1;font-size:13px;">{{ it.title }}</span>
-              <form method="POST" action="/admin/subtask-list/{{ it.id }}/delete" style="margin:0;" onsubmit="return confirm('Remove {{ it.title }}?')">
+              <form method="POST" action="/admin/subtask-list/{{ it.id }}/delete" style="margin:0;" data-confirm="Remove {{ it.title }}?" >
                 <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;" title="Remove">🗑</button>
               </form>
             </div>
@@ -935,7 +935,7 @@
                 <span style="font-size:13px;">{{ dt.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="dtEdit({{ dt.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <form method="POST" action="/admin/doctype/{{ dt.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ dt.name }}?')">
+                  <form method="POST" action="/admin/doctype/{{ dt.id }}/delete" style="display:inline;" data-confirm="Remove {{ dt.name }}?" >
                     <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
                   </form>
                 </div>
@@ -1009,7 +1009,7 @@ Every service task is priced here — Cost Price stays internal (never shown in 
                   <td style="text-align:right;">
                     <button onclick="rcEdit({{ rc.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
                     {% set rc_juris = rc.jurisdiction or 'Any' %}
-                    <form method="POST" action="/admin/service-prices/{{ rc.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ rc.doc_type }} ({{ rc_juris }})?')">
+                    <form method="POST" action="/admin/service-prices/{{ rc.id }}/delete" style="display:inline;" data-confirm="Remove {{ rc.doc_type }} ({{ rc_juris }})?" >
                       <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
                     </form>
                   </td>
@@ -1067,7 +1067,7 @@ Every service task is priced here — Cost Price stays internal (never shown in 
                 <span style="font-size:13px;">{{ partner.name }}</span>
                 <div style="display:flex;gap:5px;">
                   <button onclick="paEdit({{ partner.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Edit">✏</button>
-                  <form method="POST" action="/admin/partner/{{ partner.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove {{ partner.name }}?')">
+                  <form method="POST" action="/admin/partner/{{ partner.id }}/delete" style="display:inline;" data-confirm="Remove {{ partner.name }}?" >
                     <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
                   </form>
                 </div>
@@ -1092,11 +1092,11 @@ Every service task is priced here — Cost Price stays internal (never shown in 
       <summary>🛠 Tools &amp; Maintenance</summary>
       <div class="acc-inner">
         <div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 0;">
-          <a href="/admin/secure-documents" class="btn-sm" style="background:#059669;color:white;border-color:#059669;" onclick="return confirm('Secure all document files? Raw Cloudinary links will stop working — files will only open for logged-in staff via the CRM. Run once after deploy.')">🔐 Secure Documents</a>
+          <a href="/admin/secure-documents" class="btn-sm" style="background:#059669;color:white;border-color:#059669;" data-confirm="Secure all document files? Raw Cloudinary links will stop working — files will only open for logged-in staff via the CRM. Run once after deploy." >🔐 Secure Documents</a>
           <a href="/admin/alerts/enable-all" class="btn-sm" style="background:#B45309;color:white;border-color:#B45309;">🔔 Enable alerts for all clients</a>
           <a href="/admin/alerts/disable-all" class="btn-sm" style="background:#B91C1C;color:white;border-color:#B91C1C;" onclick="return confirm('Turn OFF report alerts for ALL customers? No customer will receive automated weekly/monthly emails until you re-enable them individually on each customer\'s health page.')">🔕 Turn OFF all alerts</a>
           <a href="/admin/ac-opening-date-review" class="btn-sm" style="background:#B45309;color:white;border-color:#B45309;">🏷 AC Opening Date Review{% if aod_unverified_count %} <span style="background:rgba(255,255,255,.25);padding:1px 7px;border-radius:10px;font-size:11px;">{{ aod_unverified_count }}</span>{% endif %}</a>
-          <form method="POST" action="/admin/compliance-snapshot/take" style="margin:0;display:inline;" onsubmit="return confirm('Take a compliance snapshot for every client, dated today? Convention: run this at end of month.');">
+          <form method="POST" action="/admin/compliance-snapshot/take" style="margin:0;display:inline;" data-confirm="Take a compliance snapshot for every client, dated today? Convention: run this at end of month." >
             <button type="submit" class="btn-sm" style="background:#7C3AED;color:white;border-color:#7C3AED;cursor:pointer;">📸 Take compliance snapshot</button>
           </form>
           <a href="/admin/backup/export" class="btn-sm" style="background:#133E87;color:white;border-color:#133E87;display:inline-flex;align-items:center;gap:5px;">⬇ Download Full Backup</a>

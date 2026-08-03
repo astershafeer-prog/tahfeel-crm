@@ -136,13 +136,13 @@
                    target="_blank" class="doc-act" style="background:#25D366;color:white;" title="Personal WhatsApp from your own number (not logged)">💬 Personal</a>
                 {% endif %}
                 {% if expiry_tpl and doc.customer and (doc.customer.whatsapp or doc.customer.mobile or doc.customer.phone or doc.customer.phone2) %}
-                <form method="POST" action="/documents/{{ doc.id }}/whatsapp-remind" style="display:inline-flex;margin:0;" onsubmit="return confirm('Send an official renewal reminder to {{ doc.customer.name }} from the business WhatsApp? It will be logged in the CRM.');">
+                <form method="POST" action="/documents/{{ doc.id }}/whatsapp-remind" style="display:inline-flex;margin:0;" data-confirm="Send an official renewal reminder to {{ doc.customer.name }} from the business WhatsApp? It will be logged in the CRM." >
                   <button type="submit" class="doc-act" style="background:#128C7E;color:white;" title="Approved reminder from the business number — logged in the CRM, replies come to the inbox">📨 Reminder</button>
                 </form>
                 {% endif %}
                 {% if session.role in ['admin', 'operations'] %}
                 <a href="/documents/{{ doc.id }}/edit" class="doc-act" style="background:#F1F5F9;color:#334155;" title="Edit document">✏ Edit</a>
-                <form method="POST" action="/documents/{{ doc.id }}/delete" style="display:inline;" onsubmit="return confirm('Remove this document?')">
+                <form method="POST" action="/documents/{{ doc.id }}/delete" style="display:inline;" data-confirm="Remove this document?" >
                   <button type="submit" class="doc-act" style="background:#FEE2E2;color:#B91C1C;" title="Delete document">🗑</button>
                 </form>
                 {% endif %}

@@ -95,7 +95,7 @@
               <a href="/customers/{{ r.customer.id }}" style="color:var(--primary);font-size:12px;font-weight:600;text-decoration:none;margin-right:10px;">✏ Update</a>
               {% if expiry_tpl and (r.owner.mobile or r.customer.whatsapp or r.customer.mobile or r.customer.phone) %}
               {% set doc_type = 'passport' if (r.p_days is not none and (r.e_days is none or r.p_days <= r.e_days)) else 'eid' %}
-              <form method="POST" action="/owner-compliance/whatsapp-remind/{{ r.owner.id }}/{{ doc_type }}" style="display:inline;" onsubmit="return confirm('Send a renewal reminder to {{ r.owner.name }} from the business WhatsApp?');">
+              <form method="POST" action="/owner-compliance/whatsapp-remind/{{ r.owner.id }}/{{ doc_type }}" style="display:inline;" data-confirm="Send a renewal reminder to {{ r.owner.name }} from the business WhatsApp?" >
                 <button type="submit" style="background:none;border:none;padding:0;color:#128C7E;font-size:12px;font-weight:600;cursor:pointer;">📨 Remind</button>
               </form>
               {% endif %}

@@ -53,7 +53,7 @@
         {% if lead %}<a href="/leads/{{ lead.id }}" style="font-size:11px;background:#E6EEFF;color:#1A3B8B;padding:4px 12px;border-radius:20px;text-decoration:none;">◉ Lead: {{ lead.name }}</a>
         {% elif customer %}<a href="/customers/{{ customer.id }}" style="font-size:11px;background:#E7F6EC;color:#1B7A3D;padding:4px 12px;border-radius:20px;text-decoration:none;">👤 Client: {{ customer.name }}</a>
         {% else %}
-        <form method="POST" action="/whatsapp/{{ wa_id }}/convert" style="display:inline;" onsubmit="return confirm('Create a new lead from this conversation and assign it to the next sales staff?');">
+        <form method="POST" action="/whatsapp/{{ wa_id }}/convert" style="display:inline;" data-confirm="Create a new lead from this conversation and assign it to the next sales staff?" >
           <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border:none;">+ Convert to Lead</button>
         </form>
         {% endif %}
@@ -65,7 +65,7 @@
         <form method="POST" action="/whatsapp/{{ wa_id }}/done" style="display:inline;">
           <button type="submit" title="{{ 'Reopen this conversation' if resolved else 'Mark done — moves it out of the active inbox' }}" style="font-size:11px;border:1px solid {{ '#CBD5E1' if resolved else '#16A34A' }};background:{{ '#F1F5F9' if resolved else '#fff' }};color:{{ '#64748B' if resolved else '#16A34A' }};border-radius:20px;padding:4px 12px;cursor:pointer;">{{ '↩ Reopen' if resolved else '✓ Done' }}</button>
         </form>
-        <form method="POST" action="/whatsapp/{{ wa_id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this entire conversation? This cannot be undone.');">
+        <form method="POST" action="/whatsapp/{{ wa_id }}/delete" style="display:inline;" data-confirm="Delete this entire conversation? This cannot be undone." >
           <button type="submit" title="Delete conversation" style="background:none;border:none;color:#DC2626;font-size:16px;cursor:pointer;padding:4px;">🗑</button>
         </form>
       </div>

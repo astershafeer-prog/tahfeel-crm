@@ -91,7 +91,7 @@
                 <button type="submit" class="btn-sm" style="border-color:{{ '#DC2626' if t.active else '#16A34A' }};color:{{ '#DC2626' if t.active else '#16A34A' }};">{{ 'Deactivate' if t.active else 'Activate' }}</button>
               </form>
               <button type="button" class="btn-sm" onclick="var f=document.getElementById('edit-{{ t.id }}');f.style.display=f.style.display==='none'?'block':'none';">✏ Edit</button>
-              <form method="POST" action="/whatsapp/templates/{{ t.id }}/delete" onsubmit="return confirm('Delete template {{ t.label }}?');" style="margin:0;">
+              <form method="POST" action="/whatsapp/templates/{{ t.id }}/delete" data-confirm="Delete template {{ t.label }}?" style="margin:0;">
                 <button type="submit" style="background:none;border:none;color:#DC2626;font-size:14px;cursor:pointer;">🗑</button>
               </form>
             </div>

@@ -275,12 +275,12 @@
         </div>
         <div style="display:flex;gap:6px;align-items:flex-start;">
           {% if c.outcome == 'Connected' %}
-          <form method="POST" action="/customers/{{ customer.id }}/calls/{{ c.id }}/to-lead" style="margin:0;" onsubmit="return confirm('Create a lead from this call? It will enter the sales pipeline.');">
+          <form method="POST" action="/customers/{{ customer.id }}/calls/{{ c.id }}/to-lead" style="margin:0;" data-confirm="Create a lead from this call? It will enter the sales pipeline." >
             <button type="submit" class="btn-sm" style="border-color:#1A3B8B;color:#1A3B8B;font-size:11px;white-space:nowrap;" title="This call raised an opportunity — create a lead">➡ Opportunity</button>
           </form>
           {% endif %}
           {% if session.role == 'admin' or c.called_by == session.user_id %}
-          <form method="POST" action="/calls/{{ c.id }}/delete" style="margin:0;" onsubmit="return confirm('Remove this call log entry?');">
+          <form method="POST" action="/calls/{{ c.id }}/delete" style="margin:0;" data-confirm="Remove this call log entry?" >
             <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);font-size:11px;">🗑</button>
           </form>
           {% endif %}

@@ -112,7 +112,7 @@
                 <button type="submit" style="background:none;border:none;padding:0;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;margin-right:10px;">✓ Mark Filed</button>
               </form>
               {% if expiry_tpl and (r.customer.whatsapp or r.customer.mobile or r.customer.phone or r.customer.phone2) %}
-              <form method="POST" action="/tax-filing/{{ r.filing.id }}/whatsapp-remind" style="display:inline;" onsubmit="return confirm('Send a filing reminder to {{ r.customer.name }} from the business WhatsApp?');">
+              <form method="POST" action="/tax-filing/{{ r.filing.id }}/whatsapp-remind" style="display:inline;" data-confirm="Send a filing reminder to {{ r.customer.name }} from the business WhatsApp?" >
                 <button type="submit" style="background:none;border:none;padding:0;color:#128C7E;font-size:12px;font-weight:600;cursor:pointer;">📨 Remind</button>
               </form>
               {% endif %}
