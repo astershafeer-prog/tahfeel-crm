@@ -42,7 +42,7 @@
         Each client can still opt out individually from their profile at any time. This action does not delete or change any data — only the alert toggle.
       </div>
 
-      <form method="POST" action="/admin/alerts/enable-all" onsubmit="return confirm('Enable compliance alerts for {{ count }} client(s)? This cannot be easily undone in bulk — you would need to turn them off one by one, or use Turn OFF all alerts.');">
+      <form method="POST" action="/admin/alerts/enable-all" data-confirm="Enable compliance alerts for {{ count }} client(s)? This cannot be easily undone in bulk — you would need to turn them off one by one, or use Turn OFF all alerts." >
         <div style="display:flex;gap:10px;justify-content:flex-end;">
           <a href="/admin" class="btn-sm">Cancel</a>
           <button type="submit" class="btn-sm" style="background:#B45309;color:white;border-color:#B45309;">🔔 Confirm — Enable Alerts for {{ count }} Client(s)</button>

@@ -205,7 +205,7 @@
           <form method="post" style="margin:0;padding:0;">
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="note_id" value="{{ note.id }}">
-            <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" onclick="return confirm('Delete?')">🗑</button>
+            <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" data-confirm="Delete?" >🗑</button>
           </form>
         </div>
         {% endfor %}
@@ -237,7 +237,7 @@
             <form method="post" style="margin:0;padding:0;">
               <input type="hidden" name="action" value="delete">
               <input type="hidden" name="note_id" value="{{ note.id }}">
-              <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" onclick="return confirm('Remove?')" title="Delete">🗑</button>
+              <button type="submit" class="ib ib-del" style="width:24px;height:24px;font-size:11px;" data-confirm="Remove?" title="Delete">🗑</button>
             </form>
           </div>
         </div>

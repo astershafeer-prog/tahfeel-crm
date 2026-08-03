@@ -71,7 +71,7 @@
                 <form method="post" action="/partners/{{ partner.id }}/toggle" style="display:inline;">
                   <button type="submit" class="btn-sm" style="background:{% if partner.active %}#F59E0B{% else %}#10B981{% endif %};color:white;margin-right:4px;">{% if partner.active %}Deactivate{% else %}Activate{% endif %}</button>
                 </form>
-                <form method="post" action="/partners/{{ partner.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete {{ partner.name }}? This cannot be undone.');">
+                <form method="post" action="/partners/{{ partner.id }}/delete" style="display:inline;" data-confirm="Delete {{ partner.name }}? This cannot be undone." >
                   <button type="submit" class="btn-sm" style="background:#EF4444;color:white;">Delete</button>
                 </form>
               </td>

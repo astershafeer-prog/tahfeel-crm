@@ -561,7 +561,7 @@
 
       <div class="card-footer">
         <button class="action-btn action-btn-edit" onclick="openModal('edit', {{ doc.id }})">Edit</button>
-        <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="flex: 1;" onsubmit="return confirm('Delete this document?');">
+        <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="flex: 1;" data-confirm="Delete this document?" >
           <button type="submit" class="btn btn-danger" style="width: 100%;">Delete</button>
         </form>
       </div>
@@ -622,7 +622,7 @@
           <td>
             <div class="actions">
               <button class="action-btn action-btn-edit" onclick="openModal('edit', {{ doc.id }})">Edit</button>
-              <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="display: inline;" onsubmit="return confirm('Delete?');">
+              <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="display: inline;" data-confirm="Delete?" >
                 <button type="submit" class="action-btn action-btn-delete">Delete</button>
               </form>
             </div>

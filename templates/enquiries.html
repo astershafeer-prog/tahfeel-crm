@@ -146,12 +146,12 @@
               <form method="post" action="/enquiries/{{ e.id }}/resolve" style="margin:0;">
                 <button type="submit" class="act-btn" title="{{ 'Reopen this enquiry' if e.status=='Resolved' else 'Mark resolved' }}" style="{% if e.status!='Resolved' %}border-color:#A7F3D0;color:#047857;{% endif %}">{{ '↩ Reopen' if e.status=='Resolved' else '✓ Resolve' }}</button>
               </form>
-              <form method="post" action="/enquiries/{{ e.id }}/convert-lead" style="margin:0;" onsubmit="return confirm('Create a lead from this enquiry?');">
+              <form method="post" action="/enquiries/{{ e.id }}/convert-lead" style="margin:0;" data-confirm="Create a lead from this enquiry?" >
                 <button type="submit" class="act-btn" title="Convert to a lead" style="background:#1A3B8B;border-color:#1A3B8B;color:#fff;">➡ Lead</button>
               </form>
               {% endif %}
               <button type="button" class="act-btn" title="Change enquiry / follow-up dates" onclick="var r=document.getElementById('dates-{{ e.id }}');r.style.display=(r.style.display==='none'?'table-row':'none');">📅</button>
-              <form method="post" action="/enquiries/{{ e.id }}/delete" style="margin:0;" onsubmit="return confirm('Delete this enquiry?');">
+              <form method="post" action="/enquiries/{{ e.id }}/delete" style="margin:0;" data-confirm="Delete this enquiry?" >
                 <button type="submit" class="act-btn" title="Delete" style="border-color:#FECACA;background:#FEF2F2;color:#B91C1C;">🗑</button>
               </form>
             </div>

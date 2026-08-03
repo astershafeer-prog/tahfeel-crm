@@ -5058,6 +5058,20 @@ def delete_customer(customer_id):
         Employee.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
         Owner.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
         Company.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
+        # 2b) everything else that points at this customer. Order matters:
+        # BundleDeliverable is a child of CustomerBundle AND holds an FK to
+        # TaxFiling, so it has to go before both. Without this block the delete
+        # fails on a foreign-key violation for any client that has ever had VAT
+        # ticked, a monthly review logged, a bundle assigned, or been included
+        # in a compliance snapshot — which is most established clients.
+        _bundle_ids = [b.id for b in CustomerBundle.query.filter_by(customer_id=customer_id).all()]
+        if _bundle_ids:
+            BundleDeliverable.query.filter(
+                BundleDeliverable.customer_bundle_id.in_(_bundle_ids)).delete(synchronize_session=False)
+        CustomerBundle.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
+        TaxFiling.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
+        CustomerCall.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
+        ComplianceSnapshot.query.filter_by(customer_id=customer_id).delete(synchronize_session=False)
         # 3) unlink WhatsApp history (keep the messages, just detach)
         WhatsAppMessage.query.filter_by(customer_id=customer_id).update({'customer_id': None})
         db.session.delete(customer)

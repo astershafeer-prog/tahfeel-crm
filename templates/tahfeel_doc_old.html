@@ -164,7 +164,7 @@
         <div class="actions">
           <button class="action-btn" onclick="openViewModal({{ doc.id }}, '{{ doc.name }}', '{{ doc.doc_type }}', '{{ doc.owner }}', '{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}', '{{ doc.issue_date.strftime('%Y-%m-%d') if doc.issue_date else '' }}', '{{ doc.authority }}', '{{ doc.document_url or '' }}')">👁️ View</button>
           <button class="action-btn" onclick="openEditModal({{ doc.id }}, '{{ doc.name }}', '{{ doc.doc_type }}', '{{ doc.owner }}', '{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}', '{{ doc.issue_date.strftime('%Y-%m-%d') if doc.issue_date else '' }}', '{{ doc.authority }}')">✏️ Edit</button>
-          <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="display: inline;" onsubmit="return confirm('Delete {{ doc.name }}?');">
+          <form method="post" action="/tahfeel-doc/{{ doc.id }}/delete" style="display: inline;" data-confirm="Delete {{ doc.name }}?" >
             <button type="submit" class="action-btn action-btn-delete">🗑️ Delete</button>
           </form>
         </div>

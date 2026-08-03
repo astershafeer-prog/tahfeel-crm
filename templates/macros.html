@@ -271,6 +271,33 @@ loadTheme();
 })();
 </script>
 
+<script>
+// ── Confirm guard ───────────────────────────────────────────────────────────
+// Destructive actions declare their prompt in data-confirm, NOT by building a
+// JS string in an onsubmit attribute. Jinja escapes an apostrophe to &#39;, the
+// browser decodes it before JS parses the attribute, so a name like
+// "D'Souza Trading" broke the handler — and a THROWING onsubmit does not stop
+// submission, so the delete went through with no prompt at all. Reading the
+// value from dataset never parses it as code, so quotes are simply text.
+(function(){
+  document.addEventListener('submit', function(e){
+    var f = e.target;
+    if (!f || !f.dataset || !f.dataset.confirm) return;
+    if (!window.confirm(f.dataset.confirm)) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  // Buttons and links carrying their own data-confirm — including submit
+  // buttons, whose form may not have one. Skipped only when the surrounding
+  // form ALSO declares data-confirm, so a single action never prompts twice.
+  document.addEventListener('click', function(e){
+    var el = e.target.closest && e.target.closest('[data-confirm]');
+    if (!el || el.tagName === 'FORM') return;
+    var f = el.form || (el.closest && el.closest('form'));
+    if (f && f.dataset && f.dataset.confirm) return;
+    if (!window.confirm(el.dataset.confirm)) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+})();
+</script>
+
 {% endmacro %}
 
 

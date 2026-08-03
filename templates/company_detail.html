@@ -96,7 +96,7 @@
     </div>
 
     {% if session.role == 'admin' %}
-    <form method="POST" action="/companies/{{ company.id }}/delete" onsubmit="return confirm('Delete this company? Its documents will be kept but unlinked. This cannot be undone.');" style="margin-bottom:30px;">
+    <form method="POST" action="/companies/{{ company.id }}/delete" data-confirm="Delete this company? Its documents will be kept but unlinked. This cannot be undone." style="margin-bottom:30px;">
       <button type="submit" class="btn-sm" style="border-color:var(--danger);color:var(--danger);">🗑 Delete Company</button>
     </form>
     {% endif %}
