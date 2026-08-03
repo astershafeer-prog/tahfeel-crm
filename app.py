@@ -4526,6 +4526,42 @@ def cancel_customer_bundle(bundle_id):
     flash(f'{cb.template.name} bundle cancelled')
     return redirect(url_for('bundle_detail', bundle_id=bundle_id))
 
+@app.route('/bundles/<int:bundle_id>/reactivate', methods=['POST'])
+@login_required
+def reactivate_customer_bundle(bundle_id):
+    """Undo a cancellation. Cancel used to be a one-way door, so an accidental
+    click left the bundle dead permanently."""
+    if session.get('role') != 'admin':
+        flash('Only an admin can reactivate a cancelled bundle.', 'error')
+        return redirect(url_for('bundle_detail', bundle_id=bundle_id))
+    cb = CustomerBundle.query.get_or_404(bundle_id)
+    if cb.status != 'Cancelled':
+        flash('That bundle is not cancelled.', 'error')
+        return redirect(url_for('bundle_detail', bundle_id=bundle_id))
+    cb.status = 'Active'
+    db.session.commit()
+    flash(f'{cb.template.name} reactivated for {cb.customer.name if cb.customer else "the client"}.')
+    return redirect(url_for('bundle_detail', bundle_id=bundle_id))
+
+@app.route('/bundles/<int:bundle_id>/delete', methods=['POST'])
+@login_required
+def delete_customer_bundle(bundle_id):
+    """Hard delete, for a MIS-ASSIGNMENT only — a bundle put against a company
+    that never bought it. A genuine cancellation should use Cancel, which keeps
+    the record. Deliverables are removed explicitly because the relationship has
+    no cascade; leaving them would orphan the rows and break the bundle list."""
+    if session.get('role') != 'admin':
+        flash('Only an admin can delete a bundle. Use Cancel Bundle instead.', 'error')
+        return redirect(url_for('bundle_detail', bundle_id=bundle_id))
+    cb = CustomerBundle.query.get_or_404(bundle_id)
+    name = cb.template.name if cb.template else 'Bundle'
+    cust = cb.customer.name if cb.customer else 'the client'
+    n = BundleDeliverable.query.filter_by(customer_bundle_id=cb.id).delete(synchronize_session=False)
+    db.session.delete(cb)
+    db.session.commit()
+    flash(f'{name} deleted from {cust} — {n} deliverable{"s" if n != 1 else ""} removed.')
+    return redirect(url_for('bundle_list'))
+
 @app.route('/bundles/<int:bundle_id>')
 @login_required
 def bundle_detail(bundle_id):
