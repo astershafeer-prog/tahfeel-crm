@@ -9,9 +9,26 @@ jobs:
   reports:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger monthly compliance report emails
+      # The endpoint only sends one small batch per call (so a single request
+      # never runs long enough to hit the server's 30s timeout), so this loops,
+      # calling it again every ~20s until the response says none remain. Every
+      # send is dedupe-logged server-side, so a failed batch or a re-run of
+      # this whole workflow is always safe to retry — it never double-sends.
+      - name: Send monthly compliance reports until done
         run: |
-          echo "Calling monthly-reports endpoint..."
-          curl -fsS "https://tahfeelcrm.online/cron/monthly-reports?key=${{ secrets.CRON_KEY }}" -o response.json \
-            || { echo "Request failed"; exit 1; }
-          echo "Response:"; cat response.json
+          for i in $(seq 1 40); do
+            echo "── Batch $i ──"
+            resp=$(curl -fsS "https://tahfeelcrm.online/cron/monthly-reports?key=${{ secrets.CRON_KEY }}") || resp=""
+            if [ -z "$resp" ]; then
+              echo "Batch $i request failed — retrying in 30s"
+              sleep 30
+              continue
+            fi
+            echo "$resp"
+            remaining=$(echo "$resp" | jq -r '.remaining // 0')
+            if [ "$remaining" -eq 0 ] 2>/dev/null; then
+              echo "All reports sent for this month."
+              break
+            fi
+            sleep 20
+          done

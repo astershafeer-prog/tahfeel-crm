@@ -7585,6 +7585,8 @@ def cron_expiry_alerts():
     admin_email = os.environ.get('ALERT_ADMIN_EMAIL')
     alerted, results = 0, []
     for c in Customer.query.filter_by(alerts_enabled=True).all():
+        if c.ac_status in ('Inactive', 'Closed'):
+            continue  # no compliance nagging for a license that's no longer active
         items = _expiring_items(c.id, 30)
         if not items:
             continue
@@ -8162,28 +8164,55 @@ def send_customer_report(customer_id):
         flash(f'Could not send report: {msg}', 'error')
     return redirect(url_for('customer_health', customer_id=customer_id))
 
+# Each report is a WeasyPrint render + an email send — too slow to run all
+# 200+ companies in one HTTP request without hitting gunicorn's 30s worker
+# timeout (and blocking the app's single worker for everyone else while it
+# runs). Instead this processes one small batch per call and relies on
+# AutoMessageLog for dedupe, so the external cron just hits this URL
+# repeatedly (every few minutes) starting the 1st until `remaining` hits 0 —
+# a mid-batch crash or timeout is safe to retry, it never double-sends.
+MONTHLY_REPORT_BATCH_SIZE = 10
+
 @app.route('/cron/monthly-reports')
 def cron_monthly_reports():
-    """Monthly customer compliance reports — hit by external cron on the 1st.
+    """Monthly customer compliance reports — hit repeatedly by external cron
+    starting the 1st (e.g. every few minutes) until `remaining` is 0.
     GET /cron/monthly-reports?key=CRON_KEY"""
     from flask import jsonify
     if not _valid_cron_key():
         return 'Forbidden', 403
     if not automation_on('auto_monthly_report'):
         return jsonify({'skipped': 'monthly compliance report is turned OFF in the admin panel'})
+    period = now_dubai().strftime('%Y-%m')
+    already_sent = {
+        log.dedupe_key for log in
+        AutoMessageLog.query.filter(AutoMessageLog.kind == 'monthly_report',
+                                    AutoMessageLog.dedupe_key.like(f'monthly_report:%:{period}')).all()
+    }
+    candidates = [
+        c for c in Customer.query.filter_by(alerts_enabled=True).order_by(Customer.id).all()
+        if c.ac_status not in ('Inactive', 'Closed')
+        and f'monthly_report:{c.id}:{period}' not in already_sent
+    ]
+    batch = candidates[:MONTHLY_REPORT_BATCH_SIZE]
     sent, skipped, details = 0, 0, []
-    for c in Customer.query.filter_by(alerts_enabled=True).all():
+    for c in batch:
         try:
             ok, msg = _send_customer_report(c.id)
         except Exception as e:
             ok, msg = False, str(e)
         if ok:
             sent += 1
+            db.session.add(AutoMessageLog(kind='monthly_report',
+                                          dedupe_key=f'monthly_report:{c.id}:{period}',
+                                          detail=c.name))
+            db.session.commit()
         else:
             skipped += 1
         details.append(f'{c.name}: {msg}')
-    _mark_run('monthly_report', f'{sent} report(s) sent')
-    return jsonify({'sent': sent, 'skipped': skipped, 'details': details})
+    remaining = len(candidates) - len(batch)
+    _mark_run('monthly_report', f'{sent} sent this batch, {remaining} remaining this month')
+    return jsonify({'sent': sent, 'skipped': skipped, 'remaining': remaining, 'details': details})
 
 @app.route('/reports/birthdays')
 @login_required
@@ -8327,6 +8356,8 @@ def cron_expiry_wa():
         cust = d.customer
         if not cust or not cust.alerts_enabled:
             continue  # respect the per-customer alert opt-in
+        if cust.ac_status in ('Inactive', 'Closed'):
+            continue  # no compliance nagging for a license that's no longer active
         key = f'expirywa:{d.id}:{d.expiry_date.date().isoformat()}:{days}'
         if AutoMessageLog.query.filter_by(dedupe_key=key).first():
             continue
@@ -8381,6 +8412,8 @@ def cron_tax_filing_wa():
         cust = f.customer
         if not cust or not cust.alerts_enabled:
             continue
+        if cust.ac_status in ('Inactive', 'Closed'):
+            continue  # no compliance nagging for a license that's no longer active
         key = f'taxfilingwa:{f.id}:{days}'
         if AutoMessageLog.query.filter_by(dedupe_key=key).first():
             continue
@@ -10288,6 +10321,7 @@ def analytics():
         for f in TaxFiling.query.filter(TaxFiling.filed_at.is_(None)).all():
             open_filings_by_cust.setdefault(f.customer_id, []).append(f)
         docs_expired = docs_30 = docs_60 = 0
+        license_expired = 0
         tax_urgent_rows = []
         gaps = {'no_wa': 0, 'no_rep': 0, 'no_owner': 0, 'no_authority': 0, 'no_activity': 0}
         tax = {'vat_notfiled': 0, 'vat_overdue': 0, 'ct_notfiled': 0, 'ct_overdue': 0, 'vat_na': 0}
@@ -10310,6 +10344,18 @@ def analytics():
                     docs_30 += 1
                 elif dl <= 60:
                     docs_60 += 1
+            # -- business license (Trade License doc) expiry specifically — a
+            # company can have other documents expired while its actual license
+            # is fine, so this is separate from the "any document expired" count
+            # above. Takes the latest Trade License record if there's more than
+            # one (e.g. renewal history), since an old superseded one shouldn't
+            # count as the license being expired.
+            tl_docs = [d for d in docs_by_cust.get(c.id, []) if (d.doc_type or '').strip() == 'Trade License']
+            if tl_docs:
+                latest_tl = max(tl_docs, key=lambda d: d.expiry_date)
+                tl_dl = (latest_tl.expiry_date.date() - today).days if hasattr(latest_tl.expiry_date, 'date') else (latest_tl.expiry_date - today).days
+                if tl_dl < 0:
+                    license_expired += 1
             # -- tax compliance (VAT quarterly / Corp Tax annual filing history)
             c_open = open_filings_by_cust.get(c.id, [])
             c_vat_open = [f for f in c_open if f.tax_type == 'VAT']
@@ -10432,6 +10478,7 @@ def analytics():
             'max_formed_growth': max((g['count'] for g in formed_growth), default=1) or 1,
             # ── scan report ──
             'docs_expired': docs_expired, 'docs_30': docs_30, 'docs_60': docs_60,
+            'license_expired': license_expired,
             'tax': tax, 'gaps': gaps, 'calls': calls,
             'tax_urgent': sorted(tax_urgent_rows, key=lambda r: r['days'])[:20],
             'tax_urgent_total': len(tax_urgent_rows),
