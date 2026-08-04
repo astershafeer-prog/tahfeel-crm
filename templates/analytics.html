@@ -570,6 +570,23 @@
     </div>
 
     <div class="grid3">
+      <div class="kpi" style="border-top:4px solid #133E87;">
+        <div class="kpi-label">Newly Formed by Tahfeel</div>
+        <div class="kpi-val">{{ pf.formed_total }}</div>
+        <div class="kpi-sub">New business licenses we opened, of {{ pf.total }} total</div>
+      </div>
+      <div class="an-card" style="grid-column:span 2;margin-bottom:0;">
+        <div class="an-card-title">Newly Formed — by Jurisdiction</div>
+        {% set jc = {'Mainland':'#133E87','Free Zone':'#10B981','Offshore':'#8B5CF6','Not set':'#CBD5E1'} %}
+        {% set max_fj = pf.formed_juris[0][1] if pf.formed_juris else 1 %}
+        {% for name, cnt in pf.formed_juris %}
+        <div class="bar-row"><div class="bar-label">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_fj)*100)|int }}%;background:{{ jc.get(name,'#64748B') }};"></div></div><div class="bar-val">{{ cnt }}</div></div>
+        {% endfor %}
+        {% if not pf.formed_juris %}<div class="empty-state">No companies marked "Newly Formed" yet</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="grid3">
       <div class="kpi" style="border-top:4px solid #F59E0B;">
         <div class="kpi-label">Dormant 30+ Days</div>
         <div class="kpi-val" style="color:#F59E0B;">{{ pf.dormant_30 }}</div>
@@ -803,6 +820,21 @@
         {% endfor %}
         {% if pf.activities_notset %}<div style="margin-top:8px;font-size:11px;color:#64748B;border-top:0.5px solid #F1F5F9;padding-top:8px;">{{ pf.activities_notset }} companies have no business activity filled in</div>{% endif %}
         {% if not pf.activities %}<div class="empty-state">Business activity not filled in on any company yet</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="an-card" style="grid-column:1 / -1;">
+        <div class="an-card-title">New Licenses Opened by Tahfeel <span style="font-weight:400;color:#64748B;font-size:11px;">· last 12 months</span></div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:100px;">
+          {% for g in pf.formed_growth %}
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <span style="font-size:11px;color:#64748B;line-height:1;">{{ g.count if g.count else '' }}</span>
+            <div style="width:100%;border-radius:3px 3px 0 0;background:{% if loop.last %}#10B981{% else %}#D1FAE5{% endif %};height:{{ ((g.count/pf.max_formed_growth)*75)|int if g.count else 2 }}px;min-height:2px;"></div>
+            <div style="font-size:11px;color:{% if loop.last %}#10B981{% else %}#94A3B8{% endif %};font-weight:{% if loop.last %}700{% else %}400{% endif %};">{{ g.month }}</div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
     {% endif %}
