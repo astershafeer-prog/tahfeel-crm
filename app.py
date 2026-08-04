@@ -445,6 +445,11 @@ class Customer(db.Model):
     # 500, not 200: a UAE licence routinely lists several activities in one string
     business_activity = db.Column(db.String(500))
     ac_status = db.Column(db.String(30))            # Active / Under Formation / Inactive / Closed
+    # 'Yes' / 'No' — was this license newly opened by Tahfeel, vs. an already-
+    # existing company that just came to us for a service? Mandatory on the
+    # Add-Company wizard going forward; pre-existing rows were bulk-backfilled
+    # to 'No' and are being corrected by hand as staff review each one.
+    formed_by_tahfeel = db.Column(db.String(10))
     po_box = db.Column(db.String(30))
     mobile = db.Column(db.String(30))
     whatsapp = db.Column(db.String(30))
@@ -4268,6 +4273,9 @@ def add_customer():
         if ctype == 'Company' and not (request.form.get('contact_person') or '').strip():
             flash('Contact Person is required for a Company client', 'error')
             return _redisplay()
+        if ctype == 'Company' and request.form.get('formed_by_tahfeel') not in ('Yes', 'No'):
+            flash('Please specify whether this was newly formed by Tahfeel', 'error')
+            return _redisplay()
         if not request.form.get('source'):
             flash('Source is required', 'error')
             return _redisplay()
@@ -4315,7 +4323,7 @@ def add_customer():
         db.session.flush()  # get customer.id before commit
 
         # Company profile fields (UAE) — applied for any customer; blank for individuals
-        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website','uae_pass_number','uae_pass_name']:
+        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website','uae_pass_number','uae_pass_name','formed_by_tahfeel']:
             _val = request.form.get(_f, '').strip() or None
             if _f in ('mobile', 'whatsapp') and _val:
                 _val = normalize_phone_e164(_val)
@@ -4888,7 +4896,7 @@ def edit_customer(customer_id):
         customer.alerts_enabled = bool(request.form.get('alerts_enabled'))
         # Company profile fields (UAE) — only update fields actually present in the
         # submitted form, so trimmed/removed fields keep their existing values (no wipe).
-        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website','uae_pass_number','uae_pass_name']:
+        for _f in ['ac_code','trade_name','legal_form','jurisdiction','licensing_authority','freezone_name','emirate','country_incorp','business_activity','ac_status','po_box','mobile','whatsapp','website','uae_pass_number','uae_pass_name','formed_by_tahfeel']:
             if _f in request.form:
                 _val = request.form.get(_f, '').strip() or None
                 if _f in ('mobile', 'whatsapp') and _val:
@@ -9382,6 +9390,11 @@ def init_db():
             # over-length string rather than truncating, so this was a 500 on save.
             'ALTER TABLE customer ALTER COLUMN business_activity TYPE VARCHAR(500)',
             'ALTER TABLE customer ALTER COLUMN address TYPE VARCHAR(500)',
+            # "Newly formed by Tahfeel?" tracking — backfill existing companies to
+            # 'No' (owner is reviewing them one by one and correcting to 'Yes'
+            # where it actually applies); new companies must choose explicitly.
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS formed_by_tahfeel VARCHAR(10)',
+            "UPDATE customer SET formed_by_tahfeel='No' WHERE formed_by_tahfeel IS NULL AND customer_type='Company'",
         ]
         for sql in migrations:
             try:
@@ -10383,6 +10396,18 @@ def analytics():
             growth.append({'month': _cal.month_abbr[m_],
                            'count': sum(1 for c in companies if c.created_at
                                         and c.created_at.year == y_ and c.created_at.month == m_)})
+        # "Newly formed by Tahfeel" — new business licenses we actually opened,
+        # as distinct from existing companies that just came to us for a service.
+        formed_companies = [c for c in companies if c.formed_by_tahfeel == 'Yes']
+        formed_juris_counts = Counter((c.jurisdiction or 'Not set') for c in formed_companies)
+        formed_growth = []
+        for i in range(11, -1, -1):
+            m_, y_ = now.month - i, now.year
+            if m_ <= 0:
+                m_, y_ = m_ + 12, y_ - 1
+            formed_growth.append({'month': _cal.month_abbr[m_],
+                           'count': sum(1 for c in formed_companies if c.created_at
+                                        and c.created_at.year == y_ and c.created_at.month == m_)})
         pf = {
             'total': len(companies),
             'individual_total': individual_total,
@@ -10401,6 +10426,10 @@ def analytics():
             'dormant_total': dormant_90,
             'managers': managers,
             'growth': growth, 'max_growth': max((g['count'] for g in growth), default=1) or 1,
+            'formed_total': len(formed_companies),
+            'formed_juris': formed_juris_counts.most_common(),
+            'formed_growth': formed_growth,
+            'max_formed_growth': max((g['count'] for g in formed_growth), default=1) or 1,
             # ── scan report ──
             'docs_expired': docs_expired, 'docs_30': docs_30, 'docs_60': docs_60,
             'tax': tax, 'gaps': gaps, 'calls': calls,
