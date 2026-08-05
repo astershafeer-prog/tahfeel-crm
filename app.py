@@ -1538,7 +1538,7 @@ def birthday_people(today):
                        'dob': o.date_of_birth, 'mobile': o.mobile,
                        'link': f'/customers/{o.customer_id}'})
     for e in Employee.query.filter(Employee.date_of_birth.isnot(None)).all():
-        if (e.status or 'Active') in ('Resigned', 'Terminated'):
+        if (e.status or 'Active') in ('Resigned', 'Terminated', 'Rejected'):
             continue
         people.append({'kind': 'Employee', 'name': e.name,
                        'company': e.company.name if e.company else '',
@@ -8408,12 +8408,13 @@ def cron_birthday_wishes():
             skipped += 1
         details.append(f'{o.name} (owner): {"sent" if wam else "FAILED"}')
     # Customer-company employees — wish goes to the EMPLOYEE's own mobile only.
-    # Resigned/Terminated staff are never wished.
+    # Resigned/Terminated/Rejected staff are never wished ('Rejected' = visa
+    # application refused, so they never actually joined the company).
     for e in Employee.query.filter(Employee.date_of_birth.isnot(None)).all():
         dob = e.date_of_birth
         if not (dob.month == today.month and dob.day == today.day):
             continue
-        if (e.status or 'Active') in ('Resigned', 'Terminated'):
+        if (e.status or 'Active') in ('Resigned', 'Terminated', 'Rejected'):
             continue
         key = f'birthday:employee:{e.id}:{today.year}'
         if AutoMessageLog.query.filter_by(dedupe_key=key).first():
