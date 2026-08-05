@@ -1295,8 +1295,11 @@ class InternalReminder(db.Model):
     __tablename__ = 'internal_reminder'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
-    category = db.Column(db.String(60))
     due_date = db.Column(db.Date, nullable=False)
+    # Free-text "Remarks" — a separate Category field was dropped before anyone
+    # used it: two free-text boxes (Category + Notes) just made people wonder
+    # which one to type in. The old nullable `category` column is left orphaned
+    # in the DB rather than dropped, since dropping columns is irreversible.
     notes = db.Column(db.Text)
     is_done = db.Column(db.Boolean, default=False)
     created_by = db.Column(db.String(100))
@@ -6544,8 +6547,13 @@ def reminders():
     q = InternalReminder.query
     q = q.filter_by(is_done=True) if show_done else q.filter_by(is_done=False)
     items = q.order_by(InternalReminder.due_date).all()
-    due_soon = len([r for r in items if not r.is_done and (r.due_date - today).days <= 30])
-    return render_template('reminders.html', items=items, today=today, show_done=show_done, due_soon=due_soon)
+    # Stats always describe the ACTIVE list, even while viewing the Done tab —
+    # "3 overdue" shouldn't silently become 0 just because you clicked Done.
+    active = InternalReminder.query.filter_by(is_done=False).all()
+    overdue = len([r for r in active if (r.due_date - today).days < 0])
+    due_soon = len([r for r in active if 0 <= (r.due_date - today).days <= 30])
+    return render_template('reminders.html', items=items, today=today, show_done=show_done,
+                           overdue=overdue, due_soon=due_soon, active_total=len(active))
 
 @app.route('/reminders/add', methods=['POST'])
 @login_required
@@ -6558,7 +6566,6 @@ def add_reminder():
         return redirect(url_for('reminders'))
     r = InternalReminder(
         title=title,
-        category=request.form.get('category', '').strip() or None,
         due_date=datetime.strptime(due, '%Y-%m-%d').date(),
         notes=request.form.get('notes', '').strip() or None,
         created_by=session.get('user_name'),
@@ -6580,7 +6587,6 @@ def edit_reminder(reminder_id):
         return redirect(url_for('reminders'))
     r.title = title
     r.due_date = datetime.strptime(due, '%Y-%m-%d').date()
-    r.category = request.form.get('category', '').strip() or None
     r.notes = request.form.get('notes', '').strip() or None
     db.session.commit()
     flash(f'Reminder "{r.title}" updated')

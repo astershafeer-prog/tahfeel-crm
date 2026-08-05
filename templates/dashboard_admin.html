@@ -103,7 +103,7 @@
       {% for r in reminders_due[:5] %}
       {% set dl = (r.due_date - now.date()).days %}
       <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;{% if not loop.last %}border-bottom:0.5px solid #F8FAFC;{% endif %}">
-        <span style="font-size:13px;color:#1A2333;">{{ r.title }}{% if r.category %} <span style="color:#94A3B8;">· {{ r.category }}</span>{% endif %}</span>
+        <span style="font-size:13px;color:#1A2333;">{{ r.title }}{% if r.notes %} <span style="color:#94A3B8;">· {{ r.notes }}</span>{% endif %}</span>
         <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;{% if dl < 0 %}background:#FEF2F2;color:#B91C1C;{% else %}background:#FFFBEB;color:#92400E;{% endif %}">{% if dl < 0 %}Overdue {{ -dl }}d{% else %}{{ dl }}d left{% endif %}</span>
       </div>
       {% endfor %}
