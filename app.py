@@ -1286,6 +1286,22 @@ class DeskNote(db.Model):
     user = db.relationship('User', foreign_keys=[user_id])
     mention_user = db.relationship('User', foreign_keys=[mention_user_id])
 
+class InternalReminder(db.Model):
+    """Internal-only renewals (domain, hosting, software, insurance...) — NOT
+    client data. Shown inside the CRM itself (admin dashboard + this list)
+    rather than emailed, since a "your domain is expiring" email is
+    indistinguishable from a phishing one; a fact you look up inside a system
+    you're already logged into doesn't have that problem."""
+    __tablename__ = 'internal_reminder'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    category = db.Column(db.String(60))
+    due_date = db.Column(db.Date, nullable=False)
+    notes = db.Column(db.Text)
+    is_done = db.Column(db.Boolean, default=False)
+    created_by = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=now_dubai)
+
 class ComplianceSnapshot(db.Model):
     """TASK 3.3: one row per client per "Take snapshot" run — aggregate
     counts only (no per-document detail), used for the month-over-month
@@ -2239,8 +2255,17 @@ def dashboard():
         except:
             birthdays_today = []
         bday_counts = birthday_counts(now.date())
+        try:
+            today = now.date()
+            reminders_due = sorted(
+                [r for r in InternalReminder.query.filter_by(is_done=False).all()
+                 if (r.due_date - today).days <= 30],
+                key=lambda r: r.due_date)
+        except:
+            reminders_due = []
         return render_template('dashboard_admin.html',
                                leads=leads, today_leads=today_leads, needs_attention=needs_attention, testimonial_nudges=testimonial_nudges,
+                               reminders_due=reminders_due,
                                birthdays_today=birthdays_today, bday_counts=bday_counts,
                                wl_filter=wl_filter, wl_from=wl_from, wl_to=wl_to,
                                total=total, overdue_leads=overdue_leads,
@@ -6504,6 +6529,82 @@ def admin_delete_vendor(vendor_id):
     db.session.commit()
     flash(f'Vendor "{v.name}" removed')
     return redirect(url_for('admin_panel') + '#vendors')
+
+
+# ── Internal Reminders (domain, hosting, software — NOT client data) ──────────
+# Deliberately admin-only and CRM-internal, not emailed: a "your domain is
+# expiring" email is indistinguishable from phishing, so the whole point is to
+# have a place you trust because you're already logged into it.
+@app.route('/reminders')
+@login_required
+@admin_required
+def reminders():
+    today = now_dubai().date()
+    show_done = request.args.get('show') == 'done'
+    q = InternalReminder.query
+    q = q.filter_by(is_done=True) if show_done else q.filter_by(is_done=False)
+    items = q.order_by(InternalReminder.due_date).all()
+    due_soon = len([r for r in items if not r.is_done and (r.due_date - today).days <= 30])
+    return render_template('reminders.html', items=items, today=today, show_done=show_done, due_soon=due_soon)
+
+@app.route('/reminders/add', methods=['POST'])
+@login_required
+@admin_required
+def add_reminder():
+    title = request.form.get('title', '').strip()
+    due = request.form.get('due_date', '').strip()
+    if not title or not due:
+        flash('Title and due date are required', 'error')
+        return redirect(url_for('reminders'))
+    r = InternalReminder(
+        title=title,
+        category=request.form.get('category', '').strip() or None,
+        due_date=datetime.strptime(due, '%Y-%m-%d').date(),
+        notes=request.form.get('notes', '').strip() or None,
+        created_by=session.get('user_name'),
+    )
+    db.session.add(r)
+    db.session.commit()
+    flash(f'Reminder "{r.title}" added')
+    return redirect(url_for('reminders'))
+
+@app.route('/reminders/<int:reminder_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_reminder(reminder_id):
+    r = InternalReminder.query.get_or_404(reminder_id)
+    title = request.form.get('title', '').strip()
+    due = request.form.get('due_date', '').strip()
+    if not title or not due:
+        flash('Title and due date are required', 'error')
+        return redirect(url_for('reminders'))
+    r.title = title
+    r.due_date = datetime.strptime(due, '%Y-%m-%d').date()
+    r.category = request.form.get('category', '').strip() or None
+    r.notes = request.form.get('notes', '').strip() or None
+    db.session.commit()
+    flash(f'Reminder "{r.title}" updated')
+    return redirect(url_for('reminders'))
+
+@app.route('/reminders/<int:reminder_id>/toggle-done', methods=['POST'])
+@login_required
+@admin_required
+def toggle_reminder_done(reminder_id):
+    r = InternalReminder.query.get_or_404(reminder_id)
+    r.is_done = not r.is_done
+    db.session.commit()
+    flash(f'"{r.title}" marked {"done" if r.is_done else "not done"}')
+    return redirect(url_for('reminders', show='done' if r.is_done else None))
+
+@app.route('/reminders/<int:reminder_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_reminder(reminder_id):
+    r = InternalReminder.query.get_or_404(reminder_id)
+    flash(f'Reminder "{r.title}" deleted')
+    db.session.delete(r)
+    db.session.commit()
+    return redirect(url_for('reminders'))
 
 
 # ── Admin — Bundle Templates ───────────────────────────────────────────────────

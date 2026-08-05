@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Reminders</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+  <style>
+    .kpi{background:white;border-radius:12px;padding:16px 18px;border:0.5px solid #E2E8F0;}
+    .kpi-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .kpi-val{font-size:26px;font-weight:800;color:#1A2333;}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+    .days-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+    .rem-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:0.5px solid #F1F5F9;}
+    .rem-row:last-child{border-bottom:none;}
+    details.rem-edit summary{cursor:pointer;font-size:12px;color:#1A3B8B;font-weight:600;list-style:none;}
+    details.rem-edit summary::-webkit-details-marker{display:none;}
+    .rem-form-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end;}
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('reminders') }}
+
+  <div class="container" style="max-width:1000px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}<div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header" style="margin-bottom:16px;">
+      <div>
+        <h2 style="color:#133E87;">⏰ Reminders</h2>
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">Internal renewals — domain, hosting, software, insurance. Not client data, not emailed: check here instead of trusting a "your domain is expiring" email.</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <a href="/reminders" class="btn-sm {% if not show_done %}btn-primary{% else %}btn-secondary{% endif %}">Active</a>
+        <a href="/reminders?show=done" class="btn-sm {% if show_done %}btn-primary{% else %}btn-secondary{% endif %}">Done</a>
+      </div>
+    </div>
+
+    {% if not show_done %}
+    <div class="grid3">
+      <div class="kpi" style="border-top:4px solid {{ '#EF4444' if due_soon else '#10B981' }};">
+        <div class="kpi-label">Due Within 30 Days</div>
+        <div class="kpi-val" style="color:{{ '#EF4444' if due_soon else '#10B981' }};">{{ due_soon }}</div>
+      </div>
+      <div class="kpi" style="border-top:4px solid #64748B;">
+        <div class="kpi-label">Total Active</div>
+        <div class="kpi-val">{{ items|length }}</div>
+      </div>
+      <div class="kpi" style="border-top:4px solid #8B5CF6;grid-column:span 1;">
+        <div class="kpi-label">&nbsp;</div>
+        <div style="font-size:11px;color:#64748B;">No WhatsApp/email alerts yet — check this page. Ask to add them later if this page alone isn't enough.</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:#1A2333;margin-bottom:12px;">+ Add Reminder</div>
+      <form method="POST" action="/reminders/add">
+        <div class="rem-form-grid">
+          <div class="form-group"><label>Title</label><input type="text" name="title" placeholder="e.g. Domain renewal — tahfeelcrm.online" required></div>
+          <div class="form-group"><label>Category</label><input type="text" name="category" placeholder="Domain / Hosting / Software..."></div>
+          <div class="form-group"><label>Due Date</label><input type="date" name="due_date" required></div>
+        </div>
+        <div class="form-group" style="margin-top:10px;"><label>Notes</label><input type="text" name="notes" placeholder="Optional — registrar, account, login hint, etc."></div>
+        <button type="submit" class="btn-add" style="margin-top:6px;">Add Reminder</button>
+      </form>
+    </div>
+
+    <div class="card">
+      {% if items %}
+      {% for r in items %}
+      {% set dl = (r.due_date - today).days %}
+      <div class="rem-row">
+        <div style="width:110px;flex-shrink:0;">
+          {% if r.is_done %}<span class="days-badge" style="background:#ECFDF5;color:#047857;">✓ Done</span>
+          {% elif dl < 0 %}<span class="days-badge" style="background:#FEF2F2;color:#B91C1C;">Overdue {{ -dl }}d</span>
+          {% elif dl <= 30 %}<span class="days-badge" style="background:#FFFBEB;color:#92400E;">{{ dl }}d left</span>
+          {% else %}<span class="days-badge" style="background:#F1F5F9;color:#475569;">{{ dl }}d left</span>{% endif %}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;color:#1A2333;font-size:13px;">{{ r.title }}</div>
+          <div style="font-size:11px;color:#64748B;margin-top:2px;">
+            {% if r.category %}{{ r.category }} · {% endif %}Due {{ r.due_date.strftime('%d %b %Y') }}
+            {% if r.notes %} · {{ r.notes }}{% endif %}
+          </div>
+        </div>
+        <details class="rem-edit">
+          <summary>Edit</summary>
+          <form method="POST" action="/reminders/{{ r.id }}/edit" style="margin-top:10px;min-width:320px;">
+            <div class="rem-form-grid">
+              <div class="form-group"><label>Title</label><input type="text" name="title" value="{{ r.title }}" required></div>
+              <div class="form-group"><label>Category</label><input type="text" name="category" value="{{ r.category or '' }}"></div>
+              <div class="form-group"><label>Due Date</label><input type="date" name="due_date" value="{{ r.due_date.strftime('%Y-%m-%d') }}" required></div>
+            </div>
+            <div class="form-group" style="margin-top:10px;"><label>Notes</label><input type="text" name="notes" value="{{ r.notes or '' }}"></div>
+            <button type="submit" class="btn-sm btn-primary" style="margin-top:6px;">Save</button>
+          </form>
+        </details>
+        <form method="POST" action="/reminders/{{ r.id }}/toggle-done">
+          <button type="submit" class="btn-sm btn-secondary">{{ 'Mark Not Done' if r.is_done else 'Mark Done' }}</button>
+        </form>
+        <form method="POST" action="/reminders/{{ r.id }}/delete" data-confirm="Delete '{{ r.title }}'? This can't be undone.">
+          <button type="submit" class="btn-sm btn-danger">Delete</button>
+        </form>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="text-align:center;padding:40px;color:#64748B;font-size:13px;">
+        {% if show_done %}No completed reminders yet.{% else %}No reminders yet — add your first one above.{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
