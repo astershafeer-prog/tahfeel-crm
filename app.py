@@ -156,6 +156,23 @@ app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20MB cap on any single re
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tahfeel.db')).replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Connection pool settings — Postgres only. SQLite's default pool doesn't accept
+# pool_size/max_overflow, so local dev keeps SQLAlchemy's defaults.
+#   pool_pre_ping  — test a connection before using it. Railway/Postgres drops idle
+#                    connections, and without this the first query after an idle spell
+#                    fails with "connection already closed" (an intermittent 500).
+#   pool_recycle   — retire connections after 5 min rather than let them go stale.
+#   pool_size      — per gunicorn worker, so keep it modest: workers x pool_size must
+#                    stay under the Postgres connection limit.
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'pool_size': 5,
+        'max_overflow': 5,
+    }
+
 db = SQLAlchemy(app)
 
 # ── CSRF protection ───────────────────────────────────────────────────────────

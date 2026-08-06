@@ -20,4 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD gunicorn app:app -b 0.0.0.0:$PORT
+# 2 worker processes x 4 threads = 8 requests served at once (was 1).
+# Threads matter most here: a request waiting on the Claude API or generating a
+# PDF releases the GIL, so the rest of the office isn't blocked meanwhile.
+# --timeout 120: the default 30s can kill a worker mid-PDF or mid-AI-reply.
+CMD gunicorn app:app -b 0.0.0.0:$PORT -w 2 --threads 4 --timeout 120
