@@ -161,12 +161,12 @@
             <label style="font-size:11px;color:#64748B;">Access token
               {% if capi.token_set %}<span style="color:#16A34A;">— saved ✓ (leave blank to keep it)</span>{% else %}<span style="color:#B45309;">— not set yet</span>{% endif %}
             </label>
-            <input type="password" name="capi_token" autocomplete="off" placeholder="{{ 'Paste a new token to replace' if capi.token_set else 'CAPI access token from Events Manager' }}" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            <input type="password" name="capi_token" autocomplete="new-password" data-lpignore="true" data-form-type="other" placeholder="{{ 'Paste a new token to replace' if capi.token_set else 'CAPI access token from Events Manager' }}" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;">
             <div style="flex:1;min-width:160px;">
               <label style="font-size:11px;color:#64748B;">Dataset / Pixel ID</label>
-              <input type="text" name="capi_dataset_id" value="{{ capi.dataset_id }}" placeholder="e.g. 1234567890" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+              <input type="text" name="capi_dataset_id" value="{{ capi.dataset_id }}" autocomplete="off" inputmode="numeric" data-lpignore="true" data-form-type="other" placeholder="e.g. 1234567890" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
             </div>
             <div style="flex:1;min-width:130px;">
               <label style="font-size:11px;color:#64748B;">Stage 1 event — marked Genuine</label>
@@ -224,11 +224,11 @@
             <label style="font-size:11px;color:#64748B;">Access token — needs <strong>ads_read</strong>
               {% if adsync.token_set %}<span style="color:#16A34A;">— saved ✓ (leave blank to keep it)</span>{% else %}<span style="color:#B45309;">— not set yet</span>{% endif %}
             </label>
-            <input type="password" name="ads_token" autocomplete="off" placeholder="{{ 'Paste a new token to replace' if adsync.token_set else 'System User token with ads_read' }}" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            <input type="password" name="ads_token" autocomplete="new-password" data-lpignore="true" data-form-type="other" placeholder="{{ 'Paste a new token to replace' if adsync.token_set else 'System User token with ads_read' }}" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
           </div>
           <div>
-            <label style="font-size:11px;color:#64748B;">Ad account ID</label>
-            <input type="text" name="ads_account_id" value="{{ adsync.account_id }}" placeholder="e.g. 153115390… (the act_ prefix is optional)" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            <label style="font-size:11px;color:#64748B;">Ad account ID <span style="font-weight:400;">— digits only</span></label>
+            <input type="text" name="ads_account_id" value="{{ adsync.account_id }}" autocomplete="off" inputmode="numeric" data-lpignore="true" data-form-type="other" placeholder="e.g. 153115390… (the act_ prefix is optional)" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
           </div>
           <div style="font-size:11px;color:#64748B;line-height:1.5;">
             Find the <strong>ad account ID</strong> in Ads Manager — the number beside the account name at the top.

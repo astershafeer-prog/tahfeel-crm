@@ -3319,15 +3319,27 @@ def admin_subtask_list_delete(item_id):
 def admin_capi_settings():
     """Save Meta Conversions API config. The token is only overwritten when a new
     one is typed, so saving other fields never wipes an existing token."""
+    errors = []
     set_setting('capi_enabled', 'on' if request.form.get('capi_enabled') == 'on' else 'off')
-    set_setting('capi_dataset_id', (request.form.get('capi_dataset_id') or '').strip())
+    raw_ds = (request.form.get('capi_dataset_id') or '').strip()
+    if raw_ds:
+        ds = _clean_numeric_id(raw_ds)
+        if ds:
+            set_setting('capi_dataset_id', ds)
+        else:
+            errors.append(f'Dataset ID "{raw_ds}" is not a number — it was NOT saved. '
+                          'Check whether your browser autofilled an email there.')
     set_setting('capi_event_name', (request.form.get('capi_event_name') or 'Qualified').strip() or 'Qualified')
     set_setting('capi_event_name_2', (request.form.get('capi_event_name_2') or 'Converted').strip() or 'Converted')
     set_setting('capi_test_code', (request.form.get('capi_test_code') or '').strip())
     new_token = (request.form.get('capi_token') or '').strip()
     if new_token:
-        set_setting('capi_token', new_token)
-    flash('Meta CAPI settings saved.')
+        if _looks_like_token(new_token):
+            set_setting('capi_token', new_token)
+        else:
+            errors.append("That doesn't look like a Meta access token — it was NOT saved. "
+                          'If your browser autofilled your login password, clear the field and paste the real token.')
+    flash(' '.join(f'⚠️ {e}' for e in errors) if errors else 'Meta CAPI settings saved.')
     return redirect(url_for('admin_panel') + '#capi')
 
 @app.route('/admin/capi-test', methods=['POST'])
@@ -3542,18 +3554,50 @@ def cron_sync_ad_spend():
         out[label] = meta_sync_spend(y, m)
     return jsonify(out)
 
+def _clean_numeric_id(raw):
+    """Digits-only Meta id (dataset / ad account), or None if it isn't one.
+
+    Validated server-side because browsers autofill a saved email into any text
+    input sitting next to a password box — so this field really does arrive as
+    'someone@example.com' in normal use, not just under attack."""
+    v = (raw or '').strip()
+    if v.lower().startswith('act_'):
+        v = v[4:]
+    return v if v.isdigit() else None
+
+def _looks_like_token(v):
+    """Reject an autofilled account password or email pretending to be an API token.
+    Meta tokens are long, and contain neither '@' nor whitespace."""
+    return len(v) >= 20 and '@' not in v and not any(ch.isspace() for ch in v)
+
 @app.route('/admin/ads-sync-settings', methods=['POST'])
 @login_required
 @admin_required
 def admin_ads_sync_settings():
     """Save Meta Marketing API config. The token is only overwritten when a new one
     is typed, so saving other fields never wipes an existing token."""
-    set_setting('ads_sync_enabled', 'on' if request.form.get('ads_sync_enabled') == 'on' else 'off')
-    set_setting('ads_account_id', (request.form.get('ads_account_id') or '').strip())
+    errors = []
+    raw_account = (request.form.get('ads_account_id') or '').strip()
+    if raw_account:
+        account = _clean_numeric_id(raw_account)
+        if account:
+            set_setting('ads_account_id', account)
+        else:
+            errors.append(f'Ad account ID "{raw_account}" is not a number — it was NOT saved. '
+                          'Your browser may have autofilled an email here; check the field.')
     new_token = (request.form.get('ads_token') or '').strip()
     if new_token:
-        set_setting('ads_token', new_token)
-    flash('Ad spend sync settings saved.')
+        if _looks_like_token(new_token):
+            set_setting('ads_token', new_token)
+        else:
+            errors.append("That doesn't look like a Meta access token — it was NOT saved. "
+                          'If your browser autofilled your login password, clear the field and paste the real token.')
+    want_on = request.form.get('ads_sync_enabled') == 'on'
+    ready   = bool(get_setting('ads_token', '')) and bool(get_setting('ads_account_id', ''))
+    if want_on and not ready:
+        errors.append('Sync left OFF — it needs both a valid ad account ID and an access token.')
+    set_setting('ads_sync_enabled', 'on' if (want_on and ready) else 'off')
+    flash(' '.join(f'⚠️ {e}' for e in errors) if errors else 'Ad spend sync settings saved.')
     return redirect(url_for('admin_panel') + '#adsync')
 
 @app.route('/admin/ads-sync-now', methods=['POST'])
