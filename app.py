@@ -254,7 +254,10 @@ def restrict_marketing_role():
     # External Marketing-Ext users are sandboxed to the read-only lead report only.
     if session.get('role') != 'marketing':
         return
-    allowed = {'marketing_report', 'marketing_export', 'logout', 'static'}
+    # campaign_performance_agency is the revenue-free campaign view. The full
+    # /campaign-performance is deliberately NOT here — it carries revenue.
+    allowed = {'marketing_report', 'marketing_export', 'campaign_performance_agency',
+               'logout', 'static'}
     if (request.endpoint or '') in allowed:
         return
     return redirect(url_for('marketing_report'))
@@ -3280,19 +3283,19 @@ def _month_arg():
     n = now_dubai()
     return n.year, n.month
 
-@app.route('/campaign-performance')
-@login_required
-@admin_required
-def campaign_performance():
-    """Per Meta campaign: leads in, quality, clients won, revenue booked to date.
+def _campaign_rows(year, month, with_revenue=True):
+    """Aggregate one month's Meta leads by campaign.
 
-    Cohort-based — a campaign is credited with revenue from the leads it generated
-    in the chosen month, whenever that money actually landed. That's the only
-    honest way to judge a campaign: a July lead that pays in September was still
-    won by July's spend."""
+    Cohort-based — a campaign is credited with the leads it generated in the chosen
+    month, and (for the admin view) whatever those leads have paid since. A July
+    lead that pays in September was still won by July's spend.
+
+    with_revenue=False is the external-agency view: the revenue query never runs and
+    no revenue/net/roas keys are produced. That's why this is a flag and not an
+    {% if %} in the template — data that never enters the context cannot leak out of
+    it, however the template is later edited."""
     from sqlalchemy import or_
     from collections import defaultdict
-    year, month = _month_arg()
     start = datetime(year, month, 1)
     end   = datetime(year + (1 if month == 12 else 0), (month % 12) + 1, 1)
 
@@ -3310,7 +3313,7 @@ def campaign_performance():
     # Revenue per customer, one query. Same cash-basis rule the rest of the CRM
     # uses: closed jobs' booked revenue + every partial-revenue row.
     rev_by_cust = defaultdict(float)
-    if cust_by_lead:
+    if with_revenue and cust_by_lead:
         for j in Job.query.filter(Job.customer_id.in_(list(cust_by_lead.values()))).all():
             if j.status in ('Closed', 'Closed - Pending Partner Commission'):
                 rev_by_cust[j.customer_id] += (j.revenue or 0)
@@ -3330,49 +3333,89 @@ def campaign_performance():
         cids    = [cust_by_lead[l.id] for l in ls if l.id in cust_by_lead]
         n       = len(ls)
         genuine = sum(1 for l in ls if l.genuine == 'Genuine')
-        revenue = sum(rev_by_cust.get(c, 0) for c in cids)
         spend   = spend_by_campaign.get(name, 0)
-        rows.append({
+        row = {
             'campaign': name, 'leads': n, 'genuine': genuine,
             'junk':        sum(1 for l in ls if l.genuine == 'Junk'),
             'unreachable': sum(1 for l in ls if l.genuine == 'Unreachable'),
             'not_reviewed': n - sum(1 for l in ls if l.genuine in ('Genuine', 'Junk', 'Unreachable')),
-            'clients': len(cids), 'revenue': revenue, 'spend': spend,
+            'clients': len(cids), 'spend': spend,
             'p_genuine': round(100 * genuine / n) if n else 0,
             'p_client':  round(100 * len(cids) / n) if n else 0,
             'cpl':              div(spend, n),
             'cost_per_genuine': div(spend, genuine),
             'cost_per_client':  div(spend, len(cids)),
-            'net':  (revenue - spend) if spend else None,
-            'roas': div(revenue, spend),
-        })
-    rows.sort(key=lambda r: (-r['revenue'], -r['leads']))
+        }
+        if with_revenue:
+            revenue = sum(rev_by_cust.get(c, 0) for c in cids)
+            row['revenue'] = revenue
+            row['net']     = (revenue - spend) if spend else None
+            row['roas']    = div(revenue, spend)
+        rows.append(row)
+    rows.sort(key=lambda r: (-r.get('revenue', 0), -r['leads']))
 
     t_leads   = sum(r['leads'] for r in rows)
     t_genuine = sum(r['genuine'] for r in rows)
     t_clients = sum(r['clients'] for r in rows)
-    t_rev     = sum(r['revenue'] for r in rows)
     t_spend   = sum(r['spend'] for r in rows)
     totals = {
-        'leads': t_leads, 'genuine': t_genuine, 'clients': t_clients,
-        'revenue': t_rev, 'spend': t_spend,
+        'leads': t_leads, 'genuine': t_genuine, 'clients': t_clients, 'spend': t_spend,
         'cpl': div(t_spend, t_leads), 'cost_per_client': div(t_spend, t_clients),
-        'net': (t_rev - t_spend) if t_spend else None, 'roas': div(t_rev, t_spend),
         'p_genuine': round(100 * t_genuine / t_leads) if t_leads else 0,
         'p_client':  round(100 * t_clients / t_leads) if t_leads else 0,
     }
+    if with_revenue:
+        t_rev = sum(r['revenue'] for r in rows)
+        totals['revenue'] = t_rev
+        totals['net']     = (t_rev - t_spend) if t_spend else None
+        totals['roas']    = div(t_rev, t_spend)
+    return rows, totals, start
 
-    # Month picker — last 18 months, newest first.
+def _campaign_months(floor=None):
+    """Month options for the picker — last 18, newest first, never before `floor`
+    (the Marketing-Ext report_from date, so the agency can't page back past it)."""
     n0, months = now_dubai(), []
     for i in range(18):
         yy, mm = n0.year, n0.month - i
         while mm < 1:
             mm += 12
             yy -= 1
+        if floor and (yy, mm) < (floor.year, floor.month):
+            break
         months.append({'v': f'{yy}-{mm:02d}', 'label': datetime(yy, mm, 1).strftime('%b %Y')})
+    return months
 
+@app.route('/campaign-performance')
+@login_required
+@admin_required
+def campaign_performance():
+    """Admin view — includes revenue, net and ROAS."""
+    year, month = _month_arg()
+    rows, totals, start = _campaign_rows(year, month, with_revenue=True)
     return render_template('campaign_performance.html', rows=rows, totals=totals,
-                           months=months, sel=f'{year}-{month:02d}',
+                           months=_campaign_months(), sel=f'{year}-{month:02d}',
+                           period=start.strftime('%B %Y'))
+
+@app.route('/campaign-performance/agency')
+@login_required
+def campaign_performance_agency():
+    """Marketing-Ext view — same funnel, no money we earned.
+
+    The agency needs to see which campaigns produce genuine leads and real clients,
+    or they keep optimising for cheap form-fills. They do not need our revenue: that
+    is our margin per lead, and they are who we negotiate fees with. Read-only —
+    spend is entered by an admin, so there's no dispute about who typed what."""
+    if session.get('role') not in ('marketing', 'admin'):
+        flash('Access denied.')
+        return redirect(url_for('dashboard'))
+    user  = User.query.get(session['user_id'])
+    floor = user.report_from if (user and user.role == 'marketing') else None
+    year, month = _month_arg()
+    if floor and (year, month) < (floor.year, floor.month):
+        year, month = floor.year, floor.month
+    rows, totals, start = _campaign_rows(year, month, with_revenue=False)
+    return render_template('campaign_performance_agency.html', rows=rows, totals=totals,
+                           months=_campaign_months(floor), sel=f'{year}-{month:02d}',
                            period=start.strftime('%B %Y'))
 
 @app.route('/campaign-performance/spend', methods=['POST'])

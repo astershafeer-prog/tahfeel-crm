@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel — Campaign Performance</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Arial, sans-serif; background:#f0f4f8; color:#1e293b; }
+    .topbar { background:#1A3B8B; color:#fff; padding:12px 22px; display:flex; align-items:center; justify-content:space-between; }
+    .topbar .brand { font-size:15px; font-weight:700; letter-spacing:.3px; }
+    .topbar .brand span { font-size:12px; font-weight:400; color:#b8c5e0; margin-left:8px; }
+    .topbar .right { display:flex; align-items:center; gap:14px; font-size:12px; color:#d8e0f0; }
+    .topbar a { color:#fff; text-decoration:none; }
+    .tabs { background:#0F2660; padding:0 22px; display:flex; gap:2px; }
+    .tabs a { color:#b8c5e0; text-decoration:none; font-size:13px; padding:10px 16px; border-bottom:2px solid transparent; }
+    .tabs a.active { color:#fff; font-weight:700; border-bottom-color:#fff; }
+    .container { max-width:1080px; margin:0 auto; padding:18px 22px; }
+    h2 { font-size:18px; color:#0F2660; font-weight:700; }
+    .sub { font-size:12px; color:#64748b; margin-top:3px; line-height:1.55; }
+    .head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+    .chips { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:16px 0; }
+    .chip { background:#fff; border:0.5px solid #e2e8f0; border-radius:8px; padding:11px 13px; }
+    .chip .l { font-size:10px; color:#64748B; text-transform:uppercase; letter-spacing:.4px; }
+    .chip .v { font-size:22px; font-weight:700; color:#0F2660; }
+    .chip .s { font-size:11px; color:#64748b; margin-top:3px; }
+    .card { background:#fff; border:0.5px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { background:#f8fafc; color:#64748b; text-align:left; font-weight:700; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap; }
+    td { padding:11px 12px; border-top:0.5px solid #eef2f7; color:#334155; }
+    th.num, td.num { text-align:right; }
+    tr.tot td { border-top:1.5px solid #cbd5e1; background:#f8fafc; font-weight:800; color:#0F2660; }
+    .cname { font-weight:700; color:#1A2333; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .muted { color:#94A3B8; }
+    .bar { height:6px; background:#F1F5F9; border-radius:20px; overflow:hidden; margin-top:5px; }
+    .bar i { display:block; height:100%; background:#1A3B8B; }
+    .qs { font-size:11px; color:#64748b; margin-top:4px; }
+    select { border:0.5px solid #cbd5e1; border-radius:6px; padding:7px 10px; font-size:13px; background:#fff; }
+    .note { font-size:11.5px; color:#64748B; line-height:1.65; margin-top:12px; }
+    .empty { padding:44px; text-align:center; color:#64748B; font-size:13px; }
+    @media (max-width:860px){ .chips{grid-template-columns:repeat(2,1fr);} }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">TAHFEEL <span>Campaign Performance</span></div>
+    <div class="right"><span>{{ session.user_name }}</span><a href="/logout">Logout</a></div>
+  </div>
+  <div class="tabs">
+    <a href="/marketing-report">Lead Report</a>
+    <a href="/campaign-performance/agency" class="active">Campaign Performance</a>
+  </div>
+
+  <div class="container">
+    <div class="head">
+      <div>
+        <h2>Campaign Performance — {{ period }}</h2>
+        <div class="sub">
+          How each campaign's leads from <strong>{{ period }}</strong> actually performed after handover — how many were
+          genuine, and how many became paying clients.
+        </div>
+      </div>
+      <form method="GET">
+        <select name="m" onchange="this.form.submit()">
+          {% for mo in months %}<option value="{{ mo.v }}" {% if mo.v == sel %}selected{% endif %}>{{ mo.label }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+
+    <div class="chips">
+      <div class="chip">
+        <div class="l">Leads delivered</div>
+        <div class="v">{{ totals.leads }}</div>
+        <div class="s">in {{ period }}</div>
+      </div>
+      <div class="chip">
+        <div class="l">Genuine</div>
+        <div class="v">{{ totals.genuine }}</div>
+        <div class="s">{{ totals.p_genuine }}% of leads</div>
+      </div>
+      <div class="chip">
+        <div class="l">Became clients</div>
+        <div class="v">{{ totals.clients }}</div>
+        <div class="s">{{ totals.p_client }}% of leads</div>
+      </div>
+      <div class="chip">
+        <div class="l">Cost per client</div>
+        <div class="v">{% if totals.cost_per_client %}{{ '{:,.0f}'.format(totals.cost_per_client) }}{% else %}<span class="muted">—</span>{% endif %}</div>
+        <div class="s">{% if totals.cpl %}AED {{ '{:,.2f}'.format(totals.cpl) }} per lead{% else %}spend not entered{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      {% if rows %}
+      <table>
+        <thead>
+          <tr>
+            <th>Campaign</th>
+            <th class="num">Leads</th>
+            <th class="num">Genuine</th>
+            <th class="num">Junk</th>
+            <th class="num">Unreachable</th>
+            <th class="num">Clients</th>
+            <th class="num">Spend (AED)</th>
+            <th class="num">Cost / lead</th>
+            <th class="num">Cost / client</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>
+              <div class="cname" title="{{ r.campaign }}">{{ r.campaign }}</div>
+              <div class="bar"><i style="width:{{ r.p_client }}%;"></i></div>
+              <div class="qs">{{ r.p_genuine }}% genuine · {{ r.p_client }}% became clients{% if r.not_reviewed %} · {{ r.not_reviewed }} not yet reviewed{% endif %}</div>
+            </td>
+            <td class="num">{{ r.leads }}</td>
+            <td class="num">{{ r.genuine }}</td>
+            <td class="num">{{ r.junk }}</td>
+            <td class="num">{{ r.unreachable }}</td>
+            <td class="num">{{ r.clients }}</td>
+            <td class="num">{% if r.spend %}{{ '{:,.2f}'.format(r.spend) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="num">{% if r.cpl %}{{ '{:,.2f}'.format(r.cpl) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="num">{% if r.cost_per_client %}{{ '{:,.0f}'.format(r.cost_per_client) }}{% elif r.spend and not r.clients %}<span class="muted">no clients yet</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+          <tr class="tot">
+            <td>Total — {{ rows|length }} campaign{{ '' if rows|length == 1 else 's' }}</td>
+            <td class="num">{{ totals.leads }}</td>
+            <td class="num">{{ totals.genuine }}</td>
+            <td class="num">{{ rows|sum(attribute='junk') }}</td>
+            <td class="num">{{ rows|sum(attribute='unreachable') }}</td>
+            <td class="num">{{ totals.clients }}</td>
+            <td class="num">{% if totals.spend %}{{ '{:,.2f}'.format(totals.spend) }}{% else %}—{% endif %}</td>
+            <td class="num">{% if totals.cpl %}{{ '{:,.2f}'.format(totals.cpl) }}{% else %}—{% endif %}</td>
+            <td class="num">{% if totals.cost_per_client %}{{ '{:,.0f}'.format(totals.cost_per_client) }}{% else %}—{% endif %}</td>
+          </tr>
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No Meta leads were received in {{ period }}.</div>
+      {% endif %}
+    </div>
+
+    <div class="note">
+      <strong>Genuine / Junk / Unreachable</strong> are set by the Tahfeel sales team after they contact each lead.
+      <strong>Clients</strong> are leads that became paying customers — the number worth optimising for, since a cheap lead
+      that never converts costs more than an expensive one that does.
+      <strong>Cost per client</strong> is the month's ad spend divided by clients won from that month's leads; it looks high
+      early in a month because the spend lands immediately while deals take weeks to close. Ad spend is entered by Tahfeel
+      and is read-only here.
+    </div>
+  </div>
+</body>
+</html>
