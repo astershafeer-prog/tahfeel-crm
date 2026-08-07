@@ -560,6 +560,20 @@ class PartialRevenue(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     recorder = db.relationship('User', foreign_keys=[recorded_by])
 
+class CampaignSpend(db.Model):
+    """Manually-entered Meta ad spend, per campaign per month, for the Campaign ROI
+    report. Deliberately manual: at one or two live campaigns, typing one number a
+    month is cheaper and far less fragile than a Marketing API sync with a token
+    that expires silently. Revisit if we ever run five-plus campaigns at once."""
+    __tablename__ = 'campaign_spend'
+    id       = db.Column(db.Integer, primary_key=True)
+    campaign = db.Column(db.String(200), nullable=False, index=True)
+    year     = db.Column(db.Integer, nullable=False)
+    month    = db.Column(db.Integer, nullable=False)
+    amount   = db.Column(db.Float, default=0)
+    updated_at = db.Column(db.DateTime, default=now_dubai, onupdate=now_dubai)
+    __table_args__ = (db.UniqueConstraint('campaign', 'year', 'month', name='uq_campaign_spend_period'),)
+
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
@@ -3247,6 +3261,142 @@ def admin_capi_test():
     except Exception as e:
         flash(f'Test failed: {e}')
     return redirect(url_for('admin_panel') + '#capi')
+
+
+# ── Campaign ROI — which Meta campaigns produce paying clients ────────────────
+# Admin-only, and on its own route ON PURPOSE. It shows revenue per campaign, which
+# the Marketing-Ext (external agency) role must never see — that number is our margin
+# per lead, and the agency is who we negotiate fees with. Keeping it off
+# /marketing-report means no template condition sits between them and it.
+def _month_arg():
+    """Parse ?m=YYYY-MM into (year, month), falling back to the current Dubai month."""
+    try:
+        y, mo = ((request.args.get('m') or '').strip().split('-'))
+        y, mo = int(y), int(mo)
+        if 1 <= mo <= 12 and 2000 <= y <= 2100:
+            return y, mo
+    except ValueError:
+        pass
+    n = now_dubai()
+    return n.year, n.month
+
+@app.route('/campaign-performance')
+@login_required
+@admin_required
+def campaign_performance():
+    """Per Meta campaign: leads in, quality, clients won, revenue booked to date.
+
+    Cohort-based — a campaign is credited with revenue from the leads it generated
+    in the chosen month, whenever that money actually landed. That's the only
+    honest way to judge a campaign: a July lead that pays in September was still
+    won by July's spend."""
+    from sqlalchemy import or_
+    from collections import defaultdict
+    year, month = _month_arg()
+    start = datetime(year, month, 1)
+    end   = datetime(year + (1 if month == 12 else 0), (month % 12) + 1, 1)
+
+    leads = Lead.query.filter(
+        or_(Lead.meta_lead_id.isnot(None), Lead.source.like('Meta%')),
+        Lead.created_at >= start, Lead.created_at < end).all()
+
+    # Lead -> Customer, one query rather than one per lead.
+    lead_ids = [l.id for l in leads]
+    cust_by_lead = {}
+    if lead_ids:
+        for c in Customer.query.filter(Customer.lead_id.in_(lead_ids)).all():
+            cust_by_lead[c.lead_id] = c.id
+
+    # Revenue per customer, one query. Same cash-basis rule the rest of the CRM
+    # uses: closed jobs' booked revenue + every partial-revenue row.
+    rev_by_cust = defaultdict(float)
+    if cust_by_lead:
+        for j in Job.query.filter(Job.customer_id.in_(list(cust_by_lead.values()))).all():
+            if j.status in ('Closed', 'Closed - Pending Partner Commission'):
+                rev_by_cust[j.customer_id] += (j.revenue or 0)
+            for pr in j.partial_revenues:
+                rev_by_cust[j.customer_id] += (pr.amount or 0)
+
+    spend_by_campaign = {s.campaign: (s.amount or 0)
+                         for s in CampaignSpend.query.filter_by(year=year, month=month).all()}
+
+    groups = defaultdict(list)
+    for l in leads:
+        groups[(l.campaign or '').strip() or '— no campaign name —'].append(l)
+
+    div = lambda a, b: (a / b) if b else None
+    rows = []
+    for name, ls in groups.items():
+        cids    = [cust_by_lead[l.id] for l in ls if l.id in cust_by_lead]
+        n       = len(ls)
+        genuine = sum(1 for l in ls if l.genuine == 'Genuine')
+        revenue = sum(rev_by_cust.get(c, 0) for c in cids)
+        spend   = spend_by_campaign.get(name, 0)
+        rows.append({
+            'campaign': name, 'leads': n, 'genuine': genuine,
+            'junk':        sum(1 for l in ls if l.genuine == 'Junk'),
+            'unreachable': sum(1 for l in ls if l.genuine == 'Unreachable'),
+            'not_reviewed': n - sum(1 for l in ls if l.genuine in ('Genuine', 'Junk', 'Unreachable')),
+            'clients': len(cids), 'revenue': revenue, 'spend': spend,
+            'p_genuine': round(100 * genuine / n) if n else 0,
+            'p_client':  round(100 * len(cids) / n) if n else 0,
+            'cpl':              div(spend, n),
+            'cost_per_genuine': div(spend, genuine),
+            'cost_per_client':  div(spend, len(cids)),
+            'net':  (revenue - spend) if spend else None,
+            'roas': div(revenue, spend),
+        })
+    rows.sort(key=lambda r: (-r['revenue'], -r['leads']))
+
+    t_leads   = sum(r['leads'] for r in rows)
+    t_genuine = sum(r['genuine'] for r in rows)
+    t_clients = sum(r['clients'] for r in rows)
+    t_rev     = sum(r['revenue'] for r in rows)
+    t_spend   = sum(r['spend'] for r in rows)
+    totals = {
+        'leads': t_leads, 'genuine': t_genuine, 'clients': t_clients,
+        'revenue': t_rev, 'spend': t_spend,
+        'cpl': div(t_spend, t_leads), 'cost_per_client': div(t_spend, t_clients),
+        'net': (t_rev - t_spend) if t_spend else None, 'roas': div(t_rev, t_spend),
+        'p_genuine': round(100 * t_genuine / t_leads) if t_leads else 0,
+        'p_client':  round(100 * t_clients / t_leads) if t_leads else 0,
+    }
+
+    # Month picker — last 18 months, newest first.
+    n0, months = now_dubai(), []
+    for i in range(18):
+        yy, mm = n0.year, n0.month - i
+        while mm < 1:
+            mm += 12
+            yy -= 1
+        months.append({'v': f'{yy}-{mm:02d}', 'label': datetime(yy, mm, 1).strftime('%b %Y')})
+
+    return render_template('campaign_performance.html', rows=rows, totals=totals,
+                           months=months, sel=f'{year}-{month:02d}',
+                           period=start.strftime('%B %Y'))
+
+@app.route('/campaign-performance/spend', methods=['POST'])
+@login_required
+@admin_required
+def campaign_spend_save():
+    """Save the manually-entered Meta spend for each campaign in one month."""
+    year, month = _month_arg()
+    for key, val in request.form.items():
+        if not key.startswith('spend__'):
+            continue
+        name = key[len('spend__'):]
+        try:
+            amount = float((val or '').strip() or 0)
+        except ValueError:
+            continue
+        row = CampaignSpend.query.filter_by(campaign=name, year=year, month=month).first()
+        if row:
+            row.amount = amount
+        elif amount:
+            db.session.add(CampaignSpend(campaign=name, year=year, month=month, amount=amount))
+    db.session.commit()
+    flash('Ad spend saved.')
+    return redirect(url_for('campaign_performance', m=f'{year}-{month:02d}'))
 
 
 # ── Marketing-Ext: read-only lead report for the external marketing agency ──
@@ -9422,6 +9572,15 @@ def init_db():
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS on_leave BOOLEAN DEFAULT FALSE',
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS report_from DATE',
             'ALTER TABLE lead ADD COLUMN IF NOT EXISTS meta_lead_id VARCHAR(50)',
+            """CREATE TABLE IF NOT EXISTS campaign_spend (
+                id SERIAL PRIMARY KEY,
+                campaign VARCHAR(200) NOT NULL,
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                amount FLOAT DEFAULT 0,
+                updated_at TIMESTAMP,
+                CONSTRAINT uq_campaign_spend_period UNIQUE (campaign, year, month)
+            )""",
             # Company entity + document linkage (company table itself created by create_all)
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS company_id INTEGER',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS alerts_enabled BOOLEAN DEFAULT FALSE',

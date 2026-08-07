@@ -407,6 +407,10 @@ loadTheme();
       {% endif %}
       <a href="/reports" {% if active=='reports' %}class="active"{% endif %}>📊 Reports</a>
       <a href="/analytics" {% if active=='analytics' %}class="active"{% endif %}>📈 Analytics</a>
+      {% if session.role == 'admin' %}
+      {# Admin only — this page shows revenue per campaign, which Marketing-Ext must never see. #}
+      <a href="/campaign-performance" {% if active=='campaign-performance' %}class="active"{% endif %}>📣 Campaign ROI</a>
+      {% endif %}
       {% if session.role in ['admin', 'finance'] %}
       <a href="/partner-commissions" {% if active=='partner-commissions' %}class="active"{% endif %}>💰 Commissions</a>
       {% endif %}

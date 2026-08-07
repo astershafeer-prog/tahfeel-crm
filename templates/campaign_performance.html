@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Campaign ROI</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  {%- from 'macros.html' import theme_loader -%}
+  {{ theme_loader() }}
+  <style>
+    .cp-wrap{max-width:1250px;margin:0 auto;padding:18px 22px;}
+    .cp-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:6px;}
+    .cp-title{font-size:19px;font-weight:800;color:#0F2660;}
+    .cp-sub{font-size:12px;color:#64748B;margin-top:3px;line-height:1.55;}
+    .cp-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0;}
+    .kpi{background:white;border-radius:12px;padding:14px 16px;border:0.5px solid #E2E8F0;}
+    .kpi-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .kpi-val{font-size:24px;font-weight:800;color:#1A2333;}
+    .kpi-sub{font-size:11px;color:#64748B;margin-top:3px;}
+    .cp-card{background:white;border-radius:12px;border:0.5px solid #E2E8F0;overflow:hidden;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th{background:#F8FAFC;color:#64748B;text-align:left;font-weight:700;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+    td{padding:11px 12px;border-top:0.5px solid #EEF2F7;color:#334155;vertical-align:middle;}
+    th.num,td.num{text-align:right;}
+    tr.tot td{border-top:1.5px solid #CBD5E1;background:#F8FAFC;font-weight:800;color:#0F2660;}
+    .cname{font-weight:700;color:#1A2333;max-width:290px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .muted{color:#94A3B8;}
+    .pos{color:#27500A;font-weight:700;}
+    .neg{color:#A32D2D;font-weight:700;}
+    .spend-in{width:96px;border:0.5px solid #CBD5E1;border-radius:6px;padding:6px 8px;font-size:13px;text-align:right;background:#fff;}
+    .bar{height:6px;background:#F1F5F9;border-radius:20px;overflow:hidden;margin-top:5px;}
+    .bar i{display:block;height:100%;background:#1A3B8B;}
+    .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .toolbar select{border:0.5px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:13px;background:#fff;}
+    .btn{border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;}
+    .btn-save{background:#1A3B8B;color:#fff;}
+    .note{font-size:11.5px;color:#64748B;line-height:1.6;margin-top:10px;}
+    .empty{padding:44px;text-align:center;color:#64748B;font-size:13px;}
+    .flash{background:#EAF3DE;color:#27500A;padding:9px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;}
+    @media (max-width:900px){ .cp-kpis{grid-template-columns:repeat(2,1fr);} }
+  </style>
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('campaign-performance') }}
+
+  <div class="cp-wrap">
+    {% with msgs = get_flashed_messages() %}
+      {% if msgs %}{% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="cp-head">
+      <div>
+        <div class="cp-title">📣 Campaign ROI — {{ period }}</div>
+        <div class="cp-sub">
+          Meta campaigns by the leads they generated in <strong>{{ period }}</strong>, and what those leads have paid
+          <strong>to date</strong>. A lead from {{ period }} that paid later still counts here — it was won by this month's spend.
+        </div>
+      </div>
+      <form method="GET" class="toolbar">
+        <select name="m" onchange="this.form.submit()">
+          {% for mo in months %}<option value="{{ mo.v }}" {% if mo.v == sel %}selected{% endif %}>{{ mo.label }}</option>{% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-save">Go</button></noscript>
+      </form>
+    </div>
+
+    <div class="cp-kpis">
+      <div class="kpi">
+        <div class="kpi-label">Meta leads</div>
+        <div class="kpi-val">{{ totals.leads }}</div>
+        <div class="kpi-sub">{{ totals.genuine }} genuine ({{ totals.p_genuine }}%)</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Clients won</div>
+        <div class="kpi-val">{{ totals.clients }}</div>
+        <div class="kpi-sub">{{ totals.p_client }}% of leads</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Ad spend</div>
+        <div class="kpi-val">{% if totals.spend %}{{ '{:,.0f}'.format(totals.spend) }}{% else %}<span class="muted">—</span>{% endif %}</div>
+        <div class="kpi-sub">{% if totals.cpl %}AED {{ '{:,.2f}'.format(totals.cpl) }} / lead{% else %}enter spend below{% endif %}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Revenue to date</div>
+        <div class="kpi-val">{{ '{:,.0f}'.format(totals.revenue) }}</div>
+        <div class="kpi-sub">{% if totals.cost_per_client %}AED {{ '{:,.0f}'.format(totals.cost_per_client) }} / client{% else %}cash basis{% endif %}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Net</div>
+        <div class="kpi-val {% if totals.net is not none %}{{ 'pos' if totals.net >= 0 else 'neg' }}{% endif %}">
+          {% if totals.net is not none %}{{ '{:,.0f}'.format(totals.net) }}{% else %}<span class="muted">—</span>{% endif %}
+        </div>
+        <div class="kpi-sub">{% if totals.roas %}{{ '{:.2f}'.format(totals.roas) }}× return{% else %}needs spend{% endif %}</div>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('campaign_spend_save', m=sel) }}">
+      <div class="cp-card">
+        {% if rows %}
+        <table>
+          <thead>
+            <tr>
+              <th>Campaign</th>
+              <th class="num">Leads</th>
+              <th class="num">Genuine</th>
+              <th class="num">Clients</th>
+              <th class="num">Spend (AED)</th>
+              <th class="num">Cost / lead</th>
+              <th class="num">Cost / client</th>
+              <th class="num">Revenue</th>
+              <th class="num">Net</th>
+              <th class="num">ROAS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+            <tr>
+              <td>
+                <div class="cname" title="{{ r.campaign }}">{{ r.campaign }}</div>
+                <div class="bar"><i style="width:{{ r.p_client }}%;"></i></div>
+                <div class="kpi-sub">{{ r.p_genuine }}% genuine · {{ r.p_client }}% became clients{% if r.not_reviewed %} · {{ r.not_reviewed }} unreviewed{% endif %}</div>
+              </td>
+              <td class="num">{{ r.leads }}</td>
+              <td class="num">{{ r.genuine }}</td>
+              <td class="num">{{ r.clients }}</td>
+              <td class="num">
+                <input class="spend-in" type="number" step="0.01" min="0" inputmode="decimal"
+                       name="spend__{{ r.campaign }}" value="{{ '{:.2f}'.format(r.spend) if r.spend else '' }}" placeholder="0.00">
+              </td>
+              <td class="num">{% if r.cpl %}{{ '{:,.2f}'.format(r.cpl) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{% if r.cost_per_client %}{{ '{:,.0f}'.format(r.cost_per_client) }}{% elif r.spend and not r.clients %}<span class="muted">no clients</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{{ '{:,.0f}'.format(r.revenue) }}</td>
+              <td class="num">{% if r.net is not none %}<span class="{{ 'pos' if r.net >= 0 else 'neg' }}">{{ '{:,.0f}'.format(r.net) }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{% if r.roas %}{{ '{:.2f}'.format(r.roas) }}×{% else %}<span class="muted">—</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            <tr class="tot">
+              <td>Total — {{ rows|length }} campaign{{ '' if rows|length == 1 else 's' }}</td>
+              <td class="num">{{ totals.leads }}</td>
+              <td class="num">{{ totals.genuine }}</td>
+              <td class="num">{{ totals.clients }}</td>
+              <td class="num">{% if totals.spend %}{{ '{:,.2f}'.format(totals.spend) }}{% else %}—{% endif %}</td>
+              <td class="num">{% if totals.cpl %}{{ '{:,.2f}'.format(totals.cpl) }}{% else %}—{% endif %}</td>
+              <td class="num">{% if totals.cost_per_client %}{{ '{:,.0f}'.format(totals.cost_per_client) }}{% else %}—{% endif %}</td>
+              <td class="num">{{ '{:,.0f}'.format(totals.revenue) }}</td>
+              <td class="num">{% if totals.net is not none %}<span class="{{ 'pos' if totals.net >= 0 else 'neg' }}">{{ '{:,.0f}'.format(totals.net) }}</span>{% else %}—{% endif %}</td>
+              <td class="num">{% if totals.roas %}{{ '{:.2f}'.format(totals.roas) }}×{% else %}—{% endif %}</td>
+            </tr>
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty">No Meta leads were created in {{ period }}.</div>
+        {% endif %}
+      </div>
+
+      {% if rows %}
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;">
+        <button type="submit" class="btn btn-save">Save ad spend</button>
+        <span class="note" style="margin:0;">Copy each campaign's <strong>Amount spent</strong> from Ads Manager for {{ period }}. Saved per campaign, per month.</span>
+      </div>
+      {% endif %}
+    </form>
+
+    <div class="note">
+      <strong>Revenue</strong> is cash basis — closed jobs plus part-payments received — the same rule the dashboard uses,
+      counted for clients who came from this month's leads.
+      <strong>Cost per client</strong> is this month's spend divided by clients won from this month's leads; early in a month it
+      will look terrible, because the spend has landed but the deals haven't closed yet. Judge a month once it has had time to mature.
+      Leads whose campaign name is missing are grouped under <em>— no campaign name —</em>; that means Meta didn't return one, not that they came from nowhere.
+    </div>
+  </div>
+</body>
+</html>
