@@ -1086,9 +1086,16 @@ class AutoMessageLog(db.Model):
 # the token + dataset id and flips it on. Config lives in AppSetting:
 #   capi_enabled ('on'/'off', default off) · capi_token · capi_dataset_id
 #   capi_event_name (default 'Qualified') · capi_test_code (optional, for testing)
-def capi_send_lead_quality(lead):
-    """Fire one CAPI event for a Genuine lead. Only for Meta-sourced leads (need the
-    Meta lead id to attribute to the ad). Deduped per lead+event. Never raises."""
+def capi_send_lead_event(lead, stage='qualified'):
+    """Fire one CAPI event for a lead reaching a funnel stage. Only for Meta-sourced
+    leads (need the Meta lead id to attribute to the ad). Deduped per lead+event.
+    Never raises.
+
+    Meta needs signal across at least TWO funnel stages before it will activate
+    Conversion Leads optimisation, so we send both:
+      'qualified' — the lead was marked Genuine
+      'converted' — the lead became a paying client
+    Both event names are configurable and must match what's mapped in Events Manager."""
     try:
         if get_setting('capi_enabled', 'off') != 'on':
             return
@@ -1098,7 +1105,10 @@ def capi_send_lead_quality(lead):
             return
         if not lead or not lead.meta_lead_id:
             return  # only Meta-ad leads can be matched back to a campaign
-        event_name = get_setting('capi_event_name', 'Qualified') or 'Qualified'
+        if stage == 'converted':
+            event_name = get_setting('capi_event_name_2', 'Converted') or 'Converted'
+        else:
+            event_name = get_setting('capi_event_name', 'Qualified') or 'Qualified'
         key = f'capi:{lead.id}:{event_name}'
         if AutoMessageLog.query.filter_by(dedupe_key=key).first():
             return  # already sent this signal for this lead
@@ -1122,7 +1132,8 @@ def capi_send_lead_quality(lead):
                 'event_time': int(time.time()),
                 'action_source': 'system_generated',
                 'user_data': user_data,
-                'custom_data': {'lead_event_source': 'crm', 'crm': 'Tahfeel CRM'},
+                # Meta's CRM spec: lead_event_source = the CRM's name, event_source = 'crm'.
+                'custom_data': {'lead_event_source': 'Tahfeel CRM', 'event_source': 'crm'},
             }],
             'access_token': token,
         }
@@ -1131,9 +1142,15 @@ def capi_send_lead_quality(lead):
             payload['test_event_code'] = test_code
         r = requests.post(f'https://graph.facebook.com/v19.0/{dataset}/events',
                           json=payload, timeout=10)
-        db.session.add(AutoMessageLog(kind='capi', dedupe_key=key,
-                                      detail=f'{event_name} · {(lead.name or lead.id)} · HTTP {r.status_code}'))
-        set_setting('run_capi', f'{now_dubai().strftime("%d %b %Y %H:%M")} — {event_name} -> HTTP {r.status_code}')
+        ok = (r.status_code == 200)
+        # Only burn the dedupe key on a successful send. Otherwise a bad token or the
+        # wrong dataset id would permanently mark these leads as "already sent" and
+        # they could never be retried once the config is fixed.
+        if ok:
+            db.session.add(AutoMessageLog(kind='capi', dedupe_key=key,
+                                          detail=f'{event_name} · {(lead.name or lead.id)} · HTTP 200'))
+        set_setting('run_capi', f'{now_dubai().strftime("%d %b %Y %H:%M")} — {event_name} -> HTTP {r.status_code}'
+                                + ('' if ok else f' · {r.text[:120]}'))
         db.session.commit()
         print(f'[CAPI] {event_name} sent for lead {lead.id}: HTTP {r.status_code} {r.text[:200]}')
     except Exception as e:
@@ -2625,7 +2642,7 @@ def lead_detail(lead_id):
         # Send the "good lead" signal to Meta when quality is set to Genuine (dormant
         # unless CAPI is configured + enabled; safe no-op otherwise).
         if new_quality == 'Genuine':
-            capi_send_lead_quality(lead)
+            capi_send_lead_event(lead, 'qualified')
         flash('Update saved')
         return redirect(url_for('lead_detail', lead_id=lead_id))
     # WhatsApp chat link: show a "View WhatsApp chat" button only when this lead's
@@ -2663,7 +2680,7 @@ def set_lead_quality(lead_id):
     db.session.add(note)
     db.session.commit()
     if value == 'Genuine':
-        capi_send_lead_quality(lead)
+        capi_send_lead_event(lead, 'qualified')
     flash(f'Lead marked {value or "unreviewed"}')
     return redirect(url_for('lead_detail', lead_id=lead_id))
 
@@ -3103,6 +3120,7 @@ def admin_panel():
         'token_set': bool(get_setting('capi_token', '')),
         'dataset_id': get_setting('capi_dataset_id', '') or '',
         'event_name': get_setting('capi_event_name', 'Qualified') or 'Qualified',
+        'event_name_2': get_setting('capi_event_name_2', 'Converted') or 'Converted',
         'test_code': get_setting('capi_test_code', '') or '',
         'last_run': get_setting('run_capi', ''),
     }
@@ -3186,6 +3204,7 @@ def admin_capi_settings():
     set_setting('capi_enabled', 'on' if request.form.get('capi_enabled') == 'on' else 'off')
     set_setting('capi_dataset_id', (request.form.get('capi_dataset_id') or '').strip())
     set_setting('capi_event_name', (request.form.get('capi_event_name') or 'Qualified').strip() or 'Qualified')
+    set_setting('capi_event_name_2', (request.form.get('capi_event_name_2') or 'Converted').strip() or 'Converted')
     set_setting('capi_test_code', (request.form.get('capi_test_code') or '').strip())
     new_token = (request.form.get('capi_token') or '').strip()
     if new_token:
@@ -4431,6 +4450,12 @@ def add_customer():
             ))
 
         db.session.commit()
+        # Second CAPI stage — this lead became a paying client. Dormant unless CAPI
+        # is configured + enabled, and a no-op for non-Meta leads.
+        if customer.lead_id:
+            _converted_lead = Lead.query.get(customer.lead_id)
+            if _converted_lead:
+                capi_send_lead_event(_converted_lead, 'converted')
         flash('Customer added successfully')
         return redirect(url_for('customer_detail', customer_id=customer.id))
 

@@ -169,8 +169,12 @@
               <input type="text" name="capi_dataset_id" value="{{ capi.dataset_id }}" placeholder="e.g. 1234567890" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
             </div>
             <div style="flex:1;min-width:130px;">
-              <label style="font-size:11px;color:#64748B;">Event name</label>
+              <label style="font-size:11px;color:#64748B;">Stage 1 event — marked Genuine</label>
               <input type="text" name="capi_event_name" value="{{ capi.event_name }}" placeholder="Qualified" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            </div>
+            <div style="flex:1;min-width:130px;">
+              <label style="font-size:11px;color:#64748B;">Stage 2 event — became a client</label>
+              <input type="text" name="capi_event_name_2" value="{{ capi.event_name_2 }}" placeholder="Converted" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
             </div>
             <div style="flex:1;min-width:130px;">
               <label style="font-size:11px;color:#64748B;">Test code (optional)</label>
@@ -178,8 +182,11 @@
             </div>
           </div>
           <div style="font-size:11px;color:#64748B;line-height:1.5;">
-            The <strong>event name</strong> must match what the agency sets the campaign’s “Conversion Leads” objective to
-            optimise for. Use the <strong>test code</strong> (Events Manager → Test Events) to verify a live send, then clear it.
+            Both <strong>event names</strong> must match the stages you mapped in Events Manager → your CRM dataset. Meta needs
+            signal across <strong>two</strong> stages before it will activate Conversion Leads optimisation — that's why there are two.
+            Use the <strong>test code</strong> (Events Manager → Test Events) to verify a live send, then clear it.
+            The <strong>Dataset ID</strong> must be a <strong>CRM</strong> data source, not your website pixel — events sent to a website
+            pixel return "success" and are silently discarded.
           </div>
           <div>
             <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">Save CAPI settings</button>
