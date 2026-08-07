@@ -3462,6 +3462,9 @@ def _campaign_rows(year, month, with_revenue=True):
             'cpl':              div(spend, n),
             'cost_per_genuine': div(spend, genuine),
             'cost_per_client':  div(spend, len(cids)),
+            # CTR separates the two failures that look identical in the lead count:
+            # low CTR is a creative problem, high CTR with junk leads is targeting.
+            'ctr': div(100.0 * ((sp.clicks or 0) if sp else 0), (sp.impressions or 0) if sp else 0),
         }
         if with_revenue:
             revenue = sum(rev_by_cust.get(c, 0) for c in cids)
@@ -3475,8 +3478,11 @@ def _campaign_rows(year, month, with_revenue=True):
     t_genuine = sum(r['genuine'] for r in rows)
     t_clients = sum(r['clients'] for r in rows)
     t_spend   = sum(r['spend'] for r in rows)
+    t_impr    = sum(r['impressions'] for r in rows)
+    t_clicks  = sum(r['clicks'] for r in rows)
     totals = {
         'leads': t_leads, 'genuine': t_genuine, 'clients': t_clients, 'spend': t_spend,
+        'impressions': t_impr, 'clicks': t_clicks, 'ctr': div(100.0 * t_clicks, t_impr),
         'cpl': div(t_spend, t_leads), 'cost_per_client': div(t_spend, t_clients),
         'p_genuine': round(100 * t_genuine / t_leads) if t_leads else 0,
         'p_client':  round(100 * t_clients / t_leads) if t_leads else 0,

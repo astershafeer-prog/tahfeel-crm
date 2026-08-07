@@ -24,7 +24,7 @@
     .chip .l { font-size:10px; color:#64748B; text-transform:uppercase; letter-spacing:.4px; }
     .chip .v { font-size:22px; font-weight:700; color:#0F2660; }
     .chip .s { font-size:11px; color:#64748b; margin-top:3px; }
-    .card { background:#fff; border:0.5px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+    .card { background:#fff; border:0.5px solid #e2e8f0; border-radius:10px; overflow-x:auto; }
     table { width:100%; border-collapse:collapse; font-size:13px; }
     th { background:#f8fafc; color:#64748b; text-align:left; font-weight:700; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap; }
     td { padding:11px 12px; border-top:0.5px solid #eef2f7; color:#334155; }
@@ -96,6 +96,8 @@
         <thead>
           <tr>
             <th>Campaign</th>
+            <th class="num">Impressions</th>
+            <th class="num">CTR</th>
             <th class="num">Leads</th>
             <th class="num">Genuine</th>
             <th class="num">Junk</th>
@@ -114,6 +116,8 @@
               <div class="bar"><i style="width:{{ r.p_client }}%;"></i></div>
               <div class="qs">{{ r.p_genuine }}% genuine · {{ r.p_client }}% became clients{% if r.not_reviewed %} · {{ r.not_reviewed }} not yet reviewed{% endif %}</div>
             </td>
+            <td class="num">{% if r.impressions %}{{ '{:,}'.format(r.impressions) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="num">{% if r.ctr %}{{ '{:.2f}'.format(r.ctr) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
             <td class="num">{{ r.leads }}</td>
             <td class="num">{{ r.genuine }}</td>
             <td class="num">{{ r.junk }}</td>
@@ -126,6 +130,8 @@
           {% endfor %}
           <tr class="tot">
             <td>Total — {{ rows|length }} campaign{{ '' if rows|length == 1 else 's' }}</td>
+            <td class="num">{% if totals.impressions %}{{ '{:,}'.format(totals.impressions) }}{% else %}—{% endif %}</td>
+            <td class="num">{% if totals.ctr %}{{ '{:.2f}'.format(totals.ctr) }}%{% else %}—{% endif %}</td>
             <td class="num">{{ totals.leads }}</td>
             <td class="num">{{ totals.genuine }}</td>
             <td class="num">{{ rows|sum(attribute='junk') }}</td>
@@ -143,6 +149,9 @@
     </div>
 
     <div class="note">
+      <strong>CTR</strong> is clicks ÷ impressions, straight from Meta. Read it together with the genuine rate: a low CTR
+      points at the creative, while a high CTR with a low genuine rate points at targeting — the ad is compelling, but to
+      the wrong people.
       <strong>Genuine / Junk / Unreachable</strong> are set by the Tahfeel sales team after they contact each lead.
       <strong>Clients</strong> are leads that became paying customers — the number worth optimising for, since a cheap lead
       that never converts costs more than an expensive one that does.

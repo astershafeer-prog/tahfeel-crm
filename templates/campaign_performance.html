@@ -18,7 +18,7 @@
     .kpi-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
     .kpi-val{font-size:24px;font-weight:800;color:#1A2333;}
     .kpi-sub{font-size:11px;color:#64748B;margin-top:3px;}
-    .cp-card{background:white;border-radius:12px;border:0.5px solid #E2E8F0;overflow:hidden;}
+    .cp-card{background:white;border-radius:12px;border:0.5px solid #E2E8F0;overflow-x:auto;}
     table{width:100%;border-collapse:collapse;font-size:13px;}
     th{background:#F8FAFC;color:#64748B;text-align:left;font-weight:700;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
     td{padding:11px 12px;border-top:0.5px solid #EEF2F7;color:#334155;vertical-align:middle;}
@@ -105,6 +105,8 @@
           <thead>
             <tr>
               <th>Campaign</th>
+              <th class="num">Impressions</th>
+              <th class="num">CTR</th>
               <th class="num">Leads</th>
               <th class="num">Genuine</th>
               <th class="num">Clients</th>
@@ -124,6 +126,8 @@
                 <div class="bar"><i style="width:{{ r.p_client }}%;"></i></div>
                 <div class="kpi-sub">{{ r.p_genuine }}% genuine · {{ r.p_client }}% became clients{% if r.not_reviewed %} · {{ r.not_reviewed }} unreviewed{% endif %}</div>
               </td>
+              <td class="num">{% if r.impressions %}{{ '{:,}'.format(r.impressions) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{% if r.ctr %}{{ '{:.2f}'.format(r.ctr) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
               <td class="num">{{ r.leads }}</td>
               <td class="num">{{ r.genuine }}</td>
               <td class="num">{{ r.clients }}</td>
@@ -145,6 +149,8 @@
             {% endfor %}
             <tr class="tot">
               <td>Total — {{ rows|length }} campaign{{ '' if rows|length == 1 else 's' }}</td>
+              <td class="num">{% if totals.impressions %}{{ '{:,}'.format(totals.impressions) }}{% else %}—{% endif %}</td>
+              <td class="num">{% if totals.ctr %}{{ '{:.2f}'.format(totals.ctr) }}%{% else %}—{% endif %}</td>
               <td class="num">{{ totals.leads }}</td>
               <td class="num">{{ totals.genuine }}</td>
               <td class="num">{{ totals.clients }}</td>
