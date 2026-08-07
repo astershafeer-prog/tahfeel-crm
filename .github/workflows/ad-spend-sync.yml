@@ -1,0 +1,30 @@
+name: Daily Meta Ad Spend Sync
+
+on:
+  schedule:
+    # 07:30 Dubai (UTC+4) = 03:30 UTC, every day. Early enough that Campaign ROI
+    # is already up to date before anyone opens it, and staggered well clear of
+    # the 05:00 UTC WhatsApp batch so the two never contend for the same worker.
+    - cron: '30 3 * * *'
+  workflow_dispatch: {}    # allows a manual run from the Actions tab
+
+jobs:
+  ad-spend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull Meta ad spend into Campaign ROI
+        run: |
+          echo "Calling sync-ad-spend endpoint..."
+          curl -fsS --max-time 120 \
+            "https://tahfeelcrm.online/cron/sync-ad-spend?key=${{ secrets.CRON_KEY }}" \
+            -o response.json \
+            || { echo "Request failed"; exit 1; }
+          echo "Response:"; cat response.json
+          # Syncs the CURRENT and PREVIOUS month every run: Meta restates spend for
+          # a few days after the fact, so a month that stopped syncing on the 1st
+          # would keep a slightly wrong final number forever.
+          #
+          # "skipped" in the response means the sync is switched OFF in the admin
+          # panel — that is not a failure. A non-empty "unmatched" list means Meta
+          # billed for a campaign with no CRM leads under that exact name, which is
+          # usually a renamed campaign or a non-lead (reach/hiring) campaign.
