@@ -29,6 +29,7 @@
     .pos{color:#27500A;font-weight:700;}
     .neg{color:#A32D2D;font-weight:700;}
     .spend-in{width:96px;border:0.5px solid #CBD5E1;border-radius:6px;padding:6px 8px;font-size:13px;text-align:right;background:#fff;}
+    .auto-tag{font-size:10px;color:#0E7490;font-weight:700;margin-top:2px;}
     .bar{height:6px;background:#F1F5F9;border-radius:20px;overflow:hidden;margin-top:5px;}
     .bar i{display:block;height:100%;background:#1A3B8B;}
     .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -127,8 +128,13 @@
               <td class="num">{{ r.genuine }}</td>
               <td class="num">{{ r.clients }}</td>
               <td class="num">
-                <input class="spend-in" type="number" step="0.01" min="0" inputmode="decimal"
-                       name="spend__{{ r.campaign }}" value="{{ '{:.2f}'.format(r.spend) if r.spend else '' }}" placeholder="0.00">
+                {% if r.auto %}
+                  {{ '{:,.2f}'.format(r.spend) }}
+                  <div class="auto-tag" title="Pulled from Meta{{ ' at ' ~ r.synced_at if r.synced_at }}">⟳ auto</div>
+                {% else %}
+                  <input class="spend-in" type="number" step="0.01" min="0" inputmode="decimal"
+                         name="spend__{{ r.campaign }}" value="{{ '{:.2f}'.format(r.spend) if r.spend else '' }}" placeholder="0.00">
+                {% endif %}
               </td>
               <td class="num">{% if r.cpl %}{{ '{:,.2f}'.format(r.cpl) }}{% else %}<span class="muted">—</span>{% endif %}</td>
               <td class="num">{% if r.cost_per_client %}{{ '{:,.0f}'.format(r.cost_per_client) }}{% elif r.spend and not r.clients %}<span class="muted">no clients</span>{% else %}<span class="muted">—</span>{% endif %}</td>
@@ -159,7 +165,8 @@
       {% if rows %}
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;">
         <button type="submit" class="btn btn-save">Save ad spend</button>
-        <span class="note" style="margin:0;">Copy each campaign's <strong>Amount spent</strong> from Ads Manager for {{ period }}. Saved per campaign, per month.</span>
+        <span class="note" style="margin:0;">Rows marked <strong>⟳ auto</strong> come from Meta each night and can't be edited here.
+        For any other campaign, copy its <strong>Amount spent</strong> from Ads Manager for {{ period }}.</span>
       </div>
       {% endif %}
     </form>

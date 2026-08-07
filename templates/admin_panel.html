@@ -204,6 +204,53 @@
       </div>
     </details>
 
+    <!-- Meta ad spend sync — fills the Campaign ROI report automatically -->
+    <details class="acc" id="adsync">
+      <summary>💰 Meta ad spend sync (Campaign ROI)</summary>
+      <div class="acc-inner">
+      <div style="padding:14px 18px;">
+        <div style="font-size:12.5px;color:#64748B;margin-bottom:12px;line-height:1.6;">
+          Pulls what each campaign <strong>spent</strong> from Meta each night and fills it into
+          <a href="/campaign-performance" style="color:#1A3B8B;">Campaign ROI</a>, so nobody copies numbers out of Ads
+          Manager by hand. Read-only access — this <strong>cannot change your ads, budgets or spend</strong>.
+          While it's on, synced campaigns become read-only in the report so a typed number can't be silently overwritten.
+        </div>
+        <form method="POST" action="/admin/ads-sync-settings" style="display:flex;flex-direction:column;gap:12px;max-width:560px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" name="ads_sync_enabled" value="on" {{ 'checked' if adsync.enabled }} style="width:18px;height:18px;">
+            <span style="font-size:14px;font-weight:700;color:var(--text-primary);">Enable nightly spend sync</span>
+          </label>
+          <div>
+            <label style="font-size:11px;color:#64748B;">Access token — needs <strong>ads_read</strong>
+              {% if adsync.token_set %}<span style="color:#16A34A;">— saved ✓ (leave blank to keep it)</span>{% else %}<span style="color:#B45309;">— not set yet</span>{% endif %}
+            </label>
+            <input type="password" name="ads_token" autocomplete="off" placeholder="{{ 'Paste a new token to replace' if adsync.token_set else 'System User token with ads_read' }}" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:#64748B;">Ad account ID</label>
+            <input type="text" name="ads_account_id" value="{{ adsync.account_id }}" placeholder="e.g. 153115390… (the act_ prefix is optional)" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+          </div>
+          <div style="font-size:11px;color:#64748B;line-height:1.5;">
+            Find the <strong>ad account ID</strong> in Ads Manager — the number beside the account name at the top.
+            Spend is matched to campaigns by <strong>name</strong>; if a campaign is renamed after its leads arrived,
+            the sync reports it as unmatched rather than quietly attaching the spend to nothing.
+          </div>
+          <div>
+            <button type="submit" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">Save sync settings</button>
+          </div>
+          {% if adsync.last_run %}<div style="font-size:11px;color:#16A34A;">Last sync: {{ adsync.last_run }}</div>{% endif %}
+          <div style="font-size:11px;color:{{ '#16A34A' if adsync.enabled else '#94A3B8' }};">
+            Currently: <strong>{{ 'ON — spend syncs nightly' if adsync.enabled else 'OFF — spend is entered by hand' }}</strong>
+          </div>
+        </form>
+        <form method="POST" action="/admin/ads-sync-now" style="margin-top:10px;max-width:560px;">
+          <button type="submit" class="btn-sm" style="background:#0E7490;color:white;border-color:#0E7490;">Sync now</button>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">Save settings first. Pulls this month's spend immediately — use it to confirm the token and account ID work.</span>
+        </form>
+      </div>
+      </div>
+    </details>
+
     <!-- Staff & Roles -->
     <details class="acc">
       <summary>👥 Staff &amp; Roles</summary>

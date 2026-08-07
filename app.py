@@ -564,16 +564,22 @@ class PartialRevenue(db.Model):
     recorder = db.relationship('User', foreign_keys=[recorded_by])
 
 class CampaignSpend(db.Model):
-    """Manually-entered Meta ad spend, per campaign per month, for the Campaign ROI
-    report. Deliberately manual: at one or two live campaigns, typing one number a
-    month is cheaper and far less fragile than a Marketing API sync with a token
-    that expires silently. Revisit if we ever run five-plus campaigns at once."""
+    """Meta ad spend per campaign per month, for the Campaign ROI report.
+
+    Two ways in: typed by an admin (source='manual'), or pulled from the Meta
+    Marketing API by the daily sync (source='meta'). When the sync is on it is
+    authoritative — it overwrites, and the report renders those rows read-only, so
+    nobody types a number that will be silently replaced overnight."""
     __tablename__ = 'campaign_spend'
     id       = db.Column(db.Integer, primary_key=True)
     campaign = db.Column(db.String(200), nullable=False, index=True)
     year     = db.Column(db.Integer, nullable=False)
     month    = db.Column(db.Integer, nullable=False)
     amount   = db.Column(db.Float, default=0)
+    source   = db.Column(db.String(10), default='manual')   # manual | meta
+    impressions = db.Column(db.Integer, default=0)
+    clicks      = db.Column(db.Integer, default=0)
+    synced_at   = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, default=now_dubai, onupdate=now_dubai)
     __table_args__ = (db.UniqueConstraint('campaign', 'year', 'month', name='uq_campaign_spend_period'),)
 
@@ -1172,6 +1178,95 @@ def capi_send_lead_event(lead, stage='qualified'):
         print(f'[CAPI] {event_name} sent for lead {lead.id}: HTTP {r.status_code} {r.text[:200]}')
     except Exception as e:
         print(f'[CAPI] send failed: {e}')
+
+# ── Meta Marketing API: pull ad spend per campaign ────────────────────────────
+# Phase 2 of Campaign ROI. Fills CampaignSpend automatically so nobody copies
+# numbers out of Ads Manager by hand. Dormant until an admin adds an ad account id
+# + token with ads_read and enables it. Config lives in AppSetting:
+#   ads_sync_enabled ('on'/'off') · ads_token · ads_account_id
+def meta_fetch_spend(year, month):
+    """Fetch per-campaign spend for one month from the Meta Marketing API.
+
+    Returns (rows, error). `rows` is a list of dicts keyed by campaign NAME, which
+    is what Lead.campaign stores — both come from Meta, so they match unless a
+    campaign was renamed after its leads arrived. Never raises."""
+    import calendar, json, requests
+    token   = get_setting('ads_token', '')
+    account = (get_setting('ads_account_id', '') or '').strip()
+    if not token or not account:
+        return [], 'Ad account id or access token not set.'
+    if not account.startswith('act_'):
+        account = 'act_' + account.lstrip('act_')
+    since = f'{year}-{month:02d}-01'
+    until = f'{year}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}'
+    url = f'https://graph.facebook.com/v19.0/{account}/insights'
+    params = {
+        'level': 'campaign',
+        'fields': 'campaign_name,spend,impressions,clicks',
+        'time_range': json.dumps({'since': since, 'until': until}),
+        'limit': 200,
+        'access_token': token,
+    }
+    rows, guard = [], 0
+    try:
+        while url and guard < 25:          # paging guard: 25 pages is far past any real month
+            guard += 1
+            r = requests.get(url, params=params, timeout=20)
+            if r.status_code != 200:
+                return [], f'Meta returned HTTP {r.status_code}: {r.text[:200]}'
+            body = r.json()
+            for d in body.get('data', []):
+                name = (d.get('campaign_name') or '').strip()
+                if not name:
+                    continue
+                rows.append({
+                    'campaign': name,
+                    'spend': float(d.get('spend') or 0),
+                    'impressions': int(float(d.get('impressions') or 0)),
+                    'clicks': int(float(d.get('clicks') or 0)),
+                })
+            url = (body.get('paging') or {}).get('next')
+            params = None                   # `next` is a fully-formed url already
+        return rows, None
+    except Exception as e:
+        return [], f'{type(e).__name__}: {e}'
+
+def meta_sync_spend(year, month):
+    """Upsert one month of Meta spend into CampaignSpend. Returns a result dict.
+
+    `unmatched` lists campaigns Meta billed for that have no leads under that exact
+    name in the CRM — almost always a campaign renamed after its leads came in, or
+    a non-lead campaign (reach/hiring). Surfaced rather than swallowed, because a
+    silently unmatched campaign makes cost-per-client look better than it is."""
+    rows, err = meta_fetch_spend(year, month)
+    if err:
+        set_setting('run_ads_sync', f'{now_dubai().strftime("%d %b %Y %H:%M")} — FAILED: {err[:160]}')
+        db.session.commit()
+        return {'ok': False, 'error': err, 'updated': 0, 'unmatched': []}
+    crm_campaigns = {
+        (c or '').strip() for (c,) in
+        db.session.query(Lead.campaign).filter(Lead.campaign.isnot(None)).distinct().all()
+    }
+    updated, unmatched = 0, []
+    for r in rows:
+        if r['campaign'] not in crm_campaigns:
+            unmatched.append(r['campaign'])
+        row = CampaignSpend.query.filter_by(campaign=r['campaign'], year=year, month=month).first()
+        if not row:
+            row = CampaignSpend(campaign=r['campaign'], year=year, month=month)
+            db.session.add(row)
+        row.amount      = r['spend']
+        row.impressions = r['impressions']
+        row.clicks      = r['clicks']
+        row.source      = 'meta'
+        row.synced_at   = now_dubai()
+        updated += 1
+    note = f'{updated} campaign(s) for {year}-{month:02d}'
+    if unmatched:
+        note += f' · {len(unmatched)} with no matching CRM leads: {", ".join(unmatched[:3])}'
+    set_setting('run_ads_sync', f'{now_dubai().strftime("%d %b %Y %H:%M")} — {note}')
+    db.session.commit()
+    return {'ok': True, 'error': None, 'updated': updated, 'unmatched': unmatched}
 
 def wa_template_active(meta_name):
     """Return an active MessageTemplate by its Meta name, or None."""
@@ -3141,6 +3236,12 @@ def admin_panel():
         'test_code': get_setting('capi_test_code', '') or '',
         'last_run': get_setting('run_capi', ''),
     }
+    adsync = {
+        'enabled': get_setting('ads_sync_enabled', 'off') == 'on',
+        'token_set': bool(get_setting('ads_token', '')),
+        'account_id': get_setting('ads_account_id', '') or '',
+        'last_run': get_setting('run_ads_sync', ''),
+    }
     # Flat master list of common sub-tasks (pick from when creating a task)
     subtask_list = SubTaskTemplate.query.order_by(SubTaskTemplate.sort_order, SubTaskTemplate.id).all()
     authorities = LicensingAuthority.query.order_by(LicensingAuthority.sort_order, LicensingAuthority.name).all()
@@ -3157,7 +3258,7 @@ def admin_panel():
     bundle_templates = BundleTemplate.query.filter_by(active=True).order_by(BundleTemplate.name).all()
     return render_template('admin_panel.html', users=users, services=services,
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
-                           wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi,
+                           wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi, adsync=adsync,
                            subtask_list=subtask_list, authorities=authorities,
                            aod_unverified_count=aod_unverified_count, renewal_costs=renewal_costs,
                            price_jurisdictions=JURISDICTIONS_PRICE_LIST,
@@ -3320,8 +3421,7 @@ def _campaign_rows(year, month, with_revenue=True):
             for pr in j.partial_revenues:
                 rev_by_cust[j.customer_id] += (pr.amount or 0)
 
-    spend_by_campaign = {s.campaign: (s.amount or 0)
-                         for s in CampaignSpend.query.filter_by(year=year, month=month).all()}
+    spend_rows = {s.campaign: s for s in CampaignSpend.query.filter_by(year=year, month=month).all()}
 
     groups = defaultdict(list)
     for l in leads:
@@ -3333,9 +3433,14 @@ def _campaign_rows(year, month, with_revenue=True):
         cids    = [cust_by_lead[l.id] for l in ls if l.id in cust_by_lead]
         n       = len(ls)
         genuine = sum(1 for l in ls if l.genuine == 'Genuine')
-        spend   = spend_by_campaign.get(name, 0)
+        sp      = spend_rows.get(name)
+        spend   = (sp.amount or 0) if sp else 0
         row = {
             'campaign': name, 'leads': n, 'genuine': genuine,
+            'auto':      bool(sp and sp.source == 'meta'),
+            'synced_at': (sp.synced_at.strftime('%d %b %H:%M') if (sp and sp.synced_at) else ''),
+            'impressions': (sp.impressions or 0) if sp else 0,
+            'clicks':      (sp.clicks or 0) if sp else 0,
             'junk':        sum(1 for l in ls if l.genuine == 'Junk'),
             'unreachable': sum(1 for l in ls if l.genuine == 'Unreachable'),
             'not_reviewed': n - sum(1 for l in ls if l.genuine in ('Genuine', 'Junk', 'Unreachable')),
@@ -3418,12 +3523,64 @@ def campaign_performance_agency():
                            months=_campaign_months(floor), sel=f'{year}-{month:02d}',
                            period=start.strftime('%B %Y'))
 
+@app.route('/cron/sync-ad-spend')
+def cron_sync_ad_spend():
+    """Pull Meta ad spend into CampaignSpend. Run daily.
+    GET /cron/sync-ad-spend?key=CRON_KEY
+
+    Syncs the current month AND the previous one: Meta restates spend for a few
+    days after the fact, so a month that stopped being synced on the 1st keeps a
+    slightly wrong final number forever."""
+    if not _valid_cron_key():
+        return 'Forbidden', 403
+    if get_setting('ads_sync_enabled', 'off') != 'on':
+        return jsonify({'skipped': 'ad spend sync is turned OFF in the admin panel'})
+    n = now_dubai()
+    prev_y, prev_m = (n.year - 1, 12) if n.month == 1 else (n.year, n.month - 1)
+    out = {}
+    for label, (y, m) in (('current', (n.year, n.month)), ('previous', (prev_y, prev_m))):
+        out[label] = meta_sync_spend(y, m)
+    return jsonify(out)
+
+@app.route('/admin/ads-sync-settings', methods=['POST'])
+@login_required
+@admin_required
+def admin_ads_sync_settings():
+    """Save Meta Marketing API config. The token is only overwritten when a new one
+    is typed, so saving other fields never wipes an existing token."""
+    set_setting('ads_sync_enabled', 'on' if request.form.get('ads_sync_enabled') == 'on' else 'off')
+    set_setting('ads_account_id', (request.form.get('ads_account_id') or '').strip())
+    new_token = (request.form.get('ads_token') or '').strip()
+    if new_token:
+        set_setting('ads_token', new_token)
+    flash('Ad spend sync settings saved.')
+    return redirect(url_for('admin_panel') + '#adsync')
+
+@app.route('/admin/ads-sync-now', methods=['POST'])
+@login_required
+@admin_required
+def admin_ads_sync_now():
+    """Run the sync immediately for the current month, so an admin can prove the
+    token and ad account work without waiting for the cron."""
+    n = now_dubai()
+    res = meta_sync_spend(n.year, n.month)
+    if not res['ok']:
+        flash(f'⚠️ Sync failed: {res["error"]}')
+    else:
+        msg = f'✅ Synced {res["updated"]} campaign(s) for {n.strftime("%B %Y")}.'
+        if res['unmatched']:
+            msg += (f' {len(res["unmatched"])} had no matching CRM leads '
+                    f'({", ".join(res["unmatched"][:3])}) — usually a renamed or non-lead campaign.')
+        flash(msg)
+    return redirect(url_for('admin_panel') + '#adsync')
+
 @app.route('/campaign-performance/spend', methods=['POST'])
 @login_required
 @admin_required
 def campaign_spend_save():
     """Save the manually-entered Meta spend for each campaign in one month."""
     year, month = _month_arg()
+    skipped = 0
     for key, val in request.form.items():
         if not key.startswith('spend__'):
             continue
@@ -3434,11 +3591,17 @@ def campaign_spend_save():
             continue
         row = CampaignSpend.query.filter_by(campaign=name, year=year, month=month).first()
         if row:
+            # Never let a typed number overwrite a synced one — the next sync would
+            # silently revert it, and the admin would have no idea why.
+            if row.source == 'meta':
+                skipped += 1
+                continue
             row.amount = amount
         elif amount:
-            db.session.add(CampaignSpend(campaign=name, year=year, month=month, amount=amount))
+            db.session.add(CampaignSpend(campaign=name, year=year, month=month,
+                                         amount=amount, source='manual'))
     db.session.commit()
-    flash('Ad spend saved.')
+    flash('Ad spend saved.' + (f' {skipped} auto-synced campaign(s) left untouched.' if skipped else ''))
     return redirect(url_for('campaign_performance', m=f'{year}-{month:02d}'))
 
 
@@ -9624,6 +9787,10 @@ def init_db():
                 updated_at TIMESTAMP,
                 CONSTRAINT uq_campaign_spend_period UNIQUE (campaign, year, month)
             )""",
+            "ALTER TABLE campaign_spend ADD COLUMN IF NOT EXISTS source VARCHAR(10) DEFAULT 'manual'",
+            'ALTER TABLE campaign_spend ADD COLUMN IF NOT EXISTS impressions INTEGER DEFAULT 0',
+            'ALTER TABLE campaign_spend ADD COLUMN IF NOT EXISTS clicks INTEGER DEFAULT 0',
+            'ALTER TABLE campaign_spend ADD COLUMN IF NOT EXISTS synced_at TIMESTAMP',
             # Company entity + document linkage (company table itself created by create_all)
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS company_id INTEGER',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS alerts_enabled BOOLEAN DEFAULT FALSE',
