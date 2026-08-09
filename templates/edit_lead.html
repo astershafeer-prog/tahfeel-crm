@@ -82,6 +82,8 @@
               <label>Campaign <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(optional)</span></label>
               <select name="campaign">
                 <option value="">— No campaign —</option>
+                {# A Meta campaign name isn't in the admin list, so the route prepends
+                   it to `campaigns` before rendering — see edit_lead() in app.py. #}
                 {% for c in campaigns %}
                 <option value="{{ c.name }}" {% if lead.campaign == c.name %}selected{% endif %}>{{ c.name }}</option>
                 {% endfor %}
