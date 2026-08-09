@@ -3448,6 +3448,11 @@ def _campaign_rows(year, month, with_revenue=True):
     groups = defaultdict(list)
     for l in leads:
         groups[(l.campaign or '').strip() or '— no campaign name —'].append(l)
+    # A campaign Meta billed for that produced no tracked leads still belongs on the
+    # report — building groups from leads alone would hide it, and money spent with
+    # nothing to show for it is the single most important row on this page.
+    for name in spend_rows:
+        groups.setdefault(name, [])
 
     div = lambda a, b: (a / b) if b else None
     rows = []
