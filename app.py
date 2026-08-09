@@ -3473,6 +3473,20 @@ def _campaign_rows(year, month, with_revenue=True, end_year=None, end_month=None
     excluded = Lead.query.filter(
         Lead.meta_lead_id.is_(None), Lead.source.like('Meta%'),
         Lead.created_at >= start, Lead.created_at < end).count()
+    # Leads a rep marked "Converted" in the update form that have no client record.
+    # "Converted" there is typed by a person; a real client requires the
+    # Convert-to-Client flow that sets Customer.lead_id, and only that carries jobs
+    # and revenue. Surfaced so a broken link shows up as a warning instead of
+    # quietly holding Clients at zero.
+    linked_ids = db.session.query(Customer.lead_id).filter(Customer.lead_id.isnot(None))
+    unlinked = Lead.query.filter(
+        Lead.meta_lead_id.isnot(None), Lead.status == 'Converted',
+        Lead.created_at >= start, Lead.created_at < end,
+        ~Lead.id.in_(linked_ids)).count()
+    missing_campaign = Lead.query.filter(
+        Lead.meta_lead_id.isnot(None),
+        db.or_(Lead.campaign.is_(None), Lead.campaign == ''),
+        Lead.created_at >= start, Lead.created_at < end).count()
 
     # Lead -> Customer, one query rather than one per lead.
     lead_ids = [l.id for l in leads]
@@ -3576,6 +3590,13 @@ def _campaign_rows(year, month, with_revenue=True, end_year=None, end_month=None
         totals['net']     = (t_rev - t_spend) if t_spend else None
         totals['roas']    = div(t_rev, t_spend)
     totals['excluded'] = excluded
+    totals['unlinked'] = unlinked
+    totals['missing_campaign'] = missing_campaign
+    # How mature this cohort is. Conversions here typically take more than a month,
+    # so a recent period showing few clients is expected — say so on the page rather
+    # than let someone read it as a failure.
+    _n = now_dubai()
+    totals['months_old'] = max(0, (_n.year - end_year) * 12 + (_n.month - end_month))
     return rows, totals, start
 
 def _campaign_months(floor=None):
@@ -3826,6 +3847,53 @@ def campaign_sync_month():
             msg += (f' {len(unmatched)} campaign(s) had no matching CRM leads '
                     f'({", ".join(sorted(unmatched)[:3])}) — renamed or non-lead campaigns.')
         flash(msg)
+    return redirect(back)
+
+CAMPAIGN_BACKFILL_BATCH = 40   # one Meta call each; keeps a click well under the 30s timeout
+
+@app.route('/campaign-performance/backfill-campaigns', methods=['POST'])
+@login_required
+@admin_required
+def campaign_backfill_names():
+    """Fill in missing campaign names for leads in the selected period.
+
+    Batched on purpose — one Meta call per lead, so a big month would otherwise
+    blow the request timeout. Click again while any remain. Meta only keeps lead
+    records for roughly 90 days, so older leads may never be recoverable; those are
+    reported as 'not returned' rather than retried forever."""
+    from sqlalchemy import or_
+    from meta_webhook import fetch_campaign_name
+    y1, m1, y2, m2, _ = _range_args()
+    back = url_for('campaign_performance', m=f'{y1}-{m1:02d}', to=f'{y2}-{m2:02d}')
+    if not get_setting('ads_token', ''):
+        flash('Add the ads_read access token in Admin Panel → Meta ad spend sync first.')
+        return redirect(back)
+    start = datetime(y1, m1, 1)
+    end   = datetime(y2 + (1 if m2 == 12 else 0), (m2 % 12) + 1, 1)
+    base = Lead.query.filter(
+        Lead.meta_lead_id.isnot(None),
+        or_(Lead.campaign.is_(None), Lead.campaign == ''),
+        Lead.created_at >= start, Lead.created_at < end)
+    total = base.count()
+    filled, missing = 0, 0
+    for lead in base.order_by(Lead.created_at.desc()).limit(CAMPAIGN_BACKFILL_BATCH).all():
+        name = fetch_campaign_name(lead.meta_lead_id)
+        if name:
+            lead.campaign = name[:100]
+            filled += 1
+        else:
+            missing += 1
+    db.session.commit()
+    remaining = total - filled
+    msg = f'✅ Filled {filled} campaign name(s).'
+    if missing:
+        msg += (f' {missing} not returned by Meta — leads older than about 90 days '
+                'are no longer retrievable.')
+    if remaining > 0 and filled:
+        msg += f' {remaining} still blank — click again to continue.'
+    if not total:
+        msg = 'No leads in this period are missing a campaign name.'
+    flash(msg)
     return redirect(back)
 
 @app.route('/campaign-performance/spend', methods=['POST'])

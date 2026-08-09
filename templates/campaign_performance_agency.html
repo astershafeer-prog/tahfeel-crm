@@ -78,6 +78,14 @@
       </form>
     </div>
 
+    {% if totals.months_old < 2 %}
+    <div style="background:#E6F1FB;border:0.5px solid #BBD6F0;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12.5px;color:#185FA5;line-height:1.6;">
+      <strong>This period is still maturing.</strong> Leads here normally take more than a month to become clients — people
+      enquire while planning a business and decide later. A low client count for a recent period is expected, and cost per
+      client only becomes meaningful once the period has had time to mature.
+    </div>
+    {% endif %}
+
     {% if totals.excluded %}
     <div style="background:#FAEEDA;border:0.5px solid #E8D5A8;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12.5px;color:#633806;line-height:1.6;">
       <strong>{{ totals.excluded }} lead{{ '' if totals.excluded == 1 else 's' }} excluded from this report.</strong>

@@ -48,6 +48,34 @@ def get_next_sales_staff(db, User, Lead):
 
 
 # ── Fetch lead details from Meta API ─────────────────────────────────────────
+def fetch_campaign_name(leadgen_id):
+    """Second, optional lookup for a lead's campaign name using the ads_read token.
+
+    A Page access token can read a lead's field_data but usually CANNOT see
+    campaign_name — Meta only returns it to a token with ads permissions. That is
+    why so many leads saved with the campaign blank.
+
+    Deliberately a separate call from fetch_meta_lead: the primary fetch keeps using
+    the Page token, so if this token is missing, expired or unauthorised we lose a
+    label, never a lead. Returns '' on any failure."""
+    try:
+        from app import get_setting
+        token = get_setting('ads_token', '')
+    except Exception:
+        token = ''
+    if not token:
+        return ''
+    try:
+        r = requests.get(f'https://graph.facebook.com/v19.0/{leadgen_id}',
+                         params={'access_token': token, 'fields': 'campaign_name'}, timeout=10)
+        if r.status_code != 200:
+            return ''
+        return (r.json().get('campaign_name') or '').strip()
+    except Exception as e:
+        print(f'[Meta] campaign_name lookup failed for {leadgen_id}: {e}')
+        return ''
+
+
 def fetch_meta_lead(leadgen_id):
     """Call Meta API to get the actual lead field data."""
     token = os.environ.get('META_PAGE_ACCESS_TOKEN', '')
@@ -59,7 +87,11 @@ def fetch_meta_lead(leadgen_id):
     try:
         r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
-        return r.json()
+        data = r.json()
+        # Page token didn't return the campaign — try the ads_read token for it.
+        if not (data.get('campaign_name') or '').strip():
+            data['campaign_name'] = fetch_campaign_name(leadgen_id)
+        return data
     except Exception as e:
         print(f'[Meta] Failed to fetch lead {leadgen_id}: {e}')
         return None

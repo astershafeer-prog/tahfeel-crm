@@ -82,6 +82,23 @@
       </form>
     </div>
 
+    {% if totals.months_old < 2 %}
+    <div style="background:#E6F1FB;border:0.5px solid #BBD6F0;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12.5px;color:#185FA5;line-height:1.6;">
+      <strong>This period is still maturing.</strong> Tahfeel's leads normally take more than a month to convert — often
+      considerably longer, since people enquire while planning a business and decide later. Few or no clients here is
+      expected, not a failure. <strong>Cost per client and ROAS only mean something once a period has had time to mature.</strong>
+    </div>
+    {% endif %}
+
+    {% if totals.unlinked %}
+    <div style="background:#FCEBEB;border:0.5px solid #F0C4C4;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12.5px;color:#791F1F;line-height:1.6;">
+      <strong>{{ totals.unlinked }} lead{{ '' if totals.unlinked == 1 else 's' }} marked “Converted” with no client record.</strong>
+      Marking a lead Converted in the update form doesn't create the client — only <em>Convert to Client</em> does, and revenue
+      hangs off the client's jobs. Until they're linked, these leads count as won by your team but bring no revenue into this
+      report. Open each one and use Convert to Client.
+    </div>
+    {% endif %}
+
     {% if totals.excluded %}
     <div style="background:#FAEEDA;border:0.5px solid #E8D5A8;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12.5px;color:#633806;line-height:1.6;">
       <strong>{{ totals.excluded }} imported lead{{ '' if totals.excluded == 1 else 's' }} excluded.</strong>
@@ -221,6 +238,15 @@
       <button type="submit" class="btn btn-sync">⟳ Pull {{ period }} spend from Meta</button>
       <span class="note" style="margin:0 0 0 8px;">The nightly sync only covers the current and previous month — use this to
       backfill older ones. Over a span it pulls every month in it.</span>
+    </form>
+    {% endif %}
+
+    {% if totals.missing_campaign %}
+    <form method="POST" action="{{ url_for('campaign_backfill_names', m=sel, to=sel_to) }}" style="margin-top:10px;">
+      <button type="submit" class="btn btn-sync">⟳ Fill {{ totals.missing_campaign }} missing campaign name{{ '' if totals.missing_campaign == 1 else 's' }}</button>
+      <span class="note" style="margin:0 0 0 8px;">These leads came from a Meta ad but saved without a campaign name, so their
+      spend can't be attributed. Asks Meta for each one, 40 per click — press again while any remain. Leads older than about
+      90 days are no longer retrievable from Meta.</span>
     </form>
     {% endif %}
 
