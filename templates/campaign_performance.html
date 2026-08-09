@@ -36,6 +36,7 @@
     .toolbar select{border:0.5px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:13px;background:#fff;}
     .btn{border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;}
     .btn-save{background:#1A3B8B;color:#fff;}
+    .btn-sync{background:#0E7490;color:#fff;}
     .note{font-size:11.5px;color:#64748B;line-height:1.6;margin-top:10px;}
     .empty{padding:44px;text-align:center;color:#64748B;font-size:13px;}
     .flash{background:#EAF3DE;color:#27500A;padding:9px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;}
@@ -171,11 +172,18 @@
       {% if rows %}
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;">
         <button type="submit" class="btn btn-save">Save ad spend</button>
-        <span class="note" style="margin:0;">Rows marked <strong>⟳ auto</strong> come from Meta each night and can't be edited here.
-        For any other campaign, copy its <strong>Amount spent</strong> from Ads Manager for {{ period }}.</span>
+        <span class="note" style="margin:0;">Rows marked <strong>⟳ auto</strong> come from Meta each night and can't be edited here.</span>
       </div>
       {% endif %}
     </form>
+
+    {% if rows %}
+    <form method="POST" action="{{ url_for('campaign_sync_month', m=sel) }}" style="margin-top:10px;">
+      <button type="submit" class="btn btn-sync">⟳ Pull {{ period }} spend from Meta</button>
+      <span class="note" style="margin:0 0 0 8px;">The nightly sync only covers the current and previous month — use this to
+      backfill any older one. Campaigns Meta has no record of stay editable above.</span>
+    </form>
+    {% endif %}
 
     <div class="note">
       <strong>Revenue</strong> is cash basis — closed jobs plus part-payments received — the same rule the dashboard uses,

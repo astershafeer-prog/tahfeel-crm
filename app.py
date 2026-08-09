@@ -3624,6 +3624,32 @@ def admin_ads_sync_now():
         flash(msg)
     return redirect(url_for('admin_panel') + '#adsync')
 
+@app.route('/campaign-performance/sync', methods=['POST'])
+@login_required
+@admin_required
+def campaign_sync_month():
+    """Pull spend for the month currently on screen.
+
+    The nightly cron only covers the current and previous month, so this is how
+    any older month gets backfilled — without it, June and earlier could only ever
+    be typed in by hand."""
+    year, month = _month_arg()
+    if not (get_setting('ads_token', '') and get_setting('ads_account_id', '')):
+        flash('Add the ad account ID and access token in Admin Panel → Meta ad spend sync first.')
+        return redirect(url_for('campaign_performance', m=f'{year}-{month:02d}'))
+    res = meta_sync_spend(year, month)
+    if not res['ok']:
+        flash(f'⚠️ Sync failed: {res["error"]}')
+    else:
+        msg = f'✅ Pulled spend for {res["updated"]} campaign(s).'
+        if res['unmatched']:
+            msg += (f' {len(res["unmatched"])} had no matching CRM leads '
+                    f'({", ".join(res["unmatched"][:3])}) — renamed or non-lead campaigns.')
+        if not res['updated']:
+            msg = 'Meta reported no spend for this month on that ad account.'
+        flash(msg)
+    return redirect(url_for('campaign_performance', m=f'{year}-{month:02d}'))
+
 @app.route('/campaign-performance/spend', methods=['POST'])
 @login_required
 @admin_required
