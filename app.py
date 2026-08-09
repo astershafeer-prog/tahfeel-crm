@@ -257,7 +257,7 @@ def restrict_marketing_role():
     # campaign_performance_agency is the revenue-free campaign view. The full
     # /campaign-performance is deliberately NOT here — it carries revenue.
     allowed = {'marketing_report', 'marketing_export', 'campaign_performance_agency',
-               'logout', 'static'}
+               'campaign_performance_agency_export', 'logout', 'static'}
     if (request.endpoint or '') in allowed:
         return
     return redirect(url_for('marketing_report'))
@@ -3409,21 +3409,56 @@ def _month_arg():
     n = now_dubai()
     return n.year, n.month
 
-def _campaign_rows(year, month, with_revenue=True):
-    """Aggregate one month's Meta leads by campaign.
+def _months_between(y1, m1, y2, m2):
+    """Every (year, month) from start to end inclusive."""
+    out, yy, mm = [], y1, m1
+    while (yy, mm) <= (y2, m2) and len(out) < 120:
+        out.append((yy, mm))
+        mm += 1
+        if mm > 12:
+            mm, yy = 1, yy + 1
+    return out
+
+def _range_args(floor=None):
+    """Parse ?m=YYYY-MM (start) and optional ?to=YYYY-MM (end) into
+    (y1, m1, y2, m2, is_range). A backwards range is swapped rather than rejected."""
+    y1, m1 = _month_arg()
+    y2, m2 = y1, m1
+    raw_to = (request.args.get('to') or '').strip()
+    try:
+        ty, tm = (int(x) for x in raw_to.split('-'))
+        if 1 <= tm <= 12 and 2000 <= ty <= 2100:
+            y2, m2 = ty, tm
+    except ValueError:
+        pass
+    if (y2, m2) < (y1, m1):
+        (y1, m1), (y2, m2) = (y2, m2), (y1, m1)
+    if floor and (y1, m1) < (floor.year, floor.month):
+        y1, m1 = floor.year, floor.month
+        if (y2, m2) < (y1, m1):
+            y2, m2 = y1, m1
+    return y1, m1, y2, m2, (y1, m1) != (y2, m2)
+
+def _campaign_rows(year, month, with_revenue=True, end_year=None, end_month=None):
+    """Aggregate Meta leads by campaign, over one month or a span of months.
 
     Cohort-based — a campaign is credited with the leads it generated in the chosen
-    month, and (for the admin view) whatever those leads have paid since. A July
+    period, and (for the admin view) whatever those leads have paid since. A July
     lead that pays in September was still won by July's spend.
+
+    Spanning months matters at Tahfeel's volume: at one to three conversions a
+    month, a single deal closing on the 31st rather than the 1st moves cost per
+    client by half. A quarter has enough conversions for the number to hold still.
 
     with_revenue=False is the external-agency view: the revenue query never runs and
     no revenue/net/roas keys are produced. That's why this is a flag and not an
     {% if %} in the template — data that never enters the context cannot leak out of
     it, however the template is later edited."""
-    from sqlalchemy import or_
     from collections import defaultdict
+    if end_year is None:
+        end_year, end_month = year, month
     start = datetime(year, month, 1)
-    end   = datetime(year + (1 if month == 12 else 0), (month % 12) + 1, 1)
+    end   = datetime(end_year + (1 if end_month == 12 else 0), (end_month % 12) + 1, 1)
 
     # Only leads Meta actually delivered through the lead-ads webhook carry a
     # meta_lead_id. Imported and hand-added rows with a "Meta…" source do not, and
@@ -3456,7 +3491,22 @@ def _campaign_rows(year, month, with_revenue=True):
             for pr in j.partial_revenues:
                 rev_by_cust[j.customer_id] += (pr.amount or 0)
 
-    spend_rows = {s.campaign: s for s in CampaignSpend.query.filter_by(year=year, month=month).all()}
+    # Spend is stored per campaign per month, so a span just sums the months in it.
+    # A campaign counts as auto-synced only if EVERY month in the span was synced —
+    # otherwise the row is part hand-typed and must stay editable.
+    period_months = _months_between(year, month, end_year, end_month)
+    spend_rows = {}
+    for s in CampaignSpend.query.filter(db.or_(*[
+            db.and_(CampaignSpend.year == y, CampaignSpend.month == m) for y, m in period_months])).all():
+        a = spend_rows.setdefault(s.campaign, {'amount': 0.0, 'impressions': 0, 'clicks': 0,
+                                               'auto': True, 'synced_at': ''})
+        a['amount']      += (s.amount or 0)
+        a['impressions'] += (s.impressions or 0)
+        a['clicks']      += (s.clicks or 0)
+        if s.source != 'meta':
+            a['auto'] = False
+        if s.synced_at:
+            a['synced_at'] = s.synced_at.strftime('%d %b %H:%M')
     excluded_campaigns = {f.campaign for f in CampaignFlag.query.filter_by(excluded=True).all()}
 
     groups = defaultdict(list)
@@ -3475,14 +3525,14 @@ def _campaign_rows(year, month, with_revenue=True):
         n       = len(ls)
         genuine = sum(1 for l in ls if l.genuine == 'Genuine')
         sp      = spend_rows.get(name)
-        spend   = (sp.amount or 0) if sp else 0
+        spend   = sp['amount'] if sp else 0
         row = {
             'campaign': name, 'leads': n, 'genuine': genuine,
             'excluded': name in excluded_campaigns,
-            'auto':      bool(sp and sp.source == 'meta'),
-            'synced_at': (sp.synced_at.strftime('%d %b %H:%M') if (sp and sp.synced_at) else ''),
-            'impressions': (sp.impressions or 0) if sp else 0,
-            'clicks':      (sp.clicks or 0) if sp else 0,
+            'auto':      bool(sp and sp['auto']),
+            'synced_at': sp['synced_at'] if sp else '',
+            'impressions': sp['impressions'] if sp else 0,
+            'clicks':      sp['clicks'] if sp else 0,
             'junk':        sum(1 for l in ls if l.genuine == 'Junk'),
             'unreachable': sum(1 for l in ls if l.genuine == 'Unreachable'),
             'not_reviewed': n - sum(1 for l in ls if l.genuine in ('Genuine', 'Junk', 'Unreachable')),
@@ -3494,7 +3544,7 @@ def _campaign_rows(year, month, with_revenue=True):
             'cost_per_client':  div(spend, len(cids)),
             # CTR separates the two failures that look identical in the lead count:
             # low CTR is a creative problem, high CTR with junk leads is targeting.
-            'ctr': div(100.0 * ((sp.clicks or 0) if sp else 0), (sp.impressions or 0) if sp else 0),
+            'ctr': div(100.0 * (sp['clicks'] if sp else 0), sp['impressions'] if sp else 0),
         }
         if with_revenue:
             revenue = sum(rev_by_cust.get(c, 0) for c in cids)
@@ -3542,16 +3592,30 @@ def _campaign_months(floor=None):
         months.append({'v': f'{yy}-{mm:02d}', 'label': datetime(yy, mm, 1).strftime('%b %Y')})
     return months
 
+def _period_label(y1, m1, y2, m2):
+    if (y1, m1) == (y2, m2):
+        return datetime(y1, m1, 1).strftime('%B %Y')
+    return f"{datetime(y1, m1, 1).strftime('%b %Y')} – {datetime(y2, m2, 1).strftime('%b %Y')}"
+
 @app.route('/campaign-performance')
 @login_required
 @admin_required
 def campaign_performance():
     """Admin view — includes revenue, net and ROAS."""
-    year, month = _month_arg()
-    rows, totals, start = _campaign_rows(year, month, with_revenue=True)
+    y1, m1, y2, m2, is_range = _range_args()
+    rows, totals, start = _campaign_rows(y1, m1, with_revenue=True, end_year=y2, end_month=m2)
     return render_template('campaign_performance.html', rows=rows, totals=totals,
-                           months=_campaign_months(), sel=f'{year}-{month:02d}',
-                           period=start.strftime('%B %Y'))
+                           months=_campaign_months(), sel=f'{y1}-{m1:02d}', sel_to=f'{y2}-{m2:02d}',
+                           is_range=is_range, period=_period_label(y1, m1, y2, m2))
+
+@app.route('/campaign-performance/export')
+@login_required
+@admin_required
+def campaign_performance_export():
+    """Excel download of the admin view — includes revenue."""
+    y1, m1, y2, m2, _ = _range_args()
+    rows, totals, _s = _campaign_rows(y1, m1, with_revenue=True, end_year=y2, end_month=m2)
+    return _campaign_xlsx(rows, totals, _period_label(y1, m1, y2, m2), with_revenue=True)
 
 @app.route('/campaign-performance/agency')
 @login_required
@@ -3567,13 +3631,85 @@ def campaign_performance_agency():
         return redirect(url_for('dashboard'))
     user  = User.query.get(session['user_id'])
     floor = user.report_from if (user and user.role == 'marketing') else None
-    year, month = _month_arg()
-    if floor and (year, month) < (floor.year, floor.month):
-        year, month = floor.year, floor.month
-    rows, totals, start = _campaign_rows(year, month, with_revenue=False)
+    y1, m1, y2, m2, is_range = _range_args(floor)
+    rows, totals, start = _campaign_rows(y1, m1, with_revenue=False, end_year=y2, end_month=m2)
     return render_template('campaign_performance_agency.html', rows=rows, totals=totals,
-                           months=_campaign_months(floor), sel=f'{year}-{month:02d}',
-                           period=start.strftime('%B %Y'))
+                           months=_campaign_months(floor), sel=f'{y1}-{m1:02d}', sel_to=f'{y2}-{m2:02d}',
+                           is_range=is_range, period=_period_label(y1, m1, y2, m2))
+
+@app.route('/campaign-performance/agency/export')
+@login_required
+def campaign_performance_agency_export():
+    """Excel download of the AGENCY view.
+
+    A second path to the same data is exactly where a revenue leak would happen, so
+    this goes through with_revenue=False like the page does — the columns aren't
+    hidden in the writer, the numbers are never fetched."""
+    if session.get('role') not in ('marketing', 'admin'):
+        flash('Access denied.')
+        return redirect(url_for('dashboard'))
+    user  = User.query.get(session['user_id'])
+    floor = user.report_from if (user and user.role == 'marketing') else None
+    y1, m1, y2, m2, _ = _range_args(floor)
+    rows, totals, _s = _campaign_rows(y1, m1, with_revenue=False, end_year=y2, end_month=m2)
+    return _campaign_xlsx(rows, totals, _period_label(y1, m1, y2, m2), with_revenue=False)
+
+def _campaign_xlsx(rows, totals, label, with_revenue):
+    """Build the Campaign ROI spreadsheet. `with_revenue` decides the columns, and
+    the caller decides `with_revenue` — the rows handed in simply have no revenue
+    keys for the agency, so there is nothing here to accidentally write out."""
+    import io
+    from flask import send_file
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Campaign ROI'
+    head = ['Campaign', 'Impressions', 'CTR %', 'Leads', 'Genuine', 'Junk', 'Unreachable',
+            'Clients', 'Spend (AED)', 'Cost/Lead', 'Cost/Client']
+    if with_revenue:
+        head += ['Revenue (AED)', 'Net (AED)', 'ROAS']
+    head += ['Counted in totals']
+    ws.append([f'Campaign ROI — {label}'])
+    ws['A1'].font = Font(bold=True, size=13)
+    ws.append([])
+    ws.append(head)
+    for c in ws[3]:
+        c.font = Font(bold=True)
+        c.alignment = Alignment(horizontal='center')
+    r2 = lambda v: round(v, 2) if isinstance(v, (int, float)) else v
+    for r in rows:
+        line = [r['campaign'], r['impressions'] or None, r2(r['ctr']), r['leads'], r['genuine'],
+                r['junk'], r['unreachable'], r['clients'], r2(r['spend']) or None,
+                r2(r['cpl']), r2(r['cost_per_client'])]
+        if with_revenue:
+            line += [r2(r.get('revenue')), r2(r.get('net')), r2(r.get('roas'))]
+        line += ['No — not lead-gen' if r['excluded'] else 'Yes']
+        ws.append(line)
+    tot = ['TOTAL', totals['impressions'] or None, r2(totals['ctr']), totals['leads'],
+           totals['genuine'], None, None, totals['clients'], r2(totals['spend']) or None,
+           r2(totals['cpl']), r2(totals['cost_per_client'])]
+    if with_revenue:
+        tot += [r2(totals.get('revenue')), r2(totals.get('net')), r2(totals.get('roas'))]
+    tot += ['']
+    ws.append([])
+    ws.append(tot)
+    for c in ws[ws.max_row]:
+        c.font = Font(bold=True)
+    if totals.get('excluded'):
+        ws.append([])
+        ws.append([f"{totals['excluded']} imported lead(s) excluded — added to the CRM from "
+                   f"other sources, not delivered by a Meta ad."])
+    for col in ws.columns:
+        width = max((len(str(c.value)) for c in col if c.value is not None), default=10)
+        ws.column_dimensions[col[0].column_letter].width = min(max(width + 2, 11), 42)
+    ws.freeze_panes = 'A4'
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    safe = label.replace(' ', '_').replace('–', 'to').replace('/', '-')
+    return send_file(buf, download_name=f'tahfeel_campaign_roi_{safe}.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.route('/cron/sync-ad-spend')
 def cron_sync_ad_spend():
@@ -3667,22 +3803,30 @@ def campaign_sync_month():
     The nightly cron only covers the current and previous month, so this is how
     any older month gets backfilled — without it, June and earlier could only ever
     be typed in by hand."""
-    year, month = _month_arg()
+    y1, m1, y2, m2, _ = _range_args()
+    back = url_for('campaign_performance', m=f'{y1}-{m1:02d}', to=f'{y2}-{m2:02d}')
     if not (get_setting('ads_token', '') and get_setting('ads_account_id', '')):
         flash('Add the ad account ID and access token in Admin Panel → Meta ad spend sync first.')
-        return redirect(url_for('campaign_performance', m=f'{year}-{month:02d}'))
-    res = meta_sync_spend(year, month)
-    if not res['ok']:
-        flash(f'⚠️ Sync failed: {res["error"]}')
+        return redirect(back)
+    updated, unmatched, errors = 0, set(), []
+    for y, m in _months_between(y1, m1, y2, m2):
+        res = meta_sync_spend(y, m)
+        if res['ok']:
+            updated += res['updated']
+            unmatched.update(res['unmatched'])
+        else:
+            errors.append(f'{y}-{m:02d}: {res["error"]}')
+    if errors:
+        flash('⚠️ Sync failed for ' + '; '.join(errors[:2]))
+    elif not updated:
+        flash('Meta reported no spend for that period on this ad account.')
     else:
-        msg = f'✅ Pulled spend for {res["updated"]} campaign(s).'
-        if res['unmatched']:
-            msg += (f' {len(res["unmatched"])} had no matching CRM leads '
-                    f'({", ".join(res["unmatched"][:3])}) — renamed or non-lead campaigns.')
-        if not res['updated']:
-            msg = 'Meta reported no spend for this month on that ad account.'
+        msg = f'✅ Pulled spend for {updated} campaign-month(s).'
+        if unmatched:
+            msg += (f' {len(unmatched)} campaign(s) had no matching CRM leads '
+                    f'({", ".join(sorted(unmatched)[:3])}) — renamed or non-lead campaigns.')
         flash(msg)
-    return redirect(url_for('campaign_performance', m=f'{year}-{month:02d}'))
+    return redirect(back)
 
 @app.route('/campaign-performance/spend', methods=['POST'])
 @login_required

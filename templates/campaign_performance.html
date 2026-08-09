@@ -41,6 +41,7 @@
     .btn{border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;}
     .btn-save{background:#1A3B8B;color:#fff;}
     .btn-sync{background:#0E7490;color:#fff;}
+    .btn-dl{background:#1a8d4e;color:#fff;text-decoration:none;}
     .note{font-size:11.5px;color:#64748B;line-height:1.6;margin-top:10px;}
     .empty{padding:44px;text-align:center;color:#64748B;font-size:13px;}
     .flash{background:#EAF3DE;color:#27500A;padding:9px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;}
@@ -66,10 +67,18 @@
         </div>
       </div>
       <form method="GET" class="toolbar">
-        <select name="m" onchange="this.form.submit()">
-          {% for mo in months %}<option value="{{ mo.v }}" {% if mo.v == sel %}selected{% endif %}>{{ mo.label }}</option>{% endfor %}
-        </select>
+        <label style="font-size:11px;color:#64748B;">From
+          <select name="m" onchange="this.form.submit()">
+            {% for mo in months %}<option value="{{ mo.v }}" {% if mo.v == sel %}selected{% endif %}>{{ mo.label }}</option>{% endfor %}
+          </select>
+        </label>
+        <label style="font-size:11px;color:#64748B;">To
+          <select name="to" onchange="this.form.submit()">
+            {% for mo in months %}<option value="{{ mo.v }}" {% if mo.v == sel_to %}selected{% endif %}>{{ mo.label }}</option>{% endfor %}
+          </select>
+        </label>
         <noscript><button type="submit" class="btn btn-save">Go</button></noscript>
+        <a class="btn btn-dl" href="{{ url_for('campaign_performance_export', m=sel, to=sel_to) }}">⬇ Excel</a>
       </form>
     </div>
 
@@ -153,7 +162,12 @@
               <td class="num">{{ r.genuine }}</td>
               <td class="num">{{ r.clients }}</td>
               <td class="num">
-                {% if r.auto %}
+                {% if is_range %}
+                  {# A typed number can't be filed against a span of months, so spend is
+                     read-only here. Pick a single month to edit it. #}
+                  {{ '{:,.2f}'.format(r.spend) if r.spend else '—' }}
+                  {% if r.auto %}<div class="auto-tag">⟳ auto</div>{% endif %}
+                {% elif r.auto %}
                   {{ '{:,.2f}'.format(r.spend) }}
                   <div class="auto-tag" title="Pulled from Meta{{ ' at ' ~ r.synced_at if r.synced_at }}">⟳ auto</div>
                 {% else %}
@@ -191,8 +205,11 @@
 
       {% if rows %}
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;">
-        <button type="submit" class="btn btn-save">Save ad spend</button>
-        <span class="note" style="margin:0;">Rows marked <strong>⟳ auto</strong> come from Meta each night and can't be edited here.
+        <button type="submit" class="btn btn-save">{{ 'Save settings' if is_range else 'Save ad spend' }}</button>
+        <span class="note" style="margin:0;">
+        {% if is_range %}Spend is read-only across a span — a typed number can't be filed against several months. Pick a single
+        month in <strong>From</strong> and <strong>To</strong> to edit it.
+        {% else %}Rows marked <strong>⟳ auto</strong> come from Meta each night and can't be edited here.{% endif %}
         Ticking <strong>Not lead-gen</strong> keeps a campaign visible but out of every total — use it for hiring, reach and brand
         campaigns, which were never trying to produce clients. The setting sticks across all months.</span>
       </div>
@@ -200,10 +217,10 @@
     </form>
 
     {% if rows %}
-    <form method="POST" action="{{ url_for('campaign_sync_month', m=sel) }}" style="margin-top:10px;">
+    <form method="POST" action="{{ url_for('campaign_sync_month', m=sel, to=sel_to) }}" style="margin-top:10px;">
       <button type="submit" class="btn btn-sync">⟳ Pull {{ period }} spend from Meta</button>
       <span class="note" style="margin:0 0 0 8px;">The nightly sync only covers the current and previous month — use this to
-      backfill any older one. Campaigns Meta has no record of stay editable above.</span>
+      backfill older ones. Over a span it pulls every month in it.</span>
     </form>
     {% endif %}
 
