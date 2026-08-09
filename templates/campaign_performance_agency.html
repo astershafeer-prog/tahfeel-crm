@@ -67,6 +67,14 @@
       </form>
     </div>
 
+    {% if totals.excluded %}
+    <div style="background:#FAEEDA;border:0.5px solid #E8D5A8;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12.5px;color:#633806;line-height:1.6;">
+      <strong>{{ totals.excluded }} lead{{ '' if totals.excluded == 1 else 's' }} excluded from this report.</strong>
+      They were added to the CRM from other sources rather than delivered by a Meta ad, so they aren't part of campaign
+      performance.
+    </div>
+    {% endif %}
+
     <div class="chips">
       <div class="chip">
         <div class="l">Leads delivered</div>

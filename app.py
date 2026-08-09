@@ -3412,9 +3412,19 @@ def _campaign_rows(year, month, with_revenue=True):
     start = datetime(year, month, 1)
     end   = datetime(year + (1 if month == 12 else 0), (month % 12) + 1, 1)
 
+    # Only leads Meta actually delivered through the lead-ads webhook carry a
+    # meta_lead_id. Imported and hand-added rows with a "Meta…" source do not, and
+    # counting them here would understate cost per lead — we'd be dividing real ad
+    # spend by leads the ads never produced. June 2026 had 374 such rows against 70
+    # real ones, which would have made every cost figure for that month meaningless.
     leads = Lead.query.filter(
-        or_(Lead.meta_lead_id.isnot(None), Lead.source.like('Meta%')),
+        Lead.meta_lead_id.isnot(None),
         Lead.created_at >= start, Lead.created_at < end).all()
+    # Counted, not hidden — silently dropping 84% of a month's rows would be worse
+    # than the wrong number it replaces.
+    excluded = Lead.query.filter(
+        Lead.meta_lead_id.is_(None), Lead.source.like('Meta%'),
+        Lead.created_at >= start, Lead.created_at < end).count()
 
     # Lead -> Customer, one query rather than one per lead.
     lead_ids = [l.id for l in leads]
@@ -3492,6 +3502,7 @@ def _campaign_rows(year, month, with_revenue=True):
         totals['revenue'] = t_rev
         totals['net']     = (t_rev - t_spend) if t_spend else None
         totals['roas']    = div(t_rev, t_spend)
+    totals['excluded'] = excluded
     return rows, totals, start
 
 def _campaign_months(floor=None):
