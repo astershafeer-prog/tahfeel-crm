@@ -583,6 +583,19 @@ class CampaignSpend(db.Model):
     updated_at = db.Column(db.DateTime, default=now_dubai, onupdate=now_dubai)
     __table_args__ = (db.UniqueConstraint('campaign', 'year', 'month', name='uq_campaign_spend_period'),)
 
+class CampaignFlag(db.Model):
+    """Per-campaign settings that hold across every month.
+
+    `excluded` marks a campaign as not lead-generation — recruitment, reach, brand.
+    Its spend is real, but blending it into cost-per-lead answers a question nobody
+    asked: a hiring ad was never trying to produce clients. Excluded campaigns still
+    show on the report, so the money stays visible; they just don't skew the totals."""
+    __tablename__ = 'campaign_flag'
+    id       = db.Column(db.Integer, primary_key=True)
+    campaign = db.Column(db.String(200), nullable=False, unique=True, index=True)
+    excluded = db.Column(db.Boolean, default=False)
+    updated_at = db.Column(db.DateTime, default=now_dubai, onupdate=now_dubai)
+
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
@@ -3444,6 +3457,7 @@ def _campaign_rows(year, month, with_revenue=True):
                 rev_by_cust[j.customer_id] += (pr.amount or 0)
 
     spend_rows = {s.campaign: s for s in CampaignSpend.query.filter_by(year=year, month=month).all()}
+    excluded_campaigns = {f.campaign for f in CampaignFlag.query.filter_by(excluded=True).all()}
 
     groups = defaultdict(list)
     for l in leads:
@@ -3464,6 +3478,7 @@ def _campaign_rows(year, month, with_revenue=True):
         spend   = (sp.amount or 0) if sp else 0
         row = {
             'campaign': name, 'leads': n, 'genuine': genuine,
+            'excluded': name in excluded_campaigns,
             'auto':      bool(sp and sp.source == 'meta'),
             'synced_at': (sp.synced_at.strftime('%d %b %H:%M') if (sp and sp.synced_at) else ''),
             'impressions': (sp.impressions or 0) if sp else 0,
@@ -3487,14 +3502,17 @@ def _campaign_rows(year, month, with_revenue=True):
             row['net']     = (revenue - spend) if spend else None
             row['roas']    = div(revenue, spend)
         rows.append(row)
-    rows.sort(key=lambda r: (-r.get('revenue', 0), -r['leads']))
+    # Excluded (non lead-gen) campaigns sort to the bottom and are left out of every
+    # total below — visible, but not distorting the numbers people act on.
+    rows.sort(key=lambda r: (r['excluded'], -r.get('revenue', 0), -r['leads']))
+    counted = [r for r in rows if not r['excluded']]
 
-    t_leads   = sum(r['leads'] for r in rows)
-    t_genuine = sum(r['genuine'] for r in rows)
-    t_clients = sum(r['clients'] for r in rows)
-    t_spend   = sum(r['spend'] for r in rows)
-    t_impr    = sum(r['impressions'] for r in rows)
-    t_clicks  = sum(r['clicks'] for r in rows)
+    t_leads   = sum(r['leads'] for r in counted)
+    t_genuine = sum(r['genuine'] for r in counted)
+    t_clients = sum(r['clients'] for r in counted)
+    t_spend   = sum(r['spend'] for r in counted)
+    t_impr    = sum(r['impressions'] for r in counted)
+    t_clicks  = sum(r['clicks'] for r in counted)
     totals = {
         'leads': t_leads, 'genuine': t_genuine, 'clients': t_clients, 'spend': t_spend,
         'impressions': t_impr, 'clicks': t_clicks, 'ctr': div(100.0 * t_clicks, t_impr),
@@ -3692,6 +3710,17 @@ def campaign_spend_save():
         elif amount:
             db.session.add(CampaignSpend(campaign=name, year=year, month=month,
                                          amount=amount, source='manual'))
+    # Lead-gen flags. Unchecked boxes don't submit, so the page also posts every
+    # campaign it rendered — otherwise un-ticking one could never be saved.
+    present  = request.form.getlist('campaign_present')
+    excluded = set(request.form.getlist('exclude_campaign'))
+    for name in present:
+        flag = CampaignFlag.query.filter_by(campaign=name).first()
+        want = name in excluded
+        if flag:
+            flag.excluded = want
+        elif want:
+            db.session.add(CampaignFlag(campaign=name, excluded=True))
     db.session.commit()
     flash('Ad spend saved.' + (f' {skipped} auto-synced campaign(s) left untouched.' if skipped else ''))
     return redirect(url_for('campaign_performance', m=f'{year}-{month:02d}'))
@@ -9883,6 +9912,12 @@ def init_db():
             'ALTER TABLE campaign_spend ADD COLUMN IF NOT EXISTS impressions INTEGER DEFAULT 0',
             'ALTER TABLE campaign_spend ADD COLUMN IF NOT EXISTS clicks INTEGER DEFAULT 0',
             'ALTER TABLE campaign_spend ADD COLUMN IF NOT EXISTS synced_at TIMESTAMP',
+            """CREATE TABLE IF NOT EXISTS campaign_flag (
+                id SERIAL PRIMARY KEY,
+                campaign VARCHAR(200) NOT NULL UNIQUE,
+                excluded BOOLEAN DEFAULT FALSE,
+                updated_at TIMESTAMP
+            )""",
             # Company entity + document linkage (company table itself created by create_all)
             'ALTER TABLE document ADD COLUMN IF NOT EXISTS company_id INTEGER',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS alerts_enabled BOOLEAN DEFAULT FALSE',

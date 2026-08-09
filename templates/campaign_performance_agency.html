@@ -35,6 +35,8 @@
     .bar { height:6px; background:#F1F5F9; border-radius:20px; overflow:hidden; margin-top:5px; }
     .bar i { display:block; height:100%; background:#1A3B8B; }
     .qs { font-size:11px; color:#64748b; margin-top:4px; }
+    tr.excl td { background:#FBFCFD; color:#94A3B8; }
+    tr.excl .cname { color:#94A3B8; font-weight:600; text-decoration:line-through; }
     select { border:0.5px solid #cbd5e1; border-radius:6px; padding:7px 10px; font-size:13px; background:#fff; }
     .note { font-size:11.5px; color:#64748B; line-height:1.65; margin-top:12px; }
     .empty { padding:44px; text-align:center; color:#64748B; font-size:13px; }
@@ -118,11 +120,15 @@
         </thead>
         <tbody>
           {% for r in rows %}
-          <tr>
+          <tr {% if r.excluded %}class="excl"{% endif %}>
             <td>
               <div class="cname" title="{{ r.campaign }}">{{ r.campaign }}</div>
+              {% if r.excluded %}
+              <div class="qs">Not a lead-generation campaign — shown for reference, not counted in the totals.</div>
+              {% else %}
               <div class="bar"><i style="width:{{ r.p_client }}%;"></i></div>
               <div class="qs">{{ r.p_genuine }}% genuine · {{ r.p_client }}% became clients{% if r.not_reviewed %} · {{ r.not_reviewed }} not yet reviewed{% endif %}</div>
+              {% endif %}
             </td>
             <td class="num">{% if r.impressions %}{{ '{:,}'.format(r.impressions) }}{% else %}<span class="muted">—</span>{% endif %}</td>
             <td class="num">{% if r.ctr %}{{ '{:.2f}'.format(r.ctr) }}%{% else %}<span class="muted">—</span>{% endif %}</td>

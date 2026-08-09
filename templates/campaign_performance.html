@@ -30,6 +30,10 @@
     .neg{color:#A32D2D;font-weight:700;}
     .spend-in{width:96px;border:0.5px solid #CBD5E1;border-radius:6px;padding:6px 8px;font-size:13px;text-align:right;background:#fff;}
     .auto-tag{font-size:10px;color:#0E7490;font-weight:700;margin-top:2px;}
+    .exl{display:flex;align-items:center;gap:5px;font-size:10.5px;color:#94A3B8;margin-top:5px;cursor:pointer;}
+    .exl input{width:13px;height:13px;cursor:pointer;}
+    tr.excl td{background:#FBFCFD;color:#94A3B8;}
+    tr.excl .cname{color:#94A3B8;font-weight:600;text-decoration:line-through;}
     .bar{height:6px;background:#F1F5F9;border-radius:20px;overflow:hidden;margin-top:5px;}
     .bar i{display:block;height:100%;background:#1A3B8B;}
     .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -130,11 +134,18 @@
           </thead>
           <tbody>
             {% for r in rows %}
-            <tr>
+            <tr {% if r.excluded %}class="excl"{% endif %}>
               <td>
                 <div class="cname" title="{{ r.campaign }}">{{ r.campaign }}</div>
+                <input type="hidden" name="campaign_present" value="{{ r.campaign }}">
+                {% if not r.excluded %}
                 <div class="bar"><i style="width:{{ r.p_client }}%;"></i></div>
                 <div class="kpi-sub">{{ r.p_genuine }}% genuine · {{ r.p_client }}% became clients{% if r.not_reviewed %} · {{ r.not_reviewed }} unreviewed{% endif %}</div>
+                {% endif %}
+                <label class="exl">
+                  <input type="checkbox" name="exclude_campaign" value="{{ r.campaign }}" {{ 'checked' if r.excluded }}>
+                  Not lead-gen — leave out of totals
+                </label>
               </td>
               <td class="num">{% if r.impressions %}{{ '{:,}'.format(r.impressions) }}{% else %}<span class="muted">—</span>{% endif %}</td>
               <td class="num">{% if r.ctr %}{{ '{:.2f}'.format(r.ctr) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
@@ -181,7 +192,9 @@
       {% if rows %}
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;">
         <button type="submit" class="btn btn-save">Save ad spend</button>
-        <span class="note" style="margin:0;">Rows marked <strong>⟳ auto</strong> come from Meta each night and can't be edited here.</span>
+        <span class="note" style="margin:0;">Rows marked <strong>⟳ auto</strong> come from Meta each night and can't be edited here.
+        Ticking <strong>Not lead-gen</strong> keeps a campaign visible but out of every total — use it for hiring, reach and brand
+        campaigns, which were never trying to produce clients. The setting sticks across all months.</span>
       </div>
       {% endif %}
     </form>
