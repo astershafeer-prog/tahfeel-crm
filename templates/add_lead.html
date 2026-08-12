@@ -55,9 +55,20 @@
               </select>
             </div>
             <div class="form-group"><label>Campaign <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(optional)</span></label>
+              {# Meta's own names first: ad spend is matched to leads by exact name,
+                 so only these can ever collect spend on the Campaign ROI report. #}
               <select name="campaign">
                 <option value="">— No campaign —</option>
-                {% for c in campaigns %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
+                {% if meta_campaigns %}
+                <optgroup label="Meta campaigns — ad spend matches these">
+                  {% for name in meta_campaigns %}<option value="{{ name }}">{{ name }}</option>{% endfor %}
+                </optgroup>
+                {% endif %}
+                {% if other_campaigns %}
+                <optgroup label="Other — walk-in, referral, no ad spend">
+                  {% for name in other_campaigns %}<option value="{{ name }}">{{ name }}</option>{% endfor %}
+                </optgroup>
+                {% endif %}
               </select>
             </div>
           </div>

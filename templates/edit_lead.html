@@ -80,13 +80,30 @@
             </div>
             <div class="form-group">
               <label>Campaign <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(optional)</span></label>
+              {# Meta's own names first: ad spend is matched to leads by exact name,
+                 so only these can ever collect spend on the Campaign ROI report.
+                 `current_extra` is this lead's own name when it's in neither list —
+                 without it the dropdown would blank and the next save would wipe the
+                 real campaign. See edit_lead() in app.py. #}
               <select name="campaign">
                 <option value="">— No campaign —</option>
-                {# A Meta campaign name isn't in the admin list, so the route prepends
-                   it to `campaigns` before rendering — see edit_lead() in app.py. #}
-                {% for c in campaigns %}
-                <option value="{{ c.name }}" {% if lead.campaign == c.name %}selected{% endif %}>{{ c.name }}</option>
-                {% endfor %}
+                {% if current_extra %}
+                <option value="{{ current_extra }}" selected>{{ current_extra }}</option>
+                {% endif %}
+                {% if meta_campaigns %}
+                <optgroup label="Meta campaigns — ad spend matches these">
+                  {% for name in meta_campaigns %}
+                  <option value="{{ name }}" {% if lead.campaign == name %}selected{% endif %}>{{ name }}</option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
+                {% if other_campaigns %}
+                <optgroup label="Other — walk-in, referral, no ad spend">
+                  {% for name in other_campaigns %}
+                  <option value="{{ name }}" {% if lead.campaign == name %}selected{% endif %}>{{ name }}</option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
               </select>
             </div>
             <div class="form-group">

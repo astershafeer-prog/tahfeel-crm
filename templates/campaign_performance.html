@@ -108,6 +108,25 @@
     </div>
     {% endif %}
 
+    {# Above the table on purpose. This used to sit underneath it as a plain button,
+       where it went unnoticed for two months while the figures quietly ran wrong. #}
+    {% if totals.missing_campaign %}
+    <div style="background:#FEF2F2;border:0.5px solid #FCA5A5;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12.5px;color:#7F1D1D;line-height:1.6;">
+      <strong>{{ totals.missing_campaign }} Meta lead{{ '' if totals.missing_campaign == 1 else 's' }} in {{ period }} have no campaign name.</strong>
+      Meta delivered them, but didn't say which campaign — so no ad spend can be attributed to them. Until they're filled,
+      every campaign below shows a higher cost per lead than it really has.
+      <form method="POST" action="{{ url_for('campaign_backfill_names', m=sel, to=sel_to) }}" style="margin-top:8px;">
+        <button type="submit" class="btn btn-sync">⟳ Fill {{ totals.missing_campaign }} missing campaign name{{ '' if totals.missing_campaign == 1 else 's' }}</button>
+        <span style="font-size:11.5px;margin-left:8px;">Looks each one up through the ad that produced it, 40 per click — press again while any remain.
+        Leads older than about 90 days are no longer retrievable from Meta.</span>
+      </form>
+      <div style="margin-top:8px;font-size:11.5px;">
+        If any can't be recovered, don't hand-pick a name from the dropdown unless it's one of Meta's own — the report matches
+        spend to leads on the exact name, so a near-miss orphans both.
+      </div>
+    </div>
+    {% endif %}
+
     <div class="cp-kpis">
       <div class="kpi">
         <div class="kpi-label">Meta leads</div>
@@ -238,15 +257,6 @@
       <button type="submit" class="btn btn-sync">⟳ Pull {{ period }} spend from Meta</button>
       <span class="note" style="margin:0 0 0 8px;">The nightly sync only covers the current and previous month — use this to
       backfill older ones. Over a span it pulls every month in it.</span>
-    </form>
-    {% endif %}
-
-    {% if totals.missing_campaign %}
-    <form method="POST" action="{{ url_for('campaign_backfill_names', m=sel, to=sel_to) }}" style="margin-top:10px;">
-      <button type="submit" class="btn btn-sync">⟳ Fill {{ totals.missing_campaign }} missing campaign name{{ '' if totals.missing_campaign == 1 else 's' }}</button>
-      <span class="note" style="margin:0 0 0 8px;">These leads came from a Meta ad but saved without a campaign name, so their
-      spend can't be attributed. Asks Meta for each one, 40 per click — press again while any remain. Leads older than about
-      90 days are no longer retrievable from Meta.</span>
     </form>
     {% endif %}
 

@@ -1,7 +1,6 @@
 # v19
 import os
 import hmac
-from types import SimpleNamespace
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -405,6 +404,28 @@ class Source(db.Model):
 class Campaign(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
+
+def campaign_options():
+    """Campaign dropdown choices, split into Meta's real names and the hand-kept list.
+
+    Returns (meta_names, other_names).
+
+    Campaign ROI joins ad spend to leads on an exact name match, so only a name Meta
+    itself uses can ever collect spend. This list used to be the admin-managed
+    Campaign table alone — four hand-typed labels, none of which matched Meta — so a
+    Meta lead being labelled by hand had no correct option to pick, and whatever got
+    chosen orphaned the lead and the spend from each other. The real names come free
+    from the nightly spend sync, which has been storing them all along.
+
+    The admin list stays, second: walk-ins and referrals belong to no Meta campaign,
+    and forcing them into one would be a different kind of wrong. Names appearing in
+    both are shown once, under Meta."""
+    meta = [r[0] for r in db.session.query(CampaignSpend.campaign)
+            .distinct().order_by(CampaignSpend.campaign).all() if r[0]]
+    seen = set(meta)
+    other = [c.name for c in Campaign.query.order_by(Campaign.name).all()
+             if c.name not in seen]
+    return meta, other
 
 class LicensingAuthority(db.Model):
     """Admin-managed list of licensing authorities / free zones (DED, DMCC, IFZA…).
@@ -2703,9 +2724,11 @@ def add_lead():
         # genuinely inbound Meta leads (meta_webhook.py).
         flash('Lead added successfully')
         return redirect(url_for('all_leads'))
-    campaigns = Campaign.query.order_by(Campaign.name).all()
+    meta_campaigns, other_campaigns = campaign_options()
     tomorrow = (now_dubai() + timedelta(days=1)).strftime('%Y-%m-%d')
-    return render_template('add_lead.html', users=users, services=services, sources=sources, campaigns=campaigns, now=now, tomorrow=tomorrow)
+    return render_template('add_lead.html', users=users, services=services, sources=sources,
+                           meta_campaigns=meta_campaigns, other_campaigns=other_campaigns,
+                           now=now, tomorrow=tomorrow)
 
 @app.route('/leads/<int:lead_id>', methods=['GET', 'POST'])
 @login_required
@@ -3151,15 +3174,17 @@ def edit_lead(lead_id):
         db.session.commit()
         flash('Lead updated successfully')
         return redirect(url_for('lead_detail', lead_id=lead_id))
-    campaigns = Campaign.query.order_by(Campaign.name).all()
-    # Meta leads carry whatever campaign name Facebook/Instagram used at the time —
-    # never pre-registered in the admin Campaign list. If we don't offer it as an
-    # option here, the dropdown falls back to blank and the next save silently
-    # wipes the real campaign name. Add it as a one-off option so it stays selected
-    # and round-trips unchanged if nobody touches the field.
-    if lead.campaign and lead.campaign not in [c.name for c in campaigns]:
-        campaigns = [SimpleNamespace(name=lead.campaign)] + campaigns
-    return render_template('edit_lead.html', lead=lead, users=users, services=services, sources=sources, campaigns=campaigns, now=now)
+    meta_campaigns, other_campaigns = campaign_options()
+    # A lead can carry a campaign name that's in neither list — one Meta used before
+    # this account started syncing spend, or a label typed in by hand. If we don't
+    # offer it as an option the dropdown falls back to blank and the next save
+    # silently wipes it, so it gets its own entry and round-trips unchanged.
+    current_extra = lead.campaign if (lead.campaign
+                                      and lead.campaign not in meta_campaigns
+                                      and lead.campaign not in other_campaigns) else ''
+    return render_template('edit_lead.html', lead=lead, users=users, services=services,
+                           sources=sources, meta_campaigns=meta_campaigns,
+                           other_campaigns=other_campaigns, current_extra=current_extra, now=now)
 
 @app.route('/leads/<int:lead_id>/delete', methods=['POST'])
 @login_required
@@ -3857,12 +3882,12 @@ CAMPAIGN_BACKFILL_BATCH = 40   # one Meta call each; keeps a click well under th
 def campaign_backfill_names():
     """Fill in missing campaign names for leads in the selected period.
 
-    Batched on purpose — one Meta call per lead, so a big month would otherwise
-    blow the request timeout. Click again while any remain. Meta only keeps lead
-    records for roughly 90 days, so older leads may never be recoverable; those are
-    reported as 'not returned' rather than retried forever."""
+    Batched on purpose — up to two Meta calls per lead, so a big month would
+    otherwise blow the request timeout. Click again while any remain. Meta only keeps
+    lead records for roughly 90 days, so older leads may never be recoverable; those
+    are reported as 'not returned' rather than retried forever."""
     from sqlalchemy import or_
-    from meta_webhook import fetch_campaign_name
+    from meta_webhook import resolve_campaign_name
     y1, m1, y2, m2, _ = _range_args()
     back = url_for('campaign_performance', m=f'{y1}-{m1:02d}', to=f'{y2}-{m2:02d}')
     if not get_setting('ads_token', ''):
@@ -3877,7 +3902,7 @@ def campaign_backfill_names():
     total = base.count()
     filled, missing = 0, 0
     for lead in base.order_by(Lead.created_at.desc()).limit(CAMPAIGN_BACKFILL_BATCH).all():
-        name = fetch_campaign_name(lead.meta_lead_id)
+        name = resolve_campaign_name(leadgen_id=lead.meta_lead_id)
         if name:
             lead.campaign = name[:100]
             filled += 1
@@ -10969,6 +10994,11 @@ def analytics():
     # ── Campaign performance (show all campaigns, not just the top few)
     campaign_counts = Counter(l.campaign for l in all_leads if l.campaign)
     top_campaigns = campaign_counts.most_common()
+    # Meta delivered these but named no campaign, so no ad spend can reach them. They
+    # are absent from the list above rather than shown as a zero — a gap that reads as
+    # "nothing to see" is exactly how this went unnoticed for two months.
+    unattributed_meta = sum(1 for l in all_leads
+                            if l.meta_lead_id and not (l.campaign or '').strip())
 
     # ── TASK 2.3(b): Lead→Client conversion tracking, computed from the
     # converted_at stamp (set only by the "Convert to Client" flow) — NOT the
@@ -11353,7 +11383,8 @@ def analytics():
         total_invoiced=total_invoiced, total_received=total_received,
         total_outstanding=total_outstanding,
         pipeline=pipeline, top_services=top_services, top_sources=top_sources,
-        top_campaigns=top_campaigns, monthly_revenue=monthly_revenue,
+        top_campaigns=top_campaigns, unattributed_meta=unattributed_meta,
+        monthly_revenue=monthly_revenue,
         staff_stats=staff_stats,
         conversions_this_month=conversions_this_month, conversions_total=conversions_total,
         conversion_rate_by_source=conversion_rate_by_source, avg_days_to_convert=avg_days_to_convert,

@@ -48,16 +48,30 @@ def get_next_sales_staff(db, User, Lead):
 
 
 # ── Fetch lead details from Meta API ─────────────────────────────────────────
-def fetch_campaign_name(leadgen_id):
-    """Second, optional lookup for a lead's campaign name using the ads_read token.
+# One ad produces many leads, so the same handful of ads gets asked about all day.
+# Process-local and never invalidated on purpose: a campaign is renamed rarely, and
+# a redeploy clears it anyway.
+_AD_CAMPAIGN_CACHE = {}
 
-    A Page access token can read a lead's field_data but usually CANNOT see
-    campaign_name — Meta only returns it to a token with ads permissions. That is
-    why so many leads saved with the campaign blank.
 
-    Deliberately a separate call from fetch_meta_lead: the primary fetch keeps using
-    the Page token, so if this token is missing, expired or unauthorised we lose a
-    label, never a lead. Returns '' on any failure."""
+def fetch_ad_campaign(ad_id):
+    """Resolve an ad to the campaign that owns it, using the ads_read token.
+
+    The roundabout route is the point. Asking Meta for the LEAD's campaign_name —
+    the obvious call, and what this module used to do — needs a token holding
+    lead-retrieval rights. The ads token does not have them, and Meta reports that
+    as a bare "object does not exist", which reads like an expired lead rather than
+    a permission problem. So every lookup failed silently and every lead saved blank.
+
+    Ads are precisely what an ads token may read, and each lead names the ad that
+    produced it. Same answer, via a door we actually hold the key to.
+
+    Returns '' on any failure — a lost label must never cost us a lead."""
+    if not ad_id:
+        return ''
+    ad_id = str(ad_id)
+    if ad_id in _AD_CAMPAIGN_CACHE:
+        return _AD_CAMPAIGN_CACHE[ad_id]
     try:
         from app import get_setting
         token = get_setting('ads_token', '')
@@ -66,31 +80,70 @@ def fetch_campaign_name(leadgen_id):
     if not token:
         return ''
     try:
+        r = requests.get(f'https://graph.facebook.com/v19.0/{ad_id}',
+                         params={'access_token': token, 'fields': 'campaign{name}'}, timeout=10)
+        if r.status_code != 200:
+            print(f'[Meta] ad->campaign lookup failed for ad {ad_id}: {r.text[:140]}')
+            return ''
+        name = ((r.json().get('campaign') or {}).get('name') or '').strip()
+    except Exception as e:
+        print(f'[Meta] ad->campaign lookup failed for ad {ad_id}: {e}')
+        return ''
+    if name:
+        _AD_CAMPAIGN_CACHE[ad_id] = name
+    return name
+
+
+def fetch_lead_ad_id(leadgen_id):
+    """Ask Meta which ad a lead came from, using the Page token.
+
+    Only needed when we're starting from a lead already saved without an ad_id — the
+    live webhook is handed one in the notification and skips this hop."""
+    token = os.environ.get('META_PAGE_ACCESS_TOKEN', '')
+    if not token:
+        return ''
+    try:
         r = requests.get(f'https://graph.facebook.com/v19.0/{leadgen_id}',
-                         params={'access_token': token, 'fields': 'campaign_name'}, timeout=10)
+                         params={'access_token': token, 'fields': 'ad_id'}, timeout=10)
         if r.status_code != 200:
             return ''
-        return (r.json().get('campaign_name') or '').strip()
+        return str(r.json().get('ad_id') or '')
     except Exception as e:
-        print(f'[Meta] campaign_name lookup failed for {leadgen_id}: {e}')
+        print(f'[Meta] ad_id lookup failed for lead {leadgen_id}: {e}')
         return ''
 
 
-def fetch_meta_lead(leadgen_id):
-    """Call Meta API to get the actual lead field data."""
+def resolve_campaign_name(leadgen_id=None, ad_id=None):
+    """Campaign name for a lead, from whichever identifier we have.
+
+    Two callers: the webhook, which already knows the ad, and the report's backfill
+    button, which starts from a saved lead and has to ask Meta for the ad first.
+    Returns '' if neither route arrives — the lead still saves, just unlabelled."""
+    name = fetch_ad_campaign(ad_id)
+    if not name and leadgen_id:
+        name = fetch_ad_campaign(fetch_lead_ad_id(leadgen_id))
+    return name
+
+
+def fetch_meta_lead(leadgen_id, ad_id=''):
+    """Call Meta API to get the actual lead field data.
+
+    `ad_id` comes from the webhook notification and is only a head start — if it is
+    absent the lead object usually carries one too."""
     token = os.environ.get('META_PAGE_ACCESS_TOKEN', '')
     url = f'https://graph.facebook.com/v19.0/{leadgen_id}'
     params = {
         'access_token': token,
-        'fields': 'field_data,created_time,ad_name,campaign_name,platform'
+        'fields': 'field_data,created_time,ad_id,ad_name,campaign_name,platform'
     }
     try:
         r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
-        # Page token didn't return the campaign — try the ads_read token for it.
+        # Page token didn't return the campaign — go round through the ad instead.
         if not (data.get('campaign_name') or '').strip():
-            data['campaign_name'] = fetch_campaign_name(leadgen_id)
+            data['campaign_name'] = resolve_campaign_name(
+                leadgen_id=leadgen_id, ad_id=data.get('ad_id') or ad_id)
         return data
     except Exception as e:
         print(f'[Meta] Failed to fetch lead {leadgen_id}: {e}')
@@ -233,7 +286,9 @@ def meta_receive():
             if not leadgen_id:
                 continue
 
-            raw_meta = fetch_meta_lead(leadgen_id)
+            # Meta names the ad in the notification itself — pass it through so the
+            # campaign can be resolved without a second round trip to find it.
+            raw_meta = fetch_meta_lead(leadgen_id, lead_data.get('ad_id', ''))
             if raw_meta:
                 save_lead_to_crm(lead_data, raw_meta)
 
