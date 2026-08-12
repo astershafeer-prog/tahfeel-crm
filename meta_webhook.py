@@ -13,6 +13,28 @@ meta_bp = Blueprint('meta', __name__)
 
 DUBAI_TZ = timezone(timedelta(hours=4))
 
+
+class MetaTransientError(Exception):
+    """A lead fetch that failed for a reason a retry could clear.
+
+    Raised rather than returned so no caller can mistake it for "there was no lead
+    here" — the entire point is that the webhook must NOT acknowledge these."""
+
+
+# Meta error codes a retry can actually clear. 190 is the important one: an expired
+# page token comes back as a plain 400, and answering 200 to that would silently bin
+# every lead arriving between the expiry and someone noticing.
+_RETRYABLE_META_CODES = {
+    1,    # unknown transient API error
+    2,    # temporary Graph API problem
+    4,    # app-level rate limit
+    17,   # user-level rate limit
+    32,   # page-level rate limit
+    190,  # access token expired/invalid — fixable, so keep the lead alive
+    341,  # application limit reached
+    613,  # calls-per-second limit
+}
+
 def now_dubai():
     return datetime.now(DUBAI_TZ).replace(tzinfo=None)
 
@@ -129,8 +151,16 @@ def fetch_meta_lead(leadgen_id, ad_id=''):
     """Call Meta API to get the actual lead field data.
 
     `ad_id` comes from the webhook notification and is only a head start — if it is
-    absent the lead object usually carries one too."""
+    absent the lead object usually carries one too.
+
+    Returns the lead dict, or None when Meta says the lead is genuinely gone and
+    asking again will not change that. Raises MetaTransientError for anything a
+    retry might fix, which the caller turns into a non-200 so Meta re-delivers."""
     token = os.environ.get('META_PAGE_ACCESS_TOKEN', '')
+    if not token:
+        # Not a lost cause: someone can set the token and Meta's retry still lands.
+        raise MetaTransientError('META_PAGE_ACCESS_TOKEN is not configured')
+
     url = f'https://graph.facebook.com/v19.0/{leadgen_id}'
     params = {
         'access_token': token,
@@ -138,16 +168,34 @@ def fetch_meta_lead(leadgen_id, ad_id=''):
     }
     try:
         r = requests.get(url, params=params, timeout=10)
-        r.raise_for_status()
-        data = r.json()
-        # Page token didn't return the campaign — go round through the ad instead.
-        if not (data.get('campaign_name') or '').strip():
-            data['campaign_name'] = resolve_campaign_name(
-                leadgen_id=leadgen_id, ad_id=data.get('ad_id') or ad_id)
-        return data
-    except Exception as e:
-        print(f'[Meta] Failed to fetch lead {leadgen_id}: {e}')
+    except requests.RequestException as e:
+        raise MetaTransientError(f'network error: {e}') from e
+
+    if r.status_code != 200:
+        err = {}
+        try:
+            err = (r.json() or {}).get('error') or {}
+        except ValueError:
+            pass
+        code   = err.get('code')
+        detail = err.get('message') or r.text[:200]
+        if r.status_code >= 500 or code in _RETRYABLE_META_CODES:
+            raise MetaTransientError(f'HTTP {r.status_code} (code {code}): {detail}')
+        print(f'[Meta] Lead {leadgen_id} unavailable, not retrying — '
+              f'HTTP {r.status_code} (code {code}): {detail}')
         return None
+
+    try:
+        data = r.json()
+    except ValueError as e:
+        raise MetaTransientError(f'unreadable response: {e}') from e
+
+    # Page token didn't return the campaign — go round through the ad instead.
+    # Still non-fatal: a lost label must never cost us a lead.
+    if not (data.get('campaign_name') or '').strip():
+        data['campaign_name'] = resolve_campaign_name(
+            leadgen_id=leadgen_id, ad_id=data.get('ad_id') or ad_id)
+    return data
 
 
 def parse_lead_fields(field_data):
@@ -277,6 +325,13 @@ def meta_receive():
     if not payload:
         return 'OK', 200
 
+    # A lead we could not save for a reason that may clear on its own means the whole
+    # delivery has to go unacknowledged — a 200 here is Meta's cue to forget the lead
+    # forever, which is how paid leads were being lost to a single timeout. Meta
+    # re-sends the entire payload, and the meta_lead_id check in save_lead_to_crm
+    # stops the ones that did save from doubling up.
+    retry_delivery = False
+
     for entry in payload.get('entry', []):
         for change in entry.get('changes', []):
             if change.get('field') != 'leadgen':
@@ -288,8 +343,31 @@ def meta_receive():
 
             # Meta names the ad in the notification itself — pass it through so the
             # campaign can be resolved without a second round trip to find it.
-            raw_meta = fetch_meta_lead(leadgen_id, lead_data.get('ad_id', ''))
-            if raw_meta:
+            try:
+                raw_meta = fetch_meta_lead(leadgen_id, lead_data.get('ad_id', ''))
+            except MetaTransientError as e:
+                print(f'[Meta] Lead {leadgen_id} fetch failed, asking Meta to resend: {e}')
+                retry_delivery = True
+                continue
+            if raw_meta is None:
+                continue  # permanently gone — already logged, nothing to retry
+
+            try:
                 save_lead_to_crm(lead_data, raw_meta)
+            except Exception as e:
+                try:
+                    from app import db
+                    db.session.rollback()
+                except Exception:
+                    pass
+                print(f'[Meta] Lead {leadgen_id} save failed, asking Meta to resend: {e}')
+                retry_delivery = True
+
+    if retry_delivery:
+        # 503 rather than 500 — this is "come back later", and Meta backs off and
+        # re-delivers for hours. Permanently-dead leads returned 200 above, so one
+        # of those can never pin the endpoint in an endless retry loop and get the
+        # whole subscription disabled.
+        return 'Retry later', 503
 
     return 'OK', 200

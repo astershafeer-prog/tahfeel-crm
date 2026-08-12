@@ -249,6 +249,26 @@ def set_security_headers(resp):
     return resp
 
 @app.before_request
+def enforce_active_user():
+    """A session is only as good as the account behind it.
+
+    Deactivating someone in the admin panel used to change nothing for a browser that
+    was already signed in — the cookie kept working until it expired on its own, so a
+    removed staff member walked away with live access to every client record. Re-read
+    the row on each request and drop the session the moment the account stops being
+    active (or disappears). One primary-key lookup; cheap enough to do every time."""
+    if 'user_id' not in session:
+        return
+    if (request.endpoint or '') in ('login', 'logout', 'static'):
+        return
+    user = User.query.get(session['user_id'])
+    if user and user.active:
+        return
+    session.clear()
+    flash('Your account is no longer active. Please contact an administrator.', 'error')
+    return redirect(url_for('login'))
+
+@app.before_request
 def restrict_marketing_role():
     # External Marketing-Ext users are sandboxed to the read-only lead report only.
     if session.get('role') != 'marketing':
@@ -4815,13 +4835,10 @@ def customers():
     auth_filter = request.args.get('authority', '')
     birthdays_today = []
     try:
-        # Ensure columns exist first
-        with db.engine.connect() as conn:
-            for col, typ in [('phone2','VARCHAR(20)'),('assigned_to','INTEGER'),('date_of_birth','DATE')]:
-                try:
-                    conn.execute(db.text(f'ALTER TABLE customer ADD COLUMN IF NOT EXISTS {col} {typ}'))
-                    conn.commit()
-                except: pass
+        # phone2 / assigned_to / date_of_birth used to be ALTER TABLE'd into existence
+        # right here, on every single page load. They live in the boot migrations in
+        # init_db() instead — schema work belongs at startup, not in a request that
+        # takes a table lock to be told the column already exists.
         customer_list = Customer.query.order_by(Customer.created_at.desc()).all()
         if search:
             csdigits = ''.join(ch for ch in search if ch.isdigit())
@@ -6632,6 +6649,14 @@ def approve_job(job_id):
     if job.status == 'Done':
         job.status = 'Closed'
         job.completed_at = now_dubai()
+        # Closing here has to book revenue the same way the other two close paths do
+        # (ready_close_job and close_job). It didn't, so every task closed from this
+        # button landed in Closed with no revenue and read as AED 0 in every report.
+        # A Done task has never been through the partner-commission prompt, so this
+        # is always the regular-task close — same reasoning as ready_close_job.
+        job.revenue = job.amount_received or 0
+        job.revenue_date = now_dubai().date()
+        job.partner_commission_expected = False
     else:
         job.status = 'Assigned'
     job.finance_approved_by = session['user_id']
@@ -6641,6 +6666,9 @@ def approve_job(job_id):
         job.finance_notes = notes  # save to job record
     action = 'Closed' if job.status == 'Closed' else 'Approved'
     remark = f'{action} by Finance. Invoiced: AED {job.amount_invoiced or 0:,.0f} / Received: AED {job.amount_received or 0:,.0f}'
+    if job.status == 'Closed':
+        remark += (f' / Revenue: AED {job.revenue:,.0f} '
+                   f'(counted for {job.revenue_date.strftime("%B %Y")})')
     if notes:
         remark += f'. Notes: {notes}'
     update = JobUpdate(job_id=job.id, status=job.status, remark=remark, staff_name=session['user_name'])
@@ -10306,6 +10334,20 @@ def init_db():
             # over-length string rather than truncating, so this was a 500 on save.
             'ALTER TABLE customer ALTER COLUMN business_activity TYPE VARCHAR(500)',
             'ALTER TABLE customer ALTER COLUMN address TYPE VARCHAR(500)',
+            # Columns /customers used to ALTER into existence on every page load.
+            # Listed here so that page can just read. Each statement is retried
+            # individually below, so this is the safe place for them even though two
+            # are also covered by the monthly_target block above.
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS assigned_to INTEGER',
+            'ALTER TABLE customer ADD COLUMN IF NOT EXISTS date_of_birth DATE',
+            # WhatsApp: one row per Meta message id. handle_incoming already checks
+            # for a duplicate before inserting, but that is a read-then-write — two
+            # gunicorn workers handed the same retried delivery can both pass the
+            # check and both fire an AI reply. The constraint is what actually makes
+            # that impossible. Partial because rows predating wam_id have none.
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_wam_wam_id_unique '
+            'ON whats_app_message (wam_id) WHERE wam_id IS NOT NULL',
             # "Newly formed by Tahfeel?" tracking — backfill existing companies to
             # 'No' (owner is reviewing them one by one and correcting to 'Yes'
             # where it actually applies); new companies must choose explicitly.

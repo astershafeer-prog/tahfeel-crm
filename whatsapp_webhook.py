@@ -19,6 +19,7 @@ import hashlib
 import requests
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request
+from sqlalchemy.exc import IntegrityError
 
 wa_bp = Blueprint('whatsapp', __name__)
 
@@ -569,6 +570,14 @@ def do_handover(wa_id):
 
 
 # ── Incoming message handling ─────────────────────────────────────────────────
+def _rollback_quietly():
+    """Discard a half-finished transaction so the next message starts clean."""
+    try:
+        from app import db
+        db.session.rollback()
+    except Exception:
+        pass
+
 def _already_seen(wam_id):
     from app import WhatsAppMessage
     if not wam_id:
@@ -610,8 +619,17 @@ def handle_incoming(msg, contacts):
         wa_id=normalize_phone(wa_id), direction='in').first() is None
 
     # 1) log the inbound (always — so it shows in the CRM inbox even when the bot is muted)
-    row = log_message(wa_id, 'in', body, msg_type=mtype, wam_id=wam_id, contact_name=cname,
-                      media_url=media_url, mime_type=mime_type)
+    try:
+        row = log_message(wa_id, 'in', body, msg_type=mtype, wam_id=wam_id, contact_name=cname,
+                          media_url=media_url, mime_type=mime_type)
+    except IntegrityError:
+        # The unique index on wam_id just caught what _already_seen structurally
+        # cannot: another worker was handed the same retried delivery and inserted it
+        # in the gap between our check and this write. Theirs is the one that goes on
+        # to reply — we stop here rather than send the customer a second answer.
+        db.session.rollback()
+        print(f'[WA] Duplicate delivery {wam_id} — already handled by another worker')
+        return
 
     # A new inbound re-opens a "Done" chat, so a customer reply is never missed in
     # the Done tab — the conversation pops back into the active inbox.
@@ -788,14 +806,18 @@ def wa_receive():
                 continue
             value = change.get('value', {})
             contacts = value.get('contacts', [])
+            # One bad message must not poison the session for the rest of the batch,
+            # so each handler rolls back its own failure before the next one runs.
             for msg in value.get('messages', []):
                 try:
                     handle_incoming(msg, contacts)
                 except Exception as e:
+                    _rollback_quietly()
                     print(f'[WA] handle_incoming error: {e}')
             for st in value.get('statuses', []):
                 try:
                     handle_status(st)
                 except Exception as e:
+                    _rollback_quietly()
                     print(f'[WA] handle_status error: {e}')
     return 'OK', 200
