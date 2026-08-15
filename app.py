@@ -10826,6 +10826,20 @@ def invoice_generator():
 @login_required
 @admin_required
 def export_full_backup():
+    """Human-readable offline snapshot of the CRM, one sheet per record type.
+
+    IMPORTANT — this is NOT a restore file. Disaster recovery runs off the nightly
+    pg_dump (.github/workflows/backup.yml) and Railway's own Postgres snapshots,
+    which capture every table and every relationship. This workbook is the copy a
+    human can open and read when the CRM itself is unavailable, so it covers the
+    records the business runs on (clients, their company profiles, owners, staff
+    of clients, documents and their expiry dates, jobs, tasks, tax filings) and
+    deliberately skips message logs, activity history and settings tables.
+
+    Every sheet is built independently and its row count is reported on the
+    "Backup Info" sheet — a sheet that silently failed would otherwise look
+    identical to one that was genuinely empty.
+    """
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill
@@ -10836,113 +10850,299 @@ def export_full_backup():
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="133E87", end_color="133E87", fill_type="solid")
 
-        def style_headers(ws, headers):
+        def fmt_d(val):
+            """dd/mm/yyyy, or blank. Pre-2000 expiry placeholders read as blank —
+            same rule the CRM uses on screen (see has_valid_expiry)."""
+            return val.strftime('%d/%m/%Y') if val else ''
+
+        def fmt_dt(val):
+            return val.strftime('%d/%m/%Y %H:%M') if val else ''
+
+        def fmt_expiry(val):
+            return fmt_d(val) if has_valid_expiry(val) else ''
+
+        def yn(val):
+            return 'Yes' if val else 'No'
+
+        # Names are resolved once here rather than per sheet: the old code built this
+        # inside the Leads block, so a Leads failure took every later sheet with it.
+        try:
+            users_map = {u.id: u.name for u in User.query.all()}
+        except Exception:
+            users_map = {}
+
+        report = []   # (sheet title, rows written, status)
+
+        def build(title, headers, fetch):
+            """Add one sheet. `fetch` returns an iterable of (obj, row-list) pairs.
+            A single bad record is skipped, not fatal; a failed query costs only
+            its own sheet."""
+            ws = wb.create_sheet(title)
             ws.append(headers)
             for cell in ws[1]:
                 cell.font = header_font
                 cell.fill = header_fill
-            for col in ws.columns:
-                max_len = max((len(str(cell.value or '')) for cell in col), default=10)
-                ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+            ws.freeze_panes = 'A2'
 
-        # Sheet 1: Leads
-        try:
-            ws1 = wb.active
-            ws1.title = "Leads"
-            users_map = {u.id: u.name for u in User.query.all()}
-            style_headers(ws1, ['ID','Name','Company','Phone','Email','Service','Source','Campaign',
-                                 'Status','Assigned To','Created Date','Due Date','Remarks'])
+            written, skipped = 0, 0
+            try:
+                for obj_id, row in fetch():
+                    try:
+                        ws.append(row)
+                        written += 1
+                    except Exception as row_error:
+                        skipped += 1
+                        print(f"Backup: skipped {title} row {obj_id}: {row_error}")
+            except Exception as e:
+                print(f"Error backing up {title}: {e}")
+                report.append((title, written, f'FAILED — {e}'))
+                flash(f'Warning: {title} backup incomplete - {str(e)}', 'warning')
+                return
+
+            # Width from the header plus a sample of the data — scanning every cell
+            # of every sheet is wasted work on the big ones.
+            for col in ws.iter_cols(min_row=1, max_row=min(ws.max_row, 200)):
+                max_len = max((len(str(c.value or '')) for c in col), default=10)
+                ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 45)
+
+            report.append((title, written, f'{skipped} row(s) skipped' if skipped else 'OK'))
+
+        # ── Leads ────────────────────────────────────────────────────────────
+        def leads():
             for l in Lead.query.order_by(Lead.created_at.desc()).all():
-                ws1.append([
+                yield l.id, [
                     l.id, l.name or '', l.company or '', l.phone or '', l.email or '',
                     l.service or '', l.source or '', l.campaign or '',
                     l.status or '', users_map.get(l.assigned_to, ''),
-                    l.created_at.strftime('%d/%m/%Y %H:%M') if l.created_at else '',
-                    l.due_date.strftime('%d/%m/%Y') if l.due_date else '',
-                    l.remarks or ''
-                ])
-        except Exception as e:
-            print(f"Error backing up Leads: {e}")
-            flash(f'Warning: Leads backup incomplete - {str(e)}', 'warning')
+                    fmt_dt(l.created_at), fmt_d(l.due_date), l.remarks or ''
+                ]
+        build("Leads", ['ID','Name','Company','Phone','Email','Service','Source','Campaign',
+                        'Status','Assigned To','Created Date','Due Date','Remarks'], leads)
 
-        # Sheet 2: Customers
-        try:
-            ws2 = wb.create_sheet("Customers")
-            style_headers(ws2, ['ID','Name','Company','Phone','Email','Source','Nationality',
-                                 'Customer Type','Assigned To','Notes','Created Date'])
+        # ── Clients (individuals and companies alike) ────────────────────────
+        def customers():
             for c in Customer.query.order_by(Customer.created_at.desc()).all():
-                ws2.append([
-                    c.id, c.name or '', c.company or '', c.phone or '', c.email or '',
-                    c.source or '', c.nationality or '', c.customer_type or '',
-                    users_map.get(c.assigned_to, ''), c.notes or '',
-                    c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else ''
-                ])
-        except Exception as e:
-            print(f"Error backing up Customers: {e}")
-            flash(f'Warning: Customers backup incomplete - {str(e)}', 'warning')
+                yield c.id, [
+                    c.id, c.customer_type or '', c.name or '', c.company or '',
+                    c.contact_person or '',
+                    c.phone or '', c.phone2 or '', c.mobile or '', c.whatsapp or '',
+                    c.email or '', c.website or '', c.address or '', c.po_box or '',
+                    c.nationality or '', fmt_d(c.date_of_birth),
+                    c.source or '', c.attribution_source or '',
+                    users_map.get(c.assigned_to, ''),
+                    yn(c.alerts_enabled), c.alert_email or '', c.alert_whatsapp or '',
+                    c.lead_id or '', c.notes or '', fmt_dt(c.created_at)
+                ]
+        build("Clients", ['ID','Type','Name','Company','Contact Person',
+                          'Phone','Phone 2','Mobile','WhatsApp',
+                          'Email','Website','Address','PO Box',
+                          'Nationality','Date of Birth',
+                          'Source','Attribution Source','Assigned To',
+                          'Alerts On','Alert Email','Alert WhatsApp',
+                          'From Lead ID','Notes','Created Date'], customers)
 
-        # Sheet 3: Jobs
-        try:
-            ws3 = wb.create_sheet("Jobs")
-            style_headers(ws3, ['ID','Customer','Company','Job Type','Assigned To','Created By',
-                                 'Status','Invoiced (AED)','Received (AED)','Revenue (AED)',
-                                 'Revenue Date','Partner Commission','Partner Received','Created Date','Due Date'])
+        # ── Company profile — the licence data, kept off the Clients sheet so
+        #    individual clients don't sit under 20 permanently blank columns.
+        def company_profile():
+            q = (Customer.query
+                 .filter(Customer.customer_type == 'Company')
+                 .order_by(Customer.name))
+            for c in q.all():
+                yield c.id, [
+                    c.id, c.name or '', c.company or '', c.trade_name or '',
+                    c.ac_code or '', c.ac_status or '',
+                    c.legal_form or '', c.jurisdiction or '',
+                    c.licensing_authority or '', c.freezone_name or '',
+                    c.emirate or '', c.country_incorp or '',
+                    c.business_activity or '',
+                    fmt_d(c.ac_opening_date), yn(c.ac_opening_date_confirmed),
+                    c.formed_by_tahfeel or '',
+                    c.uae_pass_number or '', c.uae_pass_name or '',
+                    yn(c.vat_registered), yn(c.corp_tax_registered),
+                    c.vat_status or '', fmt_d(c.vat_due_date),
+                    c.corp_tax_status or '', fmt_d(c.corp_tax_due_date)
+                ]
+        build("Company Profile", ['Client ID','Name','Company','Trade Name',
+                                  'AC Code','AC Status','Legal Form','Jurisdiction',
+                                  'Licensing Authority','Free Zone','Emirate','Country',
+                                  'Business Activity','AC Opening Date','Opening Date Confirmed',
+                                  'Formed by Tahfeel','UAE Pass Number','UAE Pass Name',
+                                  'VAT Registered','Corp Tax Registered',
+                                  'VAT Status (old)','VAT Due (old)',
+                                  'Corp Tax Status (old)','Corp Tax Due (old)'], company_profile)
+
+        # ── Owners / shareholders — carries passport and EID expiry ──────────
+        def owners():
+            for o in Owner.query.order_by(Owner.customer_id, Owner.name).all():
+                yield o.id, [
+                    o.id, o.customer_id,
+                    o.company.name if o.company else '',
+                    o.name or '', o.role or '',
+                    float(o.share_pct) if o.share_pct is not None else '',
+                    o.nationality or '', o.mobile or '', fmt_d(o.date_of_birth),
+                    o.passport_no or '', fmt_expiry(o.passport_expiry),
+                    o.eid_no or '', fmt_expiry(o.eid_expiry),
+                    fmt_dt(o.created_at)
+                ]
+        build("Owners", ['ID','Client ID','Company','Name','Role','Share %',
+                         'Nationality','Mobile','Date of Birth',
+                         'Passport No','Passport Expiry','Emirates ID No','EID Expiry',
+                         'Created Date'], owners)
+
+        # ── Employees of client companies ────────────────────────────────────
+        def employees():
+            for e in Employee.query.order_by(Employee.customer_id, Employee.name).all():
+                yield e.id, [
+                    e.id, e.customer_id,
+                    e.company.name if e.company else '',
+                    e.name or '', e.designation or '', e.nationality or '',
+                    fmt_d(e.date_of_birth), fmt_d(e.join_date),
+                    e.mobile or '', e.email or '', e.status or '',
+                    fmt_dt(e.created_at)
+                ]
+        build("Employees", ['ID','Client ID','Company','Name','Designation','Nationality',
+                            'Date of Birth','Join Date','Mobile','Email','Status',
+                            'Created Date'], employees)
+
+        # ── Companies (the separate Company records under a client) ──────────
+        def companies():
+            for co in Company.query.order_by(Company.name).all():
+                yield co.id, [
+                    co.id, co.name or '', co.customer_id or '',
+                    co.owner.name if co.owner else '',
+                    co.contact_person or '', co.phone or '', co.email or '',
+                    co.trade_license_no or '', co.authority or '', co.address or '',
+                    yn(co.alerts_enabled), co.alert_email or '', co.alert_whatsapp or '',
+                    co.notes or '', users_map.get(co.created_by, ''), fmt_dt(co.created_at)
+                ]
+        build("Companies", ['ID','Name','Client ID','Client','Contact Person','Phone','Email',
+                            'Trade Licence No','Authority','Address',
+                            'Alerts On','Alert Email','Alert WhatsApp',
+                            'Notes','Created By','Created Date'], companies)
+
+        # ── Jobs ─────────────────────────────────────────────────────────────
+        def jobs():
             for j in Job.query.order_by(Job.created_at.desc()).all():
-                try:
-                    ws3.append([
-                        j.id,
-                        j.customer.name if j.customer else '',
-                        j.customer.company if j.customer else '',
-                        j.job_type or '',
-                        users_map.get(j.assigned_to, ''),
-                        users_map.get(j.created_by, ''),
-                        j.status or '',
-                        float(j.amount_invoiced or 0),
-                        float(j.amount_received or 0),
-                        float(j.revenue or 0),
-                        j.revenue_date.strftime('%d/%m/%Y') if j.revenue_date else '',
-                        'Yes' if j.partner_commission_expected else 'No',
-                        'Yes' if (j.partner_status == 'Received') else 'No',
-                        j.created_at.strftime('%d/%m/%Y %H:%M') if j.created_at else '',
-                        j.due_date.strftime('%d/%m/%Y') if j.due_date else ''
-                    ])
-                except Exception as row_error:
-                    print(f"Error backing up Job ID {j.id}: {row_error}")
-                    continue
-        except Exception as e:
-            print(f"Error backing up Jobs: {e}")
-            flash(f'Warning: Jobs backup incomplete - {str(e)}', 'warning')
+                yield j.id, [
+                    j.id, j.customer_id,
+                    j.customer.name if j.customer else '',
+                    j.customer.company if j.customer else '',
+                    j.job_type or '', j.service_note or '',
+                    users_map.get(j.assigned_to, ''), users_map.get(j.created_by, ''),
+                    j.status or '', j.priority or '',
+                    float(j.amount_invoiced or 0), float(j.amount_received or 0),
+                    float(j.revenue or 0), fmt_d(j.revenue_date),
+                    yn(j.partner_commission_expected), j.partner_name or '',
+                    float(j.partner_amount) if j.partner_amount is not None else '',
+                    j.partner_status or '', fmt_d(j.partner_received_date),
+                    fmt_dt(j.created_at), fmt_d(j.due_date), fmt_dt(j.completed_at),
+                    j.final_remarks or '', j.internal_notes or ''
+                ]
+        build("Jobs", ['ID','Client ID','Customer','Company','Job Type','Service Note',
+                       'Assigned To','Created By','Status','Priority',
+                       'Invoiced (AED)','Received (AED)','Revenue (AED)','Revenue Date',
+                       'Partner Commission','Partner Name','Partner Amount',
+                       'Partner Status','Partner Received Date',
+                       'Created Date','Due Date','Completed Date',
+                       'Final Remarks','Internal Notes'], jobs)
 
-        # Sheet 4: Documents
-        try:
-            ws4 = wb.create_sheet("Documents")
-            style_headers(ws4, ['ID','Doc Type','Owner Name','Belongs To','Customer',
-                                 'Expiry Date','Notes','Added By','Created Date'])
+        # ── Tasks ────────────────────────────────────────────────────────────
+        def tasks():
+            for t in Task.query.order_by(Task.created_at.desc()).all():
+                yield t.id, [
+                    t.id, t.title or '', t.description or '',
+                    users_map.get(t.assigned_to, ''), users_map.get(t.created_by, ''),
+                    t.status or '', t.priority or '',
+                    fmt_dt(t.due_date), t.lead_id or '', fmt_dt(t.created_at)
+                ]
+        build("Tasks", ['ID','Title','Description','Assigned To','Created By',
+                        'Status','Priority','Due Date','Lead ID','Created Date'], tasks)
+
+        # ── Client documents — with the Cloudinary link, so the actual file is
+        #    recoverable and not just its expiry date.
+        def documents():
             for d in Document.query.order_by(Document.created_at.desc()).all():
-                try:
-                    ws4.append([
-                        d.id, d.doc_type or '', d.owner_name or '', d.belongs_to or '',
-                        d.customer.name if d.customer else '',
-                        d.expiry_date.strftime('%d/%m/%Y') if d.expiry_date else '',
-                        d.notes or '', d.added_by or '',
-                        d.created_at.strftime('%d/%m/%Y %H:%M') if d.created_at else ''
-                    ])
-                except Exception as row_error:
-                    print(f"Error backing up Document ID {d.id}: {row_error}")
-                    continue
-        except Exception as e:
-            print(f"Error backing up Documents: {e}")
-            flash(f'Warning: Documents backup incomplete - {str(e)}', 'warning')
+                yield d.id, [
+                    d.id, d.doc_type or '', d.belongs_to or '', d.owner_name or '',
+                    d.customer_id or '',
+                    d.customer.name if d.customer else '',
+                    d.company_id or '', d.employee_id or '',
+                    fmt_expiry(d.expiry_date),
+                    d.file_name or '', d.file_url or '', d.cloudinary_public_id or '',
+                    d.notes or '', d.added_by or '', fmt_dt(d.created_at)
+                ]
+        build("Documents", ['ID','Doc Type','Belongs To','Owner Name',
+                            'Client ID','Customer','Company ID','Employee ID',
+                            'Expiry Date','File Name','File URL','Cloudinary ID',
+                            'Notes','Added By','Created Date'], documents)
 
-        # Sheet 5: Staff
-        try:
-            ws5 = wb.create_sheet("Staff")
-            style_headers(ws5, ['ID','Name','Email','Role','Active'])
+        # ── Tahfeel's own documents (company + staff) ────────────────────────
+        def company_documents():
+            for cd in CompanyDocument.query.order_by(CompanyDocument.expiry_date).all():
+                yield cd.id, [
+                    cd.id, cd.name or '', cd.doc_type or '', cd.category or '',
+                    cd.owner or '',
+                    cd.staff.name if cd.staff else '',
+                    cd.authority or '', fmt_d(cd.issue_date), fmt_expiry(cd.expiry_date),
+                    cd.document_url or '', cd.cloudinary_public_id or '',
+                    cd.created_by or '', fmt_dt(cd.created_at)
+                ]
+        build("Tahfeel Documents", ['ID','Name','Doc Type','Category','Owner','Staff',
+                                    'Authority','Issue Date','Expiry Date',
+                                    'File URL','Cloudinary ID','Created By','Created Date'],
+              company_documents)
+
+        # ── Tax filings (VAT quarters / Corp Tax years) ──────────────────────
+        def tax_filings():
+            q = TaxFiling.query.order_by(TaxFiling.due_date.desc())
+            for tf in q.all():
+                yield tf.id, [
+                    tf.id, tf.customer_id,
+                    tf.customer.name if tf.customer else '',
+                    tf.customer.company if tf.customer else '',
+                    tf.tax_type or '', tf.period_label or '',
+                    fmt_d(tf.due_date),
+                    'Filed' if tf.filed_at else 'Not filed', fmt_dt(tf.filed_at),
+                    fmt_dt(tf.created_at)
+                ]
+        build("Tax Filings", ['ID','Client ID','Customer','Company','Tax Type','Period',
+                              'Due Date','Status','Filed At','Created Date'], tax_filings)
+
+        # ── CRM users ────────────────────────────────────────────────────────
+        def staff():
             for u in User.query.order_by(User.name).all():
-                ws5.append([u.id, u.name, u.email, u.role, 'Yes' if u.active else 'No'])
-        except Exception as e:
-            print(f"Error backing up Staff: {e}")
-            flash(f'Warning: Staff backup incomplete - {str(e)}', 'warning')
+                yield u.id, [
+                    u.id, u.name or '', u.email or '', u.phone or '',
+                    u.role or '', yn(u.is_super), yn(u.active), yn(u.on_leave)
+                ]
+        build("Staff", ['ID','Name','Email','Phone','Role','Super Admin','Active','On Leave'],
+              staff)
+
+        # ── Backup Info — first sheet, written last (needs the counts) ───────
+        info = wb.active
+        info.title = "Backup Info"
+        info.append(['Tahfeel CRM — offline snapshot'])
+        info['A1'].font = Font(bold=True, size=14)
+        info.append(['Generated', now_dubai().strftime('%d/%m/%Y %H:%M') + ' (Dubai)'])
+        info.append(['Generated by', users_map.get(session.get('user_id'), '')])
+        info.append([])
+        info.append(['THIS FILE IS A READABLE COPY, NOT A RESTORE FILE.'])
+        info['A5'].font = Font(bold=True, color="B00020")
+        info.append(['To rebuild the CRM after a disaster, use the nightly database dump '
+                     '(GitHub → Actions → "Daily Database Backup") or a Railway Postgres snapshot. '
+                     'See RECOVERY_GUIDE.md.'])
+        info.append(['Message history, activity logs and dropdown settings are not in this file — '
+                     'they are in the database dump.'])
+        info.append([])
+        info.append(['Sheet', 'Rows', 'Status'])
+        for cell in info[9]:
+            cell.font = header_font
+            cell.fill = header_fill
+        for title, rows, status in report:
+            info.append([title, rows, status])
+        info.column_dimensions['A'].width = 26
+        info.column_dimensions['B'].width = 10
+        info.column_dimensions['C'].width = 60
 
         # Mark backup date in session
         session['last_backup_date'] = now_dubai().strftime('%Y-%m-%d')
@@ -10956,7 +11156,7 @@ def export_full_backup():
         response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         response.headers['Content-Disposition'] = f'attachment; filename={filename}'
         return response
-    
+
     except Exception as e:
         print(f"CRITICAL ERROR in backup export: {e}")
         import traceback
