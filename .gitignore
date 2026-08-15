@@ -10,6 +10,12 @@ instance/
 *.db
 *.sqlite
 *.sqlite3
+# Copies of the database taken by hand end up with a suffix after the
+# extension (tahfeel.db.bak-…, tahfeel.db.test-local-discard), which *.db
+# does not match — they sat untracked and one `git add -A` would have
+# published real client data and password hashes.
+*.db.*
+*.sqlite.*
 
 # Backups
 backups/
