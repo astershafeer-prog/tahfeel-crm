@@ -3452,6 +3452,8 @@ def admin_panel():
     capi = {
         'enabled': get_setting('capi_enabled', 'off') == 'on',
         'token_set': bool(get_setting('capi_token', '')),
+        # Shown so a truncated paste is visible without revealing the token.
+        'token_shape': _token_shape(get_setting('capi_token', '')),
         'dataset_id': get_setting('capi_dataset_id', '') or '',
         'event_name': get_setting('capi_event_name', 'Qualified') or 'Qualified',
         'event_name_2': get_setting('capi_event_name_2', 'Converted') or 'Converted',
@@ -3461,6 +3463,7 @@ def admin_panel():
     adsync = {
         'enabled': get_setting('ads_sync_enabled', 'off') == 'on',
         'token_set': bool(get_setting('ads_token', '')),
+        'token_shape': _token_shape(get_setting('ads_token', '')),
         'account_id': get_setting('ads_account_id', '') or '',
         'last_run': get_setting('run_ads_sync', ''),
     }
@@ -3555,13 +3558,28 @@ def admin_capi_settings():
     set_setting('capi_event_name_2', (request.form.get('capi_event_name_2') or 'Converted').strip() or 'Converted')
     set_setting('capi_test_code', (request.form.get('capi_test_code') or '').strip())
     new_token = (request.form.get('capi_token') or '').strip()
+    notes = []
     if new_token:
-        if _looks_like_token(new_token):
-            set_setting('capi_token', new_token)
-        else:
+        if not _looks_like_token(new_token):
             errors.append("That doesn't look like a Meta access token — it was NOT saved. "
                           'If your browser autofilled your login password, clear the field and paste the real token.')
-    flash(' '.join(f'⚠️ {e}' for e in errors) if errors else 'Meta CAPI settings saved.')
+        else:
+            # Checked against Meta before storing. Saving a token that Meta cannot even
+            # parse is how this silently sat broken: everything reported "saved ✓" and
+            # the failure only appeared later, on the test button, as a bare HTTP 400.
+            verdict, detail = meta_check_token(new_token)
+            if verdict == 'rejected':
+                errors.append(f'Meta rejected that token, so it was NOT saved: {detail} '
+                              f'(what you pasted was {_token_shape(new_token)}). A real token is '
+                              'usually around 200 characters — Events Manager shows it in a small '
+                              'scrolling box, so copying only the visible part is easy to do by '
+                              'accident. Use the copy button rather than selecting the text.')
+            else:
+                set_setting('capi_token', new_token)
+                notes.append('Token saved and verified with Meta ✓' if verdict == 'ok'
+                             else f'Token saved, but it could not be verified — {detail}.')
+    msgs = [f'⚠️ {e}' for e in errors] + notes
+    flash(' '.join(msgs) if msgs else 'Meta CAPI settings saved.')
     return redirect(url_for('admin_panel') + '#capi')
 
 @app.route('/admin/capi-test', methods=['POST'])
@@ -3595,7 +3613,25 @@ def admin_capi_test():
         if r.status_code == 200:
             flash(f'✅ Test event sent — HTTP 200. Check Events Manager → Test Events. {r.text[:200]}')
         else:
-            flash(f'⚠️ Meta returned HTTP {r.status_code}: {r.text[:250]}')
+            err = {}
+            try:
+                err = (r.json() or {}).get('error') or {}
+            except ValueError:
+                pass
+            # Meta's raw text says what went wrong but never what to do about it, and
+            # the two failures here need opposite fixes — one is the token, the other
+            # is the Dataset ID. Naming which is which saves an hour of swapping both.
+            hint = ''
+            if err.get('code') == 190:
+                hint = (f' → This is the ACCESS TOKEN, not the Dataset ID. The stored token is '
+                        f'{_token_shape(token)}; a real one runs to about 200 characters. Re-copy it '
+                        'from Events Manager → Settings using the copy button (selecting the text by '
+                        'hand usually grabs only the visible part) and paste it above, then Save.')
+            elif err.get('code') in (100, 803):
+                hint = (f' → This looks like the DATASET ID ({dataset}), not the token. It must be the '
+                        'Dataset (Pixel) ID from Events Manager, and the token must belong to a user '
+                        'with access to that dataset.')
+            flash(f'⚠️ Meta returned HTTP {r.status_code}: {r.text[:250]}{hint}')
     except Exception as e:
         flash(f'Test failed: {e}')
     return redirect(url_for('admin_panel') + '#capi')
@@ -4082,8 +4118,55 @@ def _clean_numeric_id(raw):
 
 def _looks_like_token(v):
     """Reject an autofilled account password or email pretending to be an API token.
-    Meta tokens are long, and contain neither '@' nor whitespace."""
+    Meta tokens are long, and contain neither '@' nor whitespace.
+
+    Shape only — it cannot tell a real token from 40 random characters. meta_check_token
+    is what actually decides; this just avoids a pointless round trip."""
     return len(v) >= 20 and '@' not in v and not any(ch.isspace() for ch in v)
+
+
+def meta_check_token(token):
+    """Ask Meta whether a token is real, before we store it.
+
+    Returns (verdict, detail) where verdict is one of:
+      'ok'       — Meta accepted it
+      'rejected' — Meta says the token itself is bad (code 190). Definitive.
+      'unknown'  — we couldn't reach Meta, or it failed for some unrelated reason.
+
+    Worth the extra call because the failure it prevents is invisible. A password
+    manager filling this field with an account password produces a 24-character
+    string with no '@' and no spaces, which sails through _looks_like_token and is
+    stored happily — and only shows up later as "Cannot parse access token" from a
+    completely different screen. 'unknown' is kept separate from 'rejected' so a
+    Meta outage can never stop an admin saving a token that is actually fine."""
+    import requests
+    try:
+        r = requests.get('https://graph.facebook.com/v19.0/me',
+                         params={'access_token': token, 'fields': 'id'}, timeout=10)
+    except requests.RequestException as e:
+        return 'unknown', f'could not reach Meta to verify it ({type(e).__name__})'
+    if r.status_code == 200:
+        return 'ok', ''
+    try:
+        err = (r.json() or {}).get('error') or {}
+    except ValueError:
+        err = {}
+    msg = (err.get('message') or r.text[:160]).strip()
+    if err.get('code') == 190:
+        return 'rejected', msg
+    return 'unknown', f'HTTP {r.status_code}: {msg}'
+
+
+def _token_shape(token):
+    """A description of a stored token that gives away nothing useful.
+
+    Length is the tell. A real Meta system-user token runs to roughly 200
+    characters; Events Manager shows it in a small scrolling box, so a copy that
+    grabbed only the visible part looks perfectly plausible in a password field
+    and is the most common way this ends up broken."""
+    if not token:
+        return ''
+    return f'{len(token)} characters, ending "{token[-6:]}"'
 
 @app.route('/admin/ads-sync-settings', methods=['POST'])
 @login_required
@@ -4102,11 +4185,18 @@ def admin_ads_sync_settings():
                           'Your browser may have autofilled an email here; check the field.')
     new_token = (request.form.get('ads_token') or '').strip()
     if new_token:
-        if _looks_like_token(new_token):
-            set_setting('ads_token', new_token)
-        else:
+        if not _looks_like_token(new_token):
             errors.append("That doesn't look like a Meta access token — it was NOT saved. "
                           'If your browser autofilled your login password, clear the field and paste the real token.')
+        else:
+            # Same check as the CAPI token, for the same reason: a token that Meta
+            # can't parse otherwise sits saved and only fails at 2am in the cron.
+            verdict, detail = meta_check_token(new_token)
+            if verdict == 'rejected':
+                errors.append(f'Meta rejected that token, so it was NOT saved: {detail} '
+                              f'(what you pasted was {_token_shape(new_token)}).')
+            else:
+                set_setting('ads_token', new_token)
     want_on = request.form.get('ads_sync_enabled') == 'on'
     ready   = bool(get_setting('ads_token', '')) and bool(get_setting('ads_account_id', ''))
     if want_on and not ready:

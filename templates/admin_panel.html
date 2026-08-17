@@ -162,6 +162,14 @@
               {% if capi.token_set %}<span style="color:#16A34A;">— saved ✓ (leave blank to keep it)</span>{% else %}<span style="color:#B45309;">— not set yet</span>{% endif %}
             </label>
             <input type="password" name="capi_token" autocomplete="new-password" data-lpignore="true" data-form-type="other" placeholder="{{ 'Paste a new token to replace' if capi.token_set else 'CAPI access token from Events Manager' }}" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            {# Length is the diagnostic. "Cannot parse access token" almost always means
+               a half-copied token, and nothing else on this page would reveal that. #}
+            {% if capi.token_shape %}
+            <div style="font-size:11px;color:#64748B;margin-top:4px;">
+              Stored token: {{ capi.token_shape }}.
+              <span style="color:#B45309;">A real one is usually around 200 characters — much shorter than that means the copy was cut short.</span>
+            </div>
+            {% endif %}
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;">
             <div style="flex:1;min-width:160px;">
@@ -225,6 +233,9 @@
               {% if adsync.token_set %}<span style="color:#16A34A;">— saved ✓ (leave blank to keep it)</span>{% else %}<span style="color:#B45309;">— not set yet</span>{% endif %}
             </label>
             <input type="password" name="ads_token" autocomplete="new-password" data-lpignore="true" data-form-type="other" placeholder="{{ 'Paste a new token to replace' if adsync.token_set else 'System User token with ads_read' }}" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            {% if adsync.token_shape %}
+            <div style="font-size:11px;color:#64748B;margin-top:4px;">Stored token: {{ adsync.token_shape }}.</div>
+            {% endif %}
           </div>
           <div>
             <label style="font-size:11px;color:#64748B;">Ad account ID <span style="font-weight:400;">— digits only</span></label>
