@@ -352,6 +352,12 @@ class Lead(db.Model):
     customer_story = db.Column(db.Text)
     phone2 = db.Column(db.String(20))
     campaign = db.Column(db.String(100))
+    # Which creative the customer actually answered. A campaign runs several ads at
+    # once, so the campaign name alone never told us that. Kept BESIDE campaign, not
+    # instead of it: Campaign ROI matches Meta's spend to leads on the exact campaign
+    # name, and ad spend is matched on meta_ad_id, which survives an ad being renamed.
+    meta_ad_id = db.Column(db.String(50), index=True)
+    meta_ad_name = db.Column(db.String(200))
     meta_lead_id = db.Column(db.String(50), nullable=True, unique=True)  # Prevents duplicate Meta leads
     # ── Lead redesign: quality flag (manual) + channel + timing ──
     genuine = db.Column(db.String(20))            # Genuine / Junk / Unreachable / None (unreviewed)
@@ -623,6 +629,35 @@ class CampaignSpend(db.Model):
     synced_at   = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, default=now_dubai, onupdate=now_dubai)
     __table_args__ = (db.UniqueConstraint('campaign', 'year', 'month', name='uq_campaign_spend_period'),)
+
+class AdSpend(db.Model):
+    """Meta ad spend per AD per month — the creative-level half of Campaign ROI.
+
+    Separate table rather than more columns on CampaignSpend: an ad's spend is not a
+    subdivision of a campaign row we can edit, it only ever comes from Meta. There is
+    deliberately no manual entry here. Typing spend per creative by hand for a few
+    dozen ads a month is not a thing anyone would keep up, and a half-filled
+    ad table would make cost per creative look wrong rather than absent.
+
+    Keyed on ad_id, not the ad name: renaming a creative in Ads Manager is routine,
+    and a name key would silently split one ad's history into two.
+
+    thumbnail_url is Meta's CDN link to the creative image. It expires, so it is
+    refreshed on every sync and the report falls back to the ad's name if the image
+    fails to load — a dead thumbnail must never look like a missing ad."""
+    __tablename__ = 'ad_spend'
+    id       = db.Column(db.Integer, primary_key=True)
+    ad_id    = db.Column(db.String(50), nullable=False, index=True)
+    ad_name  = db.Column(db.String(200))
+    campaign = db.Column(db.String(200), index=True)
+    year     = db.Column(db.Integer, nullable=False)
+    month    = db.Column(db.Integer, nullable=False)
+    amount   = db.Column(db.Float, default=0)
+    impressions = db.Column(db.Integer, default=0)
+    clicks      = db.Column(db.Integer, default=0)
+    thumbnail_url = db.Column(db.Text)
+    synced_at   = db.Column(db.DateTime, nullable=True)
+    __table_args__ = (db.UniqueConstraint('ad_id', 'year', 'month', name='uq_ad_spend_period'),)
 
 class CampaignFlag(db.Model):
     """Per-campaign settings that hold across every month.
@@ -1318,9 +1353,138 @@ def meta_sync_spend(year, month):
     note = f'{updated} campaign(s) for {year}-{month:02d}'
     if unmatched:
         note += f' · {len(unmatched)} with no matching CRM leads: {", ".join(unmatched[:3])}'
+    db.session.commit()
+    # Per-ad spend rides on the same trigger rather than a cron of its own — two
+    # schedules would drift apart, and a report where the ad rows are a day behind
+    # the campaign row they sit under is worse than no ad rows at all. It runs AFTER
+    # the campaign commit above, and inside its own try, so nothing at the creative
+    # level can cost us the campaign figures the whole report is built on.
+    try:
+        ads = meta_sync_ad_spend(year, month)
+    except Exception as e:
+        db.session.rollback()
+        ads = {'ok': False, 'error': f'{type(e).__name__}: {e}', 'updated': 0}
+    note += (f' · {ads["updated"]} ad(s)' if ads['ok']
+             else f' · ad-level spend FAILED: {ads["error"][:80]}')
     set_setting('run_ads_sync', f'{now_dubai().strftime("%d %b %Y %H:%M")} — {note}')
     db.session.commit()
-    return {'ok': True, 'error': None, 'updated': updated, 'unmatched': unmatched}
+    return {'ok': True, 'error': None, 'updated': updated, 'unmatched': unmatched,
+            'ads_updated': ads['updated'], 'ads_error': ads['error']}
+
+def meta_fetch_ad_spend(year, month):
+    """Fetch per-AD spend for one month from the Meta Marketing API.
+
+    Same insights endpoint as meta_fetch_spend, one level deeper. Returns
+    (rows, error); rows carry ad_id, which is what Lead.meta_ad_id holds, so leads
+    and spend match on an id rather than a name and survive a creative being
+    renamed mid-month. Never raises."""
+    import calendar, json, requests
+    token   = get_setting('ads_token', '')
+    account = (get_setting('ads_account_id', '') or '').strip()
+    if not token or not account:
+        return [], 'Ad account id or access token not set.'
+    if not account.startswith('act_'):
+        account = 'act_' + account.lstrip('act_')
+    since = f'{year}-{month:02d}-01'
+    until = f'{year}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}'
+    url = f'https://graph.facebook.com/v19.0/{account}/insights'
+    params = {
+        'level': 'ad',
+        'fields': 'ad_id,ad_name,campaign_name,spend,impressions,clicks',
+        'time_range': json.dumps({'since': since, 'until': until}),
+        # An account can easily run a few hundred ads in a month — far more rows than
+        # the campaign call returns, so this pages more times before the guard bites.
+        'limit': 200,
+        'access_token': token,
+    }
+    rows, guard = [], 60
+    try:
+        while url and guard > 0:
+            guard -= 1
+            r = requests.get(url, params=params, timeout=20)
+            if r.status_code != 200:
+                return [], f'Meta returned HTTP {r.status_code}: {r.text[:200]}'
+            body = r.json()
+            for d in body.get('data', []):
+                ad_id = (d.get('ad_id') or '').strip()
+                if not ad_id:
+                    continue
+                rows.append({
+                    'ad_id': ad_id,
+                    'ad_name': (d.get('ad_name') or '').strip(),
+                    'campaign': (d.get('campaign_name') or '').strip(),
+                    'spend': float(d.get('spend') or 0),
+                    'impressions': int(float(d.get('impressions') or 0)),
+                    'clicks': int(float(d.get('clicks') or 0)),
+                })
+            url = (body.get('paging') or {}).get('next')
+            params = None                   # `next` is a fully-formed url already
+        return rows, None
+    except Exception as e:
+        return [], f'{type(e).__name__}: {e}'
+
+
+def meta_fetch_ad_thumbnails(ad_ids):
+    """Map ad_id -> creative thumbnail url, for the ads we actually care about.
+
+    Requested in batches through the account's /ads edge rather than one call per
+    ad: a month with 300 ads would otherwise be 300 round trips inside one request.
+    Best-effort by design — a missing picture is a cosmetic loss, so any failure
+    returns what it has and the report shows names alone."""
+    import requests
+    out = {}
+    ids = [str(a) for a in ad_ids if a]
+    if not ids:
+        return out
+    token = get_setting('ads_token', '')
+    if not token:
+        return out
+    for i in range(0, len(ids), 50):
+        chunk = ids[i:i + 50]
+        try:
+            r = requests.get('https://graph.facebook.com/v19.0/',
+                             params={'ids': ','.join(chunk), 'access_token': token,
+                                     'fields': 'creative{thumbnail_url}'}, timeout=20)
+            if r.status_code != 200:
+                print(f'[Meta] thumbnail lookup failed: {r.text[:140]}')
+                continue
+            for ad_id, body in (r.json() or {}).items():
+                url = ((body or {}).get('creative') or {}).get('thumbnail_url')
+                if url:
+                    out[str(ad_id)] = url
+        except Exception as e:
+            print(f'[Meta] thumbnail lookup failed: {e}')
+    return out
+
+
+def meta_sync_ad_spend(year, month):
+    """Upsert one month of per-ad Meta spend into AdSpend. Returns a result dict.
+
+    Runs beside meta_sync_spend, never instead of it: the campaign totals stay the
+    number of record. Summing ads would quietly disagree with it, because Meta bills
+    a few things (and attributes some spend) at campaign level only."""
+    rows, err = meta_fetch_ad_spend(year, month)
+    if err:
+        return {'ok': False, 'error': err, 'updated': 0}
+    thumbs = meta_fetch_ad_thumbnails([r['ad_id'] for r in rows])
+    updated = 0
+    for r in rows:
+        row = AdSpend.query.filter_by(ad_id=r['ad_id'], year=year, month=month).first()
+        if not row:
+            row = AdSpend(ad_id=r['ad_id'], year=year, month=month)
+            db.session.add(row)
+        row.ad_name     = r['ad_name'][:200]
+        row.campaign    = r['campaign'][:200]
+        row.amount      = r['spend']
+        row.impressions = r['impressions']
+        row.clicks      = r['clicks']
+        # Keep the last known picture if this refresh didn't return one — a blank
+        # here would drop a thumbnail we already had for no gain.
+        row.thumbnail_url = thumbs.get(r['ad_id']) or row.thumbnail_url
+        row.synced_at   = now_dubai()
+        updated += 1
+    db.session.commit()
+    return {'ok': True, 'error': None, 'updated': updated}
 
 def wa_template_active(meta_name):
     """Return an active MessageTemplate by its Meta name, or None."""
@@ -3532,6 +3696,12 @@ def _campaign_rows(year, month, with_revenue=True, end_year=None, end_month=None
         Lead.meta_lead_id.isnot(None),
         db.or_(Lead.campaign.is_(None), Lead.campaign == ''),
         Lead.created_at >= start, Lead.created_at < end).count()
+    # Every lead that arrived before ad tracking existed is in here, so this starts
+    # large and only ever shrinks for leads Meta still holds (~90 days).
+    missing_ad = Lead.query.filter(
+        Lead.meta_lead_id.isnot(None),
+        db.or_(Lead.meta_ad_id.is_(None), Lead.meta_ad_id == ''),
+        Lead.created_at >= start, Lead.created_at < end).count()
 
     # Lead -> Customer, one query rather than one per lead.
     lead_ids = [l.id for l in leads]
@@ -3568,6 +3738,20 @@ def _campaign_rows(year, month, with_revenue=True, end_year=None, end_month=None
             a['synced_at'] = s.synced_at.strftime('%d %b %H:%M')
     excluded_campaigns = {f.campaign for f in CampaignFlag.query.filter_by(excluded=True).all()}
 
+    # Per-ad spend for the same period, keyed by ad id. A creative renamed mid-span
+    # would otherwise appear twice, so the newest name Meta gave us wins for display.
+    ad_spend = {}
+    for s in AdSpend.query.filter(db.or_(*[
+            db.and_(AdSpend.year == y, AdSpend.month == m) for y, m in period_months])).all():
+        a = ad_spend.setdefault(s.ad_id, {'ad_name': '', 'campaign': '', 'amount': 0.0,
+                                          'impressions': 0, 'clicks': 0, 'thumb': ''})
+        a['amount']      += (s.amount or 0)
+        a['impressions'] += (s.impressions or 0)
+        a['clicks']      += (s.clicks or 0)
+        a['ad_name']   = s.ad_name or a['ad_name']
+        a['campaign']  = s.campaign or a['campaign']
+        a['thumb']     = s.thumbnail_url or a['thumb']
+
     groups = defaultdict(list)
     for l in leads:
         groups[(l.campaign or '').strip() or '— no campaign name —'].append(l)
@@ -3578,6 +3762,61 @@ def _campaign_rows(year, month, with_revenue=True, end_year=None, end_month=None
         groups.setdefault(name, [])
 
     div = lambda a, b: (a / b) if b else None
+
+    def _ads_for(campaign_name, ls):
+        """The creatives behind one campaign row: its leads grouped by ad, plus any
+        ad Meta billed for under this campaign that produced no leads at all.
+
+        Those zero-lead ads are the point of the whole breakdown — a campaign
+        averaging an acceptable cost per lead can be hiding one creative doing all
+        the work and three burning budget for nothing, and the campaign row alone
+        can never show that."""
+        by_ad = defaultdict(list)
+        for l in ls:
+            # Leads that predate ad tracking (or whose lookup never resolved) have no
+            # ad id. Grouped under one honest label rather than silently dropped —
+            # they are real leads and their cost is real.
+            by_ad[(l.meta_ad_id or '').strip()].append(l)
+        for aid, sp in ad_spend.items():
+            if sp['campaign'] == campaign_name:
+                by_ad.setdefault(aid, [])
+        out = []
+        for aid, als in by_ad.items():
+            sp   = ad_spend.get(aid) or {}
+            cids = [cust_by_lead[l.id] for l in als if l.id in cust_by_lead]
+            n    = len(als)
+            gen  = sum(1 for l in als if l.genuine == 'Genuine')
+            spend = sp.get('amount', 0)
+            # Ad name from Meta's spend row first — it is the current one. The name
+            # stamped on the lead is the fallback for ads with no spend in the period
+            # (an ad paused mid-month still delivered the leads it delivered).
+            label = sp.get('ad_name') or next(
+                (l.meta_ad_name for l in als if l.meta_ad_name), '')
+            a = {
+                'ad_id': aid, 'ad': label or ('— unknown ad —' if not aid else f'Ad {aid}'),
+                'known': bool(label or aid), 'thumb': sp.get('thumb') or '',
+                'leads': n, 'genuine': gen, 'clients': len(cids), 'spend': spend,
+                'junk':        sum(1 for l in als if l.genuine == 'Junk'),
+                'unreachable': sum(1 for l in als if l.genuine == 'Unreachable'),
+                'not_reviewed': n - sum(1 for l in als
+                                        if l.genuine in ('Genuine', 'Junk', 'Unreachable')),
+                'impressions': sp.get('impressions', 0), 'clicks': sp.get('clicks', 0),
+                'ctr': div(100.0 * sp.get('clicks', 0), sp.get('impressions', 0)),
+                'p_genuine': round(100 * gen / n) if n else 0,
+                'p_client':  round(100 * len(cids) / n) if n else 0,
+                'cpl':              div(spend, n),
+                'cost_per_genuine': div(spend, gen),
+                'cost_per_client':  div(spend, len(cids)),
+            }
+            if with_revenue:
+                revenue = sum(rev_by_cust.get(c, 0) for c in cids)
+                a['revenue'] = revenue
+                a['net']     = (revenue - spend) if spend else None
+                a['roas']    = div(revenue, spend)
+            out.append(a)
+        out.sort(key=lambda a: (-a.get('revenue', 0), -a['clients'], -a['leads'], -a['spend']))
+        return out
+
     rows = []
     for name, ls in groups.items():
         cids    = [cust_by_lead[l.id] for l in ls if l.id in cust_by_lead]
@@ -3604,6 +3843,7 @@ def _campaign_rows(year, month, with_revenue=True, end_year=None, end_month=None
             # CTR separates the two failures that look identical in the lead count:
             # low CTR is a creative problem, high CTR with junk leads is targeting.
             'ctr': div(100.0 * (sp['clicks'] if sp else 0), sp['impressions'] if sp else 0),
+            'ads': _ads_for(name, ls),
         }
         if with_revenue:
             revenue = sum(rev_by_cust.get(c, 0) for c in cids)
@@ -3637,6 +3877,7 @@ def _campaign_rows(year, month, with_revenue=True, end_year=None, end_month=None
     totals['excluded'] = excluded
     totals['unlinked'] = unlinked
     totals['missing_campaign'] = missing_campaign
+    totals['missing_ad'] = missing_ad
     # How mature this cohort is. Conversions here typically take more than a month,
     # so a recent period showing few clients is expected — say so on the page rather
     # than let someone read it as a failure.
@@ -3770,6 +4011,38 @@ def _campaign_xlsx(rows, totals, label, with_revenue):
         width = max((len(str(c.value)) for c in col if c.value is not None), default=10)
         ws.column_dimensions[col[0].column_letter].width = min(max(width + 2, 11), 42)
     ws.freeze_panes = 'A4'
+
+    # Second sheet, not extra rows on the first: the campaign sheet is what gets
+    # totalled and pasted into a summary, and interleaving ad rows into it would
+    # double-count every figure the moment someone sums a column.
+    ws2 = wb.create_sheet('By ad')
+    head2 = ['Campaign', 'Ad', 'Impressions', 'CTR %', 'Leads', 'Genuine', 'Junk',
+             'Unreachable', 'Clients', 'Spend (AED)', 'Cost/Lead', 'Cost/Client']
+    if with_revenue:
+        head2 += ['Revenue (AED)', 'Net (AED)', 'ROAS']
+    ws2.append([f'Leads and cost per ad — {label}'])
+    ws2['A1'].font = Font(bold=True, size=13)
+    ws2.append([])
+    ws2.append(head2)
+    for c in ws2[3]:
+        c.font = Font(bold=True)
+        c.alignment = Alignment(horizontal='center')
+    for r in rows:
+        for a in r.get('ads', []):
+            line2 = [r['campaign'], a['ad'], a['impressions'] or None, r2(a['ctr']),
+                     a['leads'], a['genuine'], a['junk'], a['unreachable'], a['clients'],
+                     r2(a['spend']) or None, r2(a['cpl']), r2(a['cost_per_client'])]
+            if with_revenue:
+                line2 += [r2(a.get('revenue')), r2(a.get('net')), r2(a.get('roas'))]
+            ws2.append(line2)
+    if ws2.max_row <= 3:
+        ws2.append(['No per-ad data for this period — run the Meta sync, or the leads '
+                    'predate ad tracking.'])
+    for col in ws2.columns:
+        width = max((len(str(c.value)) for c in col if c.value is not None), default=10)
+        ws2.column_dimensions[col[0].column_letter].width = min(max(width + 2, 11), 42)
+    ws2.freeze_panes = 'A4'
+
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
@@ -3853,7 +4126,10 @@ def admin_ads_sync_now():
     if not res['ok']:
         flash(f'⚠️ Sync failed: {res["error"]}')
     else:
-        msg = f'✅ Synced {res["updated"]} campaign(s) for {n.strftime("%B %Y")}.'
+        msg = (f'✅ Synced {res["updated"]} campaign(s) and {res.get("ads_updated", 0)} ad(s) '
+               f'for {n.strftime("%B %Y")}.')
+        if res.get('ads_error'):
+            msg += f' ⚠️ Ad-level spend failed: {res["ads_error"][:120]}'
         if res['unmatched']:
             msg += (f' {len(res["unmatched"])} had no matching CRM leads '
                     f'({", ".join(res["unmatched"][:3])}) — usually a renamed or non-lead campaign.')
@@ -3874,11 +4150,12 @@ def campaign_sync_month():
     if not (get_setting('ads_token', '') and get_setting('ads_account_id', '')):
         flash('Add the ad account ID and access token in Admin Panel → Meta ad spend sync first.')
         return redirect(back)
-    updated, unmatched, errors = 0, set(), []
+    updated, ads_updated, unmatched, errors = 0, 0, set(), []
     for y, m in _months_between(y1, m1, y2, m2):
         res = meta_sync_spend(y, m)
         if res['ok']:
             updated += res['updated']
+            ads_updated += res.get('ads_updated', 0)
             unmatched.update(res['unmatched'])
         else:
             errors.append(f'{y}-{m:02d}: {res["error"]}')
@@ -3887,7 +4164,7 @@ def campaign_sync_month():
     elif not updated:
         flash('Meta reported no spend for that period on this ad account.')
     else:
-        msg = f'✅ Pulled spend for {updated} campaign-month(s).'
+        msg = f'✅ Pulled spend for {updated} campaign-month(s) and {ads_updated} ad-month(s).'
         if unmatched:
             msg += (f' {len(unmatched)} campaign(s) had no matching CRM leads '
                     f'({", ".join(sorted(unmatched)[:3])}) — renamed or non-lead campaigns.')
@@ -3900,14 +4177,17 @@ CAMPAIGN_BACKFILL_BATCH = 40   # one Meta call each; keeps a click well under th
 @login_required
 @admin_required
 def campaign_backfill_names():
-    """Fill in missing campaign names for leads in the selected period.
+    """Fill in missing ad and campaign names for leads in the selected period.
+
+    One pass covers both: the same Meta lookup returns the ad's own name and the
+    campaign that owns it, so a lead missing either is worth the call.
 
     Batched on purpose — up to two Meta calls per lead, so a big month would
     otherwise blow the request timeout. Click again while any remain. Meta only keeps
     lead records for roughly 90 days, so older leads may never be recoverable; those
     are reported as 'not returned' rather than retried forever."""
     from sqlalchemy import or_
-    from meta_webhook import resolve_campaign_name
+    from meta_webhook import resolve_ad_info
     y1, m1, y2, m2, _ = _range_args()
     back = url_for('campaign_performance', m=f'{y1}-{m1:02d}', to=f'{y2}-{m2:02d}')
     if not get_setting('ads_token', ''):
@@ -3917,27 +4197,35 @@ def campaign_backfill_names():
     end   = datetime(y2 + (1 if m2 == 12 else 0), (m2 % 12) + 1, 1)
     base = Lead.query.filter(
         Lead.meta_lead_id.isnot(None),
-        or_(Lead.campaign.is_(None), Lead.campaign == ''),
+        or_(Lead.campaign.is_(None), Lead.campaign == '',
+            Lead.meta_ad_id.is_(None), Lead.meta_ad_id == ''),
         Lead.created_at >= start, Lead.created_at < end)
     total = base.count()
-    filled, missing = 0, 0
+    filled_ad, filled_camp, missing = 0, 0, 0
     for lead in base.order_by(Lead.created_at.desc()).limit(CAMPAIGN_BACKFILL_BATCH).all():
-        name = resolve_campaign_name(leadgen_id=lead.meta_lead_id)
-        if name:
-            lead.campaign = name[:100]
-            filled += 1
-        else:
+        info = resolve_ad_info(leadgen_id=lead.meta_lead_id)
+        if info['ad_id'] and not lead.meta_ad_id:
+            lead.meta_ad_id = info['ad_id'][:50]
+        if info['ad_name'] and not lead.meta_ad_name:
+            lead.meta_ad_name = info['ad_name'][:200]
+        if info['campaign'] and not (lead.campaign or '').strip():
+            lead.campaign = info['campaign'][:100]
+            filled_camp += 1
+        if info['ad_id'] or info['ad_name']:
+            filled_ad += 1
+        elif not info['campaign']:
             missing += 1
     db.session.commit()
+    filled = max(filled_ad, filled_camp)
     remaining = total - filled
-    msg = f'✅ Filled {filled} campaign name(s).'
+    msg = f'✅ Filled {filled_ad} ad name(s) and {filled_camp} campaign name(s).'
     if missing:
         msg += (f' {missing} not returned by Meta — leads older than about 90 days '
                 'are no longer retrievable.')
     if remaining > 0 and filled:
-        msg += f' {remaining} still blank — click again to continue.'
+        msg += f' {remaining} still incomplete — click again to continue.'
     if not total:
-        msg = 'No leads in this period are missing a campaign name.'
+        msg = 'No leads in this period are missing an ad or campaign name.'
     flash(msg)
     return redirect(back)
 
@@ -10353,6 +10641,26 @@ def init_db():
             # where it actually applies); new companies must choose explicitly.
             'ALTER TABLE customer ADD COLUMN IF NOT EXISTS formed_by_tahfeel VARCHAR(10)',
             "UPDATE customer SET formed_by_tahfeel='No' WHERE formed_by_tahfeel IS NULL AND customer_type='Company'",
+            # Which creative a Meta lead answered. Campaign stays where it is — the
+            # ROI report still matches campaign spend on that exact name.
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS meta_ad_id VARCHAR(50)',
+            'ALTER TABLE lead ADD COLUMN IF NOT EXISTS meta_ad_name VARCHAR(200)',
+            'CREATE INDEX IF NOT EXISTS idx_lead_meta_ad_id ON lead (meta_ad_id)',
+            """CREATE TABLE IF NOT EXISTS ad_spend (
+                id SERIAL PRIMARY KEY,
+                ad_id VARCHAR(50) NOT NULL,
+                ad_name VARCHAR(200),
+                campaign VARCHAR(200),
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                amount FLOAT DEFAULT 0,
+                impressions INTEGER DEFAULT 0,
+                clicks INTEGER DEFAULT 0,
+                thumbnail_url TEXT,
+                synced_at TIMESTAMP,
+                CONSTRAINT uq_ad_spend_period UNIQUE (ad_id, year, month)
+            )""",
+            'CREATE INDEX IF NOT EXISTS idx_ad_spend_campaign ON ad_spend (campaign)',
         ]
         for sql in migrations:
             try:

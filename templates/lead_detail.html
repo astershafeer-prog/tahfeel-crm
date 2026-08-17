@@ -97,10 +97,15 @@
               <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Source</div>
               <div style="font-size:14px;color:var(--text-primary);">{{ lead.source or '—' }}{% if lead.sub_source %} · {{ lead.sub_source }}{% endif %}</div>
             </div>
-            {% if lead.campaign %}
+            {# The ad is what the customer actually saw and answered — a campaign runs
+               several creatives at once, so its name never told the rep anything about
+               where this person came from. Campaign is still stored on the lead and
+               still drives Campaign ROI; it just isn't the label shown here. Leads that
+               predate ad tracking fall back to it rather than showing nothing. #}
+            {% if lead.meta_ad_name or lead.campaign %}
             <div>
-              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Campaign</div>
-              <div style="font-size:14px;color:var(--text-primary);">{{ lead.campaign }}</div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">{{ 'Ad' if lead.meta_ad_name else 'Campaign' }}</div>
+              <div style="font-size:14px;color:var(--text-primary);">{{ lead.meta_ad_name or lead.campaign }}</div>
             </div>
             {% endif %}
             <div>

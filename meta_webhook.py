@@ -71,13 +71,15 @@ def get_next_sales_staff(db, User, Lead):
 
 # ── Fetch lead details from Meta API ─────────────────────────────────────────
 # One ad produces many leads, so the same handful of ads gets asked about all day.
-# Process-local and never invalidated on purpose: a campaign is renamed rarely, and
+# Process-local and never invalidated on purpose: an ad is renamed rarely, and
 # a redeploy clears it anyway.
-_AD_CAMPAIGN_CACHE = {}
+_AD_INFO_CACHE = {}
+
+_EMPTY_AD = {'ad_id': '', 'ad_name': '', 'campaign': ''}
 
 
-def fetch_ad_campaign(ad_id):
-    """Resolve an ad to the campaign that owns it, using the ads_read token.
+def fetch_ad_info(ad_id):
+    """Resolve an ad to its own name and the campaign that owns it, via ads_read.
 
     The roundabout route is the point. Asking Meta for the LEAD's campaign_name —
     the obvious call, and what this module used to do — needs a token holding
@@ -88,32 +90,42 @@ def fetch_ad_campaign(ad_id):
     Ads are precisely what an ads token may read, and each lead names the ad that
     produced it. Same answer, via a door we actually hold the key to.
 
-    Returns '' on any failure — a lost label must never cost us a lead."""
+    The ad's own name is what tells you WHICH creative a lead answered — a campaign
+    runs several at once, so the campaign name alone can't. It rides along on this
+    same request; there is no second call and no extra permission.
+
+    Returns a dict of empty strings on any failure — a lost label must never cost
+    us a lead."""
     if not ad_id:
-        return ''
+        return dict(_EMPTY_AD)
     ad_id = str(ad_id)
-    if ad_id in _AD_CAMPAIGN_CACHE:
-        return _AD_CAMPAIGN_CACHE[ad_id]
+    if ad_id in _AD_INFO_CACHE:
+        return dict(_AD_INFO_CACHE[ad_id])
     try:
         from app import get_setting
         token = get_setting('ads_token', '')
     except Exception:
         token = ''
     if not token:
-        return ''
+        return dict(_EMPTY_AD)
     try:
         r = requests.get(f'https://graph.facebook.com/v19.0/{ad_id}',
-                         params={'access_token': token, 'fields': 'campaign{name}'}, timeout=10)
+                         params={'access_token': token, 'fields': 'name,campaign{name}'}, timeout=10)
         if r.status_code != 200:
-            print(f'[Meta] ad->campaign lookup failed for ad {ad_id}: {r.text[:140]}')
-            return ''
-        name = ((r.json().get('campaign') or {}).get('name') or '').strip()
+            print(f'[Meta] ad lookup failed for ad {ad_id}: {r.text[:140]}')
+            return dict(_EMPTY_AD)
+        body = r.json()
+        info = {
+            'ad_id':    ad_id,
+            'ad_name':  (body.get('name') or '').strip(),
+            'campaign': ((body.get('campaign') or {}).get('name') or '').strip(),
+        }
     except Exception as e:
-        print(f'[Meta] ad->campaign lookup failed for ad {ad_id}: {e}')
-        return ''
-    if name:
-        _AD_CAMPAIGN_CACHE[ad_id] = name
-    return name
+        print(f'[Meta] ad lookup failed for ad {ad_id}: {e}')
+        return dict(_EMPTY_AD)
+    if info['ad_name'] or info['campaign']:
+        _AD_INFO_CACHE[ad_id] = dict(info)
+    return info
 
 
 def fetch_lead_ad_id(leadgen_id):
@@ -135,16 +147,17 @@ def fetch_lead_ad_id(leadgen_id):
         return ''
 
 
-def resolve_campaign_name(leadgen_id=None, ad_id=None):
-    """Campaign name for a lead, from whichever identifier we have.
+def resolve_ad_info(leadgen_id=None, ad_id=None):
+    """Ad id, ad name and campaign name for a lead, from whichever identifier we have.
 
     Two callers: the webhook, which already knows the ad, and the report's backfill
     button, which starts from a saved lead and has to ask Meta for the ad first.
-    Returns '' if neither route arrives — the lead still saves, just unlabelled."""
-    name = fetch_ad_campaign(ad_id)
-    if not name and leadgen_id:
-        name = fetch_ad_campaign(fetch_lead_ad_id(leadgen_id))
-    return name
+    Returns empty strings if neither route arrives — the lead still saves,
+    just unlabelled."""
+    info = fetch_ad_info(ad_id)
+    if not (info['ad_name'] or info['campaign']) and leadgen_id:
+        info = fetch_ad_info(fetch_lead_ad_id(leadgen_id))
+    return info
 
 
 def fetch_meta_lead(leadgen_id, ad_id=''):
@@ -190,11 +203,15 @@ def fetch_meta_lead(leadgen_id, ad_id=''):
     except ValueError as e:
         raise MetaTransientError(f'unreadable response: {e}') from e
 
-    # Page token didn't return the campaign — go round through the ad instead.
+    # Whatever the page token withheld, go round through the ad for. One lookup
+    # covers both labels, so a lead missing only its ad name costs nothing extra.
     # Still non-fatal: a lost label must never cost us a lead.
-    if not (data.get('campaign_name') or '').strip():
-        data['campaign_name'] = resolve_campaign_name(
-            leadgen_id=leadgen_id, ad_id=data.get('ad_id') or ad_id)
+    data['ad_id'] = str(data.get('ad_id') or ad_id or '')
+    if not ((data.get('campaign_name') or '').strip() and (data.get('ad_name') or '').strip()):
+        info = resolve_ad_info(leadgen_id=leadgen_id, ad_id=data['ad_id'])
+        data['ad_id']         = data['ad_id'] or info['ad_id']
+        data['ad_name']       = (data.get('ad_name') or '').strip() or info['ad_name']
+        data['campaign_name'] = (data.get('campaign_name') or '').strip() or info['campaign']
     return data
 
 
@@ -225,6 +242,11 @@ def save_lead_to_crm(lead_data, raw_meta):
     pref_time    = fields.get('preferred_time_for_call:', '')
     platform     = raw_meta.get('platform', 'Facebook')
     campaign     = raw_meta.get('campaign_name', '')
+    # The ad is the creative the customer actually answered. Stored alongside the
+    # campaign, never instead of it — Campaign ROI matches Meta's ad spend to leads
+    # on the exact campaign name, so dropping it would orphan every spend row.
+    ad_id        = str(raw_meta.get('ad_id') or lead_data.get('ad_id') or '')
+    ad_name      = (raw_meta.get('ad_name') or '').strip()
     meta_lead_id = str(lead_data.get('leadgen_id', ''))
 
     # Avoid duplicate leads
@@ -248,6 +270,8 @@ def save_lead_to_crm(lead_data, raw_meta):
         source       = 'Meta-Lead',     # managed CRM source
         sub_source   = platform,        # Facebook / Instagram
         campaign     = campaign,
+        meta_ad_id   = ad_id[:50] or None,
+        meta_ad_name = ad_name[:200] or None,
         lead_type    = 'New',
         status       = 'New',
         remarks      = remarks,

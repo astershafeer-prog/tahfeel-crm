@@ -35,6 +35,16 @@
     .bar { height:6px; background:#F1F5F9; border-radius:20px; overflow:hidden; margin-top:5px; }
     .bar i { display:block; height:100%; background:#1A3B8B; }
     .qs { font-size:11px; color:#64748b; margin-top:4px; }
+    .adtog { margin-top:7px; background:none; border:0.5px solid #cbd5e1; border-radius:6px; padding:3px 9px;
+             font-size:10.5px; font-weight:700; color:#1A3B8B; cursor:pointer; }
+    .adtog:hover { background:#f1f5f9; }
+    tr.adrow td { background:#FBFDFF; border-top:0.5px solid #f1f5f9; font-size:12.5px; padding:8px 12px; }
+    tr.adrow td:first-child { padding-left:26px; }
+    .adcell { display:flex; align-items:center; gap:9px; }
+    .adthumb { width:38px; height:38px; border-radius:5px; object-fit:cover; flex:0 0 38px; border:0.5px solid #e2e8f0; background:#f1f5f9; }
+    .adname { font-weight:600; color:#334155; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .adsub { font-size:10.5px; color:#94A3B8; margin-top:1px; }
+    .nolead { color:#A32D2D; font-weight:700; }
     tr.excl td { background:#FBFCFD; color:#94A3B8; }
     tr.excl .cname { color:#94A3B8; font-weight:600; text-decoration:line-through; }
     select { border:0.5px solid #cbd5e1; border-radius:6px; padding:7px 10px; font-size:13px; background:#fff; }
@@ -137,6 +147,8 @@
         </thead>
         <tbody>
           {% for r in rows %}
+          {# Jinja has no loop.parent — the campaign's index is captured for its ad rows. #}
+          {% set ci = loop.index %}
           <tr {% if r.excluded %}class="excl"{% endif %}>
             <td>
               <div class="cname" title="{{ r.campaign }}">{{ r.campaign }}</div>
@@ -145,6 +157,12 @@
               {% else %}
               <div class="bar"><i style="width:{{ r.p_client }}%;"></i></div>
               <div class="qs">{{ r.p_genuine }}% genuine · {{ r.p_client }}% became clients{% if r.not_reviewed %} · {{ r.not_reviewed }} not yet reviewed{% endif %}</div>
+              {% endif %}
+              {% if r.ads %}
+              <button type="button" class="adtog" data-ads="{{ ci }}" aria-expanded="false"
+                      data-label="{{ r.ads|length }} ad{{ '' if r.ads|length == 1 else 's' }}">
+                ▸ {{ r.ads|length }} ad{{ '' if r.ads|length == 1 else 's' }}
+              </button>
               {% endif %}
             </td>
             <td class="num">{% if r.impressions %}{{ '{:,}'.format(r.impressions) }}{% else %}<span class="muted">—</span>{% endif %}</td>
@@ -158,6 +176,36 @@
             <td class="num">{% if r.cpl %}{{ '{:,.2f}'.format(r.cpl) }}{% else %}<span class="muted">—</span>{% endif %}</td>
             <td class="num">{% if r.cost_per_client %}{{ '{:,.0f}'.format(r.cost_per_client) }}{% elif r.spend and not r.clients %}<span class="muted">no clients yet</span>{% else %}<span class="muted">—</span>{% endif %}</td>
           </tr>
+          {# The creatives inside this campaign, in the same columns. This is the level
+             the agency actually works at — which image or reel to keep running. #}
+          {% for a in r.ads %}
+          <tr class="adrow" data-ads-of="{{ ci }}" hidden>
+            <td>
+              <div class="adcell">
+                {% if a.thumb %}<img class="adthumb" src="{{ a.thumb }}" alt="" loading="lazy"
+                                     onerror="this.style.display='none'">{% endif %}
+                <div>
+                  <div class="adname" title="{{ a.ad }}">{{ a.ad }}</div>
+                  <div class="adsub">
+                    {% if a.leads %}{{ a.p_genuine }}% genuine · {{ a.p_client }}% became clients
+                    {%- if a.not_reviewed %} · {{ a.not_reviewed }} not yet reviewed{% endif %}
+                    {% else %}<span class="nolead">no leads from this ad</span>{% endif %}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="num">{% if a.impressions %}{{ '{:,}'.format(a.impressions) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="num">{% if a.ctr %}{{ '{:.2f}'.format(a.ctr) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="num">{{ a.leads }}</td>
+            <td class="num">{{ a.genuine }}</td>
+            <td class="num">{{ a.junk }}</td>
+            <td class="num">{{ a.unreachable }}</td>
+            <td class="num">{{ a.clients }}</td>
+            <td class="num">{% if a.spend %}{{ '{:,.2f}'.format(a.spend) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="num">{% if a.cpl %}{{ '{:,.2f}'.format(a.cpl) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="num">{% if a.cost_per_client %}{{ '{:,.0f}'.format(a.cost_per_client) }}{% elif a.spend and not a.clients %}<span class="muted">no clients yet</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
           {% endfor %}
           <tr class="tot">
             <td>Total — {{ rows|length }} campaign{{ '' if rows|length == 1 else 's' }}</td>
@@ -189,7 +237,26 @@
       <strong>Cost per client</strong> is the month's ad spend divided by clients won from that month's leads; it looks high
       early in a month because the spend lands immediately while deals take weeks to close. Ad spend is entered by Tahfeel
       and is read-only here.
+      <br><br>
+      <strong>Expand a campaign</strong> to see its individual ads. Spend per ad comes from Meta, so a creative shows no cost
+      until that month has been synced, and per-ad spend won't always add up to the campaign total — Meta attributes some of
+      it at campaign level only. Compare creatives against each other here; use the campaign row for the money. Leads received
+      before ad-level tracking existed appear under <em>— unknown ad —</em>.
     </div>
   </div>
+  <script>
+    // Rows are rendered hidden rather than fetched, so expanding needs no round trip.
+    document.querySelectorAll('.adtog').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var open = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+        // Rebuilt from data-label rather than sliced off the current text, which
+        // carries the template's indentation and left the old arrow behind.
+        btn.textContent = (open ? '▸ ' : '▾ ') + btn.dataset.label;
+        document.querySelectorAll('tr.adrow[data-ads-of="' + btn.dataset.ads + '"]')
+          .forEach(function (tr) { tr.hidden = open; });
+      });
+    });
+  </script>
 </body>
 </html>

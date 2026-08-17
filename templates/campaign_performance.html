@@ -36,6 +36,16 @@
     tr.excl .cname{color:#94A3B8;font-weight:600;text-decoration:line-through;}
     .bar{height:6px;background:#F1F5F9;border-radius:20px;overflow:hidden;margin-top:5px;}
     .bar i{display:block;height:100%;background:#1A3B8B;}
+    .adtog{margin-top:7px;background:none;border:0.5px solid #CBD5E1;border-radius:6px;padding:3px 9px;
+           font-size:10.5px;font-weight:700;color:#1A3B8B;cursor:pointer;}
+    .adtog:hover{background:#F1F5F9;}
+    tr.adrow td{background:#FBFDFF;border-top:0.5px solid #F1F5F9;font-size:12.5px;padding:8px 12px;}
+    tr.adrow td:first-child{padding-left:26px;}
+    .adcell{display:flex;align-items:center;gap:9px;}
+    .adthumb{width:38px;height:38px;border-radius:5px;object-fit:cover;flex:0 0 38px;border:0.5px solid #E2E8F0;background:#F1F5F9;}
+    .adname{font-weight:600;color:#334155;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .adsub{font-size:10.5px;color:#94A3B8;margin-top:1px;}
+    .nospend{color:#A32D2D;font-weight:700;}
     .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .toolbar select{border:0.5px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:13px;background:#fff;}
     .btn{border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;}
@@ -110,20 +120,32 @@
 
     {# Above the table on purpose. This used to sit underneath it as a plain button,
        where it went unnoticed for two months while the figures quietly ran wrong. #}
-    {% if totals.missing_campaign %}
-    <div style="background:#FEF2F2;border:0.5px solid #FCA5A5;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12.5px;color:#7F1D1D;line-height:1.6;">
+    {# One banner, two problems, one button — the same Meta lookup returns both labels,
+       so splitting this into two prompts would just mean clicking twice for one fix.
+       The missing-campaign case leads, because that one bends the cost figures. #}
+    {% if totals.missing_campaign or totals.missing_ad %}
+    <div style="background:{{ '#FEF2F2' if totals.missing_campaign else '#FAEEDA' }};border:0.5px solid {{ '#FCA5A5' if totals.missing_campaign else '#E8D5A8' }};border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12.5px;color:{{ '#7F1D1D' if totals.missing_campaign else '#633806' }};line-height:1.6;">
+      {% if totals.missing_campaign %}
       <strong>{{ totals.missing_campaign }} Meta lead{{ '' if totals.missing_campaign == 1 else 's' }} in {{ period }} have no campaign name.</strong>
       Meta delivered them, but didn't say which campaign — so no ad spend can be attributed to them. Until they're filled,
       every campaign below shows a higher cost per lead than it really has.
+      {% endif %}
+      {% if totals.missing_ad %}
+      <strong>{{ totals.missing_ad }} lead{{ '' if totals.missing_ad == 1 else 's' }} don't say which ad they came from.</strong>
+      Those sit under <em>— unknown ad —</em> in the breakdowns below and can't be credited to a creative. Leads that arrived
+      before ad tracking was added will always be in here unless Meta still holds them.
+      {% endif %}
       <form method="POST" action="{{ url_for('campaign_backfill_names', m=sel, to=sel_to) }}" style="margin-top:8px;">
-        <button type="submit" class="btn btn-sync">⟳ Fill {{ totals.missing_campaign }} missing campaign name{{ '' if totals.missing_campaign == 1 else 's' }}</button>
-        <span style="font-size:11.5px;margin-left:8px;">Looks each one up through the ad that produced it, 40 per click — press again while any remain.
+        <button type="submit" class="btn btn-sync">⟳ Fill missing ad &amp; campaign names</button>
+        <span style="font-size:11.5px;margin-left:8px;">Looks each lead up through the ad that produced it, 40 per click — press again while any remain.
         Leads older than about 90 days are no longer retrievable from Meta.</span>
       </form>
+      {% if totals.missing_campaign %}
       <div style="margin-top:8px;font-size:11.5px;">
         If any can't be recovered, don't hand-pick a name from the dropdown unless it's one of Meta's own — the report matches
         spend to leads on the exact name, so a near-miss orphans both.
       </div>
+      {% endif %}
     </div>
     {% endif %}
 
@@ -179,6 +201,9 @@
           </thead>
           <tbody>
             {% for r in rows %}
+            {# Jinja has no loop.parent, so the campaign's index is captured here for
+               the ad rows nested below to point back at. #}
+            {% set ci = loop.index %}
             <tr {% if r.excluded %}class="excl"{% endif %}>
               <td>
                 <div class="cname" title="{{ r.campaign }}">{{ r.campaign }}</div>
@@ -191,6 +216,12 @@
                   <input type="checkbox" name="exclude_campaign" value="{{ r.campaign }}" {{ 'checked' if r.excluded }}>
                   Not lead-gen — leave out of totals
                 </label>
+                {% if r.ads %}
+                <button type="button" class="adtog" data-ads="{{ ci }}" aria-expanded="false"
+                        data-label="{{ r.ads|length }} ad{{ '' if r.ads|length == 1 else 's' }}">
+                  ▸ {{ r.ads|length }} ad{{ '' if r.ads|length == 1 else 's' }}
+                </button>
+                {% endif %}
               </td>
               <td class="num">{% if r.impressions %}{{ '{:,}'.format(r.impressions) }}{% else %}<span class="muted">—</span>{% endif %}</td>
               <td class="num">{% if r.ctr %}{{ '{:.2f}'.format(r.ctr) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
@@ -217,6 +248,39 @@
               <td class="num">{% if r.net is not none %}<span class="{{ 'pos' if r.net >= 0 else 'neg' }}">{{ '{:,.0f}'.format(r.net) }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
               <td class="num">{% if r.roas %}{{ '{:.2f}'.format(r.roas) }}×{% else %}<span class="muted">—</span>{% endif %}</td>
             </tr>
+            {# One row per creative in this campaign, in the parent's own columns so the
+               numbers line up under the ones they add into. Hidden until asked for —
+               a campaign can run a dozen ads and expanding them all by default would
+               bury the campaign comparison this page exists for. #}
+            {% for a in r.ads %}
+            <tr class="adrow" data-ads-of="{{ ci }}" hidden>
+              <td>
+                <div class="adcell">
+                  {% if a.thumb %}<img class="adthumb" src="{{ a.thumb }}" alt="" loading="lazy"
+                                       onerror="this.style.display='none'">{% endif %}
+                  <div>
+                    <div class="adname" title="{{ a.ad }}">{{ a.ad }}</div>
+                    <div class="adsub">
+                      {% if a.leads %}{{ a.p_genuine }}% genuine · {{ a.p_client }}% became clients
+                      {%- if a.not_reviewed %} · {{ a.not_reviewed }} unreviewed{% endif %}
+                      {% else %}<span class="nospend">no leads from this ad</span>{% endif %}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="num">{% if a.impressions %}{{ '{:,}'.format(a.impressions) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{% if a.ctr %}{{ '{:.2f}'.format(a.ctr) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{{ a.leads }}</td>
+              <td class="num">{{ a.genuine }}</td>
+              <td class="num">{{ a.clients }}</td>
+              <td class="num">{% if a.spend %}{{ '{:,.2f}'.format(a.spend) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{% if a.cpl %}{{ '{:,.2f}'.format(a.cpl) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{% if a.cost_per_client %}{{ '{:,.0f}'.format(a.cost_per_client) }}{% elif a.spend and not a.clients %}<span class="muted">no clients</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{{ '{:,.0f}'.format(a.revenue) }}</td>
+              <td class="num">{% if a.net is not none %}<span class="{{ 'pos' if a.net >= 0 else 'neg' }}">{{ '{:,.0f}'.format(a.net) }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="num">{% if a.roas %}{{ '{:.2f}'.format(a.roas) }}×{% else %}<span class="muted">—</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
             {% endfor %}
             <tr class="tot">
               <td>Total — {{ rows|length }} campaign{{ '' if rows|length == 1 else 's' }}</td>
@@ -266,7 +330,29 @@
       <strong>Cost per client</strong> is this month's spend divided by clients won from this month's leads; early in a month it
       will look terrible, because the spend has landed but the deals haven't closed yet. Judge a month once it has had time to mature.
       Leads whose campaign name is missing are grouped under <em>— no campaign name —</em>; that means Meta didn't return one, not that they came from nowhere.
+      <br><br>
+      <strong>The ad rows</strong> under each campaign are the individual creatives. Their spend comes straight from Meta and
+      can't be typed in, so a creative shows no cost until the sync has run for that month. Ad spend won't always add up to the
+      campaign's total — Meta attributes some spend at campaign level only — so use the ad rows to compare creatives against
+      each other, and the campaign row for the money. Leads that arrived before ad tracking existed sit under
+      <em>— unknown ad —</em>; that's a gap in our records, not a mystery ad.
     </div>
   </div>
+  <script>
+    // Expand one campaign's creatives. Rows are rendered hidden rather than fetched,
+    // so this works without another round trip and can't leave a half-loaded table.
+    document.querySelectorAll('.adtog').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var open = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+        // Rebuilt from data-label, never sliced off the current text — the button's
+        // own text carries the template's indentation, so slicing ate whitespace and
+        // left the old arrow behind ("▾ ▸ 6 ads").
+        btn.textContent = (open ? '▸ ' : '▾ ') + btn.dataset.label;
+        document.querySelectorAll('tr.adrow[data-ads-of="' + btn.dataset.ads + '"]')
+          .forEach(function (tr) { tr.hidden = open; });
+      });
+    });
+  </script>
 </body>
 </html>
