@@ -162,6 +162,10 @@
               {% if capi.token_set %}<span style="color:#16A34A;">— saved ✓ (leave blank to keep it)</span>{% else %}<span style="color:#B45309;">— not set yet</span>{% endif %}
             </label>
             <input type="password" name="capi_token" autocomplete="new-password" data-lpignore="true" data-form-type="other" placeholder="{{ 'Paste a new token to replace' if capi.token_set else 'CAPI access token from Events Manager' }}" style="width:100%;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+            <div style="font-size:11px;color:#64748B;margin-top:4px;">
+              You can paste the whole endpoint URL from Meta's setup page
+              (<code>https://graph.facebook.com/…/events?access_token=…</code>) — the token is taken out of it automatically.
+            </div>
             {# Length is the diagnostic. "Cannot parse access token" almost always means
                a half-copied token, and nothing else on this page would reveal that. #}
             {% if capi.token_shape %}

@@ -3557,7 +3557,7 @@ def admin_capi_settings():
     set_setting('capi_event_name', (request.form.get('capi_event_name') or 'Qualified').strip() or 'Qualified')
     set_setting('capi_event_name_2', (request.form.get('capi_event_name_2') or 'Converted').strip() or 'Converted')
     set_setting('capi_test_code', (request.form.get('capi_test_code') or '').strip())
-    new_token = (request.form.get('capi_token') or '').strip()
+    new_token = _extract_token(request.form.get('capi_token'))
     notes = []
     if new_token:
         if not _looks_like_token(new_token):
@@ -4125,6 +4125,27 @@ def _looks_like_token(v):
     return len(v) >= 20 and '@' not in v and not any(ch.isspace() for ch in v)
 
 
+def _extract_token(raw):
+    """Pull the access token out of whatever Meta's setup page put on the clipboard.
+
+    That page offers the token only inside a full endpoint URL —
+    https://graph.facebook.com/v26.0/<dataset>/events?access_token=EAAK... — and its
+    "Copy access token" button does not always fire (clipboard permissions, focus).
+    The fallback everyone reaches for is Ctrl+A in the box, which yields the whole URL.
+
+    Rather than ask someone to hand-trim a 200-character string — the exact operation
+    that produced a truncated token and a day of "Cannot parse access token" — accept
+    the URL and take the token from it. Anything that isn't a URL passes through
+    untouched."""
+    v = (raw or '').strip().strip('"\'')
+    if 'access_token=' in v:
+        v = v.split('access_token=', 1)[1]
+        # The token is the rest of the query value: stop at a further parameter.
+        for sep in ('&', '#', ' ', '\n', '\r', '\t'):
+            v = v.split(sep, 1)[0]
+    return v.strip()
+
+
 def meta_check_token(token):
     """Ask Meta whether a token is real, before we store it.
 
@@ -4183,7 +4204,7 @@ def admin_ads_sync_settings():
         else:
             errors.append(f'Ad account ID "{raw_account}" is not a number — it was NOT saved. '
                           'Your browser may have autofilled an email here; check the field.')
-    new_token = (request.form.get('ads_token') or '').strip()
+    new_token = _extract_token(request.form.get('ads_token'))
     if new_token:
         if not _looks_like_token(new_token):
             errors.append("That doesn't look like a Meta access token — it was NOT saved. "
