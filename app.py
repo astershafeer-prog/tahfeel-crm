@@ -4178,6 +4178,42 @@ def meta_check_token(token):
     return 'unknown', f'HTTP {r.status_code}: {msg}'
 
 
+def meta_check_ads_access(token, account_id):
+    """Check a token can actually read THIS ad account, not merely that it is a token.
+
+    meta_check_token only proves Meta can parse it. A Conversions API dataset token
+    passes that test perfectly and is still useless here — it carries no ads_read, so
+    the spend sync fails later with an error that says nothing about which of the two
+    fields was wrong. The panel has an ad-account box and a token box side by side,
+    each wanting a long opaque string, so putting CAPI's values in the ads boxes is a
+    two-second mistake that used to surface hours later in a cron.
+
+    Verdicts as meta_check_token: 'ok' | 'rejected' | 'unknown'."""
+    import requests
+    acct = (account_id or '').strip()
+    if not acct or not token:
+        return 'unknown', 'nothing to check yet'
+    if not acct.startswith('act_'):
+        acct = 'act_' + acct.lstrip('act_')
+    try:
+        r = requests.get(f'https://graph.facebook.com/v19.0/{acct}',
+                         params={'access_token': token, 'fields': 'name'}, timeout=10)
+    except requests.RequestException as e:
+        return 'unknown', f'could not reach Meta to verify it ({type(e).__name__})'
+    if r.status_code == 200:
+        return 'ok', ((r.json() or {}).get('name') or '').strip()
+    try:
+        err = (r.json() or {}).get('error') or {}
+    except ValueError:
+        err = {}
+    msg = (err.get('message') or r.text[:160]).strip()
+    # 100 = no such object (usually a dataset id typed into the ad-account box);
+    # 190/200/294 = the token cannot read this account.
+    if err.get('code') in (100, 190, 200, 294, 803):
+        return 'rejected', msg
+    return 'unknown', f'HTTP {r.status_code}: {msg}'
+
+
 def _token_shape(token):
     """A description of a stored token that gives away nothing useful.
 
@@ -4223,7 +4259,23 @@ def admin_ads_sync_settings():
     if want_on and not ready:
         errors.append('Sync left OFF — it needs both a valid ad account ID and an access token.')
     set_setting('ads_sync_enabled', 'on' if (want_on and ready) else 'off')
-    flash(' '.join(f'⚠️ {e}' for e in errors) if errors else 'Ad spend sync settings saved.')
+    # The pair has to work together, so it is checked as a pair, after both are stored.
+    # A CAPI dataset token is a perfectly valid Meta token and passes every check
+    # above; only asking it to read this specific ad account exposes that it can't.
+    notes = []
+    if ready:
+        verdict, detail = meta_check_ads_access(get_setting('ads_token', ''),
+                                                get_setting('ads_account_id', ''))
+        if verdict == 'ok':
+            notes.append(f'Verified with Meta ✓ — reading ad account “{detail}”.')
+        elif verdict == 'rejected':
+            errors.append(f'Saved, but Meta will not let this token read ad account '
+                          f'{get_setting("ads_account_id", "")}: {detail} — so the spend sync '
+                          'will not work. Check you have not pasted the CAPI dataset ID or the '
+                          'CAPI token here; those belong in the Meta CAPI section. This box wants '
+                          'the ad account ID and a System User token with ads_read.')
+    msgs = [f'⚠️ {e}' for e in errors] + notes
+    flash(' '.join(msgs) if msgs else 'Ad spend sync settings saved.')
     return redirect(url_for('admin_panel') + '#adsync')
 
 @app.route('/admin/ads-sync-now', methods=['POST'])
