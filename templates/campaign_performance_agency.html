@@ -15,7 +15,10 @@
     .tabs { background:#0F2660; padding:0 22px; display:flex; gap:2px; }
     .tabs a { color:#b8c5e0; text-decoration:none; font-size:13px; padding:10px 16px; border-bottom:2px solid transparent; }
     .tabs a.active { color:#fff; font-weight:700; border-bottom-color:#fff; }
-    .container { max-width:1080px; margin:0 auto; padding:18px 22px; }
+    /* Wide enough that all eleven columns fit without a sideways scroll on a normal
+       laptop. Cost per client is the last column and the one people came for, so
+       losing it off the right edge made the table read as broken. */
+    .container { max-width:1500px; margin:0 auto; padding:18px 22px; }
     h2 { font-size:18px; color:#0F2660; font-weight:700; }
     .sub { font-size:12px; color:#64748b; margin-top:3px; line-height:1.55; }
     .head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; }
@@ -26,11 +29,15 @@
     .chip .s { font-size:11px; color:#64748b; margin-top:3px; }
     .card { background:#fff; border:0.5px solid #e2e8f0; border-radius:10px; overflow-x:auto; }
     table { width:100%; border-collapse:collapse; font-size:13px; }
-    th { background:#f8fafc; color:#64748b; text-align:left; font-weight:700; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap; }
-    td { padding:11px 12px; border-top:0.5px solid #eef2f7; color:#334155; }
+    th { background:#f8fafc; color:#64748b; text-align:left; font-weight:700; padding:9px 7px; font-size:10.5px; text-transform:uppercase; letter-spacing:.2px; white-space:nowrap; }
+    td { padding:10px 7px; border-top:0.5px solid #eef2f7; color:#334155; }
+    /* Pinned so the campaign name can't claim the space the numeric columns need. */
+    th:first-child, td:first-child { padding-left:14px; width:215px; }
+    th:last-child, td:last-child { padding-right:14px; }
     th.num, td.num { text-align:right; }
     tr.tot td { border-top:1.5px solid #cbd5e1; background:#f8fafc; font-weight:800; color:#0F2660; }
-    .cname { font-weight:700; color:#1A2333; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    /* Wraps rather than ellipsised — these names differ only in their trailing date. */
+    .cname { font-weight:700; color:#1A2333; max-width:185px; overflow-wrap:anywhere;line-height:1.35; }
     .muted { color:#94A3B8; }
     .bar { height:6px; background:#F1F5F9; border-radius:20px; overflow:hidden; margin-top:5px; }
     .bar i { display:block; height:100%; background:#1A3B8B; }
@@ -39,10 +46,10 @@
              font-size:10.5px; font-weight:700; color:#1A3B8B; cursor:pointer; }
     .adtog:hover { background:#f1f5f9; }
     tr.adrow td { background:#FBFDFF; border-top:0.5px solid #f1f5f9; font-size:12.5px; padding:8px 12px; }
-    tr.adrow td:first-child { padding-left:26px; }
+    tr.adrow td:first-child { padding-left:18px; }
     .adcell { display:flex; align-items:center; gap:9px; }
-    .adthumb { width:38px; height:38px; border-radius:5px; object-fit:cover; flex:0 0 38px; border:0.5px solid #e2e8f0; background:#f1f5f9; }
-    .adname { font-weight:600; color:#334155; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .adthumb { width:32px; height:32px; border-radius:5px; object-fit:cover; flex:0 0 32px; border:0.5px solid #e2e8f0; background:#f1f5f9; }
+    .adname { font-weight:600; color:#334155; max-width:150px; overflow-wrap:anywhere;line-height:1.35; }
     .adsub { font-size:10.5px; color:#94A3B8; margin-top:1px; }
     .nolead { color:#A32D2D; font-weight:700; }
     tr.excl td { background:#FBFCFD; color:#94A3B8; }
