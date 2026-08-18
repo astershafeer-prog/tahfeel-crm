@@ -487,7 +487,7 @@
           <h2>🏛 Licensing Authorities <span style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--info-bg);padding:2px 8px;border-radius:10px;margin-left:6px;">Customers</span></h2>
         </div>
         <div class="card-body">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Shown as a dropdown on the company form and in Customers → Filters. Renaming one updates every customer using it.</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Shown as a dropdown on the company form and in Customers → Filters. Renaming one updates every customer using it. Use <b>Merge</b> when the same authority appears twice under different spellings.</div>
           <form method="POST" action="/admin/authority/add">
             <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;">
               <div class="form-group" style="margin:0;flex:1;">
@@ -503,8 +503,12 @@
             <div class="la-row" style="padding:8px 0;border-bottom:1px solid var(--border-light);">
               <div id="la-view-{{ a.id }}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;">
                 <span style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;">{{ loop.index }}</span>
-                <span style="font-size:13px;">{{ a.name }}</span>
+                <span style="font-size:13px;">{{ a.name }}
+                  {% set used = auth_counts.get(a.name, 0) %}
+                  <span style="font-size:11px;color:var(--text-muted);">· {{ used }} compan{{ 'y' if used == 1 else 'ies' }}</span>
+                </span>
                 <div style="display:flex;gap:5px;">
+                  <button onclick="laMerge({{ a.id }})" style="height:28px;padding:0 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:11px;" title="Fold this into another authority">Merge</button>
                   <button onclick="laEdit({{ a.id }})" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;" title="Rename">✏</button>
                   <form method="POST" action="/admin/authority/{{ a.id }}/delete" style="margin:0;" data-confirm="Remove {{ a.name }} from the list? Customers already saved with it keep the value." >
                     <button type="submit" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;cursor:pointer;font-size:13px;" title="Remove">🗑</button>
@@ -516,10 +520,51 @@
                 <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Save</button>
                 <button type="button" onclick="laCancel({{ a.id }})" class="btn-sm">Cancel</button>
               </form>
+              <form id="la-merge-{{ a.id }}" method="POST" action="/admin/authority/merge" style="display:none;margin-top:8px;gap:8px;align-items:center;"
+                    data-confirm="Move every company on &quot;{{ a.name }}&quot; onto the authority you picked, and take &quot;{{ a.name }}&quot; off the dropdown?">
+                <input type="hidden" name="from" value="{{ a.name }}">
+                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">Move {{ auth_counts.get(a.name, 0) }} into</span>
+                <select name="to" required style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                  <option value="">Choose the spelling to keep…</option>
+                  {% for other in authorities if other.id != a.id %}
+                  <option value="{{ other.name }}">{{ other.name }} ({{ auth_counts.get(other.name, 0) }})</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Merge</button>
+                <button type="button" onclick="laMergeCancel({{ a.id }})" class="btn-sm">Cancel</button>
+              </form>
             </div>
             {% endfor %}
           {% else %}
             <div class="empty">No licensing authorities yet.</div>
+          {% endif %}
+
+          {% if auth_unlisted %}
+          <hr class="divider">
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px;">⚠ On company records but not on the list</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">
+            Typed as free text before the dropdown existed, or a typo. They still appear in
+            Insights and in the Customers filter as their own entry, so one free zone can show
+            up two or three times. Merge each into the spelling you want to keep.
+          </div>
+          {% for value, count in auth_unlisted %}
+          <div class="la-row" style="padding:8px 0;border-bottom:1px solid var(--border-light);">
+            <form method="POST" action="/admin/authority/merge" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"
+                  data-confirm="Move every company on &quot;{{ value }}&quot; onto the authority you picked?">
+              <input type="hidden" name="from" value="{{ value }}">
+              <span style="font-size:13px;flex:1;min-width:120px;">{{ value }}
+                <span style="font-size:11px;color:var(--text-muted);">· {{ count }} compan{{ 'y' if count == 1 else 'ies' }}</span>
+              </span>
+              <select name="to" required style="min-width:170px;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);">
+                <option value="">Merge into…</option>
+                {% for other in authorities %}
+                <option value="{{ other.name }}">{{ other.name }} ({{ auth_counts.get(other.name, 0) }})</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn-primary" style="font-size:12px;padding:6px 12px;">Merge</button>
+            </form>
+          </div>
+          {% endfor %}
           {% endif %}
         </div>
       </div>
@@ -1201,6 +1246,8 @@ Every service task is priced here — Cost Price stays internal (never shown in 
     function svCancel(id) { document.getElementById('sv-view-'+id).style.display='flex'; document.getElementById('sv-form-'+id).style.display='none'; }
     function laEdit(id) { document.getElementById('la-view-'+id).style.display='none'; document.getElementById('la-form-'+id).style.display='flex'; }
     function laCancel(id) { document.getElementById('la-view-'+id).style.display='grid'; document.getElementById('la-form-'+id).style.display='none'; }
+    function laMerge(id) { document.getElementById('la-view-'+id).style.display='none'; document.getElementById('la-merge-'+id).style.display='flex'; }
+    function laMergeCancel(id) { document.getElementById('la-view-'+id).style.display='grid'; document.getElementById('la-merge-'+id).style.display='none'; }
     function laFilter(input) {
       const q = input.value.toLowerCase();
       document.querySelectorAll('.la-row').forEach(function(row) {

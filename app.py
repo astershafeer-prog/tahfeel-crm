@@ -3470,6 +3470,18 @@ def admin_panel():
     # Flat master list of common sub-tasks (pick from when creating a task)
     subtask_list = SubTaskTemplate.query.order_by(SubTaskTemplate.sort_order, SubTaskTemplate.id).all()
     authorities = LicensingAuthority.query.order_by(LicensingAuthority.sort_order, LicensingAuthority.name).all()
+    # How many companies actually hold each authority string. Counted off Customer,
+    # not the managed list, because the two drift: older free-text values (and typos
+    # like "SHARJA SHAMS") sit on customer records with no matching list row, so they
+    # never appear here and can't be tidied up. Surfacing them is the point.
+    auth_counts = dict(db.session.query(Customer.licensing_authority, db.func.count(Customer.id))
+                       .filter(Customer.licensing_authority.isnot(None),
+                               Customer.licensing_authority != '')
+                       .group_by(Customer.licensing_authority).all())
+    _listed = {a.name for a in authorities}
+    auth_unlisted = sorted(((v, n) for v, n in auth_counts.items()
+                            if v and v.strip() and v not in _listed),
+                           key=lambda vn: (-vn[1], vn[0].lower()))
     aod_unverified_count = len([c for c in _ac_opening_date_suspects() if not c.ac_opening_date_confirmed])
     renewal_costs = DocRenewalCost.query.order_by(DocRenewalCost.doc_type, DocRenewalCost.jurisdiction).all()
     # Moved here from the Daily Log page 2026-07-27 — only an admin could use it there.
@@ -3485,6 +3497,7 @@ def admin_panel():
                            sources=sources, campaigns=campaigns, job_types=job_types, doc_types=doc_types, partners=partners,
                            wa_auto_welcome=wa_auto_welcome, autos=autos, runs=runs, capi=capi, adsync=adsync,
                            subtask_list=subtask_list, authorities=authorities,
+                           auth_counts=auth_counts, auth_unlisted=auth_unlisted,
                            aod_unverified_count=aod_unverified_count, renewal_costs=renewal_costs,
                            price_jurisdictions=JURISDICTIONS_PRICE_LIST,
                            activity_types=activity_types,
@@ -5132,6 +5145,42 @@ def admin_edit_authority(auth_id):
     db.session.commit()
     flash(f'Renamed "{old}" → "{new}"' + (f' · {moved} customer record(s) updated' if moved else ''))
     return redirect(url_for('admin_panel') + '#authorities')
+
+@app.route('/admin/authority/merge', methods=['POST'])
+@login_required
+@admin_required
+def admin_merge_authority():
+    """Fold one spelling of an authority into another — e.g. "Shams" and
+    "SHARJA SHAMS" into "SHAMS". Works on the raw value held by customers, not on
+    a list row, so it can also clean up free-text spellings that were never on the
+    managed list. Rename can't do this: it refuses a name that already exists,
+    which is exactly the case when you're merging duplicates."""
+    src = (request.form.get('from') or '').strip()
+    dst = (request.form.get('to') or '').strip()
+    if not src or not dst:
+        flash('Pick which authority to merge, and what to merge it into.')
+        return redirect(url_for('admin_panel') + '#authorities')
+    if src == dst:
+        flash('Those are the same authority — nothing to merge.')
+        return redirect(url_for('admin_panel') + '#authorities')
+    # The target must already be on the managed list, so a merge can never invent
+    # a fourth spelling of something we're trying to reduce to one.
+    if not LicensingAuthority.query.filter_by(name=dst).first():
+        flash(f'"{dst}" is not on the licensing authority list — add it first.')
+        return redirect(url_for('admin_panel') + '#authorities')
+
+    moved = Customer.query.filter_by(licensing_authority=src).update(
+        {'licensing_authority': dst}, synchronize_session=False)
+    # If the losing spelling also had a list row, retire it — otherwise staff would
+    # keep picking it from the dropdown and re-create the split tomorrow.
+    dup = LicensingAuthority.query.filter_by(name=src).first()
+    if dup:
+        db.session.delete(dup)
+    db.session.commit()
+    flash(f'Merged "{src}" into "{dst}" — {moved} company record{"" if moved == 1 else "s"} updated'
+          + (' · duplicate removed from the dropdown' if dup else ''))
+    return redirect(url_for('admin_panel') + '#authorities')
+
 
 @app.route('/admin/authority/<int:auth_id>/delete', methods=['POST'])
 @login_required
