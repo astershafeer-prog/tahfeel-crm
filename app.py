@@ -5272,6 +5272,21 @@ def _bundle_progress(bundle):
             done += 1
     return round(done / len(mandatory) * 100)
 
+# Filter-bar sentinel meaning "this field is empty". An empty string in the query
+# already means "no filter at all", so listing the records that are MISSING a value
+# needs its own token — that's what makes the data-gap charts clickable into a
+# worklist instead of a dead end.
+BLANK_FILTER = '__blank__'
+app.jinja_env.globals['BLANK_FILTER'] = BLANK_FILTER
+
+def _field_matches(value, wanted):
+    """Filter-bar comparison that understands BLANK_FILTER as 'never filled in'.
+    Whitespace-only counts as blank too — past imports left ' ' in these columns,
+    and a space is not data anyone can act on."""
+    if wanted == BLANK_FILTER:
+        return not (value or '').strip()
+    return value == wanted
+
 @app.route('/customers')
 @login_required
 def customers():
@@ -5284,6 +5299,7 @@ def customers():
     legal_filter = request.args.get('legal_form', '')
     juris_filter = request.args.get('jurisdiction', '')
     auth_filter = request.args.get('authority', '')
+    emirate_filter = request.args.get('emirate', '')
     birthdays_today = []
     try:
         # phone2 / assigned_to / date_of_birth used to be ALTER TABLE'd into existence
@@ -5315,9 +5331,11 @@ def customers():
         if legal_filter:
             customer_list = [c for c in customer_list if c.legal_form == legal_filter]
         if juris_filter:
-            customer_list = [c for c in customer_list if c.jurisdiction == juris_filter]
+            customer_list = [c for c in customer_list if _field_matches(c.jurisdiction, juris_filter)]
         if auth_filter:
-            customer_list = [c for c in customer_list if c.licensing_authority == auth_filter]
+            customer_list = [c for c in customer_list if _field_matches(c.licensing_authority, auth_filter)]
+        if emirate_filter:
+            customer_list = [c for c in customer_list if _field_matches(c.emirate, emirate_filter)]
         try:
             bday_list = Customer.query.filter(Customer.date_of_birth != None).all()
             birthdays_today = [c for c in bday_list if c.date_of_birth and
@@ -5350,8 +5368,10 @@ def customers():
     # Filter dropdown options — union of the managed list and whatever is actually
     # in the data, so older free-text values stay searchable instead of disappearing.
     def _opts(col, extra=()):
+        # Whitespace-only values are dropped as well as empty ones — they used to
+        # render as a blank, meaningless entry in the dropdown. "Not set" covers them.
         rows = db.session.query(col).filter(col.isnot(None), col != '').distinct().all()
-        return sorted({r[0] for r in rows} | set(extra))
+        return sorted({r[0] for r in rows if (r[0] or '').strip()} | set(extra))
     # How many of the filtered results are companies vs individuals (answers
     # "how many companies do we have in DMCC?" straight from the filter bar)
     n_company = sum(1 for c in customer_list if c.customer_type == 'Company')
@@ -5360,9 +5380,11 @@ def customers():
                            birthdays_today=birthdays_today, now=now, birthday_filter=birthday_filter,
                            users=users, rep_filter=rep_filter, type_filter=type_filter, status_filter=status_filter,
                            legal_filter=legal_filter, juris_filter=juris_filter, auth_filter=auth_filter,
+                           emirate_filter=emirate_filter,
                            legal_forms=_opts(Customer.legal_form),
                            jurisdictions=_opts(Customer.jurisdiction, ('Mainland', 'Free Zone', 'Offshore')),
                            authority_opts=_opts(Customer.licensing_authority, _authority_names()),
+                           emirates=_opts(Customer.emirate),
                            statuses=_opts(Customer.ac_status, ('Active', 'Under Formation', 'Inactive', 'Closed')),
                            n_company=n_company, n_individual=total - n_company,
                            sort=sort, sort_dir=sort_dir)
@@ -9805,6 +9827,86 @@ def customer_report_pdf(customer_id):
     return Response(pdf, mimetype='application/pdf',
                     headers={'Content-Disposition': f'inline; filename="{fname}"'})
 
+# Every company-profile field the CRM treats as fillable, in the order it appears
+# on the printed sheet. The first six come off the trade licence, so one look at
+# the licence answers all of them; the rest is contact/account detail. Order matters:
+# it's the order someone reads a licence in, so the sheet doesn't make them jump about.
+MISSING_DATA_FIELDS = [
+    ('jurisdiction', 'Jurisdiction'),
+    ('licensing_authority', 'Licensing Authority'),
+    ('emirate', 'Emirate'),
+    ('trade_name', 'Trade Name'),
+    ('legal_form', 'Legal Form'),
+    ('business_activity', 'Business Activity'),
+    ('ac_code', 'AC Code'),
+    ('ac_opening_date', 'AC Opening Date'),
+    ('email', 'Email'),
+    ('phone', 'Mobile'),
+    ('address', 'Address'),
+]
+# Not a Customer column — it's "has at least one document with a real expiry date",
+# the same check the completeness badge makes. Listed last because it needs an
+# upload rather than a pen.
+MISSING_DATA_DOC_LABEL = 'Licence doc + expiry'
+
+
+@app.route('/reports/missing-company-data')
+@login_required
+def missing_company_data_report():
+    """A4-landscape fill-in sheet: every company with a gap in its profile, grouped
+    by account manager so each person can be handed their own pages. Read-only —
+    nothing here writes to the database; someone types the answers back in after."""
+    from collections import Counter
+    now = now_dubai()
+    manager_filter = (request.args.get('manager') or '').strip()
+
+    companies = Customer.query.filter_by(customer_type='Company').all()
+    # One batched query, same rule as the completeness badge: a pre-2000 date is a
+    # placeholder from a bad import, not a real expiry.
+    dated_doc_ids = {d.customer_id for d in Document.query.filter(
+        Document.customer_id.isnot(None),
+        Document.expiry_date >= datetime(MIN_VALID_EXPIRY_YEAR, 1, 1)).all()}
+    user_names = {u.id: u.name for u in User.query.all()}
+
+    rows = []
+    field_tally = Counter()
+    for c in companies:
+        missing = [label for field, label in MISSING_DATA_FIELDS
+                   if not str(getattr(c, field, '') or '').strip()]
+        if c.id not in dated_doc_ids:
+            missing.append(MISSING_DATA_DOC_LABEL)
+        if not missing:
+            continue
+        field_tally.update(missing)
+        rows.append({
+            'customer': c,
+            'missing': missing,
+            'manager': user_names.get(c.assigned_to) or 'Unassigned',
+            'manager_id': str(c.assigned_to) if c.assigned_to else 'unassigned',
+        })
+
+    all_managers = sorted({(r['manager_id'], r['manager']) for r in rows},
+                          key=lambda m: (m[1] == 'Unassigned', m[1].lower()))
+    if manager_filter:
+        rows = [r for r in rows if r['manager_id'] == manager_filter]
+
+    # Group into the pages that actually get handed out.
+    groups = {}
+    for r in sorted(rows, key=lambda r: (r['customer'].company or r['customer'].name or '').lower()):
+        groups.setdefault((r['manager_id'], r['manager']), []).append(r)
+    grouped = sorted(groups.items(), key=lambda kv: (kv[0][1] == 'Unassigned', kv[0][1].lower()))
+
+    return render_template('missing_company_data.html',
+                           now=now, grouped=grouped, rows=rows,
+                           total_companies=len(companies),
+                           n_with_gaps=len(rows),
+                           n_blanks=sum(len(r['missing']) for r in rows),
+                           field_tally=field_tally.most_common(),
+                           all_managers=all_managers,
+                           manager_filter=manager_filter,
+                           doc_label=MISSING_DATA_DOC_LABEL)
+
+
 @app.route('/health-check/report')
 @login_required
 def compliance_report():
@@ -11895,12 +11997,12 @@ def analytics():
         import calendar as _cal
         companies = Customer.query.filter_by(customer_type='Company').all()
         status_counts = Counter((c.ac_status or 'Not set') for c in companies)
-        juris_counts = Counter((c.jurisdiction or 'Not set') for c in companies)
+        juris_counts = Counter(((c.jurisdiction or '').strip() or 'Not set') for c in companies)
         # Licensing authority across ALL companies. Was previously freezone_name, but
         # that field was never on the Add form so it was always blank; licensing_authority
         # is a managed dropdown on both forms, so this actually reflects the portfolio.
-        fz_counts = Counter((c.licensing_authority or 'Not set') for c in companies)
-        emirate_counts = Counter((c.emirate or 'Not set') for c in companies)
+        fz_counts = Counter(((c.licensing_authority or '').strip() or 'Not set') for c in companies)
+        emirate_counts = Counter(((c.emirate or '').strip() or 'Not set') for c in companies)
         legal_counts = Counter((c.legal_form or 'Not set') for c in companies)
         activity_counts = Counter((c.business_activity or '').strip().title()
                                   for c in companies if (c.business_activity or '').strip())
@@ -11991,7 +12093,7 @@ def analytics():
                 gaps['no_rep'] += 1
             if not owners_by_cust.get(c.id):
                 gaps['no_owner'] += 1
-            if not c.licensing_authority:
+            if not (c.licensing_authority or '').strip():
                 gaps['no_authority'] += 1
             if not (c.business_activity or '').strip():
                 gaps['no_activity'] += 1

@@ -41,7 +41,7 @@
     {% endwith %}
 
     <div class="page-header">
-      <h2>Clients <span class="page-subtitle">({{ total }} {% if search or rep_filter or type_filter or status_filter or legal_filter or juris_filter or auth_filter %}matching{% else %}total{% endif %} — 🏢 {{ n_company }} companies · 👤 {{ n_individual }} individuals)</span></h2>
+      <h2>Clients <span class="page-subtitle">({{ total }} {% if search or rep_filter or type_filter or status_filter or legal_filter or juris_filter or auth_filter or emirate_filter %}matching{% else %}total{% endif %} — 🏢 {{ n_company }} companies · 👤 {{ n_individual }} individuals)</span></h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
         {% if birthdays_today %}
         <a href="/customers?birthday=today" class="btn-sm" style="background:#FDF2F8;border:1px solid #FBCFE8;color:#9D174D;display:flex;align-items:center;gap:4px;">🎂 Birthdays <span style="background:#EC4899;color:white;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;">{{ birthdays_today|length }}</span></a>
@@ -60,7 +60,7 @@
     <div class="filter-card" style="border-top:4px solid #1A3B8B;">
       <div class="filter-card-head">
         <div class="filter-card-title">⊟ Filters</div>
-        {% if search or rep_filter or type_filter or status_filter or legal_filter or juris_filter or auth_filter %}<a href="/customers" class="btn-reset" style="font-size:11px;">Reset</a>{% endif %}
+        {% if search or rep_filter or type_filter or status_filter or legal_filter or juris_filter or auth_filter or emirate_filter %}<a href="/customers" class="btn-reset" style="font-size:11px;">Reset</a>{% endif %}
       </div>
       <form method="get">
         <div class="ff" style="margin-bottom:12px;">
@@ -97,6 +97,7 @@
             <label>Jurisdiction</label>
             <select name="jurisdiction">
               <option value="">All Jurisdictions</option>
+              <option value="{{ BLANK_FILTER }}" {% if juris_filter==BLANK_FILTER %}selected{% endif %}>&#9888; Not set</option>
               {% for j in jurisdictions %}<option value="{{ j }}" {% if juris_filter==j %}selected{% endif %}>{{ j }}</option>{% endfor %}
             </select>
           </div>
@@ -104,7 +105,16 @@
             <label>Licensing Authority</label>
             <select name="authority">
               <option value="">All Authorities</option>
+              <option value="{{ BLANK_FILTER }}" {% if auth_filter==BLANK_FILTER %}selected{% endif %}>&#9888; Not set</option>
               {% for a in authority_opts %}<option value="{{ a }}" {% if auth_filter==a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="ff">
+            <label>Emirate</label>
+            <select name="emirate">
+              <option value="">All Emirates</option>
+              <option value="{{ BLANK_FILTER }}" {% if emirate_filter==BLANK_FILTER %}selected{% endif %}>&#9888; Not set</option>
+              {% for e in emirates %}<option value="{{ e }}" {% if emirate_filter==e %}selected{% endif %}>{{ e }}</option>{% endfor %}
             </select>
           </div>
           <div class="ff">

@@ -20,6 +20,11 @@
     .bar-track{flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;}
     .bar-fill{height:100%;border-radius:20px;}
     .bar-val{font-size:11px;font-weight:700;color:#1A2333;width:28px;text-align:right;flex-shrink:0;}
+    /* A bar you can click through to the clients it counts — the "Not set" bars
+       are the data-gap worklist, so they have to lead somewhere. */
+    a.bar-link{display:block;text-decoration:none;color:inherit;border-radius:6px;margin:0 -6px;padding:0 6px;}
+    a.bar-link:hover{background:#F8FAFC;}
+    a.bar-link:hover .bar-label{color:#133E87;text-decoration:underline;}
     .tab-nav{display:flex;gap:4px;margin-bottom:20px;background:white;padding:6px;border-radius:10px;border:0.5px solid #E2E8F0;}
     .tab-btn{padding:8px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;color:#64748B;border:none;background:transparent;}
     .tab-btn.active{background:#133E87;color:white;}
@@ -724,11 +729,15 @@
         <div class="bar-row"><div class="bar-label" title="Automations can't reach them">No phone / WhatsApp</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_wa/gmax)*100)|int }}%;background:#EF4444;"></div></div><div class="bar-val">{{ pf.gaps.no_wa }}</div></div>
         <div class="bar-row"><div class="bar-label">No account manager</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_rep/gmax)*100)|int }}%;background:#F59E0B;"></div></div><div class="bar-val">{{ pf.gaps.no_rep }}</div></div>
         <div class="bar-row"><div class="bar-label">No owner on file</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_owner/gmax)*100)|int }}%;background:#8B5CF6;"></div></div><div class="bar-val">{{ pf.gaps.no_owner }}</div></div>
-        <div class="bar-row"><div class="bar-label">No licensing authority</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_authority/gmax)*100)|int }}%;background:#06B6D4;"></div></div><div class="bar-val">{{ pf.gaps.no_authority }}</div></div>
+        <a class="bar-link" href="/customers?type=Company&amp;authority={{ BLANK_FILTER }}" title="Show these {{ pf.gaps.no_authority }} companies">
+          <div class="bar-row"><div class="bar-label">No licensing authority</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_authority/gmax)*100)|int }}%;background:#06B6D4;"></div></div><div class="bar-val">{{ pf.gaps.no_authority }}</div></div>
+        </a>
         <div class="bar-row"><div class="bar-label">No business activity</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((pf.gaps.no_activity/gmax)*100)|int }}%;background:#94A3B8;"></div></div><div class="bar-val">{{ pf.gaps.no_activity }}</div></div>
         <div style="margin-top:8px;font-size:11px;color:#64748B;border-top:0.5px solid #F1F5F9;padding-top:8px;">
           "No phone/WhatsApp" is the one that bites — birthday wishes and expiry reminders silently skip those companies.
         </div>
+        <a href="/reports/missing-company-data" style="display:inline-block;margin-top:8px;font-size:11.5px;
+           font-weight:600;color:#133E87;text-decoration:none;">&#128424; Print the fill-in sheet &rarr;</a>
       </div>
     </div>
 
@@ -738,7 +747,9 @@
         {% set max_j = pf.juris[0][1] if pf.juris else 1 %}
         {% set jc = {'Mainland':'#133E87','Free Zone':'#10B981','Offshore':'#8B5CF6','Not set':'#CBD5E1'} %}
         {% for name, cnt in pf.juris %}
-        <div class="bar-row"><div class="bar-label">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_j)*100)|int }}%;background:{{ jc.get(name,'#64748B') }};"></div></div><div class="bar-val">{{ cnt }}</div></div>
+        <a class="bar-link" href="/customers?type=Company&amp;jurisdiction={{ BLANK_FILTER if name == 'Not set' else name|urlencode }}" title="Show these {{ cnt }} companies">
+          <div class="bar-row"><div class="bar-label">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_j)*100)|int }}%;background:{{ jc.get(name,'#64748B') }};"></div></div><div class="bar-val">{{ cnt }}</div></div>
+        </a>
         {% endfor %}
         {% if not pf.juris %}<div class="empty-state">No companies yet</div>{% endif %}
       </div>
@@ -746,7 +757,9 @@
         <div class="an-card-title">Licensing Authority / Free Zone</div>
         {% set max_f = pf.freezones[0][1] if pf.freezones else 1 %}
         {% for name, cnt in pf.freezones %}
-        <div class="bar-row"><div class="bar-label" title="{{ name }}">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_f)*100)|int }}%;background:{{ '#CBD5E1' if name == 'Not set' else '#10B981' }};"></div></div><div class="bar-val">{{ cnt }}</div></div>
+        <a class="bar-link" href="/customers?type=Company&amp;authority={{ BLANK_FILTER if name == 'Not set' else name|urlencode }}" title="Show these {{ cnt }} companies">
+          <div class="bar-row"><div class="bar-label" title="{{ name }}">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_f)*100)|int }}%;background:{{ '#CBD5E1' if name == 'Not set' else '#10B981' }};"></div></div><div class="bar-val">{{ cnt }}</div></div>
+        </a>
         {% endfor %}
         {% if not pf.freezones %}<div class="empty-state">No companies yet</div>{% endif %}
       </div>
@@ -754,7 +767,9 @@
         <div class="an-card-title">Emirates</div>
         {% set max_e = pf.emirates[0][1] if pf.emirates else 1 %}
         {% for name, cnt in pf.emirates %}
-        <div class="bar-row"><div class="bar-label">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_e)*100)|int }}%;background:#3B82F6;"></div></div><div class="bar-val">{{ cnt }}</div></div>
+        <a class="bar-link" href="/customers?type=Company&amp;emirate={{ BLANK_FILTER if name == 'Not set' else name|urlencode }}" title="Show these {{ cnt }} companies">
+          <div class="bar-row"><div class="bar-label">{{ name }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ ((cnt/max_e)*100)|int }}%;background:#3B82F6;"></div></div><div class="bar-val">{{ cnt }}</div></div>
+        </a>
         {% endfor %}
         {% if not pf.emirates %}<div class="empty-state">No companies yet</div>{% endif %}
       </div>

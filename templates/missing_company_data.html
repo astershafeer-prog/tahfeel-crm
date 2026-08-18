@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tahfeel — Missing Company Data</title>
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+  <style>
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    body{margin:0;background:#E5E9F0;font-family:'Segoe UI',Arial,sans-serif;color:#0B1B35;}
+    @page{size:A4 landscape;margin:8mm;}
+    .pg{background:#F6F8FB;width:281mm;margin:14px auto;box-shadow:0 2px 10px rgba(0,0,0,.2);
+        display:flex;flex-direction:column;}
+    @media print{
+      body{background:#F6F8FB;}
+      /* Plain block, not flex: a manager with 40 companies runs over several
+         sheets, and flex containers break across pages unpredictably. */
+      .pg{box-shadow:none;margin:0;width:auto;display:block;}
+      .ft{margin-top:12px;}
+      /* Each account manager's pages start fresh, so the stack can be split up
+         and handed out without anyone cutting a sheet in half. */
+      .pg + .pg{page-break-before:always;}
+      .no-print{display:none!important;}
+      .co{page-break-inside:avoid;}
+    }
+    .hd{background:#fff;border-bottom:1px solid #E8ECF2;padding:10px 20px;
+        display:flex;justify-content:space-between;align-items:center;}
+    .hd .brand{display:flex;align-items:center;gap:10px;}
+    .hd .brand b{font-size:17px;color:#0B1B35;}
+    .hd .brand span{font-size:12px;color:#64748B;}
+    .chip{display:inline-block;font-size:11px;font-weight:600;padding:3px 12px;border-radius:12px;
+          background:#FEF2F2;color:#B91C1C;}
+    .body{padding:10px 20px 16px;}
+    .card{background:#fff;border:1px solid #E8ECF2;border-radius:12px;}
+
+    /* ── one company = one block of write-in lines ───────────────────────── */
+    .co{background:#fff;border:1px solid #E8ECF2;border-radius:10px;padding:8px 12px 10px;margin-bottom:7px;}
+    .co-hd{display:flex;align-items:baseline;gap:10px;border-bottom:1px solid #F1F5F9;
+           padding-bottom:5px;margin-bottom:7px;}
+    .co-n{font-size:10px;color:#94A3B8;font-weight:700;width:22px;flex-shrink:0;}
+    .co-name{font-size:12.5px;font-weight:700;color:#0B1B35;flex:1;}
+    .co-known{font-size:10px;color:#64748B;}
+    .co-cnt{font-size:9.5px;font-weight:700;color:#B45309;background:#FFF7ED;
+            border-radius:10px;padding:2px 8px;white-space:nowrap;}
+    .co-tick{font-size:9.5px;color:#94A3B8;white-space:nowrap;}
+    /* Three write-in slots per line: wide enough to actually hold handwriting. */
+    .flds{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 16px;}
+    .fld{display:flex;align-items:flex-end;gap:6px;min-height:17px;}
+    .fld b{font-size:8.5px;font-weight:700;color:#64748B;text-transform:uppercase;
+           letter-spacing:.3px;white-space:nowrap;}
+    .fld i{flex:1;border-bottom:1px dotted #94A3B8;height:13px;}
+    /* The document one can't be written on a line — it needs a file uploading,
+       so it gets a tick box instead of a blank and stops eating write-in width. */
+    .fld.doc b{color:#B91C1C;}
+    .fld.doc em{font-style:normal;font-size:9px;color:#B91C1C;white-space:nowrap;}
+
+    .mgr-band{display:flex;justify-content:space-between;align-items:center;
+              background:#0F2660;color:#fff;border-radius:10px;padding:7px 14px;margin-bottom:9px;}
+    .mgr-band b{font-size:13px;}
+    .mgr-band span{font-size:11px;opacity:.85;}
+    .ft{background:#fff;border-top:1px solid #E8ECF2;padding:6px 20px;display:flex;
+        justify-content:space-between;font-size:10px;color:#64748B;margin-top:auto;}
+    .tally{display:flex;flex-wrap:wrap;gap:5px;}
+    .tally span{font-size:10px;background:#F1F5F9;border-radius:9px;padding:2px 9px;color:#475569;}
+    .tally span b{color:#0B1B35;}
+    .empty{padding:40px;text-align:center;color:#64748B;font-size:13px;}
+    select,button{font-family:inherit;}
+  </style>
+</head>
+<body>
+
+  <div class="no-print" style="max-width:281mm;margin:14px auto 0;display:flex;
+       justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <a href="/analytics?tab=companies" style="color:#1A3B8B;text-decoration:none;font-size:13px;">← Back to Insights</a>
+    <form method="get" style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+      <label style="font-size:12px;color:#475569;">Account manager</label>
+      <select name="manager" onchange="this.form.submit()"
+              style="height:36px;border:1px solid #CBD5E1;border-radius:8px;padding:0 10px;font-size:13px;">
+        <option value="">Everyone</option>
+        {% for mid, mname in all_managers %}
+        <option value="{{ mid }}" {% if manager_filter == mid %}selected{% endif %}>{{ mname }}</option>
+        {% endfor %}
+      </select>
+      <noscript><button type="submit" style="height:36px;">Go</button></noscript>
+    </form>
+    <button onclick="window.print()" style="background:#0F2660;color:#fff;border:none;border-radius:10px;
+            padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;">🖨 Print / Save as PDF</button>
+  </div>
+
+  {% if not grouped %}
+  <div class="pg">
+    <div class="hd">
+      <div class="brand">
+        <img src="/static/img/logo_white.png" alt="" style="height:30px;background:#0F2660;border-radius:8px;padding:4px;">
+        <div><b>Tahfeel</b> <span>Missing Company Data</span></div>
+      </div>
+      <span style="font-size:11.5px;color:#64748B;">Generated {{ now.strftime('%d %b %Y, %H:%M') }}</span>
+    </div>
+    <div class="empty">
+      {% if manager_filter %}Nothing missing for this account manager.{% else %}
+      Every company has a complete profile. Nothing to print.{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% for (mid, mname), items in grouped %}
+  <div class="pg">
+    <div class="hd">
+      <div class="brand">
+        <img src="/static/img/logo_white.png" alt="" style="height:30px;background:#0F2660;border-radius:8px;padding:4px;">
+        <div><b>Tahfeel</b> <span>Missing Company Data — fill in and hand back</span></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span class="chip">{{ n_with_gaps }} of {{ total_companies }} companies incomplete</span>
+        <span style="font-size:11.5px;color:#64748B;">Generated {{ now.strftime('%d %b %Y, %H:%M') }}</span>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="mgr-band">
+        <b>{{ mname }}</b>
+        {% set blanks = items|map(attribute='missing')|map('length')|sum %}
+        <span>{{ items|length }} compan{{ 'y' if items|length == 1 else 'ies' }} ·
+              {{ blanks }} blank field{{ '' if blanks == 1 else 's' }}</span>
+      </div>
+
+      {% if loop.first and not manager_filter %}
+      <div class="card" style="padding:8px 12px;margin-bottom:9px;">
+        <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;
+                    letter-spacing:.3px;margin-bottom:5px;">Where the gaps are, across all {{ total_companies }} companies</div>
+        <div class="tally">
+          {% for label, cnt in field_tally %}<span>{{ label }} <b>{{ cnt }}</b></span>{% endfor %}
+        </div>
+        <div style="margin-top:6px;font-size:10px;color:#64748B;">
+          The first six fields are all printed on the trade licence — pull the licence once and they're all answered.
+        </div>
+      </div>
+      {% endif %}
+
+      {% for r in items %}
+      <div class="co">
+        <div class="co-hd">
+          <div class="co-n">{{ loop.index }}.</div>
+          <div class="co-name">{{ r.customer.company or r.customer.name }}</div>
+          <div class="co-known">
+            {%- if r.customer.ac_code %}AC {{ r.customer.ac_code }} · {% endif -%}
+            {%- if r.customer.licensing_authority %}{{ r.customer.licensing_authority }} · {% endif -%}
+            {%- if r.customer.phone %}{{ r.customer.phone }}{% endif -%}
+          </div>
+          <div class="co-cnt">{{ r.missing|length }} missing</div>
+          <div class="co-tick">☐ checked</div>
+        </div>
+        <div class="flds">
+          {% for label in r.missing %}
+            {% if label == doc_label %}
+          <div class="fld doc"><b>{{ label }}</b><em>&#9744; collect &amp; upload</em></div>
+            {% else %}
+          <div class="fld"><b>{{ label }}</b><i></i></div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="ft">
+      <span>{{ mname }} — page for this account manager</span>
+      <span>Tahfeel Business Solutions · internal working document</span>
+    </div>
+  </div>
+  {% endfor %}
+
+</body>
+</html>
