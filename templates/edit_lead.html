@@ -78,6 +78,19 @@
                 {% endfor %}
               </select>
             </div>
+            {# The ad is Meta's own record of which creative this person answered.
+               Shown here read-only: it is a fact, not an opinion, and the only way
+               it could be "corrected" by hand is wrongly. It was invisible on this
+               form before, which made editing look like it replaced the ad with a
+               campaign — it never did, they are separate columns. #}
+            {% if lead.meta_ad_name or lead.meta_ad_id %}
+            <div class="form-group">
+              <label>Ad <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(from Meta · not editable)</span></label>
+              <div style="padding:9px 12px;background:var(--bg);border:1.5px dashed var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--text-primary);">
+                {{ lead.meta_ad_name or lead.meta_ad_id }}
+              </div>
+            </div>
+            {% endif %}
             <div class="form-group">
               <label>Campaign <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(optional)</span></label>
               {# Meta's own names first: ad spend is matched to leads by exact name,
@@ -105,6 +118,13 @@
                 </optgroup>
                 {% endif %}
               </select>
+              {% if ad_campaign and (lead.campaign or '') != ad_campaign %}
+              <div style="margin-top:6px;padding:8px 10px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:var(--radius-sm);font-size:11.5px;color:#9A3412;line-height:1.5;">
+                ⚠ Meta has this ad running in <b>{{ ad_campaign }}</b>{% if lead.campaign %}, not <b>{{ lead.campaign }}</b>{% endif %}.
+                Pick that one unless you know better — otherwise Campaign ROI and the per-ad
+                breakdown will count this lead in different places.
+              </div>
+              {% endif %}
             </div>
             <div class="form-group">
               <label>Assign To <span style="color:#DC2626;">*</span></label>

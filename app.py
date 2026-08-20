@@ -3328,6 +3328,23 @@ def download_template():
     response.headers['Content-Disposition'] = 'attachment; filename=tahfeel_leads_template.xlsx'
     return response
 
+def _meta_campaign_for_ad(ad_id):
+    """The campaign Meta reports this ad running in, from the most recent ad-spend
+    row we hold.
+
+    Returns None when the ad has no spend row at all. That means UNKNOWN, not
+    "no campaign": the sync only writes a row for a month in which the ad actually
+    spent, so a brand-new ad, a paused one, or any ad at all when the spend sync
+    isn't running will legitimately have nothing here. Callers must treat None as
+    "can't tell" and never as evidence of a mismatch."""
+    if not ad_id:
+        return None
+    row = (AdSpend.query.filter_by(ad_id=ad_id)
+           .filter(AdSpend.campaign.isnot(None), AdSpend.campaign != '')
+           .order_by(AdSpend.year.desc(), AdSpend.month.desc()).first())
+    return row.campaign if row else None
+
+
 @app.route('/leads/<int:lead_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_lead(lead_id):
@@ -3357,6 +3374,18 @@ def edit_lead(lead_id):
             lead.due_date = datetime.strptime(due, '%Y-%m-%d')
         db.session.commit()
         flash('Lead updated successfully')
+        # Campaign is hand-picked; the ad is Meta's own fact. When they disagree,
+        # Campaign ROI counts this lead under one name and the per-ad breakdown
+        # under another, and nothing anywhere would show that. Warn, don't block —
+        # a missing spend row is silence, not disagreement, and blocking on it
+        # would trap anyone repairing an older lead.
+        _ad_camp = _meta_campaign_for_ad(lead.meta_ad_id)
+        if _ad_camp and (lead.campaign or '') != _ad_camp:
+            flash('Heads up — Meta has the ad "%s" running in "%s", not "%s". '
+                  'Campaign ROI and the per-ad breakdown will count this lead in '
+                  'different places until they match.'
+                  % (lead.meta_ad_name or lead.meta_ad_id, _ad_camp,
+                     lead.campaign or 'no campaign'), 'error')
         return redirect(url_for('lead_detail', lead_id=lead_id))
     meta_campaigns, other_campaigns = campaign_options()
     # A lead can carry a campaign name that's in neither list — one Meta used before
@@ -3366,9 +3395,17 @@ def edit_lead(lead_id):
     current_extra = lead.campaign if (lead.campaign
                                       and lead.campaign not in meta_campaigns
                                       and lead.campaign not in other_campaigns) else ''
+    # What Meta says this lead's ad ran in, so the form can flag a contradiction
+    # instead of saving one silently.
+    ad_campaign = _meta_campaign_for_ad(lead.meta_ad_id)
+    # There is no point naming the right campaign if the dropdown doesn't offer it.
+    if (ad_campaign and ad_campaign not in meta_campaigns
+            and ad_campaign not in other_campaigns and ad_campaign != current_extra):
+        meta_campaigns = sorted(set(meta_campaigns) | {ad_campaign})
     return render_template('edit_lead.html', lead=lead, users=users, services=services,
                            sources=sources, meta_campaigns=meta_campaigns,
-                           other_campaigns=other_campaigns, current_extra=current_extra, now=now)
+                           other_campaigns=other_campaigns, current_extra=current_extra,
+                           ad_campaign=ad_campaign, now=now)
 
 @app.route('/leads/<int:lead_id>/delete', methods=['POST'])
 @login_required
