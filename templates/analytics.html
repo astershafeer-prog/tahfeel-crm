@@ -283,6 +283,77 @@
       {% endif %}
     </div>
 
+    {# Cohort conversion. Sits directly under the all-time card on purpose: the two
+       answer the same question and only this one compares like with like. #}
+    {% if conversion_cohorts %}
+    <div class="an-card" style="margin-bottom:16px;">
+      <div class="an-card-title">Conversion by Cohort
+        <span style="font-weight:400;color:#64748B;font-size:11px;">· grouped by the month the lead arrived, not the month it closed</span>
+      </div>
+      {% if cohort_settled_rate is not none %}
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;">
+        Cohorts old enough to have finished converting run at
+        <b style="color:#0F2660;">{{ cohort_settled_rate }}%</b>. That is the number to judge a channel on —
+        not the newest month, whose leads have not had time yet.
+      </div>
+      {% endif %}
+      {% for c in conversion_cohorts %}
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"
+           {% if c.maturing %}title="Only {{ c.age_days }} days old — leads here are still converting, so this figure will rise"{% endif %}>
+        <div style="width:74px;flex-shrink:0;font-size:11px;color:{{ '#94A3B8' if c.maturing else '#475569' }};white-space:nowrap;">{{ c.label }}</div>
+        <div style="flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;">
+          <div style="height:100%;border-radius:20px;background:{{ '#CBD5E1' if c.maturing else '#0F2660' }};width:{{ ((c.rate / cohort_max) * 100)|round|int if cohort_max else 0 }}%;"></div>
+        </div>
+        <div style="width:132px;flex-shrink:0;text-align:right;font-size:11px;white-space:nowrap;color:{{ '#94A3B8' if c.maturing else '#475569' }};">
+          <b style="color:{{ '#94A3B8' if c.maturing else '#1A2333' }};">{{ c.clients }}</b>/{{ c.leads }} · {{ c.rate }}%{% if c.maturing %} · still open{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      <div style="margin-top:6px;font-size:10.5px;color:#64748B;line-height:1.5;">
+        Greyed cohorts are under {{ cohort_mature_days }} days old and will still move — read them against
+        another cohort at the same age, never against a finished one.
+      </div>
+    </div>
+    {% endif %}
+
+    {# Response time. Everything else on this tab takes months to mean anything;
+       this is the one number the office can change before lunch. #}
+    <div class="an-card" style="margin-bottom:16px;">
+      <div class="an-card-title">Lead Response Time
+        <span style="font-weight:400;color:#64748B;font-size:11px;">· lead arrived → first actually reached</span>
+      </div>
+      {% if resp_total %}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <div style="flex:1;min-width:150px;padding:10px 12px;background:#F8FAFC;border-radius:8px;">
+          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Median response</div>
+          <div style="font-size:20px;font-weight:700;color:#0F2660;">{{ resp_median }}</div>
+          <div style="font-size:10.5px;color:#64748B;">Half were reached faster than this</div>
+        </div>
+        <div style="flex:1;min-width:150px;padding:10px 12px;background:{{ '#FEF2F2' if resp_stale_unreached else '#F8FAFC' }};border-radius:8px;">
+          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Waiting over 24h</div>
+          <div style="font-size:20px;font-weight:700;color:{{ '#B91C1C' if resp_stale_unreached else '#10B981' }};">{{ resp_stale_unreached }}</div>
+          <div style="font-size:10.5px;color:#64748B;">Never reached, and not new any more</div>
+        </div>
+      </div>
+      {% for b in resp_buckets %}
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div style="width:120px;flex-shrink:0;font-size:11px;color:#475569;white-space:nowrap;">{{ b.label }}</div>
+        <div style="flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;">
+          <div style="height:100%;border-radius:20px;background:{{ b.color }};width:{{ ((b.n / resp_total) * 100)|round|int if resp_total else 0 }}%;"></div>
+        </div>
+        <div style="width:88px;flex-shrink:0;text-align:right;font-size:11px;white-space:nowrap;color:#475569;">
+          <b style="color:#1A2333;">{{ b.n }}</b> · {{ ((b.n / resp_total) * 100)|round|int if resp_total else 0 }}%
+        </div>
+      </div>
+      {% endfor %}
+      <div style="margin-top:6px;font-size:10.5px;color:#64748B;line-height:1.5;">
+        "Reached" means a call connected or a meeting happened — an attempt that nobody answered does not count.
+      </div>
+      {% else %}
+      <div class="empty-state">No leads in this period</div>
+      {% endif %}
+    </div>
+
     <div class="grid2">
       <div class="an-card">
         <div class="an-card-title">Daily Leads Received <span style="font-weight:400;color:#64748B;font-size:11px;">· avg {{ lead_daily_avg }}/day</span></div>
@@ -406,7 +477,9 @@
        the one with the most clients, and that is the entire point of looking. #}
     {% if ad_rows or ads_meta_no_ad %}
     <div class="an-card" style="margin-bottom:16px;">
-      <div class="an-card-title">Ad Performance &mdash; leads and clients per creative</div>
+      <div class="an-card-title">Ad Performance &mdash; leads and clients per creative
+        <span style="font-weight:400;color:#64748B;font-size:11px;">· last {{ (ad_window_days / 30)|round|int }} months, ignoring the period above</span>
+      </div>
       {% if ad_rows %}
       <div style="display:grid;grid-template-columns:2fr 1.6fr 0.8fr 0.8fr 0.8fr 0.9fr;gap:8px;padding:8px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:4px;">
         <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Ad</span>

@@ -11834,6 +11834,13 @@ def export_full_backup():
         return redirect(url_for('admin_panel'))
 
 
+# Leads keep converting for months, so anything joining leads to clients needs a
+# window wider than a calendar month or it reports zero and reads as failure.
+# 180 days ~ the longest sales cycle actually seen on this business.
+AD_WINDOW_DAYS = 180
+COHORT_MATURE_DAYS = 180
+
+
 @app.route('/analytics')
 @login_required
 def analytics():
@@ -11921,13 +11928,23 @@ def analytics():
     # (which the conversion stats further down use) would give a second, smaller
     # answer for the same question — it only exists for leads converted after that
     # feature shipped — and two pages disagreeing is worse than either number.
-    _period_lead_ids = [l.id for l in all_leads]
+    #
+    # Deliberately NOT cut to the period selector. A lead is filed under the month it
+    # arrived, but with a cycle running to six months it usually becomes a client in
+    # a later one — so "this month" showed an ad's leads with none of the clients they
+    # went on to produce, and every ad read as converting nobody. Fixed trailing
+    # window instead, stated on the card.
+    _ad_since = now - timedelta(days=AD_WINDOW_DAYS)
+    _ad_leads = Lead.query.filter(Lead.created_at >= _ad_since).all()
+    if scoped:
+        _ad_leads = [l for l in _ad_leads if l.assigned_to == session['user_id']]
+    _ad_lead_ids = [l.id for l in _ad_leads]
     _won_lead_ids = set()
-    if _period_lead_ids:
+    if _ad_lead_ids:
         _won_lead_ids = {r[0] for r in db.session.query(Customer.lead_id)
-                         .filter(Customer.lead_id.in_(_period_lead_ids)).all()}
+                         .filter(Customer.lead_id.in_(_ad_lead_ids)).all()}
     _by_ad = defaultdict(list)
-    for l in all_leads:
+    for l in _ad_leads:
         if l.meta_ad_id or l.meta_ad_name:
             _by_ad[(l.meta_ad_id or '', l.meta_ad_name or '')].append(l)
     ad_rows = []
@@ -11948,8 +11965,52 @@ def analytics():
     # Meta leads carrying no ad at all — almost all of them predate ad tracking, and
     # Meta only backfills ~90 days, so this number shrinks but never reaches zero.
     # Stated outright: the rows above are not the whole period.
-    ads_meta_no_ad = sum(1 for l in all_leads
+    ads_meta_no_ad = sum(1 for l in _ad_leads
                          if l.meta_lead_id and not (l.meta_ad_id or l.meta_ad_name))
+
+    # ── Lead response time. The only lead metric that can be acted on the same day:
+    # conversion takes months to read, this reads by lunchtime. Same buckets
+    # /marketing-report has always drawn — but that page belongs to the agency, so
+    # the office could not see its own response times.
+    #
+    # Median, not mean. One lead reached three weeks late drags an average far enough
+    # to hide a team otherwise answering within the hour, and the average is what the
+    # agency report shows.
+    _resp_secs = sorted((l.first_contacted_at - l.created_at).total_seconds()
+                        for l in all_leads if l.first_contacted_at and l.created_at)
+    if _resp_secs:
+        _mid = len(_resp_secs) // 2
+        _median = (_resp_secs[_mid] if len(_resp_secs) % 2
+                   else (_resp_secs[_mid - 1] + _resp_secs[_mid]) / 2.0)
+        resp_median = _fmt_duration(_median)
+    else:
+        resp_median = '\u2014'
+    resp_buckets = [
+        {'key': 'lt1h',  'label': 'Under 1 hour',  'n': 0, 'color': '#10B981'},
+        {'key': 'h1_4',  'label': '1 to 4 hours',  'n': 0, 'color': '#34D399'},
+        {'key': 'h4_24', 'label': '4 to 24 hours', 'n': 0, 'color': '#F59E0B'},
+        {'key': 'd1_3',  'label': '1 to 3 days',   'n': 0, 'color': '#F97316'},
+        {'key': 'gt3d',  'label': 'Over 3 days',   'n': 0, 'color': '#EF4444'},
+        {'key': 'never', 'label': 'Never reached', 'n': 0, 'color': '#7F1D1D'},
+    ]
+    _rb = {b['key']: b for b in resp_buckets}
+    for l in all_leads:
+        if l.first_contacted_at and l.created_at:
+            _hrs = (l.first_contacted_at - l.created_at).total_seconds() / 3600.0
+            if _hrs < 1:     _rb['lt1h']['n'] += 1
+            elif _hrs < 4:   _rb['h1_4']['n'] += 1
+            elif _hrs < 24:  _rb['h4_24']['n'] += 1
+            elif _hrs < 72:  _rb['d1_3']['n'] += 1
+            else:            _rb['gt3d']['n'] += 1
+        else:
+            _rb['never']['n'] += 1
+    resp_total = len(all_leads)
+    # Unreached AND already a day old. Not a statistic — a call list. A lead that
+    # arrived an hour ago being unreached is normal; one from Tuesday is not.
+    resp_stale_unreached = sum(
+        1 for l in all_leads
+        if not l.first_contacted_at and l.created_at
+        and (now - l.created_at).total_seconds() > 86400)
 
     # ── Lead→Client conversions, counted from Customer.lead_id — the link the
     # Convert-to-Client flow creates, and the same signal Campaign ROI and the Ad
@@ -11986,6 +12047,43 @@ def analytics():
     CONV_MIN_FOR_RATE = 20
     _ranked = [r for r in conversion_rate_by_source if r['total'] >= CONV_MIN_FOR_RATE]
     best_source = max(_ranked, key=lambda r: r['rate']) if _ranked else None
+
+    # ── Conversion by cohort — grouped by the month the lead ARRIVED, not the month
+    # anything closed. An all-time rate averages a lead from last week together with
+    # one from a year ago; with this sales cycle the newest months are guaranteed to
+    # look like failure purely because their leads have not had time yet. Comparing
+    # cohort against cohort at the same age is the only reading that compares like
+    # with like, and it turns a drop into a signal months before an average moves.
+    _cohorts = {}
+    for l in _all_leads_ever:
+        if not l.created_at:
+            continue
+        _k = (l.created_at.year, l.created_at.month)
+        _c = _cohorts.setdefault(_k, {'leads': 0, 'clients': 0})
+        _c['leads'] += 1
+        if l.id in _converted_lead_ids:
+            _c['clients'] += 1
+    conversion_cohorts = []
+    for _k in sorted(_cohorts, reverse=True)[:12]:
+        _c = _cohorts[_k]
+        _first = date(_k[0], _k[1], 1)
+        conversion_cohorts.append({
+            'label': _first.strftime('%b %Y'),
+            'leads': _c['leads'],
+            'clients': _c['clients'],
+            'rate': round(100.0 * _c['clients'] / _c['leads'], 1) if _c['leads'] else 0,
+            'age_days': (now.date() - _first).days,
+            # Younger than a full cycle: the number will still move, so it is shown
+            # but never read as a verdict.
+            'maturing': (now.date() - _first).days < COHORT_MATURE_DAYS,
+        })
+    conversion_cohorts.reverse()   # oldest first, so it reads as a trend
+    cohort_max = max((c['rate'] for c in conversion_cohorts), default=0)
+    # Only settled cohorts belong in a headline figure.
+    _settled = [c for c in conversion_cohorts if not c['maturing'] and c['leads']]
+    cohort_settled_rate = (round(100.0 * sum(c['clients'] for c in _settled)
+                                 / sum(c['leads'] for c in _settled), 1)
+                           if _settled else None)
 
     _dated = Lead.query.filter(Lead.converted_at.isnot(None)).all()
     conversions_this_month = len([l for l in _dated
@@ -12365,6 +12463,11 @@ def analytics():
         conversions_this_month=conversions_this_month, conversions_total=conversions_total,
         conversion_rate_by_source=conversion_rate_by_source, avg_days_to_convert=avg_days_to_convert,
         conv_rate_max=conv_rate_max, best_source=best_source,
+        resp_median=resp_median, resp_buckets=resp_buckets, resp_total=resp_total,
+        resp_stale_unreached=resp_stale_unreached,
+        conversion_cohorts=conversion_cohorts, cohort_max=cohort_max,
+        cohort_settled_rate=cohort_settled_rate,
+        cohort_mature_days=COHORT_MATURE_DAYS, ad_window_days=AD_WINDOW_DAYS,
         conv_min_for_rate=CONV_MIN_FOR_RATE, conversions_dated=conversions_dated,
         max_service=max_service, max_source=max_source,
         max_pipeline=max_pipeline, max_rev=max_rev,
