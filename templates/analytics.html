@@ -246,18 +246,39 @@
          Convert-to-Client link (converted_at), not lead status. No historical
          back-linking: only counts conversions made through this flow. -->
     <div class="an-card" style="margin-bottom:16px;">
-      <div class="an-card-title">🤝 Lead → Client Conversions <span style="font-weight:400;color:#64748B;font-size:11px;">· tracked since this feature launched</span></div>
+      <div class="an-card-title">🤝 Lead → Client Conversions <span style="font-weight:400;color:#64748B;font-size:11px;">· every lead that became a client</span></div>
       <div class="grid4" style="margin-bottom:0;">
         <div class="kpi" style="border-top:4px solid #0F2660;"><div class="kpi-label">This Month</div><div class="kpi-val">{{ conversions_this_month }}</div><div class="kpi-sub">Leads converted to clients</div></div>
-        <div class="kpi" style="border-top:4px solid #10B981;"><div class="kpi-label">All Time</div><div class="kpi-val">{{ conversions_total }}</div><div class="kpi-sub">Since tracking began</div></div>
-        <div class="kpi" style="border-top:4px solid #8B5CF6;"><div class="kpi-label">Avg Days to Convert</div><div class="kpi-val">{{ avg_days_to_convert if avg_days_to_convert is not none else '—' }}</div><div class="kpi-sub">Lead created → converted</div></div>
-        <div class="kpi" style="border-top:4px solid #F59E0B;"><div class="kpi-label">Best Source</div><div class="kpi-val" style="font-size:16px;">{{ conversion_rate_by_source[0].source if conversion_rate_by_source else '—' }}</div><div class="kpi-sub">{{ conversion_rate_by_source[0].rate if conversion_rate_by_source else 0 }}% conversion rate</div></div>
+        <div class="kpi" style="border-top:4px solid #10B981;"><div class="kpi-label">All Time</div><div class="kpi-val">{{ conversions_total }}</div><div class="kpi-sub">Leads that became clients</div></div>
+        <div class="kpi" style="border-top:4px solid #8B5CF6;"><div class="kpi-label">Avg Days to Convert</div><div class="kpi-val">{{ avg_days_to_convert if avg_days_to_convert is not none else '—' }}</div><div class="kpi-sub">From the {{ conversions_dated }} with a recorded date</div></div>
+        {# Best source needs a floor. Without one a single referral that closed reads
+           as a 100% source and outranks the channel doing the actual work. #}
+        <div class="kpi" style="border-top:4px solid #F59E0B;"><div class="kpi-label">Best Source</div>
+          <div class="kpi-val" style="font-size:16px;">{{ best_source.source if best_source else '—' }}</div>
+          <div class="kpi-sub">{% if best_source %}{{ best_source.rate }}% of {{ best_source.total }} leads{% else %}No source has {{ conv_min_for_rate }}+ leads yet{% endif %}</div>
+        </div>
       </div>
       {% if conversion_rate_by_source %}
       <div style="margin-top:14px;">
+        {# Not .bar-row: its value column is 28px wide, and "4/980 · 0.4%" wrapped onto
+           three lines, which is what broke this card. Own row markup with a value
+           column wide enough for the text it actually holds. #}
         {% for r in conversion_rate_by_source %}
-        <div class="bar-row"><div class="bar-label">{{ r.source }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ r.rate }}%;background:#0F2660;"></div></div><div class="bar-val">{{ r.converted }}/{{ r.total }} · {{ r.rate }}%</div></div>
+        {% set thin = r.total < conv_min_for_rate %}
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;" {% if thin %}title="Only {{ r.total }} lead{{ '' if r.total == 1 else 's' }} — too few for the rate to mean anything"{% endif %}>
+          <div style="width:120px;flex-shrink:0;font-size:11px;color:{{ '#94A3B8' if thin else '#475569' }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.source }}</div>
+          <div style="flex:1;height:8px;background:#F1F5F9;border-radius:20px;overflow:hidden;">
+            <div style="height:100%;border-radius:20px;background:{{ '#CBD5E1' if thin else '#0F2660' }};width:{{ ((r.rate / conv_rate_max) * 100)|round|int if conv_rate_max else 0 }}%;"></div>
+          </div>
+          <div style="width:104px;flex-shrink:0;text-align:right;font-size:11px;white-space:nowrap;color:{{ '#94A3B8' if thin else '#475569' }};">
+            <b style="color:{{ '#94A3B8' if thin else '#1A2333' }};">{{ r.converted }}</b>/{{ r.total }} · {{ r.rate }}%
+          </div>
+        </div>
         {% endfor %}
+        <div style="margin-top:6px;font-size:10.5px;color:#64748B;line-height:1.5;">
+          Bars are scaled to the best rate, not to 100%, so single-digit rates stay comparable.
+          Greyed rows have under {{ conv_min_for_rate }} leads — too few to read anything into.
+        </div>
       </div>
       {% endif %}
     </div>

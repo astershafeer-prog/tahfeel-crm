@@ -11951,24 +11951,48 @@ def analytics():
     ads_meta_no_ad = sum(1 for l in all_leads
                          if l.meta_lead_id and not (l.meta_ad_id or l.meta_ad_name))
 
-    # ── TASK 2.3(b): Lead→Client conversion tracking, computed from the
-    # converted_at stamp (set only by the "Convert to Client" flow) — NOT the
-    # `won_s` status match above, and NOT tied to the page's period selector.
-    # No historical back-linking: leads converted before this feature existed
-    # have no converted_at and are simply absent from these numbers.
-    converted_leads_all = Lead.query.filter(Lead.converted_at.isnot(None)).all()
-    conversions_this_month = len([l for l in converted_leads_all
-                                  if l.converted_at.year == now.year and l.converted_at.month == now.month])
-    all_leads_ever_by_source = Counter(l.source for l in Lead.query.all() if l.source)
-    converted_by_source = Counter(l.source for l in converted_leads_all if l.source)
+    # ── Lead→Client conversions, counted from Customer.lead_id — the link the
+    # Convert-to-Client flow creates, and the same signal Campaign ROI and the Ad
+    # Performance table use, so all three agree.
+    #
+    # This used to count Lead.converted_at. Both are written by that one flow at the
+    # same moment, but converted_at only since TASK 2.3 shipped, so every lead
+    # converted before then carries the link and no timestamp. The per-source rate
+    # then divided that short numerator by every lead ever recorded — 4 over 980
+    # displayed as a 0.4% conversion rate for Meta, which was never the real rate.
+    #
+    # converted_at is still the only thing carrying a conversion DATE, so it alone
+    # drives "this month" and the average time to convert. Those two are labelled to
+    # say they only cover conversions since the stamp existed.
+    _converted_lead_ids = {r[0] for r in db.session.query(Customer.lead_id)
+                           .filter(Customer.lead_id.isnot(None)).all()}
+    conversions_total = len(_converted_lead_ids)
+    _all_leads_ever = Lead.query.all()
+    all_leads_ever_by_source = Counter(l.source for l in _all_leads_ever if l.source)
+    converted_by_source = Counter(l.source for l in _all_leads_ever
+                                  if l.source and l.id in _converted_lead_ids)
     conversion_rate_by_source = sorted([
         {'source': src, 'converted': converted_by_source.get(src, 0), 'total': total,
          'rate': round(100 * converted_by_source.get(src, 0) / total, 1) if total else 0}
         for src, total in all_leads_ever_by_source.items()
-    ], key=lambda r: -r['rate'])
-    _convert_days = [(l.converted_at - l.created_at).days for l in converted_leads_all if l.created_at]
+    ], key=lambda r: (-r['converted'], -r['total']))
+    # Bars are drawn against the best rate rather than against 100%. Real rates here
+    # are single digits, so an absolute scale drew every bar as an invisible sliver
+    # and the comparison — the only reason for a bar — was lost.
+    conv_rate_max = max((r['rate'] for r in conversion_rate_by_source), default=0)
+    # One lead that became one client is not a 100% conversion rate, it is one lead.
+    # Under this many leads a rate is noise: it cannot win the headline, and the row
+    # is greyed and marked so nobody reads it as a signal.
+    CONV_MIN_FOR_RATE = 20
+    _ranked = [r for r in conversion_rate_by_source if r['total'] >= CONV_MIN_FOR_RATE]
+    best_source = max(_ranked, key=lambda r: r['rate']) if _ranked else None
+
+    _dated = Lead.query.filter(Lead.converted_at.isnot(None)).all()
+    conversions_this_month = len([l for l in _dated
+                                  if l.converted_at.year == now.year and l.converted_at.month == now.month])
+    _convert_days = [(l.converted_at - l.created_at).days for l in _dated if l.created_at]
     avg_days_to_convert = round(sum(_convert_days) / len(_convert_days), 1) if _convert_days else None
-    conversions_total = len(converted_leads_all)
+    conversions_dated = len(_dated)
 
     # ── Monthly revenue trend (last 6 months)
     monthly_revenue = []
@@ -12340,6 +12364,8 @@ def analytics():
         staff_stats=staff_stats,
         conversions_this_month=conversions_this_month, conversions_total=conversions_total,
         conversion_rate_by_source=conversion_rate_by_source, avg_days_to_convert=avg_days_to_convert,
+        conv_rate_max=conv_rate_max, best_source=best_source,
+        conv_min_for_rate=CONV_MIN_FOR_RATE, conversions_dated=conversions_dated,
         max_service=max_service, max_source=max_source,
         max_pipeline=max_pipeline, max_rev=max_rev,
         users_map=users_map,
