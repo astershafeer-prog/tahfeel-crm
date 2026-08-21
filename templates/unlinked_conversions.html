@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahfeel CRM — Unlinked Conversions</title>
+  <link rel="stylesheet" href="/static/css/tahfeel.css">
+  <link rel="icon" href="/static/img/logo_white.png" type="image/png">
+</head>
+<body>
+  {%- from 'macros.html' import topbar, nav -%}
+  {{ topbar() }}
+  {{ nav('admin') }}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for cat, msg in messages %}
+        <div class="flash {% if cat == 'error' %}error{% elif cat == 'warning' %}warning{% endif %}">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <a href="/admin" style="display:inline-block;margin-bottom:12px;color:var(--text-muted);text-decoration:none;font-size:13px;">← Back to Admin</a>
+
+    <div class="page-header" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <h2>🔗 Unlinked Conversions</h2>
+      <a href="/admin/unlinked-conversions.xlsx" class="btn-sm" style="background:#1A3B8B;color:white;border-color:#1A3B8B;">⬇ Download as Excel</a>
+    </div>
+
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #B45309;padding:16px 18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+      <div style="font-size:13px;color:#475569;line-height:1.6;">
+        These leads are marked <strong>Converted</strong> but own no client record, so nothing they went
+        on to earn is credited back to them. Conversion rates, cost per client and campaign ROI all read
+        them as losses.
+        <br><br>
+        <strong>This page is read-only.</strong> Nothing here changes any record. It is a checking list —
+        work through it, and tell me which ones to link.
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+        <div><span style="font-size:22px;font-weight:800;color:#B45309;">{{ total }}</span>
+          <span style="font-size:12px;color:#64748B;"> unlinked in total</span></div>
+        <div><span style="font-size:22px;font-weight:800;color:#0F766E;">{{ strong }}</span>
+          <span style="font-size:12px;color:#64748B;"> with a phone or email match</span></div>
+        <div><span style="font-size:22px;font-weight:800;color:#7F1D1D;">{{ unmatched|length }}</span>
+          <span style="font-size:12px;color:#64748B;"> with no client found at all</span></div>
+      </div>
+    </div>
+
+    <!-- ── Group A: a client record already exists ───────────────────────── -->
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #0F766E;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:16px;">
+      <div style="padding:14px 18px;border-bottom:1px solid #E2E8F0;">
+        <div style="font-weight:700;font-size:14px;">A client already exists for these — only the link is missing</div>
+        <div style="font-size:12px;color:#64748B;margin-top:3px;">
+          These are the retro-link candidates. Open both sides and confirm they are the same person before
+          telling me to link them. <strong>Name only</strong> matches are the weak ones — two different
+          people can share a name.
+        </div>
+      </div>
+      {% if matched %}
+      <table>
+        <thead>
+          <tr><th>Lead</th><th>Contact</th><th>Source / Owner</th><th>Converted</th><th>Likely client</th><th>Matched on</th></tr>
+        </thead>
+        <tbody>
+          {% for m in matched %}
+            {% for c in m.candidates %}
+            <tr>
+              {% if loop.first %}
+              <td rowspan="{{ m.candidates|length }}" style="vertical-align:top;">
+                <a href="/leads/{{ m.lead.id }}" style="color:#1A3B8B;font-weight:600;text-decoration:none;font-size:13px;">{{ m.lead.name }}</a>
+                {% if m.lead.company %}<div style="font-size:11px;color:#64748B;">{{ m.lead.company }}</div>{% endif %}
+                <div style="font-size:11px;color:#94A3B8;">Lead #{{ m.lead.id }}</div>
+              </td>
+              <td rowspan="{{ m.candidates|length }}" style="vertical-align:top;font-size:12px;">
+                {{ m.lead.phone_original or m.lead.phone or '—' }}
+                {% if m.lead.email %}<div style="color:#64748B;">{{ m.lead.email }}</div>{% endif %}
+              </td>
+              <td rowspan="{{ m.candidates|length }}" style="vertical-align:top;font-size:12px;">
+                {{ m.lead.source or '—' }}
+                {% if m.lead.assignee %}<div style="color:#64748B;">{{ m.lead.assignee.name }}</div>{% endif %}
+              </td>
+              <td rowspan="{{ m.candidates|length }}" style="vertical-align:top;font-size:12px;color:var(--text-muted);">
+                {% if m.lead.converted_at %}{{ m.lead.converted_at.strftime('%d %b %Y') }}
+                {% else %}<span title="Converted before this date was recorded">not dated</span>{% endif %}
+              </td>
+              {% endif %}
+              <td>
+                <a href="/customers/{{ c.customer.id }}" style="color:#1A3B8B;font-weight:600;text-decoration:none;font-size:13px;">{{ c.customer.name }}</a>
+                {% if c.customer.company %}<div style="font-size:11px;color:#64748B;">{{ c.customer.company }}</div>{% endif %}
+                <div style="font-size:11px;color:#94A3B8;">Client #{{ c.customer.id }}</div>
+              </td>
+              <td>
+                {% if c.strong %}
+                <span style="background:#ECFDF5;color:#047857;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">{{ c.why|join(' + ') }}</span>
+                {% else %}
+                <span style="background:#FFFBEB;color:#B45309;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">name only</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="padding:24px;text-align:center;color:#64748B;font-size:13px;">
+        Nothing here — every converted lead with a matching client is already linked.
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Group B: nothing matches ──────────────────────────────────────── -->
+    <div style="background:white;border-radius:12px;border:0.5px solid #E2E8F0;border-top:5px solid #7F1D1D;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
+      <div style="padding:14px 18px;border-bottom:1px solid #E2E8F0;">
+        <div style="font-weight:700;font-size:14px;">No client record found for these</div>
+        <div style="font-size:12px;color:#64748B;margin-top:3px;">
+          Linking cannot fix these. Either the client was entered under a different number, spelling or
+          email — in which case find it and tell me, and I can link it — or the rep marked the lead
+          Converted and no client was ever created, which is a sales-record problem, not a CRM one.
+        </div>
+      </div>
+      {% if unmatched %}
+      <table>
+        <thead>
+          <tr><th>Lead</th><th>Contact</th><th>Source</th><th>Owner</th><th>Lead date</th><th>Converted</th></tr>
+        </thead>
+        <tbody>
+          {% for l in unmatched %}
+          <tr>
+            <td>
+              <a href="/leads/{{ l.id }}" style="color:#1A3B8B;font-weight:600;text-decoration:none;font-size:13px;">{{ l.name }}</a>
+              {% if l.company %}<div style="font-size:11px;color:#64748B;">{{ l.company }}</div>{% endif %}
+              <div style="font-size:11px;color:#94A3B8;">Lead #{{ l.id }}</div>
+            </td>
+            <td style="font-size:12px;">
+              {{ l.phone_original or l.phone or '—' }}
+              {% if l.email %}<div style="color:#64748B;">{{ l.email }}</div>{% endif %}
+            </td>
+            <td style="font-size:12px;">{{ l.source or '—' }}</td>
+            <td style="font-size:12px;">{{ l.assignee.name if l.assignee else '—' }}</td>
+            <td style="font-size:12px;color:var(--text-muted);">{{ l.created_at.strftime('%d %b %Y') if l.created_at else '—' }}</td>
+            <td style="font-size:12px;color:var(--text-muted);">
+              {% if l.converted_at %}{{ l.converted_at.strftime('%d %b %Y') }}{% else %}not dated{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="padding:24px;text-align:center;color:#64748B;font-size:13px;">
+        Nothing here — every converted lead has at least a candidate client.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

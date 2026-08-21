@@ -1,0 +1,66 @@
+{# Attribution guard, shown when a blank Add-Client form matches an existing lead.
+   Rendered inside the <form> but OUTSIDE the .wiz-step divs, so the Company
+   wizard's step switching can never hide it. Both buttons set lead_match_ack —
+   the guard only passes once the rep has made one of the two choices. #}
+{% if lead_matches %}
+<div class="card card-customers" id="leadMatchPanel"
+     style="margin-bottom:12px;border-left:4px solid var(--warning, #e0a800);">
+  <div class="card-header">
+    <h2>⚠ This may already be a lead</h2>
+  </div>
+  <div class="card-body">
+    <p style="margin:0 0 12px;font-size:13px;color:var(--text-muted);">
+      The phone or email entered matches {{ lead_matches|length }}
+      lead{{ '' if lead_matches|length == 1 else 's' }} that has no client record yet.
+      Linking keeps the sale credited to the rep and the campaign that produced it.
+      Nothing you have typed is lost either way.
+    </p>
+    {% for l in lead_matches %}
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+                padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);border-radius:6px;">
+      <div style="min-width:220px;">
+        <strong>{{ l.name }}</strong>{% if l.company %} — {{ l.company }}{% endif %}
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+          {{ l.status }}
+          {%- if l.source %} · {{ l.source }}{% endif %}
+          {%- if l.assignee %} · {{ l.assignee.name }}{% endif %}
+          {%- if l.created_at %} · {{ l.created_at.strftime('%d %b %Y') }}{% endif %}
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);">
+          {{ l.phone_original or l.phone or '' }}{% if l.email %} · {{ l.email }}{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a href="/leads/{{ l.id }}" target="_blank" rel="noopener"
+           style="font-size:12px;color:var(--primary);text-decoration:none;">View lead →</a>
+        <button type="button" class="btn-primary lead-match-link" data-lead-id="{{ l.id }}"
+                style="font-size:13px;padding:6px 12px;">Link to this lead</button>
+      </div>
+    </div>
+    {% endfor %}
+    <button type="button" class="btn-cancel" id="leadMatchDismiss" style="font-size:13px;padding:6px 12px;">
+      None of these — different person
+    </button>
+  </div>
+</div>
+<script>
+  (function() {
+    var panel = document.getElementById('leadMatchPanel');
+    if (!panel) return;
+    var form = panel.closest('form');
+    function ack(leadId) {
+      form.querySelector('input[name="lead_match_ack"]').value = '1';
+      if (leadId) form.querySelector('input[name="lead_id"]').value = leadId;
+      // requestSubmit(), not submit(): submit() skips the form's own submit
+      // listener, which would silently jump the duplicate-phone confirm and land
+      // the rep on a second server bounce. The two checks are meant to stack —
+      // first "is this an existing lead", then "is this an existing client".
+      if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+    }
+    panel.querySelectorAll('.lead-match-link').forEach(function(b) {
+      b.addEventListener('click', function() { ack(b.dataset.leadId); });
+    });
+    document.getElementById('leadMatchDismiss').addEventListener('click', function() { ack(null); });
+  })();
+</script>
+{% endif %}

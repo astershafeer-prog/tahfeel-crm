@@ -3530,6 +3530,10 @@ def admin_panel():
                             if v and v.strip() and v not in _listed),
                            key=lambda vn: (-vn[1], vn[0].lower()))
     aod_unverified_count = len([c for c in _ac_opening_date_suspects() if not c.ac_opening_date_confirmed])
+    # Count only — the review page itself does the matching work.
+    _linked_lead_ids = db.session.query(Customer.lead_id).filter(Customer.lead_id.isnot(None))
+    unlinked_conv_count = Lead.query.filter(Lead.status == 'Converted',
+                                            ~Lead.id.in_(_linked_lead_ids)).count()
     renewal_costs = DocRenewalCost.query.order_by(DocRenewalCost.doc_type, DocRenewalCost.jurisdiction).all()
     # Moved here from the Daily Log page 2026-07-27 — only an admin could use it there.
     # Must filter to active=True: a soft-deleted type has active=False but the row
@@ -3546,6 +3550,7 @@ def admin_panel():
                            subtask_list=subtask_list, authorities=authorities,
                            auth_counts=auth_counts, auth_unlisted=auth_unlisted,
                            aod_unverified_count=aod_unverified_count, renewal_costs=renewal_costs,
+                           unlinked_conv_count=unlinked_conv_count,
                            price_jurisdictions=JURISDICTIONS_PRICE_LIST,
                            activity_types=activity_types,
                            vendors=vendors, bundle_templates=bundle_templates,
@@ -5593,6 +5598,34 @@ def _lead_customer_prefill(lead, ctype):
         'notes': lead.remarks or '',
     }
 
+def _unlinked_lead_matches(form):
+    """Leads that look like the client being typed into a blank Add-Client form.
+
+    The leak this closes: sales marks a lead Converted, operations later creates
+    the client from a blank form instead of Quick Add, and Customer.lead_id stays
+    NULL. The lead then reads as "converted with no client record" in Campaign ROI
+    while the client reads as if no ad ever produced it — the same deal counted as
+    a miss on one side and an untracked walk-in on the other.
+
+    Matches on normalized phone (either number on the form against either number
+    on the lead) or on email. Leads that already own a client record are ignored
+    on purpose: a second client for the same lead is a real thing, not a mis-link.
+    """
+    phone  = normalize_phone_e164((form.get('phone')  or '').strip())
+    phone2 = normalize_phone_e164((form.get('phone2') or '').strip())
+    email  = (form.get('email') or '').strip().lower()
+    conds = []
+    for ph in {x for x in (phone, phone2) if x}:
+        conds.append(Lead.phone == ph)
+        conds.append(Lead.phone2 == ph)
+    if email:
+        conds.append(db.func.lower(Lead.email) == email)
+    if not conds:
+        return []
+    linked = db.session.query(Customer.lead_id).filter(Customer.lead_id.isnot(None))
+    return (Lead.query.filter(db.or_(*conds), ~Lead.id.in_(linked))
+            .order_by(Lead.created_at.desc()).limit(5).all())
+
 @app.route('/customers/add', methods=['GET', 'POST'])
 @login_required
 def add_customer():
@@ -5605,7 +5638,7 @@ def add_customer():
         ctype = request.form.get('customer_type', 'Individual')
         lead_id = request.form.get('lead_id') or None
 
-        def _redisplay():
+        def _redisplay(lead_matches=()):
             # Re-render with everything already typed intact — a validation
             # failure (missing field, duplicate phone) should never throw away
             # what was entered, whether from a blank form or a Quick-Add prefill.
@@ -5618,6 +5651,7 @@ def add_customer():
                                    attribution_sources=CLIENT_ATTRIBUTION_SOURCES,
                                    authorities=_authority_names(),
                                    prefill=request.form, lead_id=lead_id,
+                                   lead_matches=lead_matches,
                                    vat_preview=[{'label': f'Q{q} {_yr}',
                                                  'due': _vat_due_date(_yr, q).strftime('%d %b %Y')}
                                                 for q in range(1, 5)],
@@ -5646,6 +5680,17 @@ def add_customer():
         if not request.form.get('assigned_to'):
             flash('Primary Representative is required', 'error')
             return _redisplay()
+
+        # Attribution guard: a blank Add-Client form that matches an existing lead
+        # must not quietly create an unlinked client. Deliberately NOT the
+        # "submit again to add anyway" pattern used for duplicate phones below —
+        # a bypass you can trip by double-clicking Save is how the link goes
+        # missing in the first place. The rep either picks the lead or states it
+        # is a different person, and lead_match_ack only gets set by doing one
+        # of those two things.
+        lead_matches = [] if lead_id else _unlinked_lead_matches(request.form)
+        if lead_matches and not request.form.get('lead_match_ack'):
+            return _redisplay(lead_matches=lead_matches)
 
         # Duplicate-phone check always runs against what's actually in the form —
         # if the rep edited the number to work around a clash, that edit is what
@@ -6380,6 +6425,124 @@ def ac_opening_date_review():
     unverified = len([c for c in suspects if not c.ac_opening_date_confirmed])
     return render_template('ac_opening_date_review.html', suspects=suspects,
                            total=total, unverified=unverified)
+
+def _unlinked_conversion_review():
+    """Converted leads that own no client record, split by whether a client for
+    them appears to exist already.
+
+    Two different problems wearing the same symptom, and the fix differs:
+
+      matched   — a client record exists but was created from a blank form, so
+                  Customer.lead_id is NULL. The deal happened, the money is in,
+                  only the link is missing. These are the retro-link candidates.
+      unmatched — nothing in the client list resembles this lead. Either the
+                  client was entered under details that match nothing here, or a
+                  rep marked the lead Converted and no client was ever created.
+                  These need a human, not a link.
+
+    Wider than the Campaign ROI warning on purpose: that one only counts leads
+    Meta delivered, because it exists to explain ad spend. A walk-in whose link
+    went missing is the same bookkeeping error and belongs on this list too.
+
+    Candidate clients are limited to ones not already linked to some other lead.
+    Phone and email are strong matches. Name is included but flagged separately —
+    it is the only thing that still catches the common case of a number being
+    retyped in a different format, and it is also the one most likely to pair two
+    unrelated people who share a common name.
+    """
+    from collections import defaultdict
+    linked_lead_ids = {r[0] for r in db.session.query(Customer.lead_id)
+                       .filter(Customer.lead_id.isnot(None)).all()}
+    leads = [l for l in Lead.query.filter(Lead.status == 'Converted').all()
+             if l.id not in linked_lead_ids]
+    leads.sort(key=lambda l: (l.converted_at or l.created_at or datetime.min), reverse=True)
+
+    by_phone, by_email, by_name = defaultdict(list), defaultdict(list), defaultdict(list)
+    for c in Customer.query.filter(Customer.lead_id.is_(None)).all():
+        for ph in {x for x in (c.phone, c.phone2, c.mobile, c.whatsapp) if x}:
+            by_phone[ph].append(c)
+        if c.email:
+            by_email[c.email.strip().lower()].append(c)
+        for nm in {(x or '').strip().lower() for x in (c.name, c.company, c.contact_person)}:
+            if nm:
+                by_name[nm].append(c)
+
+    matched, unmatched = [], []
+    for l in leads:
+        hits, why = {}, defaultdict(set)
+        def _take(cands, reason):
+            for c in cands:
+                hits[c.id] = c
+                why[c.id].add(reason)
+        for ph in {x for x in (l.phone, l.phone2) if x}:
+            _take(by_phone.get(ph, []), 'phone')
+        if l.email:
+            _take(by_email.get(l.email.strip().lower(), []), 'email')
+        for nm in {(x or '').strip().lower() for x in (l.name, l.company)}:
+            if nm:
+                _take(by_name.get(nm, []), 'name')
+        if hits:
+            cands = [{'customer': c, 'why': sorted(why[cid]),
+                      'strong': bool(why[cid] & {'phone', 'email'})}
+                     for cid, c in hits.items()]
+            # Phone/email evidence first — that is the row he can act on quickly.
+            cands.sort(key=lambda d: (not d['strong'], d['customer'].name or ''))
+            matched.append({'lead': l, 'candidates': cands})
+        else:
+            unmatched.append(l)
+    return matched, unmatched
+
+
+@app.route('/admin/unlinked-conversions')
+@login_required
+@admin_required
+def unlinked_conversions():
+    """Read-only review list. Nothing on this page writes anything — it exists to
+    show the backlog of conversions whose lead-to-client link never got made."""
+    matched, unmatched = _unlinked_conversion_review()
+    strong = sum(1 for m in matched if any(c['strong'] for c in m['candidates']))
+    return render_template('unlinked_conversions.html', matched=matched, unmatched=unmatched,
+                           total=len(matched) + len(unmatched), strong=strong)
+
+
+@app.route('/admin/unlinked-conversions.xlsx')
+@login_required
+@admin_required
+def unlinked_conversions_export():
+    import io as _io
+    from flask import send_file
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    matched, unmatched = _unlinked_conversion_review()
+    wb = Workbook(); ws = wb.active; ws.title = 'Unlinked conversions'
+    headers = ['#', 'Lead #', 'Lead name', 'Lead company', 'Lead phone', 'Lead email',
+               'Source', 'Owner', 'Lead date', 'Converted on',
+               'Likely client', 'Client #', 'Matched on', 'Confidence']
+    for i, h in enumerate(headers, 1):
+        ws.cell(1, i, h).font = Font(bold=True, color='FFFFFF')
+        ws.cell(1, i).fill = PatternFill('solid', fgColor='1A3B8B')
+    n = 0
+    def _lead_cells(l):
+        return [l.id, l.name or '', l.company or '', l.phone_original or l.phone or '',
+                l.email or '', l.source or '', l.assignee.name if l.assignee else '',
+                l.created_at.strftime('%d/%m/%Y') if l.created_at else '',
+                l.converted_at.strftime('%d/%m/%Y') if l.converted_at else '']
+    for m in matched:
+        for c in m['candidates']:
+            n += 1
+            ws.append([n] + _lead_cells(m['lead']) + [
+                c['customer'].name or '', c['customer'].id, ', '.join(c['why']),
+                'Strong' if c['strong'] else 'Name only'])
+    for l in unmatched:
+        n += 1
+        ws.append([n] + _lead_cells(l) + ['', '', '', 'No client found'])
+    for i, w in enumerate([4, 8, 24, 24, 18, 26, 16, 16, 12, 12, 26, 9, 16, 14], 1):
+        ws.column_dimensions[ws.cell(1, i).column_letter].width = w
+    buf = _io.BytesIO(); wb.save(buf); buf.seek(0)
+    return send_file(buf, download_name=f'tahfeel_unlinked_conversions_{now_dubai().strftime("%Y%m%d")}.xlsx',
+                     as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 
 @app.route('/admin/alerts/disable-all', methods=['POST'])
 @login_required

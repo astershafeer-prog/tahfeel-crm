@@ -46,7 +46,12 @@
 
     <form method="post" action="/customers/add" enctype="multipart/form-data" id="companyForm">
       <input type="hidden" name="customer_type" value="Company">
-      {% if lead_id %}<input type="hidden" name="lead_id" value="{{ lead_id }}">{% endif %}
+      {# lead_id is always rendered, not only when prefilled: the lead-match panel
+         below writes the chosen lead into it, and a field that is not there
+         cannot be written to. #}
+      <input type="hidden" name="lead_id" value="{{ lead_id or '' }}">
+      <input type="hidden" name="lead_match_ack" value="">
+      {% include '_lead_match_panel.html' %}
       {% if request.args.get('next') %}<input type="hidden" name="next" value="{{ request.args.get('next') }}">{% endif %}
 
       <!-- Step 1: Basic Info + Company Details -->
