@@ -379,6 +379,50 @@
       </div>
     </div>
 
+    {# Which creative actually produced the leads, and which produced clients.
+       Full width and a table rather than a fourth bar card: leads alone is the
+       misleading half of the answer — the ad with the most leads is regularly not
+       the one with the most clients, and that is the entire point of looking. #}
+    {% if ad_rows or ads_meta_no_ad %}
+    <div class="an-card" style="margin-bottom:16px;">
+      <div class="an-card-title">Ad Performance &mdash; leads and clients per creative</div>
+      {% if ad_rows %}
+      <div style="display:grid;grid-template-columns:2fr 1.6fr 0.8fr 0.8fr 0.8fr 0.9fr;gap:8px;padding:8px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:4px;">
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Ad</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Campaign</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;text-align:center;">Leads</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;text-align:center;">Genuine</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;text-align:center;">Clients</span>
+        <span style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;text-align:center;">Conv %</span>
+      </div>
+      {% for r in ad_rows %}
+      <div style="display:grid;grid-template-columns:2fr 1.6fr 0.8fr 0.8fr 0.8fr 0.9fr;gap:8px;padding:9px 12px;border-bottom:0.5px solid #F8FAFC;align-items:center;">
+        <span style="font-size:12px;font-weight:700;color:#1A2333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ r.ad }}">{{ r.ad }}</span>
+        <span style="font-size:11px;color:#64748B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ r.campaign }}">{{ r.campaign or '—' }}</span>
+        <span style="font-size:13px;font-weight:700;color:#133E87;text-align:center;">{{ r.leads }}</span>
+        <span style="font-size:13px;font-weight:700;color:#10B981;text-align:center;">{{ r.genuine }}</span>
+        <span style="font-size:13px;font-weight:700;color:{{ '#10B981' if r.clients else '#CBD5E1' }};text-align:center;">{{ r.clients if r.clients else '—' }}</span>
+        <span style="font-size:12px;font-weight:700;text-align:center;color:{{ '#10B981' if r.rate >= 10 else ('#F59E0B' if r.rate > 0 else '#94A3B8') }};">{{ r.rate }}%</span>
+      </div>
+      {% endfor %}
+      <div style="margin-top:8px;font-size:11px;color:#64748B;line-height:1.5;">
+        Clients counted the same way Campaign ROI counts them &mdash; leads that went through
+        Convert to Client &mdash; so the two pages agree.
+        {% if full_access %}<a href="{{ url_for('campaign_performance') }}" style="color:#133E87;font-weight:600;">Cost per lead and per client →</a>{% endif %}
+      </div>
+      {% else %}
+      <div class="empty-state">No ad recorded on any lead in this period</div>
+      {% endif %}
+      {% if ads_meta_no_ad %}
+      <div style="margin-top:10px;padding:8px 10px;background:#FFF7ED;border:0.5px solid #FED7AA;border-radius:6px;font-size:11.5px;color:#9A3412;line-height:1.5;">
+        <strong>{{ ads_meta_no_ad }} Meta lead{{ '' if ads_meta_no_ad == 1 else 's' }} with no ad recorded</strong> &mdash;
+        not in the rows above. Almost all of these arrived before ad tracking existed, and Meta only
+        backfills about 90 days, so they can never be attributed to a creative.
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <!-- ══ OPERATIONS TAB ══ -->
     {% elif tab == 'operations' %}
     <div class="grid4">

@@ -11911,6 +11911,46 @@ def analytics():
     unattributed_meta = sum(1 for l in all_leads
                             if l.meta_lead_id and not (l.campaign or '').strip())
 
+    # ── Ad performance: which creative produced the leads, and how many became
+    # clients. The campaign bars above cannot answer that — a campaign runs several
+    # ads at once and one creative carrying the whole thing is invisible inside the
+    # campaign average.
+    #
+    # Clients are counted from Customer.lead_id, the link the Convert-to-Client flow
+    # creates, because that is what Campaign ROI counts. Using Lead.converted_at here
+    # (which the conversion stats further down use) would give a second, smaller
+    # answer for the same question — it only exists for leads converted after that
+    # feature shipped — and two pages disagreeing is worse than either number.
+    _period_lead_ids = [l.id for l in all_leads]
+    _won_lead_ids = set()
+    if _period_lead_ids:
+        _won_lead_ids = {r[0] for r in db.session.query(Customer.lead_id)
+                         .filter(Customer.lead_id.in_(_period_lead_ids)).all()}
+    _by_ad = defaultdict(list)
+    for l in all_leads:
+        if l.meta_ad_id or l.meta_ad_name:
+            _by_ad[(l.meta_ad_id or '', l.meta_ad_name or '')].append(l)
+    ad_rows = []
+    for (_aid, _aname), _ls in _by_ad.items():
+        _won = sum(1 for l in _ls if l.id in _won_lead_ids)
+        ad_rows.append({
+            'ad': _aname or ('Ad %s' % _aid),
+            'ad_id': _aid,
+            'campaign': next((l.campaign for l in _ls if l.campaign), ''),
+            'leads': len(_ls),
+            'genuine': sum(1 for l in _ls if l.genuine == 'Genuine'),
+            'clients': _won,
+            'rate': round(100 * _won / len(_ls)) if _ls else 0,
+        })
+    # Best converter first, then biggest producer — the order the question is asked in.
+    ad_rows.sort(key=lambda r: (-r['clients'], -r['leads']))
+    ad_max = max((r['leads'] for r in ad_rows), default=0)
+    # Meta leads carrying no ad at all — almost all of them predate ad tracking, and
+    # Meta only backfills ~90 days, so this number shrinks but never reaches zero.
+    # Stated outright: the rows above are not the whole period.
+    ads_meta_no_ad = sum(1 for l in all_leads
+                         if l.meta_lead_id and not (l.meta_ad_id or l.meta_ad_name))
+
     # ── TASK 2.3(b): Lead→Client conversion tracking, computed from the
     # converted_at stamp (set only by the "Convert to Client" flow) — NOT the
     # `won_s` status match above, and NOT tied to the page's period selector.
@@ -12295,6 +12335,7 @@ def analytics():
         total_outstanding=total_outstanding,
         pipeline=pipeline, top_services=top_services, top_sources=top_sources,
         top_campaigns=top_campaigns, unattributed_meta=unattributed_meta,
+        ad_rows=ad_rows, ad_max=ad_max, ads_meta_no_ad=ads_meta_no_ad,
         monthly_revenue=monthly_revenue,
         staff_stats=staff_stats,
         conversions_this_month=conversions_this_month, conversions_total=conversions_total,
