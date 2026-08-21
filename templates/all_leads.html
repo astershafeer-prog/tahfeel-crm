@@ -45,7 +45,10 @@
         <input type="text" name="search" placeholder="Search by name, phone or company..." value="{{ search }}">
         <button type="submit" class="btn-search">Search</button>
         {% if search %}
-          <a href="/leads" class="btn-clear">Clear</a>
+          {# Must carry ?clear=search — a bare /leads has no filter params, so the
+             route restores the saved ones from the session and the search comes
+             back. Reset (?reset=1) drops everything; this drops only the search. #}
+          <a href="/leads?clear=search" class="btn-clear">Clear</a>
         {% endif %}
       </div>
     

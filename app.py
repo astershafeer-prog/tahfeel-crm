@@ -2749,6 +2749,16 @@ def all_leads():
         session.pop('leads_filters', None)
         return redirect(url_for('all_leads'))
 
+    # Clear just the search box, keeping the filters beside it. Needs its own
+    # signal: an empty ?search= is falsy, so it would fall through to the session
+    # restore below and put the old search term straight back — which is exactly
+    # what the Clear link used to do, leaving people to backspace it by hand.
+    if request.args.get('clear') == 'search':
+        _f = dict(session.get('leads_filters') or {})
+        _f['search'] = ''
+        session['leads_filters'] = _f
+        return redirect(url_for('all_leads'))
+
     # If any filter param is present in URL — save to session
     if any(request.args.get(k) for k in FILTER_KEYS):
         session['leads_filters'] = {k: request.args.get(k, '') for k in FILTER_KEYS}
