@@ -11834,10 +11834,9 @@ def export_full_backup():
         return redirect(url_for('admin_panel'))
 
 
-# Leads keep converting for months, so anything joining leads to clients needs a
-# window wider than a calendar month or it reports zero and reads as failure.
-# 180 days ~ the longest sales cycle actually seen on this business.
-AD_WINDOW_DAYS = 180
+# Leads keep converting for months, so any figure joining leads to clients needs a
+# window wider than a calendar month before it means anything. 180 days ~ the longest
+# sales cycle actually seen on this business.
 COHORT_MATURE_DAYS = 180
 
 
@@ -11929,15 +11928,14 @@ def analytics():
     # answer for the same question — it only exists for leads converted after that
     # feature shipped — and two pages disagreeing is worse than either number.
     #
-    # Deliberately NOT cut to the period selector. A lead is filed under the month it
-    # arrived, but with a cycle running to six months it usually becomes a client in
-    # a later one — so "this month" showed an ad's leads with none of the clients they
-    # went on to produce, and every ad read as converting nobody. Fixed trailing
-    # window instead, stated on the card.
-    _ad_since = now - timedelta(days=AD_WINDOW_DAYS)
-    _ad_leads = Lead.query.filter(Lead.created_at >= _ad_since).all()
-    if scoped:
-        _ad_leads = [l for l in _ad_leads if l.assigned_to == session['user_id']]
+    # Follows the period selector like everything else on the page. It briefly ran on
+    # its own fixed window, because a lead is filed under the month it arrived while
+    # the client it becomes lands months later, so a short period shows an ad's leads
+    # with few of their eventual clients. But a card that quietly overrides the filter
+    # someone just set is worse than the problem: two controls, one silently winning.
+    # The card states the limitation instead, and "This Year" is already in the
+    # selector for anyone who wants a settled view.
+    _ad_leads = all_leads
     _ad_lead_ids = [l.id for l in _ad_leads]
     _won_lead_ids = set()
     if _ad_lead_ids:
@@ -11967,6 +11965,10 @@ def analytics():
     # Stated outright: the rows above are not the whole period.
     ads_meta_no_ad = sum(1 for l in _ad_leads
                          if l.meta_lead_id and not (l.meta_ad_id or l.meta_ad_name))
+    # Age of the selected window, so the card can warn when its Clients column is
+    # simply too young to have filled in yet.
+    ad_period_age_days = (now.date() - start_dt.date()).days
+    ad_period_immature = ad_period_age_days < COHORT_MATURE_DAYS
 
     # ── Lead response time. The only lead metric that can be acted on the same day:
     # conversion takes months to read, this reads by lunchtime. Same buckets
@@ -12011,6 +12013,16 @@ def analytics():
         1 for l in all_leads
         if not l.first_contacted_at and l.created_at
         and (now - l.created_at).total_seconds() > 86400)
+    # Leads with no contact timestamp that someone nonetheless tagged Genuine or Junk.
+    # You cannot judge a lead's quality without having spoken to them, so contact did
+    # happen and only the timestamp is missing. Worth separating, because otherwise
+    # "never reached" reads as a service failure when part of it is the activity
+    # dropdown: only "Call — connected" and "Meeting" set first_contacted_at, so a lead
+    # handled entirely over WhatsApp, or closed with "Quote sent", never gets one.
+    # Unreachable is deliberately not counted here — that tag agrees with never reached.
+    resp_contacted_untimed = sum(
+        1 for l in all_leads
+        if not l.first_contacted_at and l.genuine in ('Genuine', 'Junk'))
 
     # ── Lead→Client conversions, counted from Customer.lead_id — the link the
     # Convert-to-Client flow creates, and the same signal Campaign ROI and the Ad
@@ -12467,7 +12479,9 @@ def analytics():
         resp_stale_unreached=resp_stale_unreached,
         conversion_cohorts=conversion_cohorts, cohort_max=cohort_max,
         cohort_settled_rate=cohort_settled_rate,
-        cohort_mature_days=COHORT_MATURE_DAYS, ad_window_days=AD_WINDOW_DAYS,
+        cohort_mature_days=COHORT_MATURE_DAYS,
+        ad_period_age_days=ad_period_age_days, ad_period_immature=ad_period_immature,
+        resp_contacted_untimed=resp_contacted_untimed,
         conv_min_for_rate=CONV_MIN_FOR_RATE, conversions_dated=conversions_dated,
         max_service=max_service, max_source=max_source,
         max_pipeline=max_pipeline, max_rev=max_rev,
